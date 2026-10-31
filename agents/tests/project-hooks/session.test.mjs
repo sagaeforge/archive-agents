@@ -449,10 +449,10 @@ test("a raw escape in a real session is not rewritten", options, () => {
   assert.doesNotMatch(run.results[0].text, /matches in/);
 });
 
-test("an off switch in local settings reaches the hooks", options, () => {
+test("the off switch the guide gives, in the main checkout, reaches a worktree's hooks", options, () => {
   const box = repoCase("off-switch");
   const cwd = worktree(box);
-  writeFile(path.join(cwd, ".claude/settings.local.json"), JSON.stringify({ env: { RTK_DISABLED: "1", TRAIL_NO_HOOKS: "1" } }));
+  writeFile(path.join(box.project, ".claude/settings.local.json"), JSON.stringify({ env: { RTK_DISABLED: "1", TRAIL_NO_HOOKS: "1" } }));
   const run = session(box, { cwd, prompt: question, steps: [bash("git status")], args: bypass });
   assert.equal(run.rc, 0, run.stderr);
   assert.deepEqual(rewrites(run), []);
