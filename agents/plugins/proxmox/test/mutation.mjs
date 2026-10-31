@@ -58,7 +58,7 @@ const MUTANTS = [
   { id: "G16", breaks: "a cancelled run still promotes", file: CI, from: "!cancelled() && ", to: "always() && ", tests: GATE_TESTS },
   { id: "G17", breaks: "pull requests reach the runner", file: CI, from: "github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && !inputs.skip_smoke", to: "!inputs.skip_smoke", tests: GATE_TESTS },
   { id: "G18", breaks: "the smoke waits for a runner nobody has turned on", file: CI, from: "if: vars.LIVE_SMOKE_ENABLED == 'true' && ", to: "if: ", tests: GATE_TESTS },
-  { id: "L1", breaks: "the smoke prints the text of a tool error", file: SMOKE, from: '?.[0] ?? "tool error"', to: "?.[0] ?? text", tests: SMOKE_TESTS },
+  { id: "L1", breaks: "the smoke prints the text of a tool error", file: SMOKE, from: '/^(?:PVE API \\d{3}|[A-Z_]{2,}(?=:)|All PVE hosts unreachable)/.exec(text)?.[0] ?? "tool error"', to: "text", tests: SMOKE_TESTS },
   { id: "L2", breaks: "the smoke accepts privileges beyond .Audit", file: SMOKE, from: "expect(excess === 0,", to: "expect(true,", tests: SMOKE_TESTS },
   { id: "L3", breaks: "the smoke accepts a token with no privileges", file: SMOKE, from: "expect(held.size > 0,", to: "expect(true,", tests: SMOKE_TESTS },
   { id: "L4", breaks: "an outage reads as a plugin failure", file: SMOKE, from: "answered: !NO_ANSWER.has(code)", to: "answered: true", tests: SMOKE_TESTS },
