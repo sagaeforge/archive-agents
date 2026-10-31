@@ -5,7 +5,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
-import { git, hooksDir, repoRoot } from "./lib/sandbox.mjs";
+import { copyRepo, git, hooksDir, repoRoot, sealed, sessionCase, sessionSkipReason } from "./lib/sandbox.mjs";
 
 const read = (file) => fs.readFileSync(path.join(repoRoot, file), "utf8");
 const settings = JSON.parse(read(".claude/settings.json"));
@@ -89,6 +89,21 @@ test("the Korean guide answers every question it must", () => {
     assert.ok(guide.includes(needed), needed);
   }
 });
+
+// Hides the tool for real, inside the seal, because a PATH trick would not reach the
+// fixed PATH the hook tests run with. config.test.mjs stays out so this cannot recurse.
+for (const tool of ["jq", "timeout"]) {
+  test(`on a machine without ${tool} the suite skips instead of failing`, { skip: sessionSkipReason() ?? false }, () => {
+    const box = sessionCase(`no-${tool}`);
+    const project = copyRepo(path.join(box.work, "project"));
+    const files = ["rtk-rewrite", "trail", "session"].map((name) => `tests/project-hooks/${name}.test.mjs`);
+    const installed = spawnSync("sh", ["-c", `command -v ${tool}`], { encoding: "utf8" }).stdout.trim();
+    const run = sealed(box, project, [process.execPath, "--test", ...files], { hide: [installed], timeout: 150000 });
+    assert.equal(run.status, 0, run.stdout.slice(-3000));
+    assert.match(run.stdout, /skipped [1-9]/);
+    assert.match(run.stdout, /fail 0/);
+  });
+}
 
 test("the guide no longer promises rtk's state line", () => {
   const guide = read("docs/project-tools.md");

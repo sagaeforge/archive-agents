@@ -3,8 +3,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import test from "node:test";
-import { fakeHome, git, hasRealRtk, restrictedPath, runHook, tempDir, writeFile } from "./lib/sandbox.mjs";
+import { fakeHome, git, hasRealRtk, hookTest as test, restrictedPath, runHook, tempDir, writeFile } from "./lib/sandbox.mjs";
 
 const hook = "rtk-rewrite.sh";
 const shells = ["sh", "bash", "dash"].filter((shell) => spawnSync("sh", ["-c", `command -v ${shell}`]).status === 0);

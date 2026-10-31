@@ -6,6 +6,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -22,10 +23,23 @@ const pinnedTrail = ".local/share/trail-code/0.28.1/node_modules/.bin/trail";
 // The chain Claude Code would use to run a hook command: a small PATH, no user rc.
 const basePath = `${path.join(nodeRoot, "bin")}:/usr/bin:/bin`;
 
-const onPath = (tool) => spawnSync("sh", ["-c", `command -v ${tool}`]).status === 0;
+const onPath = (tool, PATH = process.env.PATH) => spawnSync("sh", ["-c", `command -v ${tool}`], { env: { PATH } }).status === 0;
 
 export const hasRealRtk = () => fs.existsSync(rtkInstall);
 export const hasRealTrail = () => fs.existsSync(path.join(realHome, pinnedTrail));
+
+/** Why a hook cannot print anything here, or null. Checked on the PATH hooks run with. */
+function hookToolsReason() {
+  const missing = ["jq", "timeout"].filter((tool) => !onPath(tool, basePath));
+  return missing.length > 0 ? `${missing.join(" and ")} not installed` : null;
+}
+
+/** A test that needs a working hook, which skips with a reason where none can work. */
+export function hookTest(name, ...rest) {
+  const body = rest.pop();
+  const [options = {}] = rest;
+  test(name, { ...options, skip: options.skip || (hookToolsReason() ?? false) }, body);
+}
 
 function claudeBinary() {
   try {
@@ -37,6 +51,8 @@ function claudeBinary() {
 
 /** Why session tests cannot run here, or null when they can. */
 export function sessionSkipReason() {
+  const hookTools = hookToolsReason();
+  if (hookTools) return hookTools;
   if (!onPath("bwrap")) return "bwrap is not installed";
   if (!claudeBinary()) return "no Claude Code binary at ~/.local/bin/claude";
   if (!hasRealRtk()) return "rtk is not installed";
@@ -101,8 +117,8 @@ export function runHook(script, input, { home, project, cwd, env = {}, shell = "
 export function restrictedPath(tools) {
   const dir = tempDir("path");
   for (const tool of tools) {
-    const found = execFileSync("sh", ["-c", `command -v ${tool}`], { encoding: "utf8" }).trim();
-    fs.symlinkSync(found, path.join(dir, tool));
+    const found = spawnSync("sh", ["-c", `command -v ${tool}`], { encoding: "utf8" }).stdout.trim();
+    if (found) fs.symlinkSync(found, path.join(dir, tool));
   }
   return dir;
 }
@@ -179,9 +195,9 @@ function sandboxArgs(box, { managedDir, hide = [] }) {
 }
 
 /** Runs any command inside the same seal, under the case's fake home. */
-export function sealed(box, cwd, command, { env = {}, timeout = 60000 } = {}) {
+export function sealed(box, cwd, command, { env = {}, hide, timeout = 60000 } = {}) {
   const args = [
-    ...sandboxArgs(box, {}),
+    ...sandboxArgs(box, { hide }),
     "--chdir", cwd,
     ...envArgs(box, env),
     ...command,

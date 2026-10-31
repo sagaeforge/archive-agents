@@ -3,8 +3,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import test from "node:test";
-import { copyRepo, fakeHome, git, hasRealTrail, restrictedPath, runHook, snapshot, snapshotDiff, tempDir, writeFile } from "./lib/sandbox.mjs";
+import { copyRepo, fakeHome, git, hasRealTrail, hookTest as test, restrictedPath, runHook, snapshot, snapshotDiff, tempDir, writeFile } from "./lib/sandbox.mjs";
 
 const context = "trail-context.sh";
 const sync = "trail-sync.sh";
