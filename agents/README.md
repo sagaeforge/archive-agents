@@ -7,7 +7,7 @@
 ### 준비
 
 - Claude Code, `git`, `gh`, `curl`이 설치되어 있어야 합니다.
-- Node 22 이상과 npm이 Claude Code를 시작하는 환경의 PATH에 있어야 합니다. 서버는 `node`로 실행되고, 플러그인 의존성은 설치할 때 `npm`으로 받습니다. nvm으로만 설치했다면 터미널 밖에서 시작한 Claude Code가 찾지 못할 수 있습니다.
+- Node 26 이상과 npm이 Claude Code를 시작하는 환경의 PATH에 있어야 합니다. 서버는 `node`로 실행되고, 플러그인 의존성은 설치할 때 `npm`으로 받습니다. nvm으로만 설치했다면 터미널 밖에서 시작한 Claude Code가 찾지 못할 수 있습니다.
 - 이 저장소를 읽을 수 있는 GitHub 계정이 필요합니다. 비공개 저장소입니다.
 - 내부망(192.168.x.x/24)의 노드 8006 포트에 닿아야 합니다.
 - 노드에 키 인증으로 root SSH 접속이 되어야 합니다. `bootstrap-token.sh`는 프롬프트 없이 실행되므로 비밀번호를 묻거나 호스트 키를 확인하는 상태로는 실패합니다. 먼저 한 번 접속해 호스트 키를 받아 둡니다.
@@ -129,7 +129,7 @@ rm ~/.config/proxmox-mcp/token
 
 | # | 점검 | 실패 | 경고 |
 |---|---|---|---|
-| 1 | `node`, `npm`이 PATH에 있고 Node 22 이상 | `node`나 `npm`이 없음, `package.json`의 최소 버전 미만 | Node 22 미만 |
+| 1 | `node`, `npm`이 PATH에 있고 Node 26 이상 | `node`나 `npm`이 없음, Node 26 미만 | |
 | 2 | 마켓플레이스 등록, ref, auto-update | 등록되지 않음, 다른 저장소를 따름 | auto-update 꺼짐, 원격에 `stable`이 있는데 따르지 않음 |
 | 3 | 설치 커밋과 `git ls-remote` 비교 | 설치되지 않음, 원격과 다름 | 원격을 읽지 못함, 원격에 ref가 없음, 플러그인이 비활성화됨 |
 | 4 | 설치본의 `node_modules` | 패키지가 빠져 있음, 설치본이 없음 | |
@@ -266,7 +266,7 @@ Claude Code 2.1.316에서 `claude mcp list`로 서버를 띄워 변수 확장, �
 
 ## CI 검증
 
-`main` push와 PR마다 `check` 잡이 GitHub 호스팅 러너에서 Node 20, 22, 26으로 아래 항목을 순서대로 실행합니다. 매니페스트 검증은 CLI가 요구하는 Node 22 이상에서, 변이 검사는 `.nvmrc`의 Node 26에서만 실행합니다. 클러스터에는 접속하지 않습니다.
+`main` push와 PR마다 `check` 잡이 GitHub 호스팅 러너에서 Node 26(`.nvmrc`) 한 가지로 아래 항목을 순서대로 실행합니다. 변이 검사는 한 번만 실행합니다. 클러스터에는 접속하지 않습니다.
 
 | 항목 | 막는 것 | 로컬 실행 |
 |---|---|---|
@@ -282,7 +282,7 @@ Claude Code 2.1.316에서 `claude mcp list`로 서버를 띄워 변수 확장, �
 
 gitleaks 기본 규칙은 Proxmox 토큰을 찾지 못합니다. 그래서 `.gitleaks.toml`에 전용 규칙을 두었습니다.
 
-Node 버전을 바꿀 때는 `.github/workflows/ci.yml`의 `matrix.node`와 변이 검사 단계의 조건, `plugins/proxmox/package.json`의 `engines`, `.nvmrc`를 함께 고칩니다. 서로 어긋나면 `npm test`가 실패합니다.
+Node 버전을 바꿀 때는 `.github/workflows/ci.yml`의 `matrix.node`, `plugins/proxmox/package.json`의 `engines`, `.nvmrc`, `plugins/proxmox/scripts/doctor.sh`의 `MIN_NODE_MAJOR`, `doctor-checks.mjs`의 `NODE_MAJOR`를 함께 고칩니다. 레그를 늘리면 변이 검사 단계에 `.nvmrc` 버전 조건도 붙입니다. 서로 어긋나면 `npm test`가 실패합니다.
 
 ## 문서
 

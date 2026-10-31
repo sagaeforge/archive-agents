@@ -8,8 +8,8 @@ set -euo pipefail
 
 # Resolved first, so that a link to this script finds its neighbours.
 SCRIPTS="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
-MIN_NODE_MAJOR=20 # engines in package.json, which a test holds this to.
-ACTION="Install Node 22 or newer with npm, on the PATH Claude Code starts with."
+MIN_NODE_MAJOR=26 # engines in package.json, which a test holds this to.
+ACTION="Install Node 26 or newer with npm, on the PATH Claude Code starts with."
 
 version=$(node --version 2>/dev/null) || version=""
 major=${version#v}

@@ -120,7 +120,12 @@ test("the mutation check's control has room for the whole suite, inside the job'
   assert.match(source, /runTests\(copyRepository\(root, "control"\), null, CONTROL_TIMEOUT_MS\)/);
 });
 
-test("the mutation check runs on one leg of CI, the Node version in .nvmrc", () => {
-  const [, condition] = read(".github/workflows/ci.yml").match(/^ +- if: (.+)\n +run: node test\/mutation\.mjs$/m);
-  assert.equal(condition, `github.event_name != 'schedule' && matrix.node == ${Number(read(".nvmrc"))}`);
+test("the mutation check runs once in CI, on the Node version in .nvmrc", () => {
+  const ci = read(".github/workflows/ci.yml");
+  const [, condition] = ci.match(/^ +- if: (.+)\n +run: node test\/mutation\.mjs$/m);
+  const nvmrc = Number(read(".nvmrc"));
+  const versions = ci.match(/^\s+node: \[([\d, ]+)\]$/m)[1].split(",").map(Number);
+  // A lone leg is the .nvmrc one by itself. With more legs, the condition has to pick it out.
+  const alone = versions.length === 1 && versions[0] === nvmrc;
+  assert.equal(condition, alone ? "github.event_name != 'schedule'" : `github.event_name != 'schedule' && matrix.node == ${nvmrc}`);
 });

@@ -22,7 +22,7 @@ const STABLE_REF = `refs/heads/${STABLE}`;
 // GitHub's own addresses for the repository. The path alone would pass any host that copied it.
 const REPO_URL = new RegExp(`^(?:https://(?:[^/@]+@)?github\\.com/|ssh://git@github\\.com/|git@github\\.com:)${REPO}(?:\\.git)?/?$`);
 
-const NODE_MAJOR = 22;
+const NODE_MAJOR = 26;
 const SHARED_TOKEN_ID = "mcp";
 const MACHINE_TOKEN_DAYS = 365;
 const RUNNER_TOKEN_DAYS = 180;
@@ -140,7 +140,7 @@ async function checkToolchain() {
   const versions = `node ${node.stdout.trim()}, npm ${npm.stdout.trim()}`;
   const major = Number(node.stdout.match(/\d+/)?.[0]);
   if (major >= NODE_MAJOR) return pass(`${versions}.`);
-  return warn(`${versions}: older than Node ${NODE_MAJOR}.`, { action: INSTALL_NODE });
+  return fail(`${versions}: older than Node ${NODE_MAJOR}.`, { action: INSTALL_NODE });
 }
 
 // How this machine reaches the remote, read as a plain file: git is not run inside the clone.

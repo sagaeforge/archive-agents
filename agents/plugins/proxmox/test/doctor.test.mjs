@@ -129,7 +129,7 @@ function buildSandbox(t, port, scenario) {
     runners = [{ name: "pve-runner-01", status: "online" }],
     runs = [{ status: "completed", conclusion: "success" }],
     without = [],
-    nodeVersion = "v24.0.0",
+    nodeVersion = "v26.0.0",
     separateConfigDir = false,
     separatePluginsDir = false,
     env = {},
@@ -574,7 +574,7 @@ test("with no node on PATH, doctor.sh answers the first check itself", async (t)
 
   assert.equal(status, 2);
   assert.match(stdout, /^ 1 {2}fail {2}Node and npm {2}node is not on PATH/);
-  assert.match(stdout, /Install Node 22 or newer/);
+  assert.match(stdout, /Install Node 26 or newer/);
 });
 
 test("with no node on PATH, --json is still JSON", async (t) => {
@@ -593,7 +593,7 @@ test("a node below the plugin's minimum stops at doctor.sh", async (t) => {
   const { status, report, server } = await runDoctor(t, { nodeVersion: "v18.20.0" });
 
   assert.equal(status, 2);
-  assert.match(check(report, 1).summary, /^node 18 is older than the plugin's minimum, Node 20\.$/);
+  assert.match(check(report, 1).summary, /^node 18 is older than the plugin's minimum, Node 26\.$/);
   assert.deepEqual(server.requests, []);
 });
 
@@ -628,15 +628,18 @@ test("the doctor looks where the server looks", () => {
 
 scenarios([
   {
-    name: "a Node the plugin allows but below 22 warns",
-    nodeVersion: "v20.11.1",
-    statuses: { 1: "warn" },
-    exitCode: 1,
-    expect: wantedAt(1, "summary", /^node v20\.11\.1, npm 11\.20\.0: older than Node 22\.$/),
+    name: "a Node below 26 fails the first check, even past doctor.sh",
+    // doctor.sh stops an older Node before doctor.mjs runs, so this runs doctor.mjs directly.
+    script: process.execPath,
+    args: [join(SCRIPTS, "doctor.mjs"), "--json"],
+    nodeVersion: "v22.0.0",
+    statuses: { 1: "fail" },
+    exitCode: 2,
+    expect: wantedAt(1, "summary", /^node v22\.0\.0, npm 11\.20\.0: older than Node 26\.$/),
   },
   {
-    name: "Node 22 passes",
-    nodeVersion: "v22.0.0",
+    name: "Node 26 passes",
+    nodeVersion: "v26.0.0",
     statuses: {},
     exitCode: 0,
   },

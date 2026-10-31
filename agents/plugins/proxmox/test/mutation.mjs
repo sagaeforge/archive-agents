@@ -85,7 +85,7 @@ const MUTANTS = [
   { id: "B1", breaks: "a reply with no token counts as proof, and another machine's token goes", file: BOOTSTRAP, from: 'if [[ ! $secret =~ ^[0-9A-Za-z-]+$ ]]; then\n  die "$SSH_HOST', to: 'ISSUED_ID=$NEW_ID\nif [[ ! $secret =~ ^[0-9A-Za-z-]+$ ]]; then\n  die "$SSH_HOST', tests: BOOTSTRAP_PROOF_TESTS },
   { id: "B2", breaks: "a signal can cut the cleanup short", file: BOOTSTRAP, from: 'die() {\n  HOLD_SIGNALS=true\n', to: "die() {\n", tests: BOOTSTRAP_SIGNAL_TESTS },
   { id: "W1", breaks: "a wait that ignores TERM outlives its limit", file: "../../.claude/hooks/team-watcher-wait.mjs", from: '    "-k",\n    String(KILL_AFTER_SECONDS),\n', to: "", tests: ["../../.claude/hooks/team-watcher-wait.test.mjs"] },
-  { id: "R1", breaks: "CI runs the mutation check on every leg", file: CI, from: "- if: github.event_name != 'schedule' && matrix.node == 26\n", to: "- if: github.event_name != 'schedule'\n", tests: RULE_TESTS },
+  { id: "R1", breaks: "CI gains a second leg, and the mutation check runs on both", file: CI, from: "        node: [26]\n", to: "        node: [26, 28]\n", tests: RULE_TESTS },
   { id: "R2", breaks: "CI installs an action by tag", file: CI, from: "actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0\n        with:\n          node-version: ${{ matrix.node }}", to: "actions/setup-node@v7\n        with:\n          node-version: ${{ matrix.node }}", tests: RULE_TESTS },
   { id: "R3", breaks: "CI stops scanning for secrets", file: CI, from: "      - run: .github/scripts/gitleaks.sh\n", to: "", tests: RULE_TESTS },
   { id: "R4", breaks: "check gets more time instead of staying fast", file: CI, from: "    timeout-minutes: 15\n", to: "    timeout-minutes: 45\n", tests: RULE_TESTS },
