@@ -23,11 +23,14 @@ test("every hook on disk is registered, and nothing runs after a Write", () => {
   assert.deepEqual(onDisk, ["rtk-rewrite.sh", "trail-context.sh"]);
 });
 
+// The one place the hooks may name Trail's own files: to stay away from them.
+const standDown = /^\[ ! -e "\$root\/[^"]+" \] \|\| exit 0$|^ *\*[^)]*\) exit 0 ;;$/;
+
 test("no hook can start Trail's self-heal", () => {
   assert.equal(settings.hooks.SessionStart, undefined);
   for (const script of scripts) {
     const source = fs.readFileSync(path.join(hooksDir, script), "utf8");
-    const code = source.split("\n").filter((line) => !line.trimStart().startsWith("#")).join("\n");
+    const code = source.split("\n").filter((line) => !line.trimStart().startsWith("#") && !standDown.test(line)).join("\n");
     assert.doesNotMatch(code, /\bsession-start\b|\bhook\.cjs\b|trail-hooks|graft-hooks/, script);
     assert.doesNotMatch(code, /"\$trail" (?!ask\b|build\b|\])/, `${script} may only call trail ask and trail build`);
     assert.doesNotMatch(code, /\btrail (init|mcp|upgrade|note)\b|\brtk init\b|\bnpx\b|\bnpm\b/, script);
@@ -139,6 +142,17 @@ test("the guide states what could surprise someone once the hooks are on", () =>
     // What stands Trail down.
     "`.trail/`이 있으면 Trail 훅이 멈춥니다",
     "`graft/workspace.json`",
+    "`.claude/helpers/trail-hooks.cjs`",
+    "`.claude/skills/trail/SKILL.md`",
+    "`/.trail/hook.cjs`",
+    "`.git`이 없어도 Trail 훅이 멈춥니다",
+    // A planted parse memo, and what still stands after the fix.
+    "`--no-reuse`로 파일을 모두 다시 읽고",
+    "직접 실행한 `trail build`는 캐시를 그대로 재사용하므로",
+    "잘못된 코드 위치로 출력될 수 있습니다",
+    // What the context filter stops, and what it does not.
+    "코드처럼 생긴 항목만 넣습니다",
+    "식별자 모양으로 쓴 문구는 막지 못합니다",
     // When they take effect.
     "재시작 없이",
     "6초",
@@ -158,6 +172,8 @@ test("the guide makes no promise the hooks cannot keep", () => {
   const guide = read("docs/project-tools.md");
   assert.doesNotMatch(guide, /프로젝트 파일은 데이터로만 다룹니다/);
   assert.doesNotMatch(guide, /trail-sync|Write, Edit, MultiEdit 후/);
+  assert.doesNotMatch(guide, /가짜 훅 출력 줄을 만들 수 없습니다/);
+  assert.doesNotMatch(guide, /프로젝트 파일이 Trail을 통해 프로젝트 밖에 쓰거나 명령을 실행하지 못합니다/);
 });
 
 test("the guide no longer promises rtk's state line", () => {

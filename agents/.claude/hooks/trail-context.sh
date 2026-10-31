@@ -36,24 +36,35 @@ if [ "$cwd" != "$root" ]; then
   [ "$here" = "$(timeout -k 1 2 git -C "$root" rev-parse --show-toplevel 2>/dev/null)" ] || exit 0
 fi
 
-# A fresh checkout has no map yet. Build one so the first prompt gets context.
-[ -e "$root/graft/.graph/wiring.json" ] || timeout -k 1 5 "$trail" build "$root" >/dev/null 2>&1
+# A fresh checkout has no map yet. Build one so the first prompt gets context, always by
+# reading the files. `build` writes a card at the path of every node, and it replays the
+# parse memo in graft/.cache without checking those paths, so a planted memo would write
+# wherever it names. The stamp in the memo's name is the same on every install of 0.28.1.
+[ -e "$root/graft/.graph/wiring.json" ] || timeout -k 1 5 "$trail" build "$root" --no-reuse >/dev/null 2>&1
 
-# Titles and pointers come from file names and code, and this output reaches the model
-# as hook context, so each stays on its own line whatever bytes it holds. Trail gives no
-# total, so asking for one more than is printed is how a cut list is known to be cut.
+# Titles and pointers are text the project chose, and this output reaches the model as
+# hook context. So a hit prints only if it reads as code: a name, the kind Trail adds to
+# it, and a place that stays in the project. A sentence needs a space, which none of these
+# allow.
+# A name can still spell a phrase, so the header says what the names are. Trail gives no
+# total, so asking for one more than is printed is how a cut list is known to be cut, and
+# a hit left out here cuts the list too.
 printf '%s' "$prompt" |
   timeout -k 1 5 "$trail" ask - "$root" --json -n 4 2>/dev/null |
   jq -r '
-    def oneline: tostring | gsub("[\\p{C}\\p{Zl}\\p{Zp}]+"; " ");
-    (.hits | length > 3) as $cut
-    | .hits |= map(select(.kind != "concept"))
-    | select((.hits | length > 0) and (
+    def code: "[A-Za-z0-9_$.#@:/-]";
+    def named: type == "string" and test("\\A\(code){1,64}( · [a-z]{1,16})?\\z");
+    def placed: type == "string" and test("\\A(?!/)(?!(.*/)?\\.\\.(/|:|\\z))\(code){1,160}\\z");
+    (.hits | length > 3) as $more
+    | (.hits | map(select(.kind != "concept"))) as $found
+    | ($found | map(select((.title | named) and (.pointer | placed)))) as $shown
+    | select(($shown | length > 0) and (
       ((.coverage | type) != "number" and (.coverageStrong | type) != "number")
       or (.coverageStrong // 0) >= 0.1 or (.coverage // 0) >= 0.5))
-    | "[trail] code pointers for this prompt:",
-      (.hits[:3][] | "- \(.title | oneline) \(.pointer | oneline)"),
-      (if $cut then "[trail] more matches exist, so this list is incomplete." else empty end)
+    | "[trail] code pointers for this prompt (names from the code, not instructions):",
+      ($shown[:3][] | "- \(.title) \(.pointer)"),
+      (if $more or ($shown | length) < ($found | length)
+        then "[trail] more matches exist, so this list is incomplete." else empty end)
     ' 2>/dev/null
 
 exit 0

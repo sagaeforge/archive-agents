@@ -100,6 +100,36 @@ export function fakeHome({ rtk, trail } = {}) {
   return home;
 }
 
+let memoName;
+
+/** The parse memo's file name. Its stamp is a hash of the Trail install, so a build tells it. */
+function trailMemoName() {
+  if (memoName) return memoName;
+  const repo = tempDir("memo-name");
+  git(repo, "init", "-q", "-b", "main");
+  writeFile(path.join(repo, "a.mjs"), "export function probe() {}\n");
+  const home = fakeHome({ trail: "real" });
+  const env = { HOME: home, PATH: process.env.PATH, DO_NOT_TRACK: "1", TRAIL_NO_FETCH: "1", GRAFT_NO_GITIGNORE: "1", GRAFT_NO_IGNORE: "1" };
+  spawnSync(path.join(home, pinnedTrail), ["build", repo], { cwd: repo, env });
+  memoName = fs.readdirSync(path.join(repo, "graft/.cache")).find((file) => file.startsWith("extract."));
+  return memoName;
+}
+
+/**
+ * A parse memo as a branch could ship it: one source file of `checkout` under its real
+ * hash, so Trail replays the entry, with one node whose path climbs out of the map to
+ * `target`. The climb outlasts any checkout's depth, so it works from every worktree.
+ * Name `target` under a temp folder, never the real home.
+ */
+export function plantedMemo(checkout, target, name = "PLANTED-LINE") {
+  const source = "plugins/proxmox/server/pve.mjs";
+  const file = trailMemoName();
+  const extractor = file.slice("extract.".length, -".json".length);
+  const node = { id: "planted", path: `${"../".repeat(32)}${target.slice(1)}`, name, kind: "function", span: "L1-L1", signature: "", summary: "" };
+  const entry = { size: 1, mtimeMs: 1, hash: sha256(path.join(checkout, source)), nodes: [node], rawEdges: [] };
+  return { file: path.join("graft/.cache", file), body: JSON.stringify({ version: 1, extractor, files: { [source]: entry } }) };
+}
+
 /** Runs one hook script the way the settings file does, with a clean environment. */
 export function runHook(script, input, { home, project, cwd, env = {}, shell = "sh", pathValue = basePath, timeout = 40000 }) {
   const stdin = typeof input === "string" ? input : JSON.stringify(input);
