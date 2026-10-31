@@ -74,6 +74,8 @@ const MUTANTS = [
   { id: "T5", breaks: "the token reaches a tool's error", file: "server/pve.mjs", from: 'detail: `${host}: ${code === "TLS_VERIFY" ? err.code : err.message || err.code}`', to: "detail: `${host}: ${token}`", tests: TOKEN_TESTS },
   { id: "T6", breaks: "the server prints to stdout", file: "server/log.mjs", from: "process.stderr.write(line)", to: "process.stdout.write(line)", tests: TOKEN_TESTS },
   { id: "T12", breaks: "a whole token with no UUID in it reaches the log", file: "server/log.mjs", from: "const TOKEN_SHAPED = /=|", to: "const TOKEN_SHAPED = /", tests: TOKEN_TESTS },
+  { id: "T13", breaks: "an unknown node is named back to the caller", file: "server/tools.mjs", from: "`That is not a node of this cluster.", to: '`"${node}" is not a node of this cluster.', tests: TOKEN_TESTS },
+  { id: "T14", breaks: "the token in a reason PVE gives reaches the reply", file: "server/pve.mjs", from: "safeReason(failureReason(res), token)", to: "failureReason(res)", tests: TOKEN_TESTS },
   { id: "T7", breaks: "an encoded token reaches the log", file: "server/log.mjs", from: "text = decodeURIComponent(text)", to: "text = text", tests: TOKEN_TESTS },
   { id: "T8", breaks: "a long path breaks the bound on the log", file: "server/log.mjs", from: "path.length > MAX_PATH_LENGTH || ", to: "", tests: TOKEN_TESTS },
   { id: "T9", breaks: "a FIFO at the log path hangs the server", file: "server/log.mjs", from: "    if (stat && !stat.isFile()) return; // Opening a FIFO nobody reads would block the whole server.\n", to: "", tests: named("not a file", "test/errors.test.mjs") },

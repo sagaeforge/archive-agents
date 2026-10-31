@@ -219,3 +219,55 @@ test("a refused call does not repeat its input, token or not, in the reply", asy
   }
   assert.deepEqual(httpsRequests(), []);
 });
+
+// A name the caller chose can reach a reply by two routes: the server's own wording, and PVE
+// repeating the request in its reason. Both are shut here on the real entry point, with the same
+// synthetic secret in the node, the path and the parameter.
+describe("a reply does not repeat what the caller sent", { concurrency: true }, () => {
+  const MEMBERS = [
+    { type: "node", id: "node/n1", name: "n1", online: 1 },
+    { type: "node", id: "node/n2", name: "n2", online: 1 },
+  ];
+  const lookup = (res, status, body) => reply(res, status, "x", body);
+  // A failed read of the node, and a member list that does not hold it.
+  const nodeIsUnknown = (req, res) =>
+    req.url.endsWith("/cluster/status") ? lookup(res, 200, { data: MEMBERS }) : lookup(res, 500, { data: null });
+
+  async function ask(t, answer, name, args) {
+    const server = await startFakePve(t, ca.issue(LOOPBACK), answer);
+    const caFile = join(tempDir(t), "ca.pem");
+    writeFileSync(caFile, ca.cert);
+    const { client } = await startEntryPoint(t, { token: TOKEN, port: server.port, env: { PVE_CA_FILE: caFile } });
+    const result = await client.callTool({ name, arguments: args });
+    assert.equal(result.isError, true, name);
+    return result.content[0].text;
+  }
+
+  for (const [name, args] of [
+    ["node_status", { node: SECRET }],
+    ["guest_config", { node: SECRET, vmid: 100 }],
+  ]) {
+    test(`${name} names the cluster's nodes and not the node it was given`, async (t) => {
+      const text = await ask(t, nodeIsUnknown, name, args);
+      assert.match(text, /^NODE_NOT_FOUND: .* Its nodes are n1, n2\.$/);
+      assert.ok(!text.includes(SECRET), text);
+    });
+  }
+
+  test("a reason PVE gives that repeats the token is cut before it is relayed", async (t) => {
+    const echo = (req, res) =>
+      lookup(res, 400, {
+        errors: { node: `value '${SECRET}' does not match; got ${encodeURIComponent(TOKEN)} and ${TOKEN}` },
+      });
+    const text = await ask(t, echo, "api_get", { path: "/nodes/n1/status", params: { node: SECRET } });
+    assert.match(text, /^PVE API 400: /);
+    assert.match(text, /does not match/);
+    for (const form of [SECRET, TOKEN, encodeURIComponent(TOKEN)]) assert.ok(!text.includes(form), text);
+  });
+
+  test("a reason PVE gives has a bound", async (t) => {
+    const long = (_req, res) => lookup(res, 500, { errors: { path: "a".repeat(100_000) } });
+    const text = await ask(t, long, "api_get", { path: "/nodes/n1/status" });
+    assert.ok(text.length < 2000, `${text.length} characters`);
+  });
+});

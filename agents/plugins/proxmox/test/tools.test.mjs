@@ -166,7 +166,7 @@ const CLUSTER = [
   { type: "node", id: `node/${NODE}`, name: NODE, online: 1 },
 ];
 const unknownNode = (name) =>
-  failure(`NODE_NOT_FOUND: "${name}" is not a node of this cluster. Its nodes are pve-node, pve-node.`);
+  failure(`NODE_NOT_FOUND: That is not a node of this cluster. Its nodes are pve-node, pve-node.`);
 
 const stall = () => new Promise(() => {});
 const paths = (pve) => pve.calls.map(({ path }) => path);

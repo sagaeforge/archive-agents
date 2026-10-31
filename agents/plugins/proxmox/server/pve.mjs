@@ -180,6 +180,22 @@ function failureReason({ reason, body }) {
   return details.length > 0 ? `${reason} (${details.join("; ")})` : reason;
 }
 
+const REASON_LIMIT = 1000;
+const MIN_SECRET_LENGTH = 8;
+
+// PVE can repeat what it was asked for in its reason: a path, a parameter's value, a node name. The
+// caller chose those, so they can hold the token, and the reply is kept. The token is taken out
+// wherever it appears, plain or percent-encoded, and the rest is cut to a bound.
+function safeReason(reason, token) {
+  const secret = token.slice(token.lastIndexOf("=") + 1);
+  let text = reason;
+  for (const form of [token, encodeURIComponent(token), secret, encodeURIComponent(secret)]) {
+    // A real secret is a UUID. A stub of a few characters would also match ordinary words.
+    if (form.length >= MIN_SECRET_LENGTH) text = text.split(form).join("<redacted>");
+  }
+  return text.length > REASON_LIMIT ? `${text.slice(0, REASON_LIMIT)}…` : text;
+}
+
 function allHostsFailed(failures) {
   const codes = new Set(failures.map(({ code }) => code));
   const code = codes.size === 1 ? [...codes][0] : "UNREACHABLE";
@@ -224,7 +240,7 @@ export function createClient({ hosts, getToken, transport, log = () => {} }) {
           }
           preferred = index;
           outcome.status = res.status;
-          if (res.status !== 200) throw new PveApiError(res.status, failureReason(res));
+          if (res.status !== 200) throw new PveApiError(res.status, safeReason(failureReason(res), token));
           return envelope.data;
         }
         throw allHostsFailed(failures);

@@ -103,7 +103,7 @@ for (const [name, args, readUrl] of unknownNodeReads) {
     assert.deepEqual(
       result,
       failure(
-        'NODE_NOT_FOUND: "no-such-node" is not a node of this cluster. Its nodes are pve-node, pve-node, pve-node.',
+        'NODE_NOT_FOUND: That is not a node of this cluster. Its nodes are pve-node, pve-node, pve-node.',
       ),
     );
     assert.ok(elapsed < HOST_TIMEOUT_MS, `took ${elapsed} ms`);

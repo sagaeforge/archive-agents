@@ -38,7 +38,8 @@ async function assertClusterNode(pve, node) {
   if (nodes.length > 0 && !nodes.includes(node)) {
     throw new PveRequestError(
       "NODE_NOT_FOUND",
-      `"${node}" is not a node of this cluster. Its nodes are ${nodes.sort().join(", ")}.`,
+      // The node is left out: the caller chose it, so it can hold a token, and the reply is kept.
+      `That is not a node of this cluster. Its nodes are ${nodes.sort().join(", ")}.`,
     );
   }
 }
