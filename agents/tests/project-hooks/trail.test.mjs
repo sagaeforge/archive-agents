@@ -116,7 +116,19 @@ test("every Trail call runs with telemetry, fetches, look-back, and its home off
   const box = setup({ map: false });
   runHook(context, prompt(question), box);
   const env = fs.readFileSync(path.join(box.home, "trail.env"), "utf8").split("\n");
-  for (const line of ["DO_NOT_TRACK=1", "TRAIL_NO_FETCH=1", "TRAIL_NO_LOOK_BACK=1", "GRAFT_NO_IGNORE=1", "TRAIL_HOME=/dev/null/trail"]) {
+  for (const line of [
+    "DO_NOT_TRACK=1",
+    "TRAIL_NO_FETCH=1",
+    "TRAIL_NO_LOOK_BACK=1",
+    "GRAFT_NO_IGNORE=1",
+    "TRAIL_HOME=/dev/null/trail",
+    "DOTENV_PATH=/dev/null",
+    "GIT_CONFIG_COUNT=2",
+    "GIT_CONFIG_KEY_0=core.fsmonitor",
+    "GIT_CONFIG_VALUE_0=false",
+    "GIT_CONFIG_KEY_1=core.hooksPath",
+    "GIT_CONFIG_VALUE_1=/dev/null",
+  ]) {
     assert.ok(env.includes(line), line);
   }
 });
@@ -290,6 +302,72 @@ test("a repo note stands the hooks down, they touch nothing, and removing .trail
   fs.rmSync(path.join(project, ".trail"), { recursive: true });
   assert.match(runHook(context, prompt(lookup), { home, project }).stdout, /createClient/);
   assert.deepEqual(snapshotDiff(homeBefore, snapshot(home)), []);
+});
+
+// Files a session can write without a shell, each aimed at a git child of Trail.
+const monitor = (canary) => `[core]\n\trepositoryformatversion = 0\n\tbare = false\n\tfsmonitor = touch ${canary}; true\n`;
+
+function plantRepo(dir, canary) {
+  writeFile(path.join(dir, "HEAD"), "ref: refs/heads/main\n");
+  fs.mkdirSync(path.join(dir, "objects"), { recursive: true });
+  fs.mkdirSync(path.join(dir, "refs"), { recursive: true });
+  writeFile(path.join(dir, "config"), monitor(canary));
+}
+
+const gitRoutes = {
+  ".env": (project, canary) => writeFile(path.join(project, ".env"), `GIT_CONFIG_COUNT=1\nGIT_CONFIG_KEY_0=core.fsmonitor\nGIT_CONFIG_VALUE_0=touch ${canary}; true\n`),
+  ".env with git's other config variable": (project, canary) => writeFile(path.join(project, ".env"), `GIT_CONFIG_PARAMETERS="'core.fsmonitor=touch ${canary}; true'"\n`),
+  ".git/config": (project, canary) => fs.appendFileSync(path.join(project, ".git/config"), `[core]\n\tfsmonitor = touch ${canary}; true\n`),
+  ".git file pointing at a planted repository": (project, canary) => {
+    const planted = path.join(project, "scratch/gd");
+    plantRepo(planted, canary);
+    fs.rmSync(path.join(project, ".git"), { recursive: true });
+    writeFile(path.join(project, ".git"), `gitdir: ${planted}\n`);
+  },
+  "nested repo": (project, canary) => {
+    plantRepo(path.join(project, "scratch/nested/.git"), canary);
+    writeFile(path.join(project, ".graft/config.json"), `{"followNestedRepos":true}\n`);
+  },
+};
+
+for (const [route, plant] of Object.entries(gitRoutes)) {
+  test(`${route}: a project file cannot run a command through Trail's git`, realOnly, () => {
+    const dir = tempDir("trail-route");
+    const project = copyRepo(path.join(dir, "repo"));
+    const home = fakeHome({ trail: "real" });
+    const canary = path.join(dir, "fired");
+    plant(project, canary);
+
+    // The check can fail: Trail as a person runs it does fire the command.
+    assert.equal(byHand(home, project, "build", project).status, 0);
+    assert.equal(fs.existsSync(canary), true, "the route must work without the hook's environment");
+    fs.rmSync(canary);
+    fs.rmSync(path.join(project, "graft"), { recursive: true, force: true });
+
+    const asked = runHook(context, prompt(lookup), { home, project });
+    assert.deepEqual({ rc: asked.rc, fired: fs.existsSync(canary) }, { rc: 0, fired: false });
+    assert.match(asked.stdout, /createClient/, "the map still builds and answers");
+    const synced = runHook(sync, edit(path.join(project, "README.md")), { home, project });
+    assert.deepEqual({ rc: synced.rc, fired: fs.existsSync(canary) }, { rc: 0, fired: false });
+  });
+}
+
+test("a project .env cannot move Trail's output into a global folder", realOnly, () => {
+  const dir = tempDir("trail-graft-dir");
+  const project = copyRepo(path.join(dir, "repo"));
+  const home = fakeHome({ trail: "real" });
+  fs.mkdirSync(path.join(home, ".claude"));
+  writeFile(path.join(project, ".env"), `GRAFT_DIR=${home}/.claude/planted\n`);
+
+  const before = snapshot(home);
+  assert.match(runHook(context, prompt(lookup), { home, project }).stdout, /createClient/);
+  assert.equal(runHook(sync, edit(path.join(project, ".env")), { home, project }).rc, 0);
+  assert.deepEqual(snapshotDiff(before, snapshot(home)), []);
+  assert.ok(fs.existsSync(path.join(project, "graft/.graph/wiring.json")), "the map stays in the project");
+
+  // The check can fail: Trail as a person runs it writes into the fake ~/.claude.
+  assert.equal(byHand(home, project, "build", project).status, 0);
+  assert.ok(fs.existsSync(path.join(home, ".claude/planted")), "the route must work without the hook's environment");
 });
 
 test("real Trail stays quiet on a Korean prompt with no code terms", realOnly, () => {

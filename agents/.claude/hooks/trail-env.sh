@@ -26,3 +26,12 @@ export DO_NOT_TRACK=1 TRAIL_NO_FETCH=1 TRAIL_NO_LOOK_BACK=1 GRAFT_NO_IGNORE=1
 # workspace also _trail-sync. Here it finds no notes and no connection, and nothing
 # can be written.
 export TRAIL_HOME=/dev/null/trail
+
+# Project files stay data. Trail loads <cwd>/.env and its git children inherit the
+# result, so one plain file could run a command through core.fsmonitor or send the
+# map into ~/.claude with GRAFT_DIR. The repo's own git config can reach the same
+# git, so these are the settings Claude Code forces on its own git calls.
+export DOTENV_PATH=/dev/null
+export GIT_CONFIG_COUNT=2 \
+  GIT_CONFIG_KEY_0=core.fsmonitor GIT_CONFIG_VALUE_0=false \
+  GIT_CONFIG_KEY_1=core.hooksPath GIT_CONFIG_VALUE_1=/dev/null
