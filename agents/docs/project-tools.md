@@ -17,6 +17,8 @@
 - `bypassPermissions` 모드입니다. 다른 모드에서 바꾸면 자동 승인되던 `git status`에 승인 요청이 뜹니다.
 - 작업 폴더가 프로젝트 루트입니다. rtk는 저장소 루트 기준 경로를 출력하므로, 하위 폴더에서는 다른 파일을 가리킬 수 있습니다. `cd`로 옮긴 뒤에도 마찬가지입니다.
 - `.claude/worktrees/` 밖입니다. 그 안에서는 Claude Code의 격리 가드가 `rtk git`을 거부합니다. 그래서 격리된 에이전트와 `--worktree` 세션에서는 rtk가 아무것도 바꾸지 않습니다.
+- 진행 중인 작업이 없습니다. merge, rebase, cherry-pick, revert, am, bisect 중이면 바꾸지 않습니다. rtk는 상태를 한 줄만 보여 주고, 범위 cherry-pick이나 revert가 멈춘 상태를 알아보지 못해 적용되지 않은 커밋이 남아 있어도 `clean`이라고 출력합니다.
+- 저장소 루트에 이름에 `HEAD detached `가 들어간 파일이 없습니다. rtk가 파일 이름을 분리된 HEAD 표시로 오해해 브랜치와 ahead/behind 대신 그 이름을 출력합니다.
 
 `git diff`, `git log`, git 내부 명령, `gh`, `npm test`, `claude plugin validate`, `orca-ide`, `ls`, `tree`, `find`는 바꾸지 않습니다.
 
@@ -29,7 +31,7 @@
 
 **실제 실행 형태는 `timeout ... rtk git status || git status`입니다.** rtk가 실패하거나 5초 안에 끝나지 않으면 원본이 실행되고 그 종료 코드가 결과가 됩니다. 원본이 하위 명령으로 남으므로 어디에 정의된 deny, ask 규칙이든 그대로 적용됩니다. PostToolUse 훅이나 Orca에는 이 형태로 보입니다.
 
-**출력에서 달라지는 점:** 브랜치, upstream 대비 ahead/behind, 변경 파일, 충돌은 그대로 보이고, merge, rebase, cherry-pick, bisect가 진행 중이라는 사실도 표시됩니다. 사라지는 것은 git의 안내 문구, 진행 중인 작업의 세부 정보(rebase 중인 브랜치와 대상, 남은 작업, cherry-pick 커밋, bisect 시작 브랜치), 서브모듈 변경의 세부 내용, stderr 경고입니다. 재작성할 때마다 모델에게 원본 보는 방법을 알립니다.
+**출력에서 달라지는 점:** 브랜치, upstream 대비 ahead/behind, 변경 파일, 충돌은 그대로 보입니다. 사라지는 것은 git의 안내 문구, sparse checkout 비율, 서브모듈 변경의 세부 내용, stderr 경고, `status.showStash`를 켠 경우의 stash 개수입니다. 재작성할 때마다 모델에게 원본 보는 방법을 알립니다.
 
 ## Trail
 
@@ -37,6 +39,7 @@ Trail 훅은 모든 모드에서 동작합니다.
 
 - Trail은 영어 토큰으로 찾습니다. 한글만 있는 프롬프트에는 대개 아무것도 추가되지 않습니다. 파일명이나 심볼 이름을 함께 쓰면 찾습니다.
 - 훅은 `ask`와 `build`만 실행하고 노트를 읽지도 보여 주지도 않습니다. `TRAIL_HOME`을 존재할 수 없는 경로로 지정하므로 `~/.trail`을 읽지도 쓰지도 않습니다.
+- 프로젝트 파일은 데이터로만 다룹니다. 훅에서는 Trail이 `.env`를 읽지 않고, Trail이 실행하는 git에서는 저장소의 `core.fsmonitor`와 `core.hooksPath`가 꺼집니다. 직접 실행하는 `trail`에는 이 보호가 없습니다.
 
 `trail note`는 직접 실행할 때만 동작합니다.
 
@@ -47,6 +50,7 @@ Trail 훅은 모든 모드에서 동작합니다.
 
 - 프로젝트 훅은 세션을 시작한 폴더의 `.claude/settings.json`에서 읽습니다. `plugins/proxmox`처럼 하위 폴더에서 시작하면 동작하지 않습니다.
 - 대화형 세션은 폴더 신뢰를 승인해야 훅이 실행됩니다. `claude -p`는 이 확인 없이 실행합니다.
+- 훅이 실행하는 것은 모두 파일입니다. `bypassPermissions`에서는 Write 도구로 `.claude/hooks/`의 스크립트나 rtk, Trail 설치 파일을 고칠 수 있고, 고친 내용은 다음 훅에서 셸로 실행됩니다. Bash를 막아도 이 경로는 막히지 않습니다. 막으려면 해당 경로에 `Edit` deny 규칙이 필요하며, 이 저장소는 권한 규칙을 넣지 않습니다. `acceptEdits`는 `.claude/hooks/` 쓰기를 거부합니다.
 
 ## 끄는 방법
 
@@ -73,7 +77,7 @@ TRAIL_NO_HOOKS=1 claude   # Trail 훅 둘 다
 RTK_DISABLED=1 git status
 ```
 
-`git status | cat`처럼 파이프를 붙이거나 `git status --long`처럼 옵션을 줘도 원본입니다. rtk의 복구 기록(recall)은 꺼 두었으므로 `rtk recall`은 쓸 수 없습니다.
+`git status | cat`처럼 파이프를 붙이거나 `git status --long`처럼 옵션을 줘도 원본입니다. merge, rebase처럼 진행 중인 작업이 있으면 자동으로 원본이 나옵니다. rtk의 복구 기록(recall)은 꺼 두었으므로 `rtk recall`은 쓸 수 없습니다.
 
 ## 도구가 없는 PC
 
@@ -82,6 +86,7 @@ RTK_DISABLED=1 git status
 - `~/.local/bin/rtk`가 없거나 버전이 1.1.0이 아닌 경우 (rtk 훅)
 - `~/.local/share/trail-code/0.28.1`이 없는 경우 (Trail 훅)
 - `jq`나 `timeout`이 없는 경우 (모든 훅)
+- `git`으로 저장소 상태를 확인하지 못하는 경우 (rtk 훅)
 
 도구가 멈추거나 오류를 내도 같습니다. 제한 시간 안에 끊기고 원래 작업이 계속됩니다. rtk가 `git status`를 실행하다 실패해도 원본이 대신 실행됩니다.
 
@@ -91,10 +96,10 @@ RTK_DISABLED=1 git status
 git rm .claude/settings.json .claude/hooks/rtk-rewrite.sh \
   .claude/hooks/trail-context.sh .claude/hooks/trail-sync.sh .claude/hooks/trail-env.sh
 git rm -r tests/project-hooks docs/project-tools.md
-rm -rf graft .trail
+rm -rf graft .graft .trail
 ```
 
-`.claude/settings.json`에 다른 설정이 생겼다면 파일을 지우지 말고 해당 훅 항목만 지웁니다. `graft`와 `.trail`은 체크아웃마다 따로 있습니다.
+`.claude/settings.json`에 다른 설정이 생겼다면 파일을 지우지 말고 해당 훅 항목만 지웁니다. `graft`, `.graft`, `.trail`은 체크아웃마다 따로 있습니다.
 
 도구까지 지우려면 다음을 실행합니다. `~/.trail`의 개인 노트도 함께 지워지므로 필요하면 먼저 옮겨 둡니다.
 
@@ -116,4 +121,4 @@ rm ~/.local/bin/trail; rm -rf ~/.local/share/trail-code ~/.graft ~/.trail
 sh tests/project-hooks/run.sh
 ```
 
-실제 Claude Code를 가짜 HOME, 네트워크 차단 상태로 실행해 확인합니다(모델은 스크립트로 대체). `bwrap`이나 도구가 없으면 세션 테스트는 건너뜁니다. rtk, Trail-Code, Claude Code를 올린 뒤에는 꼭 다시 실행합니다. 특히 `|| git status` 형태와 `TRAIL_HOME`, `.trail/` 처리는 현재 버전에서 확인한 동작에 의존합니다.
+실제 Claude Code를 가짜 HOME, 네트워크 차단 상태로 실행해 확인합니다(모델은 스크립트로 대체). `bwrap`이나 도구가 없으면 세션 테스트는 건너뜁니다. rtk, Trail-Code, Claude Code를 올린 뒤에는 꼭 다시 실행합니다. 특히 `|| git status` 형태와 `TRAIL_HOME`, `DOTENV_PATH`, `.trail/` 처리, 진행 중인 작업을 건너뛰는 규칙은 현재 버전에서 확인한 동작에 의존합니다.

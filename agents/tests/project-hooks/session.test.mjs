@@ -2,6 +2,7 @@
 // fake HOME over the real one, loopback-only networking, and a scripted model.
 // These prove hook plumbing, not model behaviour.
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
@@ -183,7 +184,7 @@ test("a fresh worktree gets both hooks and writes nothing global", options, (t) 
   }
 });
 
-test("the hooks add one kind of git call, Trail's local file listing", options, () => {
+test("the hooks add three kinds of local git call: Trail's listing, the state check, rtk's status", options, () => {
   const run = (hooksOn) => {
     const box = repoCase("git-delta");
     if (!hooksOn) {
@@ -191,12 +192,12 @@ test("the hooks add one kind of git call, Trail's local file listing", options, 
       git(box.project, "commit", "-qm", "no hooks");
     }
     const cwd = worktree(box);
-    session(box, { cwd, prompt: question, steps: [bash("true"), write(path.join(cwd, "probe.txt"), "x\n")], args: bypass });
+    session(box, { cwd, prompt: question, steps: [bash("git status"), write(path.join(cwd, "probe.txt"), "x\n")], args: bypass });
     return new Set(gitCalls(box));
   };
   const without = run(false);
-  const added = [...run(true)].filter((command) => !without.has(command));
-  assert.deepEqual(added, ["ls-files --cached --others --exclude-standard -z --"]);
+  const added = [...run(true)].filter((command) => !without.has(command)).sort();
+  assert.deepEqual(added, ["ls-files --cached --others --exclude-standard -z --", "rev-parse --absolute-git-dir", "status --porcelain -b"]);
 });
 
 test("the project settings file alone is enough for both hooks", options, () => {
@@ -499,6 +500,150 @@ test("after a cd that persists, git status stays raw and its paths stay true", o
   assert.equal(run.rc, 0, run.stderr);
   assert.deepEqual(rewrites(run), []);
   assert.match(run.results[1].text, /modified: +\.\.\/\.\.\/README\.md/);
+});
+
+test("after a range cherry-pick stops, git status says so instead of clean", options, () => {
+  const box = repoCase("range-pick");
+  const cwd = worktree(box);
+  const file = path.join(cwd, "README.md");
+  const base = fs.readFileSync(file, "utf8");
+  const here = git(cwd, "branch", "--show-current").trim();
+  git(cwd, "switch", "-qc", "topic");
+  fs.writeFileSync(file, `${base}\ntopic edit\n`);
+  git(cwd, "commit", "-qam", "topic one");
+  writeFile(path.join(cwd, "two.txt"), "2\n");
+  git(cwd, "add", "two.txt");
+  git(cwd, "commit", "-qm", "topic two");
+  git(cwd, "switch", "-q", here);
+  fs.writeFileSync(file, `${base}\nmain edit\n`);
+  git(cwd, "commit", "-qam", "main edit");
+  spawnSync("git", ["cherry-pick", "topic~1", "topic"], { cwd });
+  fs.writeFileSync(file, `${base}\nresolved\n`);
+  git(cwd, "add", "README.md");
+  git(cwd, "commit", "-qm", "topic one, resolved");
+
+  const run = session(box, { cwd, steps: [bash("git status")], args: bypass });
+  assert.equal(run.rc, 0, run.stderr);
+  assert.deepEqual(rewrites(run), []);
+  assert.match(run.results[0].text, /Cherry-pick currently in progress\./);
+  assert.equal(fs.existsSync(path.join(cwd, "two.txt")), false, "the second commit is still unapplied");
+});
+
+// A shell through the hooks, with the Bash tool switched off for the whole session.
+const noBash = ["--permission-mode", "bypassPermissions", "--disallowedTools", "Bash"];
+const monitor = (fired) => `[core]\n\trepositoryformatversion = 0\n\tbare = false\n\tfsmonitor = touch ${fired}; true\n`;
+
+const plantedRepo = (dir, fired) => [
+  write(path.join(dir, "HEAD"), "ref: refs/heads/main\n"),
+  write(path.join(dir, "objects/keep"), "x\n"),
+  write(path.join(dir, "refs/keep"), "x\n"),
+  write(path.join(dir, "config"), monitor(fired)),
+];
+
+const read = (file_path) => ({ tool: "Read", input: { file_path } });
+
+const hookRoutes = {
+  ".env": {
+    cwd: worktree,
+    steps: (cwd, fired, box) => [write(path.join(cwd, ".env"), `GIT_CONFIG_COUNT=1\nGIT_CONFIG_KEY_0=core.fsmonitor\nGIT_CONFIG_VALUE_0=touch ${fired}; true\nGRAFT_DIR=${box.home}/.claude/planted\n`)],
+  },
+  ".git/config": {
+    cwd: (box) => box.project,
+    steps: (cwd, fired) => {
+      const config = path.join(cwd, ".git/config");
+      return [read(config), write(config, `${fs.readFileSync(config, "utf8")}[core]\n\tfsmonitor = touch ${fired}; true\n`)];
+    },
+  },
+  ".git file of a linked worktree": {
+    cwd: worktree,
+    steps: (cwd, fired) => {
+      const planted = path.join(cwd, "scratch/gd");
+      return [...plantedRepo(planted, fired), read(path.join(cwd, ".git")), write(path.join(cwd, ".git"), `gitdir: ${planted}\n`)];
+    },
+  },
+  "nested repo": {
+    cwd: worktree,
+    steps: (cwd, fired) => [...plantedRepo(path.join(cwd, "scratch/nested/.git"), fired), write(path.join(cwd, ".graft/config.json"), `{"followNestedRepos":true}\n`)],
+  },
+};
+
+// Strips the two exports under test, so a control shows the route is live.
+const unharden = (cwd) => {
+  const file = path.join(cwd, ".claude/hooks/trail-env.sh");
+  const source = fs.readFileSync(file, "utf8");
+  const stripped = source.replace(/^export DOTENV_PATH=.*\n/m, "").replace(/^export GIT_CONFIG_COUNT=[^]*?VALUE_1=\/dev\/null\n/m, "");
+  assert.notEqual(stripped, source);
+  fs.writeFileSync(file, stripped);
+};
+
+for (const [route, { cwd: start, steps }] of Object.entries(hookRoutes)) {
+  test(`${route}: with Bash off, a Write does not reach a shell through the hooks`, options, () => {
+    const attempt = (hardened) => {
+      const box = repoCase("hook-route");
+      const cwd = start(box);
+      if (!hardened) unharden(cwd);
+      const direct = path.join(box.dir, "direct");
+      const fired = path.join(box.dir, "fired");
+      const run = session(box, {
+        cwd,
+        prompt: question,
+        steps: [bash(`touch ${direct}`), ...steps(cwd, fired, box), write(path.join(cwd, "plugins/probe.mjs"), "export const p = 1;\n")],
+        args: noBash,
+      });
+      assert.equal(run.rc, 0, run.stderr);
+      assert.equal(run.results[0].isError, true, "the Bash tool is off");
+      assert.equal(fs.existsSync(direct), false);
+      assert.ok(run.results.at(-1).text.includes("probe.mjs"), run.results.at(-1).text);
+      return { box, cwd, run, fired: fs.existsSync(fired) };
+    };
+
+    const control = attempt(false);
+    assert.equal(control.fired, true, "the route must work without the hardening");
+
+    const { box, cwd, run, fired } = attempt(true);
+    assert.equal(fired, false);
+    assert.ok(run.hooks.some((hook) => hook.hook_name === "PostToolUse:Write" && hook.exit_code === 0));
+    assert.equal(fs.existsSync(path.join(box.home, ".claude/planted")), false, "nothing moved into ~/.claude");
+    const again = session(box, { cwd, prompt: question, steps: [], args: noBash });
+    assert.ok(again.apiText.includes(trailHeader), "Trail context still arrives");
+    assert.equal(fs.existsSync(path.join(box.dir, "fired")), false);
+  });
+}
+
+test("a .env already in the checkout does nothing on a bare prompt in default mode", options, () => {
+  const attempt = (hardened) => {
+    const box = repoCase("env-prompt");
+    const cwd = worktree(box);
+    if (!hardened) unharden(cwd);
+    const fired = path.join(box.dir, "fired");
+    writeFile(path.join(cwd, ".env"), `GIT_CONFIG_COUNT=1\nGIT_CONFIG_KEY_0=core.fsmonitor\nGIT_CONFIG_VALUE_0=touch ${fired}; true\n`);
+    const run = session(box, { cwd, prompt: question, steps: [], args: ["--permission-mode", "default"] });
+    assert.equal(run.rc, 0, run.stderr);
+    return { run, fired: fs.existsSync(fired) };
+  };
+  assert.equal(attempt(false).fired, true, "the route must work without the hardening");
+  const { run, fired } = attempt(true);
+  assert.equal(fired, false);
+  assert.ok(run.apiText.includes(trailHeader));
+});
+
+// A limit the guide states, not a goal. If this starts failing, update the guide.
+test("hook scripts are files: bypassPermissions lets a Write change them, acceptEdits does not", options, () => {
+  const attempt = (mode) => {
+    const box = repoCase("hook-script");
+    const cwd = worktree(box);
+    const fired = path.join(box.dir, "fired");
+    const script = path.join(cwd, ".claude/hooks/trail-sync.sh");
+    const run = session(box, {
+      cwd,
+      steps: [read(script), write(script, `#!/bin/sh\ntouch ${fired}\n`), write(path.join(cwd, "plugins/probe.mjs"), "export const p = 1;\n")],
+      args: ["--permission-mode", mode, "--disallowedTools", "Bash"],
+    });
+    assert.equal(run.rc, 0, run.stderr);
+    return fs.existsSync(fired);
+  };
+  assert.equal(attempt("acceptEdits"), false);
+  assert.equal(attempt("bypassPermissions"), true);
 });
 
 test("searches stay Claude Code's own: ignored files are not read and results are not buried", zshOnly, () => {

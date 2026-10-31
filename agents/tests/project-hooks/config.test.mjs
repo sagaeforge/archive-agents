@@ -59,10 +59,11 @@ test(".gitignore keeps the main worktree's lines and covers local state", () => 
     "/.claude/worktrees/",
     "/.claude/settings.local.json",
     "/.trail/",
+    "/.graft/",
   ]) {
     assert.ok(lines.includes(line), line);
   }
-  for (const ignored of ["graft/x", ".claude/worktrees/x/y", ".claude/settings.local.json", ".trail/learnings/x.md"]) {
+  for (const ignored of ["graft/x", ".claude/worktrees/x/y", ".claude/settings.local.json", ".trail/learnings/x.md", ".graft/config.json", ".env"]) {
     assert.equal(spawnSync("git", ["check-ignore", "-q", "--no-index", ignored], { cwd: repoRoot }).status, 0, ignored);
   }
   for (const tracked of [".claude/settings.json", ".claude/hooks/rtk-rewrite.sh"]) {
@@ -84,9 +85,14 @@ test("no version is pinned and the hooks are not part of the shipped plugin", ()
 test("the Korean guide answers every question it must", () => {
   const guide = read("docs/project-tools.md");
   assert.match(guide, /[가-힣]/);
-  for (const needed of ["RTK_DISABLED=1", "TRAIL_NO_HOOKS=1", "disableAllHooks", "trail init", "rtk init", "trail note", "`.trail/`", "rm -rf graft .trail", "~/.trail", "|| git status"]) {
+  for (const needed of ["RTK_DISABLED=1", "TRAIL_NO_HOOKS=1", "disableAllHooks", "trail init", "rtk init", "trail note", "`.trail/`", "rm -rf graft .graft .trail", "~/.trail", "|| git status", "진행 중인 작업", "`.env`", "`.claude/hooks/`"]) {
     assert.ok(guide.includes(needed), needed);
   }
+});
+
+test("the guide no longer promises rtk's state line", () => {
+  const guide = read("docs/project-tools.md");
+  assert.doesNotMatch(guide, /진행 중이라는 사실도 표시/);
 });
 
 test("the guide and the hook name no retired rewrite", () => {

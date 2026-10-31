@@ -12,3 +12,6 @@ token
 
 # Never commit what `trail init` or `trail note` would leave here. See docs/project-tools.md.
 /.trail/
+
+# Trail's local build settings. Without this line a persisted build flag edits this file.
+/.graft/
