@@ -16,13 +16,20 @@ function nextStep(body) {
   if (tools.length === 0) return { text: "ok" };
   const first = JSON.stringify(messages[0]?.content ?? "");
   const steps = first.includes("SUBAGENT-MARKER") ? (script.substeps ?? []) : script.steps;
-  const done = messages
+  let done = messages
     .flatMap((message) => (Array.isArray(message.content) ? message.content : []))
     .filter((block) => block.type === "tool_result").length;
-  const step = steps[done];
-  if (!step) return { text: "DONE" };
-  const tool = step.tool === "Agent" && !tools.includes("Agent") ? "Task" : step.tool;
-  return { tool, input: step.input };
+  const seen = JSON.stringify(messages);
+  for (const step of steps) {
+    // { until: "text" } ends the turn here, until a later prompt carries that text.
+    if (step.until) {
+      if (!seen.includes(step.until)) return { text: "DONE" };
+    } else if (done-- === 0) {
+      const tool = step.tool === "Agent" && !tools.includes("Agent") ? "Task" : step.tool;
+      return { tool, input: step.input };
+    }
+  }
+  return { text: "DONE" };
 }
 
 let sequence = 0;

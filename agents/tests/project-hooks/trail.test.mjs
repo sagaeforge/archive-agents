@@ -43,9 +43,13 @@ const trailCalls = (home) => {
 
 const realOnly = { skip: hasRealTrail() ? false : "Trail-Code 0.28.1 is not installed" };
 
+// As Claude Code calls it: the input names the session's folder, which is the project
+// unless a test moves it.
+const fire = (input, options) => runHook(context, typeof input === "string" ? input : { cwd: options.project, ...input }, options);
+
 test("a strong match prints code pointers", () => {
   const box = setup({ reply: answer({ coverageStrong: 0.5, coverage: 0.2 }) });
-  const { rc, stdout } = runHook(context, prompt(question), box);
+  const { rc, stdout } = fire(prompt(question), box);
   assert.equal(rc, 0);
   assert.equal(
     stdout,
@@ -66,24 +70,24 @@ test("the relevance gate matches Trail's own", () => {
     [{ coverage: 0.1 }, false],
   ]) {
     const box = setup({ reply: answer(fields) });
-    assert.equal(runHook(context, prompt(question), box).stdout !== "", shown, JSON.stringify(fields));
+    assert.equal(fire(prompt(question), box).stdout !== "", shown, JSON.stringify(fields));
   }
   const empty = setup({ reply: '{"hits":[],"coverageStrong":1}' });
-  assert.equal(runHook(context, prompt(question), empty).stdout, "");
+  assert.equal(fire(prompt(question), empty).stdout, "");
 });
 
 test("short prompts and background notices never reach Trail", () => {
   const box = setup({ reply: answer({ coverageStrong: 1 }) });
   for (const text of ["", "yes", "go ahead", "12 chars ok", "<task-notification>x</task-notification> more words", "  \n<task-notification>x</task-notification> more words"]) {
-    assert.equal(runHook(context, prompt(text), box).stdout, "", text);
+    assert.equal(fire(prompt(text), box).stdout, "", text);
   }
   assert.deepEqual(trailCalls(box.home), []);
 });
 
 test("a fresh checkout builds its map once, before the first answer", () => {
   const box = setup({ map: false, reply: answer({ coverageStrong: 1 }) });
-  assert.notEqual(runHook(context, prompt(question), box).stdout, "");
-  runHook(context, prompt(question), box);
+  assert.notEqual(fire(prompt(question), box).stdout, "");
+  fire(prompt(question), box);
   assert.deepEqual(trailCalls(box.home), [
     `build ${box.project}`,
     `ask - ${box.project} --json -n 3`,
@@ -102,7 +106,7 @@ test("a crafted prompt stays data", () => {
     `-rf --help padding padding ${pwn}`,
     `line one padding\ntouch ${pwn}\n`,
   ]) {
-    assert.equal(runHook(context, prompt(text), box).rc, 0, text);
+    assert.equal(fire(prompt(text), box).rc, 0, text);
     assert.equal(fs.existsSync(pwn), false, text);
     assert.equal(fs.readFileSync(path.join(box.home, "trail.stdin"), "utf8"), text.replace(/\n+$/, ""));
     for (const call of trailCalls(box.home)) assert.equal(call, `ask - ${box.project} --json -n 3`);
@@ -111,7 +115,7 @@ test("a crafted prompt stays data", () => {
 
 test("every Trail call runs with telemetry, fetches, look-back, and its home off", () => {
   const box = setup({ map: false });
-  runHook(context, prompt(question), box);
+  fire(prompt(question), box);
   const env = fs.readFileSync(path.join(box.home, "trail.env"), "utf8").split("\n");
   for (const line of [
     "DO_NOT_TRACK=1",
@@ -132,14 +136,54 @@ test("every Trail call runs with telemetry, fetches, look-back, and its home off
 
 test("the off switch stops the hook before Trail runs", () => {
   const box = setup({ map: false });
-  runHook(context, prompt(question), { ...box, env: { TRAIL_NO_HOOKS: "1" } });
+  fire(prompt(question), { ...box, env: { TRAIL_NO_HOOKS: "1" } });
   assert.deepEqual(trailCalls(box.home), []);
+});
+
+/** A stub Trail over a real repository, so the hook's git can tell checkouts apart. */
+function checkout() {
+  const box = setup({ reply: answer({ coverageStrong: 1 }) });
+  git(box.project, "init", "-q", "-b", "main");
+  git(box.project, "config", "user.email", "sandbox@example.invalid");
+  git(box.project, "config", "user.name", "sandbox");
+  writeFile(path.join(box.project, "sub/deep/a.txt"), "x\n");
+  git(box.project, "add", "sub");
+  git(box.project, "commit", "-qm", "init");
+  return box;
+}
+
+test("a session working in another checkout gets nothing, since the map describes this one", () => {
+  const box = checkout();
+  const inner = path.join(box.project, ".claude/worktrees/inner");
+  git(box.project, "worktree", "add", "-q", "-b", "inner", inner);
+  const sibling = tempDir("sibling");
+  git(sibling, "init", "-q");
+  const nested = path.join(box.project, "scratch/nested");
+  fs.mkdirSync(nested, { recursive: true });
+  git(nested, "init", "-q");
+  for (const cwd of [inner, path.join(inner, "sub/deep"), sibling, nested, "/", "/nowhere/at/all", "", 7, null]) {
+    const asked = fire({ ...prompt(question), cwd }, box);
+    assert.deepEqual({ rc: asked.rc, stdout: asked.stdout }, { rc: 0, stdout: "" }, String(cwd));
+  }
+  const unnamed = prompt(question);
+  const asked = runHook(context, unnamed, box);
+  assert.deepEqual({ rc: asked.rc, stdout: asked.stdout }, { rc: 0, stdout: "" }, "no cwd in the input");
+  assert.deepEqual(trailCalls(box.home), [], "and Trail did not run for any of them");
+});
+
+test("a folder of the same checkout, or another spelling of its path, still gets context", () => {
+  const box = checkout();
+  const link = path.join(tempDir("link"), "same");
+  fs.symlinkSync(box.project, link);
+  for (const cwd of [box.project, `${box.project}/`, path.join(box.project, "sub"), path.join(box.project, "sub/deep"), link]) {
+    assert.match(fire({ ...prompt(question), cwd }, box).stdout, /createClient/, cwd);
+  }
 });
 
 test("a checkout with .trail/ stands the hook down before Trail runs", () => {
   const box = setup({ map: false, reply: answer({ coverageStrong: 1 }) });
   fs.mkdirSync(path.join(box.project, ".trail"));
-  const asked = runHook(context, prompt(question), box);
+  const asked = fire(prompt(question), box);
   assert.deepEqual({ rc: asked.rc, stdout: asked.stdout }, { rc: 0, stdout: "" });
   assert.deepEqual(trailCalls(box.home), []);
 });
@@ -156,7 +200,7 @@ test("a missing or broken Trail leaves the prompt alone", () => {
   for (const [name, trail] of Object.entries(broken)) {
     for (const map of [true, false]) {
       const box = setup({ trail, map });
-      const first = runHook(context, prompt(question), box);
+      const first = fire(prompt(question), box);
       assert.deepEqual({ rc: first.rc, stdout: first.stdout }, { rc: 0, stdout: "" }, name);
     }
   }
@@ -164,7 +208,7 @@ test("a missing or broken Trail leaves the prompt alone", () => {
 
 test("a hanging Trail is cut off inside the hook's timeout", () => {
   const box = setup({ trail: `#!/bin/sh\nexec sleep 40\n`, map: false });
-  const asked = runHook(context, prompt(question), box);
+  const asked = fire(prompt(question), box);
   assert.deepEqual({ rc: asked.rc, stdout: asked.stdout }, { rc: 0, stdout: "" });
   assert.ok(asked.ms < 11500, `prompt hook took ${asked.ms} ms against a 12 s limit`);
 });
@@ -172,7 +216,7 @@ test("a hanging Trail is cut off inside the hook's timeout", () => {
 test("malformed input is ignored", () => {
   const box = setup({ reply: answer({ coverageStrong: 1 }) });
   for (const input of ["", "not json", "{", "[]", "null", "{}", '{"prompt":7}', '{"prompt":null}']) {
-    const { rc, stdout } = runHook(context, input, box);
+    const { rc, stdout } = fire(input, box);
     assert.deepEqual({ rc, stdout }, { rc: 0, stdout: "" }, input);
   }
   assert.deepEqual(trailCalls(box.home), []);
@@ -182,10 +226,10 @@ test("a machine without jq, timeout, or a project directory does nothing", () =>
   const box = setup({ reply: answer({ coverageStrong: 1 }) });
   const tools = ["cat", "dirname", "sh"];
   for (const present of [[...tools, "timeout"], [...tools, "jq"]]) {
-    const { rc, stdout } = runHook(context, prompt(question), { ...box, pathValue: restrictedPath(present) });
+    const { rc, stdout } = fire(prompt(question), { ...box, pathValue: restrictedPath(present) });
     assert.deepEqual({ rc, stdout }, { rc: 0, stdout: "" }, present.join(" "));
   }
-  const noProject = runHook(context, prompt(question), { home: box.home });
+  const noProject = fire(prompt(question), { home: box.home });
   assert.deepEqual({ rc: noProject.rc, stdout: noProject.stdout }, { rc: 0, stdout: "" });
   assert.deepEqual(trailCalls(box.home), []);
 });
@@ -194,11 +238,11 @@ test("the real Trail gives context and refreshes its map without touching home",
   const project = copyRepo(path.join(tempDir("trail-real"), "repo"));
   const home = fakeHome({ trail: "real" });
   const before = snapshot(home);
-  const { rc, stdout } = runHook(context, prompt("how does createClient fail over between hosts"), { home, project });
+  const { rc, stdout } = fire(prompt("how does createClient fail over between hosts"), { home, project });
   assert.equal(rc, 0);
   assert.match(stdout, /^\[trail\] code pointers for this prompt:\n- .*createClient.*pve\.mjs:L\d+/);
   writeFile(path.join(project, "plugins/proxmox/server/probe.mjs"), "export function trailRefreshProbe() { return 42; }\n");
-  assert.match(runHook(context, prompt("where is trailRefreshProbe defined here"), { home, project }).stdout, /trailRefreshProbe/);
+  assert.match(fire(prompt("where is trailRefreshProbe defined here"), { home, project }).stdout, /trailRefreshProbe/);
   assert.deepEqual(snapshotDiff(before, snapshot(home)), []);
   assert.equal(fs.existsSync(path.join(project, ".trail")), false);
 });
@@ -252,7 +296,7 @@ test("a build after each edit changes nothing the prompt hook prints", realOnly,
   const home = fakeHome({ trail: "real" });
   const built = refreshFixture();
   const refreshed = refreshFixture();
-  const ask = (project, text) => runHook(context, prompt(text), { home, project }).stdout;
+  const ask = (project, text) => fire(prompt(text), { home, project }).stdout;
   for (const project of [built, refreshed]) assert.notEqual(ask(project, refreshQuestions[1]), "");
   for (const [name, change] of Object.entries(refreshChanges)) {
     change(built);
@@ -271,22 +315,22 @@ test("a stale card cannot reach the prompt: only the code map prints", realOnly,
   const home = fakeHome({ trail: "real" });
   const project = refreshFixture();
   const text = "which extracted symbols are in this file";
-  runHook(context, prompt(question), { home, project });
+  fire(prompt(question), { home, project });
   assert.ok(fs.existsSync(path.join(project, "graft/symbolless.md")));
   // The check can fail: Trail itself answers with the card, which is not a code pointer.
   const raw = byHand(home, project, "ask", text, project, "--json");
   assert.ok(JSON.parse(raw.stdout).hits.some((hit) => hit.kind === "concept" && hit.pointer === "symbolless"), raw.stdout);
-  assert.equal(runHook(context, prompt(text), { home, project }).stdout, "");
+  assert.equal(fire(prompt(text), { home, project }).stdout, "");
   fs.rmSync(path.join(project, "symbolless.mjs"));
-  assert.equal(runHook(context, prompt(text), { home, project }).stdout, "");
+  assert.equal(fire(prompt(text), { home, project }).stdout, "");
 });
 
 test("hits that are not code pointers print nothing, not a bare header", () => {
   const concept = { kind: "concept", title: "notes", pointer: "notes" };
   const alone = setup({ reply: JSON.stringify({ hits: [concept], coverage: 1, coverageStrong: 1 }) });
-  assert.equal(runHook(context, prompt(question), alone).stdout, "");
+  assert.equal(fire(prompt(question), alone).stdout, "");
   const mixed = setup({ reply: JSON.stringify({ hits: [concept, { kind: "symbol", title: "createClient", pointer: "a.mjs:L1-L2" }], coverageStrong: 1 }) });
-  assert.equal(runHook(context, prompt(question), mixed).stdout, "[trail] code pointers for this prompt:\n- createClient a.mjs:L1-L2\n");
+  assert.equal(fire(prompt(question), mixed).stdout, "[trail] code pointers for this prompt:\n- createClient a.mjs:L1-L2\n");
 });
 
 const lookup = "how does createClient fail over between hosts";
@@ -318,7 +362,7 @@ test("a personal note changes nothing the hook does, even in a brand-new worktre
   const fresh = path.join(dir, "fresh");
   git(project, "worktree", "add", "-q", "-b", "fresh", fresh);
   const before = snapshot(home);
-  const { rc, stdout } = runHook(context, prompt(lookup), { home, project: fresh });
+  const { rc, stdout } = fire(prompt(lookup), { home, project: fresh });
   assert.equal(rc, 0);
   assert.match(stdout, /createClient/);
   assert.deepEqual(snapshotDiff(before, snapshot(home)), []);
@@ -338,7 +382,7 @@ test("a repo note stands the hooks down, they touch nothing, and removing .trail
   const dir = tempDir("trail-repo-note");
   const project = copyRepo(path.join(dir, "repo"));
   const home = fakeHome({ trail: "real" });
-  assert.notEqual(runHook(context, prompt(lookup), { home, project }).stdout, "");
+  assert.notEqual(fire(prompt(lookup), { home, project }).stdout, "");
   const made = byHand(home, project, ...note);
   assert.equal(made.status, 0, made.stderr);
   assert.ok(fs.existsSync(path.join(project, ".trail")), "a repo note lives in the checkout");
@@ -346,7 +390,7 @@ test("a repo note stands the hooks down, they touch nothing, and removing .trail
   const homeBefore = snapshot(home);
   const projectBefore = snapshot(project);
   for (let i = 0; i < 3; i++) {
-    const { rc, stdout } = runHook(context, prompt(lookup), { home, project });
+    const { rc, stdout } = fire(prompt(lookup), { home, project });
     assert.deepEqual({ rc, stdout }, { rc: 0, stdout: "" });
   }
   assert.deepEqual(snapshotDiff(homeBefore, snapshot(home)), []);
@@ -355,13 +399,13 @@ test("a repo note stands the hooks down, they touch nothing, and removing .trail
   // .trail/ is ignored by git, so a new worktree has none and the hooks work there.
   const fresh = path.join(dir, "fresh");
   git(project, "worktree", "add", "-q", "-b", "fresh", fresh);
-  assert.match(runHook(context, prompt(lookup), { home, project: fresh }).stdout, /createClient/);
+  assert.match(fire(prompt(lookup), { home, project: fresh }).stdout, /createClient/);
   assert.equal(fs.existsSync(path.join(fresh, ".trail")), false);
   assert.equal(fs.existsSync(path.join(fresh, "graft/.cache/trail-branches.json")), false);
   assert.deepEqual(snapshotDiff(homeBefore, snapshot(home)), []);
 
   fs.rmSync(path.join(project, ".trail"), { recursive: true });
-  assert.match(runHook(context, prompt(lookup), { home, project }).stdout, /createClient/);
+  assert.match(fire(prompt(lookup), { home, project }).stdout, /createClient/);
   assert.deepEqual(snapshotDiff(homeBefore, snapshot(home)), []);
 });
 
@@ -405,7 +449,7 @@ for (const [route, plant] of Object.entries(gitRoutes)) {
     fs.rmSync(canary);
     fs.rmSync(path.join(project, "graft"), { recursive: true, force: true });
 
-    const asked = runHook(context, prompt(lookup), { home, project });
+    const asked = fire(prompt(lookup), { home, project });
     assert.deepEqual({ rc: asked.rc, fired: fs.existsSync(canary) }, { rc: 0, fired: false });
     assert.match(asked.stdout, /createClient/, "the map still builds and answers");
   });
@@ -419,7 +463,7 @@ test("a project .env cannot move Trail's output into a global folder", realOnly,
   writeFile(path.join(project, ".env"), `GRAFT_DIR=${home}/.claude/planted\n`);
 
   const before = snapshot(home);
-  assert.match(runHook(context, prompt(lookup), { home, project }).stdout, /createClient/);
+  assert.match(fire(prompt(lookup), { home, project }).stdout, /createClient/);
   assert.deepEqual(snapshotDiff(before, snapshot(home)), []);
   assert.ok(fs.existsSync(path.join(project, "graft/.graph/wiring.json")), "the map stays in the project");
 
@@ -431,6 +475,6 @@ test("a project .env cannot move Trail's output into a global folder", realOnly,
 test("real Trail stays quiet on a Korean prompt with no code terms", realOnly, () => {
   const project = copyRepo(path.join(tempDir("trail-ko"), "repo"));
   const home = fakeHome({ trail: "real" });
-  const { rc, stdout } = runHook(context, prompt("읽기 전용 토큰이 어떻게 동작하는지 설명해 주세요"), { home, project });
+  const { rc, stdout } = fire(prompt("읽기 전용 토큰이 어떻게 동작하는지 설명해 주세요"), { home, project });
   assert.deepEqual({ rc, stdout }, { rc: 0, stdout: "" });
 });

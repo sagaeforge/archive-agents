@@ -11,12 +11,24 @@
 
 . "$(dirname "$0")/trail-env.sh"
 
+input=$(cat)
+
 # Same gate as Trail's own hook: skip short prompts and background notices.
-prompt=$(jq -r '
+prompt=$(printf '%s' "$input" | jq -r '
   .prompt | strings
   | select(length >= 12 and (sub("^\\s+"; "") | startswith("<task-notification>") | not))
   ' 2>/dev/null)
 [ -n "$prompt" ] || exit 0
+
+# The map describes $root. After EnterWorktree the session works in another checkout
+# while CLAUDE_PROJECT_DIR stays put, so these pointers would name lines the agent
+# does not have. A folder of this checkout is fine, and git compares real paths.
+cwd=$(printf '%s' "$input" | jq -r '.cwd | strings' 2>/dev/null)
+if [ "$cwd" != "$root" ]; then
+  [ -n "$cwd" ] || exit 0
+  here=$(timeout -k 1 2 git -C "$cwd" rev-parse --show-toplevel 2>/dev/null) || exit 0
+  [ "$here" = "$(timeout -k 1 2 git -C "$root" rev-parse --show-toplevel 2>/dev/null)" ] || exit 0
+fi
 
 # A fresh checkout has no map yet. Build one so the first prompt gets context.
 [ -e "$root/graft/.graph/wiring.json" ] || timeout 5 "$trail" build "$root" >/dev/null 2>&1

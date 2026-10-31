@@ -228,6 +228,23 @@ echo $? > "$RUN_DIR/rc"
 kill %1 2>/dev/null
 `;
 
+// The same, with one prompt per turn: each is sent once the turn before it has ended.
+const turnDriver = `
+"$NODE_BIN" "$MOCK_FILE" &
+for _ in $(seq 1 100); do [ -e "$MOCK_READY" ] && break; sleep 0.05; done
+send() {
+  ended=0
+  for turn in "$RUN_DIR"/turn-*.json; do
+    cat "$turn"
+    ended=$((ended + 1))
+    until [ "$(grep -c '"type":"result"' "$RUN_DIR/out.ndjson" 2>/dev/null)" -ge "$ended" ]; do sleep 0.1; done
+  done
+}
+send | "$CLAUDE_BIN" -p --input-format stream-json --setting-sources "$SETTING_SOURCES" --output-format stream-json --verbose --include-hook-events --model sonnet "$@" > "$RUN_DIR/out.ndjson" 2> "$RUN_DIR/err.txt"
+echo $? > "$RUN_DIR/rc"
+kill %1 2>/dev/null
+`;
+
 function parseLines(file) {
   if (!fs.existsSync(file)) return [];
   return fs
@@ -259,7 +276,7 @@ function readRun(dir) {
       }
     }
   }
-  const final = events.find((event) => event.type === "result");
+  const final = events.findLast((event) => event.type === "result");
   const rcFile = path.join(dir, "rc");
   return {
     rc: fs.existsSync(rcFile) ? Number(fs.readFileSync(rcFile, "utf8")) : null,
@@ -277,13 +294,17 @@ function readRun(dir) {
 /**
  * Runs one headless session with the real binary and a scripted model.
  * Settings sources are named explicitly: the fake home's user settings, then the
- * project and local files of the directory the session starts in.
+ * project and local files of the directory the session starts in. `followUps` are
+ * further prompts in the same session, each sent when the turn before it ends.
  */
-export function session(box, { cwd, steps, substeps, prompt = "please go ahead", args = [], env = {}, settingSources = "user,project,local", managedDir, hide, timeout = 90000 }) {
+export function session(box, { cwd, steps, substeps, prompt = "please go ahead", followUps = [], args = [], env = {}, settingSources = "user,project,local", managedDir, hide, timeout = 90000 }) {
   const run = path.join(box.logs, `run-${++box.runs}`);
   fs.mkdirSync(run, { recursive: true });
   const scriptFile = path.join(run, "script.json");
   fs.writeFileSync(scriptFile, JSON.stringify({ steps, substeps }));
+  [prompt, ...followUps].forEach((text, turn) => {
+    fs.writeFileSync(path.join(run, `turn-${turn}.json`), `${JSON.stringify({ type: "user", message: { role: "user", content: text } })}\n`);
+  });
   const mockFile = path.join(box.dir, "mock-api.mjs");
   if (!fs.existsSync(mockFile)) fs.copyFileSync(path.join(here, "mock-api.mjs"), mockFile);
   const port = 20000 + crypto.randomInt(20000);
@@ -311,7 +332,7 @@ export function session(box, { cwd, steps, substeps, prompt = "please go ahead",
     ...sandboxArgs(box, { managedDir, hide }),
     "--chdir", cwd,
     ...envArgs(box, sessionEnv),
-    "/bin/bash", "-c", driver, "--", ...args,
+    "/bin/bash", "-c", followUps.length > 0 ? turnDriver : driver, "--", ...args,
   ];
   spawnSync("bwrap", bwrapArgs, { encoding: "utf8", timeout });
   return { ...readRun(run), ms: Date.now() - started, runDir: run };

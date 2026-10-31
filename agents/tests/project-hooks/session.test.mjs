@@ -502,6 +502,34 @@ test("a --worktree session keeps git and globs raw and still gets Trail context"
   assert.ok(run.apiText.includes(trailHeader));
 });
 
+const promptContext = (run) => run.hooks.filter((hook) => hook.hook_name === "UserPromptSubmit" && hook.hook_event === "UserPromptSubmit").map((hook) => hook.stdout ?? "");
+
+test("after EnterWorktree the prompt hook goes quiet, and speaks again back at the project", options, () => {
+  const box = repoCase("enter-worktree");
+  const run = session(box, {
+    cwd: box.project,
+    prompt: `${question} TURN-ONE`,
+    followUps: [`${question} TURN-TWO`, `${question} TURN-THREE`],
+    steps: [
+      { tool: "EnterWorktree", input: { name: "inner" } },
+      { until: "TURN-TWO" },
+      bash("pwd"),
+      { tool: "ExitWorktree", input: { action: "keep" } },
+      { until: "TURN-THREE" },
+      bash("pwd"),
+    ],
+    args: bypass,
+  });
+  assert.equal(run.rc, 0, run.stderr);
+  const inner = path.join(box.project, ".claude/worktrees/inner");
+  assert.equal(fs.existsSync(path.join(inner, "plugins/proxmox/server/pve.mjs")), true);
+  assert.deepEqual(run.results.filter((result) => /^\//.test(result.text)).map((result) => result.text.trim()), [inner, box.project]);
+  const [before, inside, after] = promptContext(run);
+  assert.match(before, /createClient/);
+  assert.equal(inside, "");
+  assert.match(after, /createClient/);
+});
+
 test("after a cd that persists, git status stays raw and its paths stay true", options, () => {
   const box = repoCase("persisted-cd");
   const cwd = worktree(box);
