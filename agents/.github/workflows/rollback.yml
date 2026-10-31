@@ -1,0 +1,31 @@
+name: Rollback
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Full SHA of the commit to put stable back on. It has to have passed CI.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  rollback:
+    # This is the one forced move of stable, so only main's copy of it gets to run.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read # rollback.sh checks that CI passed on the target.
+      contents: write
+    concurrency: promote # Shared with the promote job in ci.yml, so the two never race.
+    steps:
+      # rollback.sh walks history, and its push uses the credentials this step keeps.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - run: .github/scripts/rollback.sh "$TARGET"
+        env:
+          TARGET: ${{ inputs.sha }}
+          GH_TOKEN: ${{ github.token }}

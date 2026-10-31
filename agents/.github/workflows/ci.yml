@@ -3,6 +3,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -39,3 +40,20 @@ jobs:
         working-directory: plugins/proxmox
       - run: node test/smoke/boot.mjs
         working-directory: plugins/proxmox
+
+  # Moves stable, the branch machines follow once the gate is on. Until the owner sets this variable
+  # the job is skipped, so no write token exists and stable is not touched. See docs/stable-gate.md.
+  promote:
+    needs: check
+    if: vars.STABLE_GATE_ENABLED == 'true' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    concurrency: promote # Shared with rollback.yml, so the two never race.
+    steps:
+      # promote.sh compares this commit with stable, and its push uses the credentials this step keeps.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - run: .github/scripts/promote.sh "$GITHUB_SHA"

@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Fast feedback before a push leaves this machine. It runs only where core.hooksPath points here, and
+# --no-verify skips it, so it protects nothing on its own: the promote job in ci.yml is the gate.
+set -euo pipefail
+
+target=
+while read -r _ local_sha remote_ref _; do
+  case $remote_ref in
+    refs/heads/stable)
+      echo "pre-push: stable moves only through CI. Push to main; see docs/stable-gate.md." >&2
+      exit 1
+      ;;
+    refs/heads/main)
+      target=$local_sha
+      ;;
+  esac
+done
+
+if [[ -z $target ]]; then exit 0; fi
+
+repo=$(git rev-parse --show-toplevel)
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+
+# The working tree can hold fixes that were never committed. What gets pushed is this commit.
+git archive "$target" | tar -x -C "$work"
+
+# In a linked worktree git exports GIT_DIR to hooks. Anything below that runs git in another
+# directory would act on this repository instead.
+mapfile -t git_vars < <(git rev-parse --local-env-vars)
+unset "${git_vars[@]}"
+
+cd "$work"
+claude plugin validate .
+claude plugin validate plugins/proxmox
+
+cd plugins/proxmox
+npm ci --ignore-scripts --no-audit --no-fund
+npm test
+
+# CI scans too, but only after the secret has reached GitHub.
+"$repo/.github/scripts/gitleaks.sh"
