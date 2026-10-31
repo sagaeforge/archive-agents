@@ -130,6 +130,36 @@ for (const tool of ["jq", "timeout"]) {
   });
 }
 
+test("the guide states what could surprise someone once the hooks are on", () => {
+  const guide = read("docs/project-tools.md");
+  for (const needed of [
+    // The map holds source text, out of a Read rule's reach.
+    "`graft/.cache`에는 소스 본문의 사본이 있습니다",
+    "`Read` deny 규칙은 이 사본을 막지 못합니다",
+    // What stands Trail down.
+    "`.trail/`이 있으면 Trail 훅이 멈춥니다",
+    "`graft/workspace.json`",
+    // When they take effect.
+    "재시작 없이",
+    "6초",
+    // Where rtk runs at all.
+    "`bypassPermissions` 모드의 프로젝트 루트에서 실행한 옵션 없는 `git status`에만 동작하고, `.claude/worktrees/` 안에서는 동작하지 않습니다",
+    // What this was verified on, and what it was not.
+    "Claude Code 2.1.316",
+    "rtk 1.1.0",
+    "Trail-Code 0.28.1",
+    "실제 모델",
+  ]) {
+    assert.ok(guide.includes(needed), needed);
+  }
+});
+
+test("the guide makes no promise the hooks cannot keep", () => {
+  const guide = read("docs/project-tools.md");
+  assert.doesNotMatch(guide, /프로젝트 파일은 데이터로만 다룹니다/);
+  assert.doesNotMatch(guide, /trail-sync|Write, Edit, MultiEdit 후/);
+});
+
 test("the guide no longer promises rtk's state line", () => {
   const guide = read("docs/project-tools.md");
   assert.doesNotMatch(guide, /진행 중이라는 사실도 표시/);

@@ -795,6 +795,26 @@ test("hook scripts are files: bypassPermissions lets a Write change them, accept
   assert.equal(attempt("bypassPermissions"), true);
 });
 
+// A limit the guide states, not a goal. If this starts failing, update the guide.
+test("a Read deny stops the file and not its copy in graft/.cache", options, () => {
+  const box = repoCase("read-deny");
+  const cwd = worktree(box);
+  const file = "plugins/proxmox/server/local-creds.mjs";
+  const value = canary("cache");
+  writeFile(path.join(cwd, file), `export const creds = { LOCAL_TOKEN: "${value}" };\n`);
+  const settings = JSON.stringify({ permissions: { deny: [`Read(./${file})`] } });
+  const run = session(box, {
+    cwd,
+    prompt: question,
+    steps: [{ tool: "Read", input: { file_path: path.join(cwd, file) } }, bash(`/usr/bin/grep -o ${value} graft/.cache/extract.*.json`)],
+    args: [...bypass, "--settings", settings],
+  });
+  assert.equal(run.rc, 0, run.stderr);
+  assert.equal(run.results[0].isError, true, run.results[0].text);
+  assert.equal(run.results[0].text.includes(value), false);
+  assert.ok(run.results[1].text.includes(value), run.results[1].text);
+});
+
 test("searches stay Claude Code's own: ignored files are not read and results are not buried", zshOnly, () => {
   const box = repoCase("search-scope");
   const cwd = worktree(box);

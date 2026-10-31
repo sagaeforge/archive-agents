@@ -748,6 +748,40 @@ test("a linked worktree builds its own map instead of copying another checkout's
 });
 
 // A limit the guide states, not a goal. If this starts failing, update the guide.
+test("an edit that keeps both size and modification time is not seen", realOnly, () => {
+  const project = refreshFixture();
+  const home = fakeHome({ trail: "real" });
+  const file = path.join(project, "src/same.mjs");
+  const when = new Date("2026-01-02T03:04:05Z");
+  fs.utimesSync(file, when, when);
+  assert.match(fire(prompt("where is sameLengthAlpha defined here"), { home, project }).stdout, /sameLengthAlpha/);
+  fs.writeFileSync(file, "export function sameLengthOmega() { return 1; }\n");
+  fs.utimesSync(file, when, when);
+  assert.match(fire(prompt("where is sameLengthAlpha defined here"), { home, project }).stdout, /sameLengthAlpha/);
+  // One tick of the clock is enough, which is what any editor or tool call does.
+  fs.utimesSync(file, new Date(), new Date());
+  assert.match(fire(prompt("where is sameLengthOmega defined here"), { home, project }).stdout, /sameLengthOmega/);
+});
+
+// A limit the guide states, not a goal. If this starts failing, update the guide.
+test("the map's cache holds copies of source text, until the source changes", realOnly, () => {
+  const project = copyRepo(path.join(tempDir("trail-cache"), "repo"));
+  const home = fakeHome({ trail: "real" });
+  const file = path.join(project, "plugins/proxmox/server/local-creds.mjs");
+  const value = "canary-value-in-a-comment";
+  writeFile(file, `// ${value}\nexport function localCreds() { return 1; }\n`, 0o600);
+  const holders = () => {
+    const cache = path.join(project, "graft/.cache");
+    return fs.readdirSync(cache).filter((name) => fs.statSync(path.join(cache, name)).isFile() && fs.readFileSync(path.join(cache, name), "utf8").includes(value));
+  };
+  assert.notEqual(fire(prompt(lookup), { home, project }).stdout, "");
+  assert.notDeepEqual(holders(), []);
+  fs.writeFileSync(file, "export function localCreds() { return 1; }\n");
+  assert.notEqual(fire(prompt(lookup), { home, project }).stdout, "");
+  assert.deepEqual(holders(), []);
+});
+
+// A limit the guide states, not a goal. If this starts failing, update the guide.
 test("a tracked file under a folder turned into a link is read into the map, and nothing is written", realOnly, () => {
   const dir = tempDir("trail-read-link");
   const project = copyRepo(path.join(dir, "repo"));
