@@ -344,6 +344,16 @@ for (const [name, plant] of Object.entries(plantedMaps)) {
   });
 }
 
+test("if find cannot look under the map, Trail does not run", () => {
+  const box = setup({ reply: answer({ coverageStrong: 1 }) });
+  const tools = ["cat", "dirname", "env", "jq", "sh", "sort", "timeout"];
+  const asked = fire(prompt(question), { ...box, pathValue: restrictedPath(tools) });
+  assert.deepEqual({ rc: asked.rc, stdout: asked.stdout }, { rc: 0, stdout: "" });
+  assert.deepEqual(trailCalls(box.home), []);
+  // The check can fail: the same PATH with find in it does run Trail.
+  assert.match(fire(prompt(question), { ...box, pathValue: restrictedPath([...tools, "find"]) }).stdout, /createClient/);
+});
+
 test("a real map, cards and all, does not stand the hook down", () => {
   const box = setup({ reply: answer({ coverageStrong: 1 }) });
   writeFile(path.join(box.project, "graft/plugins/proxmox/server/pve.md"), "# card\n");
