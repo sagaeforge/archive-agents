@@ -166,6 +166,7 @@ test("provision --dry-run prints the whole plan and runs nothing", () => {
     "sed -i 's#http://#https://#'",
     "https://github.com/actions/runner/releases/download/v",
     "sha256sum --check --strict",
+    "bin/installdependencies.sh",
     "nft -c -f /etc/nftables.conf",
     "systemctl enable --now nftables",
     "# A node the cluster does not report online skips its 8006 probe, with a warning.",
@@ -177,6 +178,12 @@ test("provision --dry-run prints the whole plan and runs nothing", () => {
   ]) {
     assert.ok(result.stdout.includes(expected), `plan is missing: ${expected}`);
   }
+});
+
+test("provision --dry-run unpacks the runner as the runner account, never as root", () => {
+  const { stdout } = sandbox().run(PROVISION, ["--dry-run", "--node", "n1", "--vmid", "101"]);
+  const unpack = stdout.split("\n").find((line) => line.includes("tar xzf"));
+  assert.match(unpack, /pct exec 101 -- runuser -l runner -c /);
 });
 
 test("provision --dry-run applies and checks the firewall before the runner can register", () => {
@@ -357,6 +364,10 @@ for (const [name, script] of [
 
 for (const [label, script, args] of [
   ["an address that is not dhcp or a CIDR", PROVISION, ["--ip", "nonsense"]],
+  ["an address with an octet above 255", PROVISION, ["--ip", "192.168.x.x/24"]],
+  ["an address that is all out of range", PROVISION, ["--ip", "999.999.999.999/99"]],
+  ["a prefix above 32", PROVISION, ["--ip", "192.0.2.1/33"]],
+  ["an address with no prefix", PROVISION, ["--ip", "192.0.2.1"]],
   ["a template path", PROVISION, ["--template", "../evil.tar.zst"]],
   ["the shared machine token", ISSUE_TOKEN, ["--token-id", "mcp"]],
   ["a per-machine token", ISSUE_TOKEN, ["--token-id", "m-sagae-202611"]],
@@ -365,6 +376,21 @@ for (const [label, script, args] of [
   test(`${script === PROVISION ? "provision" : "issue-token"} rejects ${label}`, () => {
     const result = sandbox().run(script, ["--dry-run", "--node", "n1", "--vmid", "101", ...args]);
     assert.equal(result.status, 2);
+  });
+}
+
+test("provision takes a free address on the LAN", () => {
+  const result = sandbox().run(PROVISION, ["--dry-run", "--node", "n1", "--vmid", "101", "--ip", "192.0.2.1/24"]);
+  assert.equal(result.status, 0, result.stderr);
+});
+
+for (const ip of PVE_NODES) {
+  test(`provision refuses ${ip}, which belongs to a cluster node`, () => {
+    const box = sandbox();
+    const result = box.run(PROVISION, ["--node", "n1", "--vmid", "101", "--ip", `${ip}/24`]);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /is the address of a cluster node/);
+    assert.deepEqual(box.calls(), []);
   });
 }
 
@@ -461,7 +487,7 @@ test("provision picks the newest amd64 template when none is given", () => {
 
 test("provision reports the rebuild time when it finishes", () => {
   const result = sandbox().run(PROVISION, PROVISION_ARGS);
-  assert.match(result.stdout, new RegExp(`Runner pve-runner-01 is online and idle in LXC ${VMID} on ${NODE}\\. Took \\d+s\\.`));
+  assert.match(result.stdout, new RegExp(`Runner pve-runner-01 is online in LXC ${VMID} on ${NODE}\\. Took \\d+s\\.`));
 });
 
 test("the registration token reaches config.sh over stdin only", () => {
@@ -581,23 +607,74 @@ for (const [label, env] of [
     const result = box.run(PROVISION, PROVISION_ARGS);
 
     assert.equal(result.status, 1);
-    assert.ok(!called(box.calls(), /svc\.sh start/));
+    const calls = box.calls();
+    assert.ok(!called(calls, /svc\.sh start/));
+    // Enabled and onboot, the service would start on the next boot with no firewall behind it.
+    assert.ok(called(calls, /svc\.sh uninstall/));
   });
 }
+
+test("a provision that gets past the firewall requirement leaves the service alone", () => {
+  const box = sandbox();
+  assert.equal(box.run(PROVISION, PROVISION_ARGS).status, 0);
+  assert.ok(!called(box.calls(), /svc\.sh uninstall/));
+});
+
+test("a failed uninstall says what is left, and the provision still fails", () => {
+  const box = sandbox({ FAKE_FAIL_MATCH: "require-firewall.conf", FAKE_FAIL_ALSO: "svc.sh uninstall" });
+  const result = box.run(PROVISION, PROVISION_ARGS);
+
+  assert.equal(result.status, 1);
+  assert.ok(called(box.calls(), /svc\.sh uninstall/));
+  assert.match(result.stderr, new RegExp(`Could not remove the runner service\\. Do not reboot LXC ${VMID}`));
+});
 
 test("provision fails when the runner never comes online, and leaves the LXC alone", () => {
   const box = sandbox({ FAKE_RUNNER_STATE: "offline false" });
   const result = box.run(PROVISION, PROVISION_ARGS);
 
   assert.equal(result.status, 1);
-  assert.match(result.stderr, /not online and idle; last state: offline false/);
+  assert.match(result.stderr, /not online; last state: offline false/);
   assert.match(result.stderr, new RegExp(`pct destroy ${VMID}`));
   assert.ok(!called(box.calls(), /pct (destroy|stop)/), "the hint must not be executed");
 });
 
-test("a busy runner does not count as idle", () => {
+test("a runner busy with a job that was queued for it counts as online", () => {
   const result = sandbox({ FAKE_RUNNER_STATE: "online true" }).run(PROVISION, PROVISION_ARGS);
-  assert.equal(result.status, 1);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /^Next: /m);
+});
+
+// Defect 35: what a retry is for.
+
+test("provision waits out a network that takes a while to come up", () => {
+  const box = sandbox({ FAKE_FAIL_MATCH: "getent hosts", FAKE_FAIL_FIRST: "4" });
+  const result = box.run(PROVISION, PROVISION_ARGS);
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(box.calls().filter((call) => call.tool === "pct" && /getent hosts/.test(call.text)).length, 5);
+});
+
+test("provision rides out gh failing while the runner comes online", () => {
+  const result = sandbox({ FAKE_FAIL_MATCH: "actions/runners --jq", FAKE_FAIL_FIRST: "2" }).run(PROVISION, PROVISION_ARGS);
+  assert.equal(result.status, 0, result.stderr);
+});
+
+test("a run never prompts over ssh, in either script", () => {
+  for (const [script, args] of [
+    [PROVISION, PROVISION_ARGS],
+    [ISSUE_TOKEN, ISSUE_ARGS],
+  ]) {
+    const box = sandbox();
+    assert.equal(box.run(script, args).status, 0);
+    const calls = box.calls().filter((call) => call.tool === "ssh");
+    assert.notEqual(calls.length, 0);
+    for (const call of calls) assert.ok(call.argv.includes("BatchMode=yes"), call.text);
+  }
+});
+
+test("issue-token never exports the token, which would show in every child's environment", () => {
+  assert.doesNotMatch(readFileSync(ISSUE_TOKEN, "utf8"), /^\s*(?:export|declare -x)\b/m);
 });
 
 test("issue-token checks the token before installing it and keeps it off every command line", () => {
@@ -688,6 +765,15 @@ test("issue-token revokes the new token when the swap fails", () => {
 
   assert.notEqual(result.status, 0);
   assert.ok(called(box.calls(), /^pveum user token remove claude-mcp@pve ci-runner-202611$/));
+});
+
+test("a revoke that fails leaves a command to run by hand, and the run still fails", () => {
+  const box = sandbox({ FAKE_FAIL_MATCH: "ci-runner-202611", FAKE_FAIL_AFTER: "acl modify" });
+  const result = box.run(ISSUE_TOKEN, ISSUE_ARGS);
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Could not revoke it\. Run on the node: pveum user token remove claude-mcp@pve ci-runner-202611/);
+  assertNoLeak(result, box.calls(), PVE_SECRET);
 });
 
 test("issue-token never removes a token it did not create", () => {
@@ -799,11 +885,29 @@ test("firewall allows external 443 and DNS only", () => {
   assert.equal(leaving("udp", "8.8.8.8", 53), "reject");
 });
 
+// Both ends of every range, because a narrowed range still holds any address in its middle.
+const CLOSED_RANGES = [
+  ["0.0.0.0", "0.255.255.255"],
+  ["10.0.0.0", "10.x.x.x"],
+  ["100.64.0.0", "100.127.255.255"],
+  ["127.0.0.0", "127.255.255.255"],
+  ["169.254.0.0", "169.254.255.255"],
+  ["172.16.0.0", "172.x.x.x"],
+  ["192.168.x.x", "192.168.x.x"],
+  ["224.0.0.0", "255.255.255.255"],
+];
+
 test("firewall closes the rest of the LAN and the other private ranges", () => {
-  for (const ip of ["192.0.2.1", "192.0.2.1", "192.0.2.1", "10.x.x.x", "172.x.x.x", "100.64.0.1", "169.254.169.254", "0.1.2.3", "127.0.0.2", "224.0.0.1", "240.0.0.1"]) {
+  for (const ip of ["192.0.2.1", "192.0.2.1", "192.0.2.1", "169.254.169.254", ...CLOSED_RANGES.flat()]) {
     assert.equal(leaving("tcp", ip, 443), "reject", ip);
     assert.equal(leaving("tcp", ip, 8006), "reject", ip);
     assert.equal(leaving("tcp", ip, 22), "reject", ip);
+  }
+});
+
+test("firewall keeps port 443 open right up to the edge of each closed range", () => {
+  for (const ip of ["1.0.0.0", "9.255.255.255", "11.0.0.0", "100.63.255.255", "100.128.0.0", "126.255.255.255", "128.0.0.0", "169.253.255.255", "169.255.0.0", "172.15.255.255", "172.32.0.0", "192.167.255.255", "192.169.0.0", "223.255.255.255"]) {
+    assert.equal(leaving("tcp", ip, 443), "accept", ip);
   }
 });
 
@@ -816,6 +920,9 @@ test("firewall allows DHCP renewal and no new inbound connection", () => {
 
   assert.equal(verdict(nft, "output", { proto: "udp", sport: 68, dport: 67, daddr: "192.0.2.1" }), "accept");
   assert.equal(entering("udp", 67, 68), "accept");
+  // Only the DHCP client's own port, or this is a way out to anything listening on 67.
+  assert.equal(verdict(nft, "output", { proto: "udp", sport: 40000, dport: 67, daddr: "192.0.2.1" }), "reject");
+  assert.equal(entering("udp", 40000, 68), "drop");
   assert.equal(entering("tcp", 40000, 22), "drop");
   assert.equal(entering("tcp", 40000, 8006), "drop");
   assert.equal(entering("tcp", 40000, 443), "drop");

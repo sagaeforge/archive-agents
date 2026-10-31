@@ -171,6 +171,18 @@ test("params arrive in one query with the path's own, and a fragment does not ar
   );
 });
 
+// VM names and notes are free text, so they arrive in whatever language they were written in.
+
+test("a response in UTF-8 arrives intact", async (t) => {
+  const answer = { notes: "\uD14C\uC2A4\uD2B8 caf\u00E9" };
+  const server = await startFakePve(t, ca.issue(LOOPBACK), answer);
+  const { client } = await start(t, server.port);
+
+  const result = await client.callTool({ name: "api_get", arguments: { path: "/version" } });
+
+  assert.deepEqual(JSON.parse(result.content[0].text), answer);
+});
+
 // Something other than PVE answering on the API port, such as a proxy with a login page.
 
 test("a 200 that is not a PVE answer is tried on every host and reported as such, without its body", WAIT, async (t) => {

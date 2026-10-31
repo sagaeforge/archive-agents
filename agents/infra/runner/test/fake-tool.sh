@@ -34,11 +34,20 @@ if [[ ! -t 0 ]]; then
 fi
 record "$stdin" "$@"
 
-# FAKE_FAIL_AFTER holds the failure back until that text has reached the log,
-# for a command that a script runs more than once.
+# FAKE_FAIL_AFTER holds the failure back until that text has reached the log, for a
+# command that a script runs more than once. FAKE_FAIL_FIRST ends it after that many
+# failures, for a command that a script is meant to retry. FAKE_FAIL_ALSO fails a second
+# command, for what a script does after the first failure.
 forced_failure() {
+  [[ -z ${FAKE_FAIL_ALSO:-} || "$tool $*" != *"$FAKE_FAIL_ALSO"* ]] || return 0
   [[ -n ${FAKE_FAIL_MATCH:-} && "$tool $*" == *"$FAKE_FAIL_MATCH"* ]] || return 1
-  [[ -z ${FAKE_FAIL_AFTER:-} || $(<"$FAKE_LOG") == *"$FAKE_FAIL_AFTER"* ]]
+  [[ -z ${FAKE_FAIL_AFTER:-} || $(<"$FAKE_LOG") == *"$FAKE_FAIL_AFTER"* ]] || return 1
+  [[ -n ${FAKE_FAIL_FIRST:-} ]] || return 0
+
+  local counter=$FAKE_LOG.failures failed=0
+  [[ ! -e $counter ]] || failed=$(<"$counter")
+  printf '%s' "$((failed + 1))" >"$counter"
+  ((failed < FAKE_FAIL_FIRST))
 }
 
 if forced_failure "$@"; then

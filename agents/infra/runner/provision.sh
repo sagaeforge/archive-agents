@@ -51,6 +51,7 @@ IP="dhcp"
 TEMPLATE=""
 DRY_RUN=0
 LXC_CREATED=0
+SERVICE_UNGUARDED=0
 STEP=0
 NODE_IPS=()
 
@@ -84,6 +85,16 @@ usage_error() {
 
 need_value() {
   (($# >= 2)) || usage_error "$1 needs a value"
+}
+
+valid_cidr() {
+  local octet
+  [[ $1 =~ ^([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})/([0-9]{1,2})$ ]] || return 1
+  local prefix=${BASH_REMATCH[5]}
+  for octet in "${BASH_REMATCH[@]:1:4}"; do
+    ((10#$octet <= 255)) || return 1
+  done
+  ((10#$prefix <= 32))
 }
 
 parse_args() {
@@ -135,7 +146,7 @@ parse_args() {
   [[ $NODE =~ ^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?$ ]] || usage_error "invalid --node: $NODE"
   [[ $VMID =~ ^[1-9][0-9]{2,8}$ ]] || usage_error "invalid --vmid: $VMID"
   [[ $SSH_HOST =~ ^[A-Za-z0-9_][A-Za-z0-9_.@:-]*$ ]] || usage_error "invalid --host: $SSH_HOST"
-  [[ $IP == dhcp || $IP =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}$ ]] || usage_error "invalid --ip: $IP"
+  [[ $IP == dhcp ]] || valid_cidr "$IP" || usage_error "invalid --ip: $IP"
   [[ -z $TEMPLATE || $TEMPLATE =~ ^[A-Za-z0-9][A-Za-z0-9._-]*\.tar\.(gz|xz|zst)$ ]] || usage_error "invalid --template: $TEMPLATE"
 }
 
@@ -213,6 +224,8 @@ load_node_ips() {
   list=$(sed -n 's/^define PVE_NODES = { \(.*\) }$/\1/p' "$NFT_CONF")
   IFS=', ' read -r -a NODE_IPS <<<"$list"
   ((${#NODE_IPS[@]} > 0)) || die "no PVE_NODES in $NFT_CONF"
+  # On the shared bridge, the LXC would answer for that node.
+  [[ " ${NODE_IPS[*]} " != *" ${IP%/*} "* ]] || die "--ip $IP is the address of a cluster node"
 }
 
 check_target() {
@@ -371,17 +384,19 @@ check_posture() {
   apt_in_lxc apt-get update --error-on=any || die "apt cannot reach its mirrors through the firewall"
 }
 
-wait_for_idle() {
+# A job queued while the runner was down starts the moment it registers, which is the usual case in a
+# rebuild, so a busy runner is as good as an idle one here.
+wait_for_online() {
   local attempt state=""
   for ((attempt = 1; attempt <= RETRIES; attempt++)); do
     state=$(run_local gh api "repos/$REPO/actions/runners" \
       --jq ".runners[] | select(.name == \"$RUNNER_NAME\") | \"\\(.status) \\(.busy)\"") || state=""
-    if ((DRY_RUN)) || [[ $state == "online false" ]]; then
+    if ((DRY_RUN)) || [[ $state == "online "* ]]; then
       return 0
     fi
     sleep "$RETRY_DELAY"
   done
-  die "runner $RUNNER_NAME is not online and idle; last state: ${state:-not listed}"
+  die "runner $RUNNER_NAME is not online; last state: ${state:-not listed}"
 }
 
 # The unit from svc.sh only waits for the network. With this, a boot where the
@@ -413,9 +428,11 @@ register_runner() {
   fi
 
   in_lxc sh -c "cd $RUNNER_DIR && ./svc.sh install runner"
+  SERVICE_UNGUARDED=1
   require_firewall
+  SERVICE_UNGUARDED=0
   in_lxc sh -c "cd $RUNNER_DIR && ./svc.sh start"
-  wait_for_idle
+  wait_for_online
 }
 
 finish() {
@@ -426,7 +443,7 @@ finish() {
     plan "# Next: $next"
     return 0
   fi
-  printf 'Runner %s is online and idle in LXC %s on %s. Took %ss.\n' "$RUNNER_NAME" "$VMID" "$NODE" "$SECONDS"
+  printf 'Runner %s is online in LXC %s on %s. Took %ss.\n' "$RUNNER_NAME" "$VMID" "$NODE" "$SECONDS"
   printf 'Next: %s\n' "$next"
 }
 
@@ -434,6 +451,12 @@ finish() {
 # shellcheck disable=SC2317,SC2329
 report_failure() {
   local status=$?
+  # svc.sh install has already enabled the unit, and the LXC starts on boot, so a reboot before
+  # anyone looks would start a runner that does not require its firewall.
+  if ((SERVICE_UNGUARDED)); then
+    in_lxc sh -c "cd $RUNNER_DIR && ./svc.sh uninstall" ||
+      printf 'Could not remove the runner service. Do not reboot LXC %s before destroying it.\n' "$VMID" >&2
+  fi
   if ((status != 0 && LXC_CREATED)); then
     printf 'LXC %s stays on %s for inspection. To start over, run there: pct stop %s; pct destroy %s\n' \
       "$VMID" "$NODE" "$VMID" "$VMID" >&2
