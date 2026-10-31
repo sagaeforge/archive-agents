@@ -4,6 +4,13 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      skip_smoke:
+        description: Promote without the live smoke, for when the runner or the cluster is down.
+        type: boolean
+        default: false
+  schedule:
+    - cron: "0 21 * * 0" # Monday 06:00 KST. A week without a run would hide a dead runner.
 
 permissions:
   contents: read
@@ -36,16 +43,46 @@ jobs:
         working-directory: plugins/proxmox
       - run: npm test
         working-directory: plugins/proxmox
-      - run: node test/mutation.mjs
+      # The slowest step by far, and a weekly run has no new code for it to judge.
+      - if: github.event_name != 'schedule'
+        run: node test/mutation.mjs
         working-directory: plugins/proxmox
       - run: node test/smoke/boot.mjs
+        working-directory: plugins/proxmox
+
+  # Calls the real cluster from the runner LXC, next to the runner's token, so PR code must never get
+  # here. Until the owner sets this variable the job is skipped: with no runner it would sit queued for
+  # 24 hours on every push and then fail the run. See docs/live-smoke.md.
+  live-smoke:
+    needs: check
+    if: vars.LIVE_SMOKE_ENABLED == 'true' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && !inputs.skip_smoke
+    runs-on: [self-hosted, proxmox]
+    timeout-minutes: 10
+    env:
+      PVE_TOKEN_FILE: /etc/proxmox-mcp/token
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # This runner keeps its disk between jobs.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - run: npm ci --ignore-scripts
+        working-directory: plugins/proxmox
+      - run: node test/smoke/live.mjs
         working-directory: plugins/proxmox
 
   # Moves stable, the branch machines follow once the gate is on. Until the owner sets this variable
   # the job is skipped, so no write token exists and stable is not touched. See docs/stable-gate.md.
   promote:
-    needs: check
-    if: vars.STABLE_GATE_ENABLED == 'true' && github.ref == 'refs/heads/main'
+    needs: [check, live-smoke]
+    # A skipped job stops the jobs that need it unless the condition holds a status function, and that
+    # function also lifts the rule that every need passed. So check has to be named here. A weekly run
+    # stays out: after a rollback it would bring back the commit that was rolled back.
+    if: >-
+      !cancelled() && vars.STABLE_GATE_ENABLED == 'true' && github.ref == 'refs/heads/main' && github.event_name != 'schedule'
+      && needs.check.result == 'success'
+      && (needs.live-smoke.result == 'success' || inputs.skip_smoke || vars.LIVE_SMOKE_ENABLED != 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
