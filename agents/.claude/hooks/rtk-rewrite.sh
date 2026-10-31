@@ -35,6 +35,7 @@ case "$rtk" in
 esac
 
 input=$(cat)
+root=${CLAUDE_PROJECT_DIR:-}
 
 # Only in bypassPermissions. A rewritten command is no longer one of Claude Code's
 # auto-approved read-only commands, so in any mode that can prompt, a rewrite
@@ -44,11 +45,27 @@ input=$(cat)
 # prints them from the working directory, so anywhere else the same text can name
 # a different file. A worktree-isolated agent's cwd is not the project either, and
 # Claude Code's isolation guard would refuse `rtk git` there.
-listed=$(printf '%s' "$input" | jq -r --arg root "${CLAUDE_PROJECT_DIR:-}" '
+listed=$(printf '%s' "$input" | jq -r --arg root "$root" '
   select(.tool_name == "Bash" and .permission_mode == "bypassPermissions"
     and .tool_input.command == "git status" and $root != "" and .cwd == $root)
   | "yes"' 2>/dev/null)
 [ "$listed" = yes ] || exit 0
+
+# Only with nothing in progress. rtk prints one state line at most, and it does not
+# know git's wording for a sequence whose current step is done: after a range
+# cherry-pick or revert stops, it prints "clean — nothing to commit" with commits
+# still unapplied. An agent in the middle of an operation needs git's own words. This
+# rev-parse reads no index, so the repo's core.fsmonitor and hooks do not run here.
+gitdir=$(timeout -k 1 2 git -C "$root" rev-parse --absolute-git-dir 2>/dev/null) || exit 0
+for state in sequencer rebase-merge rebase-apply MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD BISECT_LOG; do
+  [ ! -e "$gitdir/$state" ] || exit 0
+done
+
+# Nor with a root file named like git's detached HEAD line. rtk trims every line of
+# git's output, file names included, looks for that line, and prints what it finds in
+# place of the real branch and its ahead and behind counts.
+set -- "$root"/*'HEAD detached '*
+[ ! -e "$1" ] && [ ! -L "$1" ] || exit 0
 
 [ "$(timeout 2 "$rtk" --version 2>/dev/null)" = 'rtk 1.1.0' ] || exit 0
 

@@ -9,8 +9,10 @@ import { fakeHome, git, hasRealRtk, restrictedPath, runHook, tempDir, writeFile 
 const hook = "rtk-rewrite.sh";
 const shells = ["sh", "bash", "dash"].filter((shell) => spawnSync("sh", ["-c", `command -v ${shell}`]).status === 0);
 
-// The hook acts only at the project root, so a call starts there unless a test moves it.
+// The hook acts only at the root of a repository, so a call starts there unless a
+// test moves it.
 const project = tempDir("rtk-project");
+git(project, "init", "-q", "-b", "main");
 
 const call = (command, extra = {}) => ({
   session_id: "session",
@@ -228,12 +230,13 @@ test("nothing from the call reaches the rewritten command", () => {
   const home = fakeHome({ rtk: stubRtk });
   const odd = path.join(tempDir("inject-root"), "a'b $(touch pwned)");
   fs.mkdirSync(odd);
+  git(odd, "init", "-q");
   const input = call("git status", { cwd: odd, session_id: "'; touch pwned; '" });
   input.tool_input.description = '$(touch pwned); "quoted" `touch pwned`';
   const output = JSON.parse(runHook(hook, input, { home, project: odd }).stdout).hookSpecificOutput;
   assert.equal(output.updatedInput.command, expected(home));
   assert.equal(output.updatedInput.description, input.tool_input.description);
-  assert.deepEqual(fs.readdirSync(odd), []);
+  assert.deepEqual(fs.readdirSync(odd), [".git"]);
 });
 
 test("a missing, wrong, broken, or slow rtk leaves the command raw", () => {
@@ -295,11 +298,38 @@ test("malformed input is ignored", () => {
 
 test("a machine without jq or timeout stays raw", () => {
   const home = fakeHome({ rtk: stubRtk });
-  const tools = ["cat", "sh"];
+  const tools = ["cat", "git", "sh"];
   for (const present of [[...tools, "timeout"], [...tools, "jq"], tools]) {
     const { rc, stdout } = fire(call("git status"), { home, pathValue: restrictedPath(present) });
     assert.deepEqual({ rc, stdout }, { rc: 0, stdout: "" }, present.join(" "));
   }
+});
+
+test("a missing, failing, or hanging git leaves the command raw", () => {
+  const home = fakeHome({ rtk: stubRtk });
+  const tools = ["cat", "jq", "sh", "sleep", "timeout"];
+  const { rc, stdout } = fire(call("git status"), { home, pathValue: restrictedPath(tools) });
+  assert.deepEqual({ rc, stdout }, { rc: 0, stdout: "" }, "no git at all");
+  for (const body of ["exit 128\n", "kill -SEGV $$\n", "exec sleep 30\n", "sleep 30\n", "trap '' TERM\nexec sleep 30\n"]) {
+    const pathValue = restrictedPath(tools);
+    writeFile(path.join(pathValue, "git"), `#!/bin/sh\n${body}`, 0o755);
+    const run = fire(call("git status"), { home, pathValue });
+    assert.deepEqual({ rc: run.rc, stdout: run.stdout }, { rc: 0, stdout: "" }, body);
+    assert.ok(run.ms < 4500, `${body} took ${run.ms} ms`);
+  }
+  assert.equal(rtkCalls(home), "", "rtk is not consulted when the state is unknown");
+});
+
+test("outside a repository nothing is rewritten", () => {
+  const home = fakeHome({ rtk: stubRtk });
+  const outside = tempDir("not-a-repo");
+  const dangling = tempDir("gone-worktree");
+  writeFile(path.join(dangling, ".git"), "gitdir: /nowhere/at/all\n");
+  for (const cwd of [outside, dangling]) {
+    const { rc, stdout } = runHook(hook, call("git status", { cwd }), { home, project: cwd });
+    assert.deepEqual({ rc, stdout }, { rc: 0, stdout: "" }, cwd);
+  }
+  assert.equal(rtkCalls(home), "");
 });
 
 function fixture() {
@@ -336,7 +366,9 @@ function corrupted() {
 // For git commands expected to stop at a conflict, which exit non-zero.
 const stops = (cwd, ...args) => spawnSync("git", args, { cwd, encoding: "utf8", env: { ...process.env, GIT_EDITOR: "true" } });
 
-const rewrite = (home, cwd) => JSON.parse(runHook(hook, call("git status", { cwd }), { home, project: cwd }).stdout).hookSpecificOutput.updatedInput.command;
+const answer = (home, cwd) => runHook(hook, call("git status", { cwd }), { home, project: cwd }).stdout;
+
+const rewrite = (home, cwd) => JSON.parse(answer(home, cwd)).hookSpecificOutput.updatedInput.command;
 
 const sh = (command, cwd, home) => spawnSync("bash", ["-c", command], { cwd, encoding: "utf8", env: { HOME: home, PATH: process.env.PATH } });
 
@@ -363,13 +395,14 @@ test("if rtk dies after the hook accepted it, the original runs and sets the exi
     const repo = fixture();
     const outside = tempDir("not-a-repo");
     const home = fakeHome({ rtk: `#!/bin/sh\n${gates}${end}` });
+    const command = rewrite(home, repo);
     const started = Date.now();
-    const run = shToFile(rewrite(home, repo), repo, home);
+    const run = shToFile(command, repo, home);
     assert.ok(Date.now() - started < 8000, `${name} took ${Date.now() - started} ms`);
     assert.equal(run.status, 0, name);
     assert.match(run.stdout, /On branch main/, name);
     if (/hangs/.test(name)) continue;
-    const failed = shToFile(rewrite(home, outside), outside, home);
+    const failed = shToFile(command, outside, home);
     assert.equal(failed.status, sh("git status", outside, home).status, name);
   }
 });
@@ -386,9 +419,10 @@ test("if rtk is gone by the time the command runs, the original still runs", () 
 
 test("exit codes match the raw command", realOnly, () => {
   const home = fakeHome({ rtk: "real" });
+  const command = rewrite(home, fixture());
   for (const cwd of [fixture(), tempDir("not-a-repo"), corrupted()]) {
     const raw = sh("git status", cwd, home);
-    const rewritten = sh(rewrite(home, cwd), cwd, home);
+    const rewritten = sh(command, cwd, home);
     assert.equal(rewritten.status, raw.status, cwd);
     if (raw.status !== 0) assert.ok(rewritten.stderr.includes(raw.stderr.trim()), rewritten.stderr);
   }
@@ -409,31 +443,213 @@ test("git status keeps every fact", realOnly, () => {
   assert.ok(out.length < sh("git status", repo, home).stdout.length);
 });
 
-test("git status still says what is in progress and what conflicts", realOnly, () => {
+/** A repo whose feat branch adds a clean commit after the one that conflicts with main. */
+function rangeToPick() {
+  const repo = diverged();
+  git(repo, "switch", "-q", "feat");
+  writeFile(path.join(repo, "later.txt"), "later\n");
+  git(repo, "add", "later.txt");
+  git(repo, "commit", "-qm", "later");
+  git(repo, "switch", "-q", "main");
+  return repo;
+}
+
+/** A repo where reverting an older commit and then the newest stops on the older one. */
+function rangeToRevert() {
+  const repo = fixture();
+  writeFile(path.join(repo, "few.txt"), "first\n");
+  git(repo, "commit", "-qam", "first");
+  const first = git(repo, "rev-parse", "HEAD").trim();
+  writeFile(path.join(repo, "few.txt"), "second\n");
+  git(repo, "commit", "-qam", "second");
+  writeFile(path.join(repo, "many.txt"), "third\n");
+  git(repo, "commit", "-qam", "third");
+  return { repo, first };
+}
+
+const resolveConflict = (repo) => {
+  writeFile(path.join(repo, "few.txt"), "resolved\n");
+  git(repo, "add", "few.txt");
+};
+
+const stoppedSequences = {
+  "a range cherry-pick resolved with git commit": () => {
+    const repo = rangeToPick();
+    stops(repo, "cherry-pick", "feat~1", "feat");
+    resolveConflict(repo);
+    git(repo, "commit", "-qm", "resolved");
+    return { repo, line: /Cherry-pick currently in progress\./ };
+  },
+  "a range cherry-pick thrown away with git reset --hard": () => {
+    const repo = rangeToPick();
+    stops(repo, "cherry-pick", "feat~1", "feat");
+    git(repo, "reset", "-q", "--hard");
+    return { repo, line: /Cherry-pick currently in progress\./ };
+  },
+  "a range revert resolved with git commit": () => {
+    const { repo, first } = rangeToRevert();
+    stops(repo, "revert", "--no-edit", first, "HEAD");
+    resolveConflict(repo);
+    git(repo, "commit", "-qm", "resolved");
+    return { repo, line: /Revert currently in progress\./ };
+  },
+};
+
+test("a stopped sequence stays raw, where rtk would report a clean tree", realOnly, () => {
   const home = fakeHome({ rtk: "real" });
-  const check = (repo, pattern) => {
-    const out = sh(rewrite(home, repo), repo, home).stdout;
-    assert.match(out, pattern);
+  for (const [name, stop] of Object.entries(stoppedSequences)) {
+    const { repo, line } = stop();
+    assert.match(sh("git status", repo, home).stdout, line, `${name}: git must report the sequence`);
+    // The check can fail: this is what the agent would read after a rewrite.
+    const rtk = sh(expected(home), repo, home).stdout;
+    assert.match(rtk, /clean/, name);
+    assert.doesNotMatch(rtk, /in progress/, name);
+    assert.equal(answer(home, repo), "", name);
+  }
+});
+
+test("the rewrite comes back once a sequence ends", realOnly, () => {
+  const home = fakeHome({ rtk: "real" });
+  const { repo } = stoppedSequences["a range cherry-pick resolved with git commit"]();
+  assert.equal(answer(home, repo), "");
+  git(repo, "cherry-pick", "--quit");
+  assert.equal(rewrite(home, repo), expected(home));
+});
+
+function patchOfFeat(repo) {
+  const patch = path.join(tempDir("patch"), "feat.patch");
+  fs.writeFileSync(patch, git(repo, "format-patch", "-1", "feat", "--stdout"));
+  return patch;
+}
+
+const bisect = (repo) => {
+  git(repo, "bisect", "start");
+  git(repo, "bisect", "bad", "HEAD");
+  git(repo, "bisect", "good", "HEAD~1");
+};
+
+// Each starts on main, or on a detached copy of it in a linked worktree.
+const operations = {
+  "merge with conflicts": (repo) => stops(repo, "merge", "feat"),
+  "rebase with conflicts": (repo) => stops(repo, "rebase", "feat"),
+  "single cherry-pick": (repo) => stops(repo, "cherry-pick", "feat"),
+  "am with conflicts": (repo) => stops(repo, "am", patchOfFeat(repo)),
+  "bisect alone": bisect,
+  "bisect under a cherry-pick": (repo) => {
+    bisect(repo);
+    stops(repo, "cherry-pick", "feat");
+  },
+  "single revert": (repo) => {
+    writeFile(path.join(repo, "few.txt"), "newer\n");
+    git(repo, "commit", "-qam", "newer");
+    stops(repo, "revert", "--no-edit", "HEAD~1");
+  },
+  "rebase stopped on an edit": (repo) => {
+    const run = spawnSync("git", ["rebase", "-i", "HEAD~1"], { cwd: repo, encoding: "utf8", env: { ...process.env, GIT_SEQUENCE_EDITOR: "sed -i s/^pick/edit/" } });
+    assert.equal(run.status, 0, run.stderr);
+  },
+};
+
+test("any operation in progress stays raw, in a checkout and in a linked worktree", () => {
+  const home = fakeHome({ rtk: stubRtk });
+  for (const [name, start] of Object.entries(operations)) {
+    const checkout = diverged();
+    start(checkout);
+    assert.equal(answer(home, checkout), "", name);
+
+    const main = diverged();
+    const linked = path.join(tempDir("linked"), "worktree");
+    git(main, "worktree", "add", "-q", "--detach", linked, "main");
+    assert.notEqual(answer(home, linked), "", `${name}: a linked worktree rewrites before it starts`);
+    start(linked);
+    assert.equal(answer(home, linked), "", `${name} in a linked worktree`);
+    assert.notEqual(answer(home, main), "", `${name}: the main checkout has nothing in progress`);
+  }
+});
+
+test("the state check asks about the project, wherever the hook process runs", () => {
+  const home = fakeHome({ rtk: stubRtk });
+  const busy = diverged();
+  stops(busy, "merge", "feat");
+  const idle = fixture();
+  assert.equal(runHook(hook, call("git status", { cwd: busy }), { home, project: busy, cwd: idle }).stdout, "");
+  assert.notEqual(runHook(hook, call("git status", { cwd: idle }), { home, project: idle, cwd: busy }).stdout, "");
+});
+
+test("a merge with nothing left to resolve stays raw too", () => {
+  const home = fakeHome({ rtk: stubRtk });
+  const repo = fixture();
+  git(repo, "switch", "-qc", "feat");
+  writeFile(path.join(repo, "added.txt"), "added\n");
+  git(repo, "add", "added.txt");
+  git(repo, "commit", "-qm", "added");
+  git(repo, "switch", "-q", "main");
+  git(repo, "merge", "-q", "--no-commit", "--no-ff", "feat");
+  assert.equal(answer(home, repo), "");
+});
+
+test("conflicts with no operation behind them still show", realOnly, () => {
+  const home = fakeHome({ rtk: "real" });
+  const repo = fixture();
+  writeFile(path.join(repo, "few.txt"), "stashed\n");
+  git(repo, "stash", "push", "-q");
+  writeFile(path.join(repo, "few.txt"), "committed\n");
+  git(repo, "commit", "-qam", "committed");
+  stops(repo, "stash", "pop");
+  assert.match(sh(rewrite(home, repo), repo, home).stdout, /UU few\.txt/);
+});
+
+test("the state check runs nothing the repository configured", () => {
+  const home = fakeHome({ rtk: stubRtk });
+  const repo = fixture();
+  const fired = path.join(repo, "fired");
+  fs.appendFileSync(path.join(repo, ".git/config"), `[core]\n\tfsmonitor = touch ${fired}; true\n\thooksPath = hooks\n`);
+  for (const name of ["post-index-change", "post-checkout", "reference-transaction"]) {
+    writeFile(path.join(repo, "hooks", name), `#!/bin/sh\ntouch ${fired}\n`, 0o755);
+  }
+  assert.equal(rewrite(home, repo), expected(home));
+  assert.equal(fs.existsSync(fired), false);
+});
+
+test("a root file named like git's detached line stays raw, where rtk would lose the branch", realOnly, () => {
+  const home = fakeHome({ rtk: "real" });
+  const origin = fixture();
+  const clone = path.join(tempDir("spoof"), "repo");
+  git(path.dirname(clone), "clone", "-q", origin, clone);
+  git(clone, "config", "user.email", "sandbox@example.invalid");
+  git(clone, "config", "user.name", "sandbox");
+  writeFile(path.join(clone, "local.txt"), "x\n");
+  git(clone, "add", "local.txt");
+  git(clone, "commit", "-qm", "local");
+  assert.match(sh(rewrite(home, clone), clone, home).stdout, /main\.\.\.origin\/main \[ahead 1\]/);
+
+  const named = path.join(clone, "HEAD detached at v9.9.9");
+  const indented = path.join(clone, " HEAD detached at v9.9.9");
+  const plant = {
+    file: () => (writeFile(named, ""), named),
+    directory: () => (writeFile(path.join(named, "x"), ""), named),
+    "dangling link": () => (fs.symlinkSync("/nowhere/at/all", named), named),
+    "leading space": () => (writeFile(indented, ""), indented),
   };
+  for (const [name, make] of Object.entries(plant)) {
+    const spoof = make();
+    // The check can fail: this is what the agent would read after a rewrite.
+    const rtk = sh(expected(home), clone, home).stdout;
+    assert.match(rtk, /^\* HEAD detached at v9\.9\.9/m, name);
+    assert.doesNotMatch(rtk, /ahead 1/, name);
+    assert.match(sh("git status", clone, home).stdout, /On branch main/, name);
+    assert.equal(answer(home, clone), "", name);
+    fs.rmSync(spoof, { recursive: true });
+  }
+  assert.equal(rewrite(home, clone), expected(home));
 
-  const merging = diverged();
-  stops(merging, "merge", "feat");
-  check(merging, /merge in progress[^]*UU few\.txt/);
-
-  const rebasing = diverged();
-  git(rebasing, "switch", "-q", "feat");
-  stops(rebasing, "rebase", "main");
-  check(rebasing, /rebase in progress[^]*UU few\.txt/);
-
-  const picking = diverged();
-  stops(picking, "cherry-pick", "feat");
-  check(picking, /cherry-pick in progress[^]*UU few\.txt/);
-
-  const bisecting = diverged();
-  git(bisecting, "bisect", "start");
-  git(bisecting, "bisect", "bad", "HEAD");
-  git(bisecting, "bisect", "good", "HEAD~1");
-  check(bisecting, /bisect in progress/);
+  // One level down git prints the directory first, so rtk does not take the bait, and
+  // a name that only begins the same way is not the line rtk looks for.
+  writeFile(path.join(clone, "sub/HEAD detached at v9.9.9"), "");
+  writeFile(path.join(clone, "HEADER.md"), "");
+  writeFile(path.join(clone, "HEAD detached"), "");
+  assert.equal(rewrite(home, clone), expected(home));
+  assert.match(sh(expected(home), clone, home).stdout, /\[ahead 1\]/);
 });
 
 test("git status keeps the upstream's ahead and behind counts", realOnly, () => {
@@ -500,8 +716,9 @@ test("rtk's ignore lists do not hide anything from git status", realOnly, () => 
 
 test("rtk stores nothing and gives no install advice, on success or failure", realOnly, () => {
   const home = fakeHome({ rtk: "real" });
+  const command = rewrite(home, fixture());
   for (const cwd of [fixture(), tempDir("not-a-repo"), corrupted()]) {
-    const out = sh(rewrite(home, cwd), cwd, home);
+    const out = sh(command, cwd, home);
     assert.doesNotMatch(out.stdout + out.stderr, /rtk init/);
   }
   const left = fs.readdirSync(home, { recursive: true }).map(String);
