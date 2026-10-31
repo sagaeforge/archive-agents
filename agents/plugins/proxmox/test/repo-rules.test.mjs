@@ -92,6 +92,15 @@ test("the Node versions in engines, the CI matrix and .nvmrc agree", () => {
   assert.ok(versions.includes(Number(read(".nvmrc"))), ".nvmrc is not a version CI tests");
 });
 
+test("the mutation check's control has room for the whole suite, inside the job's own limit", () => {
+  const source = read("plugins/proxmox/test/mutation.mjs");
+  const limit = (name) => Number(source.match(new RegExp(`^const ${name} = ([\\d_]+);$`, "m"))[1].replaceAll("_", ""));
+  const [, jobMinutes] = read(".github/workflows/ci.yml").match(/^  check:\n.*\n +timeout-minutes: (\d+)$/m);
+  assert.ok(limit("CONTROL_TIMEOUT_MS") >= 3 * limit("TEST_TIMEOUT_MS"), "npm test alone is near a mutant's limit");
+  assert.ok(limit("CONTROL_TIMEOUT_MS") < Number(jobMinutes) * 60_000, "the job would end before the control's own message");
+  assert.match(source, /runTests\(copyRepository\(root, "control"\), null, CONTROL_TIMEOUT_MS\)/);
+});
+
 test("the mutation check runs on one leg of CI, the Node version in .nvmrc", () => {
   const [, condition] = read(".github/workflows/ci.yml").match(/^ +- if: (.+)\n +run: node test\/mutation\.mjs$/m);
   assert.equal(condition, `github.event_name != 'schedule' && matrix.node == ${Number(read(".nvmrc"))}`);

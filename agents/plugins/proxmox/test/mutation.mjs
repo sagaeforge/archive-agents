@@ -13,6 +13,9 @@ const PLUGIN = "plugins/proxmox";
 // packages and the other checkouts under .claude/worktrees.
 const NOT_COPIED = new Set([".git", "node_modules", "worktrees"]);
 const TEST_TIMEOUT_MS = 120_000;
+// The control runs the whole suite, which takes well over a minute even here, so one mutant's limit
+// would fail this step on a slower runner with nothing wrong. check's own timeout still bounds it.
+const CONTROL_TIMEOUT_MS = 600_000;
 const MAX_OUTPUT_BYTES = 64 * 1024 * 1024;
 
 const GET_ONLY = "    // GET only: this client deliberately has no way to issue a mutating request.\n";
@@ -145,13 +148,13 @@ function stopGroup(pid) {
 
 // A timeout stops only the command itself. Its own process group lets the test processes under it
 // go too, or they would stay behind and spin with their directory gone.
-function runTests(cwd, files) {
+function runTests(cwd, files, timeout = TEST_TIMEOUT_MS) {
   const [command, args] = files ? [process.execPath, ["--test", ...files]] : ["npm", ["test"]];
   const { pid, status, error, stdout, stderr } = spawnSync(command, args, {
     cwd,
     env,
     encoding: "utf8",
-    timeout: TEST_TIMEOUT_MS,
+    timeout,
     maxBuffer: MAX_OUTPUT_BYTES,
     detached: true,
   });
@@ -196,7 +199,8 @@ function problemWith({ file, from, to, tests }, plugin) {
 const root = mkdtempSync(join(tmpdir(), "proxmox-mutation-"));
 let failures = 0;
 try {
-  const control = runTests(copyRepository(root, "control"));
+  const control = runTests(copyRepository(root, "control"), null, CONTROL_TIMEOUT_MS);
+  if (control.status === null) throw new Error(`the control did not finish within ${CONTROL_TIMEOUT_MS} ms`);
   if (control.status !== 0) {
     console.error(control.output);
     throw new Error("the unmodified tests fail, so no mutant can prove anything");
