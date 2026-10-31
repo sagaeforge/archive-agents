@@ -1,15 +1,14 @@
 // Guards the read-only contract from CLAUDE.md. The expected values are spelled out here rather
 // than imported from server code, so that widening the server cannot widen what these tests allow.
 import assert from "node:assert/strict";
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import https from "node:https";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { createClient, httpsTransport } from "../server/pve.mjs";
 import { createCa } from "./helpers/certs.mjs";
+import { ENTRY_POINT, startEntryPoint as runEntryPoint } from "./helpers/entry-point.mjs";
 import { LOOPBACK, startFakePve, tempDir } from "./helpers/fake-pve.mjs";
 
 const TOKEN = "tester@pve!unit=not-a-real-secret";
@@ -26,9 +25,7 @@ const READ_ONLY_TOOLS = {
 };
 
 const fromTest = (path) => fileURLToPath(new URL(path, import.meta.url));
-const SERVER_DIR = fromTest("../server");
-const ENTRY_POINT = join(SERVER_DIR, "index.mjs");
-const DIAL_FAKE_PVE = new URL("./helpers/dial-fake-pve.mjs", import.meta.url).href;
+const SERVER_DIR = dirname(ENTRY_POINT);
 
 const pinnedCa = createCa("pinned test CA");
 const otherCa = createCa("other test CA");
@@ -39,34 +36,8 @@ function pinnedCaFile(t) {
   return caFile;
 }
 
-// Runs the real entry point. Its home is throwaway, so the fake token in there is the only one it
-// can find, and PVE_HOSTS keeps the real cluster out of reach.
-async function startEntryPoint(t, port, env = { PVE_CA_FILE: pinnedCaFile(t) }) {
-  const home = tempDir(t);
-  const tokenDir = join(home, ".config", "proxmox-mcp");
-  mkdirSync(tokenDir, { recursive: true });
-  writeFileSync(join(tokenDir, "token"), `${TOKEN}\n`);
-  const log = join(home, "https-requests");
-  writeFileSync(log, "");
-
-  const client = new Client({ name: "readonly-test", version: "0.0.0" });
-  t.after(() => client.close());
-  await client.connect(
-    new StdioClientTransport({
-      command: process.execPath,
-      args: ["--import", DIAL_FAKE_PVE, ENTRY_POINT],
-      env: { HOME: home, USERPROFILE: home, PVE_HOSTS: LOOPBACK, FAKE_PVE_PORT: port, FAKE_PVE_LOG: log, ...env },
-    }),
-  );
-  return {
-    client,
-    httpsRequests: () =>
-      readFileSync(log, "utf8")
-        .split("\n")
-        .filter(Boolean)
-        .map((line) => JSON.parse(line)),
-  };
-}
+const startEntryPoint = (t, port, env = { PVE_CA_FILE: pinnedCaFile(t) }) =>
+  runEntryPoint(t, { token: TOKEN, port, env });
 
 test("a client call reaches PVE as one bodyless GET carrying only the token header", async (t) => {
   const server = await startFakePve(t, pinnedCa.issue(LOOPBACK));
@@ -193,6 +164,7 @@ const toolCalls = [
   ["cluster_overview", {}, ["/cluster/status", "/cluster/ha/status/current"]],
   ["list_resources", {}, ["/cluster/resources"]],
   ["list_resources", { type: "vm" }, ["/cluster/resources?type=vm"]],
+  ["list_resources", { type: "sdn" }, ["/cluster/resources"]],
   ["node_status", { node: "n1" }, ["/nodes/n1/status"]],
   ["guest_config", { node: "n1", vmid: 100 }, ["/nodes/n1/qemu/100/config"]],
   ["guest_config", { node: "n1", vmid: 101, kind: "lxc" }, ["/nodes/n1/lxc/101/config"]],
@@ -239,7 +211,7 @@ for (const [reason, credentials] of untrustedServers) {
     const result = await client.callTool({ name: "api_get", arguments: { path: "/version" } });
 
     assert.equal(result.isError, true);
-    assert.match(result.content[0].text, /All PVE hosts unreachable/);
+    assert.match(result.content[0].text, /^TLS_VERIFY: /);
     assert.deepEqual(server.requests, []);
   });
 }

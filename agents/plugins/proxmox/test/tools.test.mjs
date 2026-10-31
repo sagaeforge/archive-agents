@@ -3,13 +3,14 @@ import { test } from "node:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { createClient } from "../server/pve.mjs";
+import { PveApiError, PveRequestError, createClient } from "../server/pve.mjs";
 import { registerTools } from "../server/tools.mjs";
 
 const NODE = "pve-node";
 
-// Records every pve.get call and answers from `responses`, keyed by API path. It refuses a third
-// argument, which could only be a way for a tool to steer the client, such as a method.
+// Records every pve.get call and answers from `responses`, keyed by API path. An answer can be a
+// function, to fail or to stall. It refuses a third argument, which could only be a way for a tool
+// to steer the client, such as a method.
 function fakePve(responses = {}) {
   const calls = [];
   return {
@@ -18,7 +19,8 @@ function fakePve(responses = {}) {
       assert.ok(args.length <= 2, `pve.get takes a path and params, got ${JSON.stringify(args)}`);
       const [path, params] = args;
       calls.push({ path, params });
-      return responses[path];
+      const answer = responses[path];
+      return typeof answer === "function" ? answer() : answer;
     },
   };
 }
@@ -86,7 +88,6 @@ test("list_resources passes no filter when type is omitted", async (t) => {
   assert.deepEqual(pve.calls, [{ path: "/cluster/resources", params: { type: undefined } }]);
 });
 
-// sdn is left out on purpose: PVE returns nothing for it today, and that is not behaviour to pin.
 for (const type of ["vm", "node", "storage"]) {
   test(`list_resources forwards type=${type}`, async (t) => {
     const pve = fakePve({ "/cluster/resources": [] });
@@ -96,6 +97,31 @@ for (const type of ["vm", "node", "storage"]) {
     assert.deepEqual(pve.calls, [{ path: "/cluster/resources", params: { type } }]);
   });
 }
+
+// The entries of a real PVE 9 listing, cut down, plus the type older versions use for SDN zones.
+const ZONE = { id: `network/${NODE}/zone/localnetwork`, type: "network", "network-type": "zone", network: "localnetwork" };
+const OLD_ZONE = { id: `sdn/${NODE}/localnetwork`, type: "sdn", sdn: "localnetwork" };
+const RESOURCES = [
+  { id: "qemu/100", type: "qemu" },
+  { id: `node/${NODE}`, type: "node" },
+  { id: `storage/${NODE}/local`, type: "storage" },
+  ZONE,
+  OLD_ZONE,
+];
+
+test("list_resources filters type=sdn itself, because PVE's filter finds nothing", async (t) => {
+  const pve = fakePve({ "/cluster/resources": RESOURCES });
+  const client = await connect(t, pve);
+
+  assert.deepEqual(await call(client, "list_resources", { type: "sdn" }), success([ZONE, OLD_ZONE]));
+  assert.deepEqual(pve.calls, [{ path: "/cluster/resources", params: undefined }]);
+});
+
+test("list_resources reports a cluster without SDN entries as an empty list", async (t) => {
+  const client = await connect(t, fakePve({ "/cluster/resources": [{ id: "qemu/100", type: "qemu" }] }));
+
+  assert.deepEqual(await call(client, "list_resources", { type: "sdn" }), success([]));
+});
 
 // node_status
 
@@ -128,6 +154,242 @@ test("guest_config reads an LXC guest when asked", async (t) => {
   assert.deepEqual(pve.calls, [{ path: `/nodes/${NODE}/lxc/101/config`, params: undefined }]);
 });
 
+// Telling a node the cluster does not have from one that is slow or failing. PVE stalls on a name it
+// does not know, so the lookup has to start before the read gives up. Time is mocked here so that
+// the delay can be pinned exactly; errors.test.mjs goes through it for real.
+
+const NODE_CHECK_DELAY_MS = 1000;
+const NO_HANG = { timeout: 5000 }; // These reads never end by themselves, so a regression must not hang the run.
+const CLUSTER = [
+  { type: "cluster", id: "cluster", name: "example-cluster", nodes: 2, quorate: 1 },
+  { type: "node", id: "node/pve-node", name: "pve-node", online: 1 },
+  { type: "node", id: `node/${NODE}`, name: NODE, online: 1 },
+];
+const unknownNode = (name) =>
+  failure(`NODE_NOT_FOUND: "${name}" is not a node of this cluster. Its nodes are pve-node, pve-node.`);
+
+const stall = () => new Promise(() => {});
+const paths = (pve) => pve.calls.map(({ path }) => path);
+
+const turn = () => new Promise(setImmediate);
+
+// Lets the MCP exchange run. A condition that never comes true fails instead of hanging.
+async function until(condition) {
+  for (let i = 0; i < 1000 && !condition(); i++) await turn();
+  assert.ok(condition(), `gave up waiting for ${condition}`);
+}
+
+function mockTime(t) {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+}
+
+// Starts a tool call and brings it to the moment its lookup has been sent. The result comes wrapped
+// because the call is still running: an async function would wait for a promise it returns.
+async function stallRead(t, client, pve, name, args) {
+  mockTime(t);
+  const result = call(client, name, args);
+  await until(() => pve.calls.length === 1);
+  t.mock.timers.tick(NODE_CHECK_DELAY_MS);
+  await until(() => pve.calls.length === 2);
+  return { result };
+}
+
+const nodeReads = [
+  ["node_status", (node) => ({ node }), (node) => `/nodes/${node}/status`],
+  ["guest_config", (node) => ({ node, vmid: 100 }), (node) => `/nodes/${node}/qemu/100/config`],
+  ["guest_config", (node) => ({ node, vmid: 101, kind: "lxc" }), (node) => `/nodes/${node}/lxc/101/config`],
+];
+
+for (const [name, args, pathOf] of nodeReads) {
+  const label = `${name} ${pathOf("x")}`;
+
+  test(`${label} sends a healthy read alone, however long the wait after it`, async (t) => {
+    const pve = fakePve({ [pathOf(NODE)]: { ok: true } });
+    const client = await connect(t, pve);
+    mockTime(t);
+
+    assert.deepEqual(await call(client, name, args(NODE)), success({ ok: true }));
+    t.mock.timers.tick(10 * NODE_CHECK_DELAY_MS);
+    await turn();
+
+    assert.deepEqual(paths(pve), [pathOf(NODE)]);
+  });
+
+  test(`${label} looks the node up once the read has stalled for the delay, not before`, NO_HANG, async (t) => {
+    const pve = fakePve({ "/cluster/status": CLUSTER, [pathOf("ghost")]: stall });
+    const client = await connect(t, pve);
+    mockTime(t);
+
+    const result = call(client, name, args("ghost"));
+    await until(() => pve.calls.length === 1);
+    t.mock.timers.tick(NODE_CHECK_DELAY_MS - 1);
+    await turn();
+    assert.deepEqual(paths(pve), [pathOf("ghost")]);
+
+    t.mock.timers.tick(1);
+
+    assert.deepEqual(await result, unknownNode("ghost"));
+    assert.deepEqual(paths(pve), [pathOf("ghost"), "/cluster/status"]);
+  });
+
+  test(`${label} looks the node up at once when PVE answers with a server error`, async (t) => {
+    const pve = fakePve({
+      "/cluster/status": CLUSTER,
+      [pathOf("ghost")]: () => {
+        throw new PveApiError(500, "hostname lookup 'ghost' failed");
+      },
+    });
+    const client = await connect(t, pve);
+
+    assert.deepEqual(await call(client, name, args("ghost")), unknownNode("ghost"));
+  });
+
+  test(`${label} waits for a stalled read of a node the cluster has`, NO_HANG, async (t) => {
+    let finish;
+    const pve = fakePve({
+      "/cluster/status": CLUSTER,
+      [pathOf(NODE)]: () => new Promise((resolve) => (finish = resolve)),
+    });
+    const client = await connect(t, pve);
+
+    const { result } = await stallRead(t, client, pve, name, args(NODE));
+    await turn(); // The lookup comes back and clears the node, and the call still has to wait.
+    finish({ ok: true });
+
+    assert.deepEqual(await result, success({ ok: true }));
+  });
+
+  test(`${label} keeps PVE's own error for a node the cluster has`, async (t) => {
+    const pve = fakePve({
+      "/cluster/status": CLUSTER,
+      [pathOf(NODE)]: () => {
+        throw new PveApiError(500, "Configuration file does not exist");
+      },
+    });
+    const client = await connect(t, pve);
+
+    assert.deepEqual(await call(client, name, args(NODE)), failure("PVE API 500: Configuration file does not exist"));
+    assert.deepEqual(paths(pve), [pathOf(NODE), "/cluster/status"]);
+  });
+}
+
+test("a stalled read is not held back by a lookup that stalls too", NO_HANG, async (t) => {
+  let finish;
+  const path = `/nodes/${NODE}/status`;
+  const pve = fakePve({ "/cluster/status": stall, [path]: () => new Promise((resolve) => (finish = resolve)) });
+  const client = await connect(t, pve);
+
+  const { result } = await stallRead(t, client, pve, "node_status", { node: NODE });
+  finish({ ok: true });
+
+  assert.deepEqual(await result, success({ ok: true }));
+});
+
+test("a stalled read keeps its own failure when the lookup stalls too", NO_HANG, async (t) => {
+  let abandon;
+  const path = `/nodes/${NODE}/status`;
+  const pve = fakePve({
+    "/cluster/status": stall,
+    [path]: () => new Promise((_, reject) => (abandon = reject)),
+  });
+  const client = await connect(t, pve);
+
+  const { result } = await stallRead(t, client, pve, "node_status", { node: NODE });
+  abandon(new PveRequestError("TIMEOUT", "No PVE host answered in time"));
+
+  assert.deepEqual(await result, failure("TIMEOUT: No PVE host answered in time"));
+});
+
+// The client cannot be told to stop, so the read goes on to time out on every host after the tool
+// has answered. An unhandled rejection at that point would end the server.
+test("a read left behind for a missing node can fail later without harm", NO_HANG, async (t) => {
+  let abandon;
+  const path = "/nodes/ghost/status";
+  const pve = fakePve({
+    "/cluster/status": CLUSTER,
+    [path]: () => new Promise((_, reject) => (abandon = reject)),
+  });
+  const client = await connect(t, pve);
+  const unhandled = [];
+  const record = (reason) => unhandled.push(reason);
+  process.on("unhandledRejection", record);
+  t.after(() => process.off("unhandledRejection", record));
+
+  const { result } = await stallRead(t, client, pve, "node_status", { node: "ghost" });
+  assert.deepEqual(await result, unknownNode("ghost"));
+
+  abandon(new PveRequestError("TIMEOUT", "No PVE host answered in time"));
+  await turn();
+
+  assert.deepEqual(unhandled, []);
+});
+
+test("the cluster's own name does not pass for a node", async (t) => {
+  const path = "/nodes/example-cluster/status";
+  const pve = fakePve({
+    "/cluster/status": CLUSTER,
+    [path]: () => {
+      throw new PveApiError(500, "hostname lookup failed");
+    },
+  });
+  const client = await connect(t, pve);
+
+  assert.deepEqual(await call(client, "node_status", { node: "example-cluster" }), unknownNode("example-cluster"));
+});
+
+// A lookup that cannot say which nodes exist must not get a real node called missing.
+
+const inconclusiveLookups = [
+  ["fails", () => { throw new PveRequestError("TIMEOUT", "no answer"); }],
+  ["returns no list", () => null],
+  ["lists no nodes", () => [{ type: "cluster", name: "example-cluster" }]],
+  ["returns an empty list", () => []],
+];
+
+for (const [outcome, lookup] of inconclusiveLookups) {
+  test(`a failed read keeps its own error when the lookup ${outcome}`, async (t) => {
+    const path = `/nodes/${NODE}/status`;
+    const pve = fakePve({
+      "/cluster/status": lookup,
+      [path]: () => {
+        throw new PveApiError(500, "pvestatd is down");
+      },
+    });
+    const client = await connect(t, pve);
+
+    assert.deepEqual(await call(client, "node_status", { node: NODE }), failure("PVE API 500: pvestatd is down"));
+  });
+}
+
+// These are about the request or the token. A lookup would fail the same way, or could not help.
+
+const unrelatedFailures = [
+  ["a 400", () => new PveApiError(400, "Parameter verification failed.")],
+  ["a 401", () => new PveApiError(401, "Authentication failed!")],
+  ["a 403", () => new PveApiError(403, "Permission check failed")],
+  ["a refused path", () => new PveRequestError("BAD_REQUEST", "Invalid API path")],
+  ["a missing token", () => new PveRequestError("NO_TOKEN", "API token not found")],
+  ["a TLS failure", () => new PveRequestError("TLS_VERIFY", "No PVE host passed certificate verification")],
+  ["refused connections", () => new PveRequestError("REFUSED", "Every PVE host refused the connection")],
+];
+
+for (const [failing, error] of unrelatedFailures) {
+  test(`${failing} sends no lookup`, async (t) => {
+    const expected = error();
+    const path = `/nodes/${NODE}/status`;
+    const pve = fakePve({
+      "/cluster/status": CLUSTER,
+      [path]: () => {
+        throw expected;
+      },
+    });
+    const client = await connect(t, pve);
+
+    assert.deepEqual(await call(client, "node_status", { node: NODE }), failure(expected.message));
+    assert.deepEqual(paths(pve), [path]);
+  });
+}
+
 // recent_tasks
 
 const newestFirst = (count) => Array.from({ length: count }, (_, i) => ({ upid: `task-${i}`, starttime: count - i }));
@@ -152,6 +414,37 @@ test("recent_tasks returns everything when there are fewer entries than the limi
   const client = await connect(t, fakePve({ "/cluster/tasks": tasks }));
 
   assert.deepEqual(await call(client, "recent_tasks", { limit: 5 }), success(tasks));
+});
+
+// The order of a real PVE 9 listing: running tasks first, then one node at a time.
+const TASKS_BY_NODE = [
+  { upid: "running", node: "a", starttime: 50 },
+  { upid: "a-new", node: "a", starttime: 90 },
+  { upid: "a-old", node: "a", starttime: 10 },
+  { upid: "b-new", node: "b", starttime: 100 },
+  { upid: "b-mid", node: "b", starttime: 90 },
+  { upid: "b-old", node: "b", starttime: 20 },
+];
+
+const upids = (result) => JSON.parse(result.content[0].text).map(({ upid }) => upid);
+
+test("recent_tasks returns the newest tasks of the whole cluster, newest first", async (t) => {
+  const client = await connect(t, fakePve({ "/cluster/tasks": TASKS_BY_NODE }));
+
+  assert.deepEqual(upids(await call(client, "recent_tasks", {})), [
+    "b-new",
+    "a-new", // Same start as b-mid, so PVE's order stands.
+    "b-mid",
+    "running",
+    "b-old",
+    "a-old",
+  ]);
+});
+
+test("recent_tasks sorts before it cuts", async (t) => {
+  const client = await connect(t, fakePve({ "/cluster/tasks": TASKS_BY_NODE }));
+
+  assert.deepEqual(upids(await call(client, "recent_tasks", { limit: 2 })), ["b-new", "a-new"]);
 });
 
 // api_get
@@ -225,6 +518,9 @@ test("cluster_overview rejects arguments that are not an object", async (t) => {
 const traversalAttempts = [
   ["api_get", { path: "/nodes/../access" }],
   ["api_get", { path: "nodes/n1/status" }],
+  ["api_get", { path: "/nodes/..?x=1" }],
+  ["api_get", { path: "/nodes/%2e%2e/access" }],
+  ["api_get", { path: "/x\r\nFoo: bar" }],
   ["node_status", { node: ".." }],
   ["guest_config", { node: "..", vmid: 100 }],
 ];
