@@ -1,7 +1,7 @@
 // The failures the operations audit injected, plus the server log, on the real entry point and
 // real sockets. Scenario letters are those of the audit. tools.test.mjs covers the logic in detail.
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { cpSync, existsSync, readFileSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { createInterface } from "node:readline";
@@ -418,6 +418,18 @@ test("a log file that cannot be written fails no call", WAIT, async (t) => {
 
   assert.equal(result.isError, undefined);
   assert.equal(existsSync(logFile), false);
+});
+
+// Only a FIFO with no reader can stop a call here: appendFileSync would block the server in open(2).
+test("something at the log path that is not a file fails no call", WAIT, async (t) => {
+  const logFile = join(tempDir(t), "calls.jsonl");
+  assert.equal(spawnSync("mkfifo", [logFile]).status, 0);
+  const server = await startFakePve(t, ca.issue(LOOPBACK));
+  const { client } = await start(t, server.port, { PVE_CA_FILE: caFileIn(t), PVE_LOG_FILE: logFile });
+
+  const result = await client.callTool({ name: "api_get", arguments: { path: "/version" } });
+
+  assert.equal(result.isError, undefined);
 });
 
 // The plugin cache names each install after its commit.

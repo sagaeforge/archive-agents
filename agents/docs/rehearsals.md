@@ -41,7 +41,7 @@
   grep -c -- --rotate ~/.claude/plugins/marketplaces/sagae/plugins/proxmox/scripts/bootstrap-token.sh
   ```
 
-- [ ] `claude plugin list`에 `The packages it lists`로 시작하는 Note가 없는지 봅니다. 문구가 둘입니다. `npm`이 없으면 `were not installed, because it needs npm`, 그 밖에는 `are not installed`가 뒤에 붙습니다.
+- [ ] `claude plugin list`에 `The packages it lists`로 시작하는 Note가 없는지 봅니다. Claude Code가 설치를 거부했으면 `were not installed, because <이유>`, 설치가 끝나지 못했으면 `are not installed`가 뒤에 붙습니다. `npm`이 없을 때의 이유는 `it needs npm`으로 시작합니다.
 - [ ] `bootstrap-token.sh`를 실행합니다. `Token claude-mcp@pve!m-<호스트>-<연월> written to ...`가 나옵니다.
 - [ ] auto-update를 켭니다.
 - [ ] doctor를 실행합니다.

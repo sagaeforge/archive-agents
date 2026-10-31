@@ -92,6 +92,25 @@ test("the Node versions in engines, the CI matrix and .nvmrc agree", () => {
   assert.ok(versions.includes(Number(read(".nvmrc"))), ".nvmrc is not a version CI tests");
 });
 
+// A deleted step leaves every other test green, and the time limit is what the mutation check was
+// cut down to meet, so neither may change without someone saying why.
+test("the check job keeps its steps and its time limit", () => {
+  const [check] = read(".github/workflows/ci.yml").split(/^  live-smoke:$/m);
+  assert.match(check, /^ {4}timeout-minutes: 15$/m);
+  assert.deepEqual(
+    [...check.matchAll(/\brun: (.+)$/gm)].map(([, command]) => command.replace(/(claude-code)@[\d.]+/, "$1")),
+    [
+      "npx -y @anthropic-ai/claude-code plugin validate .",
+      "npx -y @anthropic-ai/claude-code plugin validate plugins/proxmox",
+      ".github/scripts/gitleaks.sh",
+      "npm ci --ignore-scripts",
+      "npm test",
+      "node test/mutation.mjs",
+      "node test/smoke/boot.mjs",
+    ],
+  );
+});
+
 test("the mutation check's control has room for the whole suite, inside the job's own limit", () => {
   const source = read("plugins/proxmox/test/mutation.mjs");
   const limit = (name) => Number(source.match(new RegExp(`^const ${name} = ([\\d_]+);$`, "m"))[1].replaceAll("_", ""));

@@ -1,7 +1,9 @@
 // How Claude Code starts the server. Every other test starts index.mjs with an environment of its own,
 // so without this nothing would stand between a line in .mcp.json and every machine.
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, readdirSync, statSync, truncateSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import fs, { existsSync, mkdirSync, readFileSync, readdirSync, statSync, truncateSync, writeFileSync } from "node:fs";
+import { syncBuiltinESMExports } from "node:module";
 import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -86,6 +88,45 @@ test("a log at its limit moves aside, and only one older file is kept", async (t
   assert.equal(statSync(`${log}.1`).size, LOG_LIMIT_BYTES);
   assert.equal(logLines(log).length, 1);
   assert.equal(statSync(log).mode & 0o777, 0o600);
+});
+
+test("a log another session moved aside first still gets this line", async (t) => {
+  const log = join(tempDir(t), "calls.jsonl");
+  writeFileSync(log, "");
+  truncateSync(log, LOG_LIMIT_BYTES);
+
+  // That session's rename lands between this one's size check and its own rename.
+  const { renameSync } = fs;
+  fs.renameSync = (from, to) => {
+    renameSync(from, to);
+    throw Object.assign(new Error("the file has gone"), { code: "ENOENT" });
+  };
+  syncBuiltinESMExports();
+  process.env.PVE_LOG_FILE = log;
+  t.after(() => {
+    fs.renameSync = renameSync;
+    syncBuiltinESMExports();
+    delete process.env.PVE_LOG_FILE;
+  });
+
+  const { logRequest } = await import(`../server/log.mjs?${randomUUID()}`);
+  logRequest({ host: "h", path: "/version", ms: 1, status: 200, failover: false });
+
+  assert.equal(statSync(`${log}.1`).size, LOG_LIMIT_BYTES);
+  assert.equal(logLines(log).length, 1);
+});
+
+test("a log that cannot move aside stops growing, and the call still works", async (t) => {
+  const dataDir = tempDir(t);
+  const log = join(dataDir, "calls.jsonl");
+  mkdirSync(join(`${log}.1`, "in-the-way"), { recursive: true });
+  writeFileSync(log, "");
+  truncateSync(log, LOG_LIMIT_BYTES);
+
+  const { result } = await callOnce(t, dataDir);
+
+  assert.equal(result.isError, undefined);
+  assert.equal(statSync(log).size, LOG_LIMIT_BYTES);
 });
 
 test("a log under its limit stays where it is", async (t) => {

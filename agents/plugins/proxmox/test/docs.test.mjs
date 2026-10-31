@@ -71,14 +71,16 @@ test("every inbox read in the team guide names its Run", () => {
   assert.doesNotMatch(read("docs/team-operations.md"), /`check --json`/);
 });
 
-test("the failed-install symptom quotes both notes the CLI prints", () => {
+test("the failed-install symptom quotes the notes the CLI prints", () => {
   const readme = read("README.md");
   assert.ok(readme.includes("`The packages it lists were not installed, because it needs npm`"));
   assert.ok(readme.includes("`The packages it lists are not installed`"));
 
   const rehearsal = read("docs/rehearsals.md");
   assert.ok(rehearsal.includes("`The packages it lists`로 시작하는 Note"));
-  assert.ok(rehearsal.includes("`were not installed, because it needs npm`"));
+  assert.ok(rehearsal.includes("`were not installed, because <이유>`"));
+  assert.ok(rehearsal.includes("`are not installed`"));
+  assert.ok(rehearsal.includes("`it needs npm`"));
 });
 
 test("the runbooks revert a merge commit with -m 1 and say how the branch merges", () => {

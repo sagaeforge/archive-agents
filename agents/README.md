@@ -52,7 +52,7 @@ claude plugin install proxmox@sagae
 | `marketplace add`가 `SSH authentication failed`나 `HTTPS authentication failed`로 실패 | 프롬프트 없이 인증되어야 합니다. `gh auth setup-git`을 실행한 뒤 `git -c core.askPass= ls-remote https://github.com/sagaeforge/sagae-claude-plugins.git`으로 확인합니다 |
 | `SSH host key is not in your known_hosts file` | `ssh -T git@github.com`을 한 번 실행해 지문을 수락합니다 |
 | `bootstrap-token.sh`의 `Could not issue token` | 위의 SSH 조건을 확인합니다. 기존 토큰과 파일은 바뀌지 않습니다. 메시지에 나오는 명령으로 노드에 남은 ID를 확인합니다 |
-| doctor 4번 실패, `claude plugin list`에 `The packages it lists`로 시작하는 Note | 의존성 자동 설치가 끝나지 못했습니다. `npm`이 PATH에 없으면 `The packages it lists were not installed, because it needs npm`이, `npm`은 있는데 60초 안에 끝나지 못했으면 `The packages it lists are not installed`가 나옵니다. `npm`을 PATH에 두고 `claude plugin update proxmox@sagae`로 다시 시도합니다 |
+| doctor 4번 실패, `claude plugin list`에 `The packages it lists`로 시작하는 Note | 의존성 자동 설치가 끝나지 못했습니다. `npm`이 PATH에 없으면 `The packages it lists were not installed, because it needs npm`이, `npm`은 있는데 60초 안에 끝나지 못했으면 `The packages it lists are not installed`가 나옵니다. 다른 이유로 설치를 거부했으면 `because` 뒤의 이유를 읽습니다. `npm`을 PATH에 두고 `claude plugin update proxmox@sagae`로 다시 시도합니다 |
 | `/mcp`에서 서버가 연결되지 않음 | `claude --debug`로 시작해 `~/.claude/debug/<세션 ID>.txt`를 봅니다. `node`를 찾지 못했다면 PATH를 고칩니다 |
 
 ## 배포 방식
@@ -245,7 +245,7 @@ CA를 바꾸면 노드 인증서를 교체한 때부터 새 CA가 머신에 닿�
 
 ## 서버 로그
 
-서버는 API 호출마다 JSON 한 줄을 stderr에 씁니다. 시각, 도구, 호스트, 경로, 소요 시간, 상태, 페일오버 여부가 들어가며 토큰, 응답 본문, 쿼리 값은 넣지 않습니다. 경로는 도구를 부른 쪽이 정하므로 토큰처럼 보이는 경로는 `<redacted>`로 바꿔 적습니다.
+서버는 API 호출마다 JSON 한 줄을 stderr에 씁니다. 시각, 도구, 호스트, 경로, 소요 시간, 상태, 페일오버 여부가 들어가며 토큰, 응답 본문, 쿼리 값은 넣지 않습니다. 경로는 도구를 부른 쪽이 정하므로 토큰처럼 보이는 경로는 퍼센트 인코딩된 것까지 `<redacted>`로 바꿔 적습니다. 1,024자가 넘는 경로도 같습니다.
 
 Claude Code는 서버 연결이 끝나면 stderr를 더 읽지 않습니다(2.1.316 기준). 그래서 `.mcp.json`이 `PVE_LOG_FILE`을 플러그인 데이터 폴더로 지정해 같은 줄을 파일에도 남깁니다. 기본으로 켜져 있습니다.
 
@@ -256,7 +256,7 @@ tail -n 20 ~/.claude/plugins/data/proxmox-sagae/calls.jsonl
 - 폴더는 Claude Code가 만들고, 파일 권한은 0600입니다.
 - 파일이 5MiB에 닿으면 `calls.jsonl.1`로 옮기고 새 파일을 시작합니다. 이전 `.1`은 지워지므로 두 파일을 합쳐 약 10MiB를 넘지 않습니다.
 - 플러그인을 업데이트해도 남습니다. 제거하면 Claude Code가 폴더째 지웁니다. [머신별 재등록](docs/stable-gate.md#머신별-재등록)의 `marketplace remove`도 같습니다.
-- 파일을 쓸 수 없어도 도구 호출은 실패하지 않습니다.
+- 파일을 쓸 수 없거나 그 경로가 일반 파일이 아니면 기록을 건너뜁니다. 도구 호출은 실패하지 않습니다.
 
 Claude Code 2.1.316에서 `claude mcp list`로 서버를 띄워 변수 확장, 폴더 생성, 파일 기록을 확인했습니다. **실제 세션에서 도구를 호출했을 때의 기록은 미검증입니다.** [온보딩 리허설](docs/rehearsals.md#1-깨끗한-머신-온보딩)에서 확인합니다.
 

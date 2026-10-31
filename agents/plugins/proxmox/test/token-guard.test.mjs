@@ -158,6 +158,8 @@ test("every line on stdout is a JSON-RPC reply, and nothing in the server writes
   }
 });
 
+const everyCharacterEscaped = (text) => [...text].map((char) => `%${char.charCodeAt(0).toString(16).padStart(2, "0")}`).join("");
+
 test("a token pasted into a path is not written down", async (t) => {
   const logFile = join(tempDir(t), "calls.jsonl");
   const server = await startFakePve(t, ca.issue(LOOPBACK));
@@ -169,11 +171,20 @@ test("a token pasted into a path is not written down", async (t) => {
     env: { PVE_CA_FILE: caFile, PVE_LOG_FILE: logFile },
   });
 
-  for (const path of [`/nodes/${TOKEN}/status`, `/nodes/${SECRET}/status`, "/nodes/n1/status"]) {
-    await client.callTool({ name: "api_get", arguments: { path } });
-  }
+  const hidden = [
+    `/nodes/${TOKEN}/status`,
+    `/nodes/${SECRET}/status`,
+    `/nodes/${TOKEN.replace(SECRET, "not-a-uuid")}/status`,
+    `/nodes/${encodeURIComponent(TOKEN)}/status`,
+    `/nodes/${everyCharacterEscaped(SECRET)}/status`,
+    `/nodes/${encodeURIComponent(everyCharacterEscaped(TOKEN))}/status`,
+    "/nodes/%2525zz/status", // Decodes once, as PVE would, and then no further, so nothing can be said about it.
+    `/${"a".repeat(1024)}`, // The bound on the log files holds only if a line has one.
+  ];
+  const shown = ["/nodes/n1/status", "/access/users/root%40pam", `/${"a".repeat(1023)}`];
+  for (const path of [...hidden, ...shown]) await client.callTool({ name: "api_get", arguments: { path } });
 
   const entries = readFileSync(logFile, "utf8").trim().split("\n").map((line) => JSON.parse(line));
-  assert.deepEqual(entries.map(({ path }) => path), ["<redacted>", "<redacted>", "/nodes/n1/status"]);
+  assert.deepEqual(entries.map(({ path }) => path), [...hidden.map(() => "<redacted>"), ...shown]);
   for (const text of [readFileSync(logFile, "utf8"), stderr()]) assert.ok(!text.includes(SECRET), text);
 });
