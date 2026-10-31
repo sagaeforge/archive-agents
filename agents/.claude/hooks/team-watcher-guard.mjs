@@ -1,19 +1,20 @@
 // PreToolUse guard for the team-watcher subagent. The only Bash command it
-// allows is one bounded Orca inbox wait, so the watcher cannot ack, reply,
-// release, stop, or retry, whatever its prompt or a message body says.
-// Allowing that command here also keeps a background watcher from stalling on
-// a permission prompt in the main session.
+// allows is one run of team-watcher-wait.mjs, so the watcher cannot ack, reply,
+// release, stop, or retry, whatever its prompt says. Allowing that command here
+// also keeps a background watcher from stalling on a permission prompt in the
+// main session.
 //
 // The agent frontmatter sets onFailure: block, so a crash here denies the call.
 
 import { text } from "node:stream/consumers";
 
-// --run is required. Without it, a session that lost its Run falls through to
-// the direct mailbox path, where check marks mail read and never replays it.
-// timeout is required too: closing the Orca pane that hosts the WSL relay can
-// hang the CLI past --timeout-ms, and a hung command must end in the foreground.
-const WAIT_COMMAND =
-  /^timeout 330 "\$\{ORCA_CLI_COMMAND:\?ORCA_CLI_COMMAND is not set\}" orchestration check --wait --types "worker_done,escalation,question" --run run_[0-9a-f]+ --timeout-ms 300000 --json$/;
+// The values only have to be safe to hand to the shell. The script checks what
+// they mean, so a wrong value gets a final report instead of a denial to work
+// around.
+const VALUE = "[A-Za-z0-9_.+-]{1,64}";
+const WAIT_COMMAND = new RegExp(
+  `^node "\\$\\(git rev-parse --show-toplevel\\)/\\.claude/hooks/team-watcher-wait\\.mjs" run=${VALUE} legs=${VALUE} leg=${VALUE}$`,
+);
 const BASH_TIMEOUT_MS = 600_000;
 
 function denialReason(toolInput) {
@@ -21,7 +22,8 @@ function denialReason(toolInput) {
     return "team-watcher may only run the exact wait command from its definition.";
   }
   // A foreground command that reaches its Bash timeout moves to the background
-  // and later wakes the finished watcher, so Bash must outlast timeout 330.
+  // and later wakes the finished watcher, so Bash must outlast the script's own
+  // 330 second limit.
   if (toolInput.timeout !== BASH_TIMEOUT_MS) {
     return `Call Bash with timeout: ${BASH_TIMEOUT_MS}.`;
   }

@@ -16,7 +16,7 @@
 
 ## 워커는 team-watcher로 기다리기
 
-메인 세션은 `orchestration check --wait`, `terminal wait`, `sleep` 반복으로 기다리지 않습니다. 대기는 `team-watcher` 서브에이전트가 맡습니다. Haiku로 실행되고 Bash 외의 도구가 없습니다.
+메인 세션은 `orchestration check --wait`, `terminal wait`, `sleep` 반복으로 기다리지 않습니다. 대기는 `team-watcher` 서브에이전트가 맡습니다. Haiku로 실행되고 Bash 외의 도구가 없습니다. 실제 대기와 결과 판정은 스크립트 `.claude/hooks/team-watcher-wait.mjs`가 하고, watcher는 그 결과 한 줄을 전달합니다. 그래서 배치가 아무리 커도 결과는 짧은 한 줄이고, 메시지 제목과 본문은 watcher에 전달되지 않습니다.
 
 1. 한 웨이브의 워커를 모두 시작합니다.
 2. `Agent` 도구로 `team-watcher`를 띄우고 턴을 끝냅니다. 정의에 `background: true`가 있어 항상 백그라운드로 실행되므로 메인 세션은 멈추지 않습니다.
@@ -27,18 +27,20 @@
 
    `run`은 지켜볼 Run ID이고 필수입니다. `run-current --json`으로 확인합니다. 명시해야 세션이 Run에서 떨어졌을 때 조용히 빈 결과를 내지 않고 오류로 드러납니다.
 
-   `legs`가 합의한 시간 제한입니다. 1에서 4까지 쓸 수 있고 한 번에 최대 5분씩 기다리므로 `legs=3`은 15분입니다. 생략하면 3이고, 범위를 벗어나면 기다리지 않고 `invalid_legs` 오류를 돌려줍니다. 이벤트가 오면 제한과 상관없이 바로 돌아옵니다.
+   `legs`가 합의한 시간 제한입니다. 1에서 4까지 쓸 수 있고 한 번에 최대 5분씩 기다리므로 `legs=3`은 15분입니다. 생략하면 3이고, 범위를 벗어나면 스크립트가 기다리지 않고 `invalid_legs` 오류를 돌려줍니다. 이벤트가 오면 제한과 상관없이 바로 돌아옵니다.
+
+   횟수도 스크립트가 세므로 정상이면 `legs`를 넘지 않습니다. 모델이 이를 어기면 정의의 `maxTurns: 5`가 대기 5번(25분)에서 끊고, 이때는 결과 없이 끝납니다. 이 상한은 `Agent` 도구로 띄울 때만 적용됩니다.
 3. 끝나면 JSON 한 줄이 메인 세션에 도착합니다. 아래 표대로 처리합니다.
 4. 모든 Dispatch가 끝날 때까지 2번으로 돌아갑니다.
 
 | 결과 | 뜻 | 메인 세션이 할 일 |
 |---|---|---|
 | `event` | `worker_done`, `escalation`, `question`이 도착했습니다 | 배치를 처리하고 ack한 뒤 watcher를 다시 띄웁니다 |
-| `checkpoint`의 `unacked_batch` | 이벤트 없는 미확인 배치가 남아 대기가 바로 끝났습니다 | `event`와 같습니다 |
+| `checkpoint`의 `unacked_batch` | 이벤트 없는 미확인 배치가 남아 대기가 바로 끝났습니다. 배치는 오래된 순서로 최대 50개라 이벤트가 그 뒤에 있을 수 있습니다 | `event`와 같습니다 |
 | `checkpoint`의 `time_limit`, `empty`, `cancelled` | 이벤트가 없습니다. 실패가 아닙니다 | watcher를 다시 띄웁니다. 세 번 연속이면 먼저 `worker-list --include-remote --json`으로 워커를 확인합니다 |
-| `error`, 또는 JSON 없이 끝남 | 대기 자체가 실패했습니다. 워커가 멈췄다는 뜻은 아닙니다 | `code`와 `message`를 읽고 원인을 해결한 뒤 watcher를 다시 띄웁니다. 대기는 다시 시작해도 안전합니다 |
+| `error`, 또는 JSON 없이 끝남 | 대기 자체가 실패했습니다. 워커가 멈췄다는 뜻도, 메일이 없다는 뜻도 아닙니다 | `code`와 `message`를 읽고 원인을 해결한 뒤 watcher를 다시 띄웁니다. 대기는 다시 시작해도 안전합니다. 같은 오류가 반복되거나 원인을 찾을 수 없으면 watcher를 그만 띄우고 아래 `check --json`으로 받은편지함을 직접 읽습니다 |
 
-배치 처리는 항상 메인 세션이 합니다. watcher 결과는 알림일 뿐이므로 내용은 Orca에서 직접 읽습니다. 아래 명령은 기다리지 않고 바로 끝납니다. `orca-ide` 자리에는 `$ORCA_CLI_COMMAND` 값을 씁니다.
+배치 처리는 항상 메인 세션이 합니다. watcher 결과는 알림일 뿐이므로 내용은 Orca에서 직접 읽습니다. 아래 명령은 기다리지 않고 바로 끝납니다. `orca-ide` 자리에는 `$ORCA_CLI_COMMAND` 값을 씁니다. 배치가 크면 Bash가 출력을 파일로 저장하고 미리보기만 보여 주므로, 메인 세션은 그 파일을 읽어 전체를 확인합니다.
 
 ```sh
 orca-ide orchestration check --json                      # 미확인 배치를 다시 읽습니다
@@ -51,8 +53,9 @@ orca-ide orchestration check --ack <delivery_id> --json  # ack하고 다음 배�
 
 ## 주의할 점
 
-- watcher는 ack, reply, release, stop, retry를 하지 않습니다. `.claude/hooks/team-watcher-guard.mjs`가 대기 명령 외의 Bash를 모두 막습니다. 대기 명령을 바꾸면 정의와 훅을 함께 고치고 `node --test .claude/hooks/team-watcher-guard.test.mjs`를 실행합니다.
+- watcher는 ack, reply, release, stop, retry를 하지 않습니다. `.claude/hooks/team-watcher-guard.mjs`가 `team-watcher-wait.mjs` 실행 외의 Bash를 모두 막습니다. 대기 명령을 바꾸면 정의, 훅, 스크립트를 함께 고칩니다. 테스트는 `plugins/proxmox`의 `npm test`에 포함되어 있습니다.
 - 프로젝트 서브에이전트의 훅은 폴더를 신뢰한 뒤에만 실행됩니다. 신뢰하지 않은 폴더에서는 watcher를 쓰지 않습니다.
+- 훅과 스크립트는 현재 폴더가 속한 git 저장소의 루트에서 찾습니다. 그래서 `plugins/proxmox` 같은 하위 폴더에서 시작한 세션에서도 동작합니다. git 저장소 밖에서는 훅이 실패해 모든 대기가 `error`로 끝납니다.
 - `checkpoint`나 `error`는 워커 종료의 증거가 아닙니다. 프로세스 종료를 확인하기 전에는 stop, abandon, retry를 하지 않습니다.
 - 세션을 띄운 Orca 창을 닫아도 세션은 tmux에서 살아 있을 수 있지만, Orca의 터미널 핸들은 사라집니다. 진행 중이던 대기는 출력 없이 끝나거나 멈출 수 있고, 멈춘 대기는 5분 30초 뒤 `wait_stalled` 오류가 됩니다. 이후의 watcher는 `consumer_fenced` 오류를 돌려줍니다. `run-current --json`이 `null`이면 `run-use --id <run_id>`로 다시 연결합니다. 이 상황의 재연결은 아직 실제로 확인하지 못했습니다.
 - Run 하나에 watcher 하나만 띄웁니다. 더 띄워도 메시지는 사라지지 않지만 같은 알림이 중복됩니다.
