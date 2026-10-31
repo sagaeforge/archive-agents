@@ -186,7 +186,7 @@ test("a fresh worktree gets both hooks and writes nothing global", options, (t) 
   }
 });
 
-test("the hooks add three kinds of local git call: Trail's listing, the state check, rtk's status", options, () => {
+test("the hooks add only local git calls that run nothing the repository configured", options, () => {
   const run = (hooksOn) => {
     const box = repoCase("git-delta");
     if (!hooksOn) {
@@ -199,7 +199,13 @@ test("the hooks add three kinds of local git call: Trail's listing, the state ch
   };
   const without = run(false);
   const added = [...run(true)].filter((command) => !without.has(command)).sort();
-  assert.deepEqual(added, ["ls-files --cached --others --exclude-standard -z --", "rev-parse --absolute-git-dir", "status --porcelain -b"]);
+  assert.deepEqual(added, [
+    "config --get status.showUntrackedFiles",
+    "ls-files --cached --others --exclude-standard -z --",
+    "ls-files --others --deleted --exclude-standard --directory --no-empty-directory",
+    "rev-parse --absolute-git-dir",
+    "status --porcelain -b",
+  ]);
 });
 
 test("the project settings file alone is enough for both hooks", options, () => {
@@ -355,6 +361,23 @@ test("a rule on an unrelated command leaves rewriting alone", options, () => {
   assert.equal(rewrites(run).length, 1);
   assert.deepEqual(run.denials, []);
   assert.ok(run.results[0].text.startsWith("* fresh-"), run.results[0].text);
+});
+
+test("rtk's database path cannot touch /dev, even where /dev can be written", options, () => {
+  const box = repoCase("dev-path");
+  const cwd = worktree(box);
+  const [command] = rewrites(session(box, { cwd, steps: [bash("git status")], args: bypass }));
+  assert.ok(command, "the session rewrote git status");
+  // bwrap gives each run a /dev of its own, owned by the caller, as root or a container sees it.
+  const look = "stat -c '%a' /dev /dev/null; ls -A /dev | tr '\\n' ' '; echo";
+  const seen = (body) => sealed(box, cwd, ["/bin/bash", "-c", `${look}; { ${body}; } > /dev/null; ${look}`]).stdout.trim().split("\n").map((line) => line.trim());
+  const hook = seen(command);
+  assert.equal(hook.length, 6, hook.join("\n"));
+  assert.deepEqual(hook.slice(3), hook.slice(0, 3));
+  // The check can fail: a database at /dev/null makes rtk chmod its parent and leave a journal.
+  const bare = seen(command.replace("RTK_DB_PATH=/dev/null/rtk.db", "RTK_DB_PATH=/dev/null"));
+  assert.notEqual(bare[3], bare[0]);
+  assert.match(bare[5], /null-journal/);
 });
 
 test("a command too long for rule checks stays raw, so a Read deny rule still stops it", options, () => {

@@ -377,6 +377,13 @@ test("a hanging Trail is cut off inside the hook's timeout", () => {
   assert.ok(asked.ms < 11500, `prompt hook took ${asked.ms} ms against a 12 s limit`);
 });
 
+test("a Trail that ignores TERM is killed, not waited for", () => {
+  const box = setup({ trail: `#!/bin/sh\ntrap '' TERM\nexec sleep 40\n` });
+  const asked = fire(prompt(question), box);
+  assert.deepEqual({ rc: asked.rc, stdout: asked.stdout }, { rc: 0, stdout: "" });
+  assert.ok(asked.ms < 7500, `took ${asked.ms} ms`);
+});
+
 test("malformed input is ignored", () => {
   const box = setup({ reply: answer({ coverageStrong: 1 }) });
   for (const input of ["", "not json", "{", "[]", "null", "{}", '{"prompt":7}', '{"prompt":null}']) {

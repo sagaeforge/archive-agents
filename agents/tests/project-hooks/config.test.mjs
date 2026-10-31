@@ -45,6 +45,15 @@ test("every hook is a bounded command through a committed script that cannot blo
   }
 });
 
+test("every timeout can also kill what ignores TERM", () => {
+  for (const script of scripts) {
+    const code = fs.readFileSync(path.join(hooksDir, script), "utf8").split("\n").filter((line) => !line.trimStart().startsWith("#"));
+    for (const line of code.filter((text) => /\btimeout\b/.test(text) && !/command -v timeout/.test(text))) {
+      assert.match(line, /\btimeout -k 1 \d+ /, `${script}: ${line}`);
+    }
+  }
+});
+
 test("hook scripts parse under sh and bash and hold no eval or unpinned download", () => {
   for (const script of scripts) {
     const file = path.join(hooksDir, script);

@@ -43,7 +43,7 @@ const rtkCalls = (home) => {
 
 const realOnly = { skip: hasRealRtk() ? false : "rtk is not installed" };
 
-const quiet = "RTK_DB_PATH=/dev/null RTK_RECALL=0 RTK_SUPPRESS_HOOK_WARNING=1 RTK_TELEMETRY_DISABLED=1";
+const quiet = "RTK_DB_PATH=/dev/null/rtk.db RTK_RECALL=0 RTK_SUPPRESS_HOOK_WARNING=1 RTK_TELEMETRY_DISABLED=1";
 const expected = (home) => `${quiet} timeout -k 1 5 ${home}/.local/bin/rtk git status || git status`;
 
 test("a plain git status becomes an rtk call with the original as its fallback", () => {
@@ -267,6 +267,8 @@ test("a hanging rtk is cut off well inside the five second hook timeout", () => 
   for (const rtk of [
     `#!/bin/sh\nexec sleep 30\n`,
     `#!/bin/sh\n[ "$1" = --version ] && { echo 'rtk 1.1.0'; exit 0; }\nexec sleep 30\n`,
+    `#!/bin/sh\ntrap '' TERM\nexec sleep 30\n`,
+    `#!/bin/sh\n[ "$1" = --version ] && { echo 'rtk 1.1.0'; exit 0; }\ntrap '' TERM\nexec sleep 30\n`,
   ]) {
     const { rc, stdout, ms } = fire(call("git status"), { home: fakeHome({ rtk }) });
     assert.deepEqual({ rc, stdout }, { rc: 0, stdout: "" });
@@ -609,6 +611,92 @@ test("the state check runs nothing the repository configured", () => {
   assert.equal(rewrite(home, repo), expected(home));
   assert.equal(fs.existsSync(fired), false);
 });
+
+test("the state check reads no file through a filter, which git status would run", () => {
+  const home = fakeHome({ rtk: stubRtk });
+  const repo = fixture();
+  const fired = path.join(repo, "fired");
+  writeFile(path.join(repo, ".gitattributes"), "* filter=canary\n");
+  fs.appendFileSync(path.join(repo, ".git/config"), `[filter "canary"]\n\tclean = touch ${fired}; cat\n`);
+  git(repo, "add", ".gitattributes");
+  git(repo, "commit", "-qm", "attributes");
+  fs.rmSync(fired, { force: true });
+  // A new modification time, with the same bytes, is what sends git to the filter.
+  fs.utimesSync(path.join(repo, "few.txt"), new Date(), new Date(Date.now() + 5000));
+  assert.equal(rewrite(home, repo), expected(home));
+  assert.equal(fs.existsSync(fired), false);
+  // The check can fail: git status does run it, so the hook must not use git status here.
+  git(repo, "status", "--porcelain");
+  assert.equal(fs.existsSync(fired), true);
+});
+
+test("status.showUntrackedFiles away from its default stays raw, where rtk would report clean", realOnly, () => {
+  const home = fakeHome({ rtk: "real" });
+  const repo = fixture();
+  writeFile(path.join(repo, "new.txt"), "untracked\n");
+  assert.equal(rewrite(home, repo), expected(home));
+  git(repo, "config", "status.showUntrackedFiles", "no");
+  // The check can fail: this is what the agent would read after a rewrite.
+  assert.match(sh(expected(home), repo, home).stdout, /clean — nothing to commit/);
+  assert.match(sh("git status", repo, home).stdout, /use -u to show untracked files/);
+  for (const value of ["no", "false", "off", "0", "all", "true", "NO"]) {
+    git(repo, "config", "status.showUntrackedFiles", value);
+    assert.equal(answer(home, repo), "", value);
+  }
+  git(repo, "config", "status.showUntrackedFiles", "normal");
+  assert.equal(rewrite(home, repo), expected(home));
+});
+
+test("a value from any git config file counts, and the last one wins, as in git", () => {
+  const home = fakeHome({ rtk: stubRtk });
+  const repo = fixture();
+  writeFile(path.join(home, ".gitconfig"), "[status]\n\tshowUntrackedFiles = no\n");
+  assert.equal(answer(home, repo), "", "from the user's own config");
+  git(repo, "config", "status.showUntrackedFiles", "normal");
+  assert.equal(rewrite(home, repo), expected(home), "the repository's setting wins");
+});
+
+const asRoot = process.getuid?.() === 0;
+const unreadable = { skip: asRoot ? "root reads everything" : (hasRealRtk() ? false : "rtk is not installed") };
+
+// Each leaves git unable to see part of the tree, which it says on stderr and exits 0.
+const blindSpots = {
+  "an untracked folder git cannot open": (repo) => {
+    writeFile(path.join(repo, "private/secret.txt"), "x\n");
+    return [path.join(repo, "private"), 0o000];
+  },
+  "a tracked folder git cannot open": (repo) => {
+    writeFile(path.join(repo, "plugins/deep/a.txt"), "x\n");
+    git(repo, "add", "plugins");
+    git(repo, "commit", "-qm", "plugins");
+    return [path.join(repo, "plugins"), 0o000];
+  },
+  "a tracked folder git can list but not enter": (repo) => {
+    writeFile(path.join(repo, "plugins/deep/a.txt"), "x\n");
+    git(repo, "add", "plugins");
+    git(repo, "commit", "-qm", "plugins");
+    return [path.join(repo, "plugins/deep"), 0o444];
+  },
+};
+
+for (const [name, plant] of Object.entries(blindSpots)) {
+  test(`${name} stays raw, where rtk would report clean`, unreadable, () => {
+    const home = fakeHome({ rtk: "real" });
+    const repo = fixture();
+    const [folder, mode] = plant(repo);
+    assert.equal(rewrite(home, repo), expected(home), "readable, it is rewritten");
+    fs.chmodSync(folder, mode);
+    try {
+      // The check can fail: rtk drops the warning and reads as a clean tree.
+      assert.match(sh(expected(home), repo, home).stdout, /clean — nothing to commit/);
+      assert.match(sh("git status", repo, home).stderr, /Permission denied/);
+      assert.equal(answer(home, repo), "");
+    } finally {
+      fs.chmodSync(folder, 0o755);
+    }
+    assert.equal(rewrite(home, repo), expected(home), "and readable again, it comes back");
+  });
+}
 
 test("a root file named like git's detached line stays raw, where rtk would lose the branch", realOnly, () => {
   const home = fakeHome({ rtk: "real" });

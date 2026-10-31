@@ -20,9 +20,11 @@
 export LC_ALL=C
 
 # Keeps rtk from storing commands and output under ~/.local/share, from sending
-# telemetry, and from telling the agent to run `rtk init -g`.
-quiet='RTK_DB_PATH=/dev/null RTK_RECALL=0 RTK_SUPPRESS_HOOK_WARNING=1 RTK_TELEMETRY_DISABLED=1'
-export RTK_DB_PATH=/dev/null RTK_RECALL=0 RTK_SUPPRESS_HOOK_WARNING=1 RTK_TELEMETRY_DISABLED=1
+# telemetry, and from telling the agent to run `rtk init -g`. The database path has
+# no parent that can be a folder, so rtk gives up on it. At /dev/null itself, rtk would
+# chmod the parent, /dev, to 0700 wherever it may, which is as root or in a container.
+quiet='RTK_DB_PATH=/dev/null/rtk.db RTK_RECALL=0 RTK_SUPPRESS_HOOK_WARNING=1 RTK_TELEMETRY_DISABLED=1'
+export RTK_DB_PATH=/dev/null/rtk.db RTK_RECALL=0 RTK_SUPPRESS_HOOK_WARNING=1 RTK_TELEMETRY_DISABLED=1
 
 rtk=$HOME/.local/bin/rtk
 [ -x "$rtk" ] || exit 0
@@ -67,12 +69,25 @@ done
 set -- "$root"/*'HEAD detached '*
 [ ! -e "$1" ] && [ ! -L "$1" ] || exit 0
 
-[ "$(timeout 2 "$rtk" --version 2>/dev/null)" = 'rtk 1.1.0' ] || exit 0
+# Nor when git can see only part of the tree. rtk prints "clean" for an empty list and
+# drops git's stderr on success, so a tree it cannot fully see would read as clean. Raw
+# git says "use -u", or names what it could not read. Config that hides untracked files
+# is one case. A folder git cannot open or enter is the other, and this listing warns
+# about both shapes. It is not `git status`, which would run the repo's clean filters.
+case "$(timeout -k 1 2 git -C "$root" config --get status.showUntrackedFiles 2>/dev/null)" in
+  '' | normal) ;;
+  *) exit 0 ;;
+esac
+warned=$(timeout -k 1 2 git -C "$root" -c core.fsmonitor=false ls-files \
+  --others --deleted --exclude-standard --directory --no-empty-directory 2>&1 >/dev/null) || exit 0
+[ -z "$warned" ] || exit 0
+
+[ "$(timeout -k 1 2 "$rtk" --version 2>/dev/null)" = 'rtk 1.1.0' ] || exit 0
 
 # Let rtk decide. It keeps git raw inside .claude/worktrees, for a --worktree
 # session, whose cwd is the project. Accept only the form it is known to return.
 rewritten=$(printf '%s' "$input" |
-  timeout 2 "$rtk" hook claude 2>/dev/null |
+  timeout -k 1 2 "$rtk" hook claude 2>/dev/null |
   jq -r '.hookSpecificOutput.updatedInput.command // empty' 2>/dev/null)
 [ "$rewritten" = 'rtk git status' ] || exit 0
 

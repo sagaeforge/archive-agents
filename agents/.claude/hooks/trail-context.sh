@@ -37,13 +37,13 @@ if [ "$cwd" != "$root" ]; then
 fi
 
 # A fresh checkout has no map yet. Build one so the first prompt gets context.
-[ -e "$root/graft/.graph/wiring.json" ] || timeout 5 "$trail" build "$root" >/dev/null 2>&1
+[ -e "$root/graft/.graph/wiring.json" ] || timeout -k 1 5 "$trail" build "$root" >/dev/null 2>&1
 
 # Titles and pointers come from file names and code, and this output reaches the model
 # as hook context, so each stays on its own line whatever bytes it holds. Trail gives no
 # total, so asking for one more than is printed is how a cut list is known to be cut.
 printf '%s' "$prompt" |
-  timeout 5 "$trail" ask - "$root" --json -n 4 2>/dev/null |
+  timeout -k 1 5 "$trail" ask - "$root" --json -n 4 2>/dev/null |
   jq -r '
     def oneline: tostring | gsub("[\\p{C}\\p{Zl}\\p{Zp}]+"; " ");
     (.hits | length > 3) as $cut

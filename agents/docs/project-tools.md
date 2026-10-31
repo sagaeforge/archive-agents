@@ -20,6 +20,7 @@
 - `.claude/worktrees/` 밖입니다. 그 안에서는 Claude Code의 격리 가드가 `rtk git`을 거부합니다. 그래서 격리된 에이전트와 `--worktree` 세션에서는 rtk가 아무것도 바꾸지 않습니다.
 - 진행 중인 작업이 없습니다. merge, rebase, cherry-pick, revert, am, bisect 중이면 바꾸지 않습니다. rtk는 상태를 한 줄만 보여 주고, 범위 cherry-pick이나 revert가 멈춘 상태를 알아보지 못해 적용되지 않은 커밋이 남아 있어도 `clean`이라고 출력합니다.
 - 저장소 루트에 이름에 `HEAD detached `가 들어간 파일이 없습니다. rtk가 파일 이름을 분리된 HEAD 표시로 오해해 브랜치와 ahead/behind 대신 그 이름을 출력합니다.
+- git이 트리 전체를 봅니다. `status.showUntrackedFiles`가 기본값(`normal`)이 아니거나 git이 열지 못하는 폴더가 있으면 바꾸지 않습니다. 원본 git은 `use -u`나 `Permission denied`로 일부만 봤다고 알리지만, rtk는 그대로 `clean`이라고 출력합니다.
 
 `git diff`, `git log`, git 내부 명령, `gh`, `npm test`, `claude plugin validate`, `orca-ide`, `ls`, `tree`, `find`는 바꾸지 않습니다.
 
@@ -32,7 +33,9 @@
 
 **실제 실행 형태는 `timeout ... rtk git status || git status`입니다.** rtk가 실패하거나 5초 안에 끝나지 않으면 원본이 실행되고 그 종료 코드가 결과가 됩니다. 원본이 하위 명령으로 남으므로 어디에 정의된 deny, ask 규칙이든 그대로 적용됩니다. PostToolUse 훅이나 Orca에는 이 형태로 보입니다.
 
-**출력에서 달라지는 점:** 브랜치, upstream 대비 ahead/behind, 변경 파일, 충돌은 그대로 보입니다. 사라지는 것은 git의 안내 문구, sparse checkout 비율, 서브모듈 변경의 세부 내용, stderr 경고, `status.showStash`를 켠 경우의 stash 개수입니다. 재작성할 때마다 모델에게 원본 보는 방법을 알립니다.
+**출력에서 달라지는 점:** 브랜치, upstream 대비 ahead/behind, 변경 파일, 충돌은 그대로 보입니다. 사라지는 것은 git의 안내 문구, sparse checkout 비율, 서브모듈 변경의 세부 내용, `status.showStash`를 켠 경우의 stash 개수, 위 조건으로 걸러지지 않는 stderr 경고(예: 줄바꿈 변환 경고)입니다. 재작성할 때마다 모델에게 원본 보는 방법을 알립니다.
+
+rtk의 사용 기록 DB는 만들지 않습니다. DB 경로를 만들 수 없는 곳(`/dev/null/rtk.db`)으로 지정하므로 root나 컨테이너에서도 `/dev`를 건드리지 않습니다.
 
 ## Trail
 
