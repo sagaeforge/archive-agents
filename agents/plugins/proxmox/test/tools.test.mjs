@@ -8,12 +8,15 @@ import { registerTools } from "../server/tools.mjs";
 
 const NODE = "pve-node";
 
-// Records every pve.get call and answers from `responses`, keyed by API path.
+// Records every pve.get call and answers from `responses`, keyed by API path. It refuses a third
+// argument, which could only be a way for a tool to steer the client, such as a method.
 function fakePve(responses = {}) {
   const calls = [];
   return {
     calls,
-    async get(path, params) {
+    async get(...args) {
+      assert.ok(args.length <= 2, `pve.get takes a path and params, got ${JSON.stringify(args)}`);
+      const [path, params] = args;
       calls.push({ path, params });
       return responses[path];
     },

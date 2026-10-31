@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
+import { writeFileSync } from "node:fs";
+import https from "node:https";
+import net from "node:net";
+import { join } from "node:path";
 import { test } from "node:test";
-import { PveApiError, buildPath, createClient, loadToken } from "../server/pve.mjs";
+import { PveApiError, buildPath, createClient, httpsTransport, loadToken } from "../server/pve.mjs";
+import { createCa } from "./helpers/certs.mjs";
+import { LOOPBACK, listen, startFakePve, tempDir } from "./helpers/fake-pve.mjs";
 
 const ok = (data) => ({ status: 200, reason: "OK", body: JSON.stringify({ data }) });
 const client = (transport) => createClient({ hosts: ["a", "b"], getToken: () => "t", transport });
@@ -51,4 +57,73 @@ test("get reports every host when all are unreachable", async () => {
 test("loadToken prefers env and explains a missing file", () => {
   assert.equal(loadToken({ PVE_API_TOKEN: " x\n" }), "x");
   assert.throws(() => loadToken({ PVE_TOKEN_FILE: "/nonexistent" }), /bootstrap-token/);
+});
+
+// A stalled host, on real sockets. Without the timeout it would hang the call and keep get() from
+// reaching the next host. readonly.test.mjs pins the 8 s value, so these shorten it to stay quick.
+
+const TOKEN = "tester@pve!unit=not-a-real-secret";
+const SHORT_TIMEOUT_MS = 50;
+const GIVE_UP_MS = 5000;
+
+const ca = createCa("transport test CA");
+const credentials = ca.issue(LOOPBACK);
+
+function transportTo(t, port) {
+  const caFile = join(tempDir(t), "ca.pem");
+  writeFileSync(caFile, ca.cert);
+  return httpsTransport({ caFile, port });
+}
+
+// Only for the stalled port: a healthy host keeps the full timeout, however slow the machine is.
+function shortenTimeout(t, stalledPort) {
+  const { request } = https;
+  t.mock.method(https, "request", (options, callback) =>
+    request(options.port === stalledPort ? { ...options, timeout: SHORT_TIMEOUT_MS } : options, callback),
+  );
+}
+
+// Turns a promise that never settles into a failure instead of a hung test run.
+const settling = (promise) =>
+  Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(reject, GIVE_UP_MS, new Error("still pending")).unref()),
+  ]);
+
+const stalls = [
+  ["the TLS handshake", () => net.createServer()],
+  ["the response", () => https.createServer(credentials, () => {})],
+  [
+    "the response body",
+    () =>
+      https.createServer(credentials, (req, res) => {
+        res.writeHead(200, { "content-length": "2" });
+        res.write("{");
+      }),
+  ],
+];
+
+for (const [phase, createServer] of stalls) {
+  test(`the transport gives up on a host that stalls during ${phase}`, async (t) => {
+    const port = await listen(t, createServer());
+    const transport = transportTo(t, port);
+    shortenTimeout(t, port);
+
+    await assert.rejects(settling(transport(LOOPBACK, "/version", TOKEN)), { message: "timeout after 8000ms" });
+  });
+}
+
+test("get fails over past a host that stalls", async (t) => {
+  const stalled = await listen(t, https.createServer(credentials, () => {}));
+  const healthy = await startFakePve(t, credentials);
+  // Real hosts share one port. Here each needs its own, so the host name picks the transport.
+  const transports = { stalled: transportTo(t, stalled), healthy: transportTo(t, healthy.port) };
+  shortenTimeout(t, stalled);
+  const pve = createClient({
+    hosts: ["stalled", "healthy"],
+    getToken: () => TOKEN,
+    transport: (host, path, token) => transports[host](LOOPBACK, path, token),
+  });
+
+  assert.deepEqual(await settling(pve.get("/version")), { served: true });
 });
