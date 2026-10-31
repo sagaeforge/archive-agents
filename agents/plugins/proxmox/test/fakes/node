@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Stands in for node when a doctor test needs another version. Asked for its version it
+# gives FAKE_NODE_VERSION, and anything else runs on the real node.
+if [[ ${1:-} == --version ]]; then
+  printf '%s\n' "$FAKE_NODE_VERSION"
+  exit 0
+fi
+exec "$REAL_NODE" "$@"

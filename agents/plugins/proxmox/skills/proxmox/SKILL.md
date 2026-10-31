@@ -49,6 +49,12 @@ API failures start with a code or with `PVE API <status>`. Act on that, not on a
 
 `scripts/bootstrap-token.sh` changes tokens on the cluster, so it runs only with the user's approval. Check first which version this plugin has, with `grep -c -- --rotate scripts/bootstrap-token.sh` from the plugin directory. A count of 0 means the old version, which issues the one token all machines share. Do not run that version. On a machine with no token file it reissues the shared token, so every other machine gets 401, and `--rotate` reports nothing to do and changes nothing. Ask the user to copy a working token file from another machine instead, to `~/.config/proxmox-mcp/token` or the path in the error, with mode 600.
 
+## Checking this machine
+
+`scripts/doctor.sh` from the plugin directory checks this machine end to end: Node and npm, the marketplace, the installed commit, dependencies, the token file and its rotation date, each host over TLS, the token's permissions, certificate expiry, and the runner and last CI. Run it when an error above does not explain itself, or to confirm a machine after an install or a token change. It only reads and never prints a token value, so it needs no approval. The actions it suggests are another matter: `scripts/bootstrap-token.sh` still needs the user's approval.
+
+Each check reports `pass`, `warn`, `fail` or `skip`, with what to do. A `skip` means it could not be tested, not that it is fine. The exit code is 0 when healthy, 1 with warnings and 2 with failures, and `--json` prints the same report as JSON.
+
 ## Server log
 
 Each API call writes one JSON line to the server's stderr: time, tool, host, path, duration, status and whether it failed over. Tokens, response bodies and query values never go in it. This is how to see which node answered and how long it took.

@@ -942,7 +942,7 @@ test(
 
 test("the default hosts match the server's", () => {
   const [, hosts] = readFileSync(SCRIPT, "utf8").match(/^DEFAULT_PVE_HOSTS="([^"]+)"$/m);
-  assert.ok(readFileSync(join(ROOT, "server", "index.mjs"), "utf8").includes(`"${hosts}"`));
+  assert.ok(readFileSync(join(ROOT, "server", "pve.mjs"), "utf8").includes(`"${hosts}"`));
 });
 
 test("a missing CA file stops before the node is touched", (t) => {
