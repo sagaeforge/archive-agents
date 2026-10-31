@@ -8,6 +8,7 @@ import test from "node:test";
 import {
   copyRepo,
   git,
+  gitCommand,
   pathShape,
   realHome,
   rewrites,
@@ -72,6 +73,8 @@ function plantMemory(box, projectDir) {
     );
   }
 }
+
+const gitCalls = (box) => shimCalls(box).filter(([tool]) => tool === "git").map(gitCommand);
 
 function filesContaining(dir, text) {
   const hits = [];
@@ -163,15 +166,31 @@ test("a fresh worktree gets both hooks and writes nothing global", options, (t) 
 
   // Hooks ran no fetch, no upgrade, and no install. Each tool is logged by a shim.
   const calls = shimCalls(box);
-  t.diagnostic(`logged tool calls: ${JSON.stringify([...new Set(calls)])}`);
-  const hookGit = calls.filter((call) => /^git (fetch|pull|push|remote|ls-remote|clone|gc|maintenance)\b/.test(call));
-  assert.deepEqual(hookGit, []);
-  assert.deepEqual(calls.filter((call) => !call.startsWith("git ")), []);
+  const gitCommands = gitCalls(box);
+  t.diagnostic(`git commands: ${JSON.stringify([...new Set(gitCommands)])}`);
+  assert.deepEqual(gitCommands.filter((command) => /^(fetch|pull|push|ls-remote|clone|gc|maintenance)\b/.test(command)), []);
+  assert.deepEqual(calls.filter(([tool]) => tool !== "git"), []);
 
   // Memory was not copied.
   for (const type of noteTypes) {
     for (const dir of [cwd, box.project]) assert.deepEqual(filesContaining(dir, canary(type)), []);
   }
+});
+
+test("the hooks add one kind of git call, Trail's local file listing", options, () => {
+  const run = (hooksOn) => {
+    const box = repoCase("git-delta");
+    if (!hooksOn) {
+      git(box.project, "rm", "-q", ".claude/settings.json");
+      git(box.project, "commit", "-qm", "no hooks");
+    }
+    const cwd = worktree(box);
+    session(box, { cwd, prompt: question, steps: [bash("true"), write(path.join(cwd, "probe.txt"), "x\n")], args: bypass });
+    return new Set(gitCalls(box));
+  };
+  const without = run(false);
+  const added = [...run(true)].filter((command) => !without.has(command));
+  assert.deepEqual(added, ["ls-files --cached --others --exclude-standard -z --"]);
 });
 
 test("the project settings file alone is enough for both hooks", options, () => {

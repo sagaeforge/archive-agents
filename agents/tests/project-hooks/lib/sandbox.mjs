@@ -126,6 +126,11 @@ export function copyRepo(target) {
 }
 
 const shimLog = "shim.log";
+const argSeparator = "\x1f";
+
+// One line per call, with arguments split by a byte no argument here contains.
+const logArgv = (tool, logs) =>
+  `{ printf '%s' ${tool}; for arg in "$@"; do printf '\\037%s' "$arg"; done; echo; } >> ${logs}/${shimLog}`;
 
 // Logged and refused: a hook has no business calling these.
 const refusedTools = ["npm", "npx", "gh", "curl", "wget", "ssh"];
@@ -142,9 +147,9 @@ export function sessionCase(label, { rtkStub, trailStub } = {}) {
   fs.mkdirSync(path.join(home, ".local/share"), { recursive: true });
   writeFile(path.join(home, ".gitconfig"), "[user]\n\tname = sandbox\n\temail = sandbox@example.invalid\n");
   for (const tool of refusedTools) {
-    writeFile(path.join(shims, tool), `#!/bin/sh\nprintf '%s %s\\n' ${tool} "$*" >> ${logs}/${shimLog}\nexit 1\n`, 0o755);
+    writeFile(path.join(shims, tool), `#!/bin/sh\n${logArgv(tool, logs)}\nexit 1\n`, 0o755);
   }
-  writeFile(path.join(shims, "git"), `#!/bin/sh\nprintf 'git %s\\n' "$*" >> ${logs}/${shimLog}\nexec /usr/bin/git "$@"\n`, 0o755);
+  writeFile(path.join(shims, "git"), `#!/bin/sh\n${logArgv("git", logs)}\nexec /usr/bin/git "$@"\n`, 0o755);
   if (rtkStub) writeFile(path.join(home, ".local/bin/rtk"), rtkStub, 0o755);
   if (trailStub) writeFile(path.join(home, pinnedTrail), trailStub, 0o755);
   return { dir, home, logs, work, shims, rtkStub, trailStub, runs: 0 };
@@ -309,10 +314,21 @@ export function rewrites(run) {
   });
 }
 
+/** Every logged call as its argv, so a subcommand can be read past global options. */
 export const shimCalls = (box) => {
   const file = path.join(box.logs, shimLog);
-  return fs.existsSync(file) ? fs.readFileSync(file, "utf8").split("\n").filter(Boolean) : [];
+  if (!fs.existsSync(file)) return [];
+  return fs.readFileSync(file, "utf8").split("\n").filter(Boolean).map((line) => line.split(argSeparator));
 };
+
+/** A logged git call from its subcommand on, past options such as `-c key=value`. */
+export function gitCommand([, ...args]) {
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "-c" || args[i] === "-C") i++;
+    else if (!args[i].startsWith("-")) return args.slice(i).join(" ");
+  }
+  return "";
+}
 
 // Paths the sandbox mounts into the fake home. They are tools, not state.
 const mounts = [/^\.local\/bin\/rtk$/, /^\.local\/share\/trail-code(\/|$)/, /^\.nvm(\/|$)/];
