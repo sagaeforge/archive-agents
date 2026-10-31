@@ -138,7 +138,11 @@ function isSafePath(path) {
 
 export function buildPath(path, params = {}) {
   if (!isSafePath(path)) {
-    throw new PveRequestError("BAD_REQUEST", `Invalid API path: ${path}`);
+    // The path is left out: the caller chose it, so it can hold a token, and the reply is kept.
+    throw new PveRequestError(
+      "BAD_REQUEST",
+      "Invalid API path: it must start with /, hold only printable ASCII, have no .. segment, and use well-formed %-escapes.",
+    );
   }
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {

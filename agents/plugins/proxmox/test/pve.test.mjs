@@ -144,7 +144,12 @@ const unsafePaths = [
 
 for (const [reason, path] of unsafePaths) {
   test(`buildPath rejects ${reason}`, () => {
-    assert.throws(() => buildPath(path), { code: "BAD_REQUEST", message: `BAD_REQUEST: Invalid API path: ${path}` });
+    assert.throws(() => buildPath(path), (err) => {
+      assert.equal(err.code, "BAD_REQUEST");
+      assert.match(err.message, /^BAD_REQUEST: Invalid API path: /);
+      assert.ok(!err.message.includes(path), err.message);
+      return true;
+    });
   });
 }
 

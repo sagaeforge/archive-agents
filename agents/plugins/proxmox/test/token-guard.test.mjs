@@ -188,3 +188,34 @@ test("a token pasted into a path is not written down", async (t) => {
   assert.deepEqual(entries.map(({ path }) => path), [...hidden.map(() => "<redacted>"), ...shown]);
   for (const text of [readFileSync(logFile, "utf8"), stderr()]) assert.ok(!text.includes(SECRET), text);
 });
+
+// A token can end up in a path or a query, by a paste or by a model repeating what it was shown. An
+// error reply goes to the model and is kept, so none may repeat what it was refused for.
+test("a refused call does not repeat its input, token or not, in the reply", async (t) => {
+  const server = await startFakePve(t, ca.issue(LOOPBACK));
+  const caFile = join(tempDir(t), "ca.pem");
+  writeFileSync(caFile, ca.cert);
+  const { client, httpsRequests } = await startEntryPoint(t, { token: TOKEN, port: server.port, env: { PVE_CA_FILE: caFile } });
+
+  const refused = [
+    ["api_get", { path: `/nodes/../status?auth=${TOKEN}` }],
+    ["api_get", { path: `/nodes/../status?auth=${encodeURIComponent(TOKEN)}` }],
+    ["api_get", { path: `/nodes/../status?auth=${everyCharacterEscaped(TOKEN)}` }],
+    ["api_get", { path: `/nodes/%2e%2e/status?auth=${everyCharacterEscaped(SECRET)}#${SECRET}` }],
+    ["api_get", { path: `/nodes/status ${SECRET}` }],
+    ["api_get", { path: `/nodes/%zz/${SECRET}?auth=${TOKEN}` }],
+    ["api_get", { path: `${SECRET}?auth=${TOKEN}` }],
+    ["node_status", { node: `../${TOKEN}` }],
+    ["guest_config", { node: `n1?auth=${TOKEN}`, vmid: 100 }],
+  ];
+  const forms = [TOKEN, SECRET, encodeURIComponent(TOKEN), everyCharacterEscaped(SECRET), everyCharacterEscaped(TOKEN)];
+  for (const [name, args] of refused) {
+    const result = await client.callTool({ name, arguments: args });
+    assert.equal(result.isError, true, name);
+    const [{ text }] = result.content;
+    for (const form of forms) assert.ok(!text.includes(form), `${name} repeats ${form}: ${text}`);
+    assert.doesNotMatch(text, /auth=|\?|#/, `${name} repeats a query or fragment: ${text}`);
+    assert.ok(!text.includes(args.path ?? args.node), `${name} repeats its input: ${text}`);
+  }
+  assert.deepEqual(httpsRequests(), []);
+});
