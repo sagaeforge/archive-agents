@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Appends one event to the fakes' shared call log, with the token the local file
+# held at that moment. That is what lets the tests place the file swap in the order.
+held=$(cut -s -d= -f1 "$PVE_TOKEN_FILE" 2>/dev/null || true)
+printf '%s | file=%s\n' "$*" "${held:-none}" >>"$FAKE_PVE_STATE/calls.log"

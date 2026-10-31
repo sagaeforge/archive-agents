@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# File-backed stand-in for pveum. $FAKE_PVE_STATE/tokens holds one file per token
+# ID, containing its secret. FAKE_PVEUM_FAIL names one operation to fail.
+set -euo pipefail
+
+state=$FAKE_PVE_STATE
+tokens=$state/tokens
+printf 'pveum %s\n' "$*" >>"$state/argv.log"
+
+step() {
+  record "$@"
+  if [[ ${FAKE_PVEUM_FAIL:-} == "$1" ]]; then
+    echo "$1: injected failure" >&2
+    exit 255
+  fi
+}
+
+case "$1 $2" in
+  "user list")
+    if [[ -e $state/user ]]; then
+      printf '[{"userid":"%s"}]\n' "$(<"$state/user")"
+    else
+      echo '[]'
+    fi
+    ;;
+  "user add")
+    step user-add "$3"
+    printf '%s' "$3" >"$state/user"
+    ;;
+  "acl modify")
+    # pveum acl modify / --users|--tokens <who> --roles <role>
+    step "acl-${4#--}" "${5#*!}" "$7"
+    ;;
+  "user token")
+    action=$3 id=$5
+    shift 5
+    case "$action" in
+      add)
+        step token-add "$id" "$@"
+        if [[ -e $tokens/$id ]]; then
+          echo "Token already exists." >&2
+          exit 255
+        fi
+        value=$(printf '%08x-%04x-4000-8000-%012x' "$RANDOM" "$RANDOM" "$RANDOM$RANDOM")
+        printf '%s' "$value" >"$tokens/$id"
+        printf '{"full-tokenid":"%s!%s","info":{"privsep":"1"},"value":"%s"}\n' "$(<"$state/user")" "$id" "$value"
+        ;;
+      remove)
+        step token-remove "$id"
+        rm "$tokens/$id"
+        ;;
+      *)
+        echo "fake pveum: unexpected token action: $action" >&2
+        exit 64
+        ;;
+    esac
+    ;;
+  *)
+    echo "fake pveum: unexpected arguments: $*" >&2
+    exit 64
+    ;;
+esac

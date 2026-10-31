@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# Stands in for curl in the bootstrap tests. It checks the header sent through
+# "--config -" against the fake node's tokens, as a real node would for /version.
+# FAKE_CURL_DOWN lists hosts that refuse connections, FAKE_CURL_REJECT=1 answers
+# 401 to every token, and FAKE_CURL_SIGNAL delivers a signal to the calling script
+# and this process, as a terminal does to its whole foreground job.
+set -euo pipefail
+
+state=$FAKE_PVE_STATE
+printf 'curl %s\n' "$*" >>"$state/argv.log"
+
+url=${!#}
+host=${url#https://}
+host=${host%%:*}
+
+config=$(cat)
+token=${config#*PVEAPIToken=}
+token=${token%\"}
+id=${token%%=*}
+id=${id#*!}
+secret=${token#*=}
+
+# Shows the tests where the candidate token sits while it is being verified.
+ls -lA "$(dirname "$PVE_TOKEN_FILE")" >"$state/verify-dir.log"
+record verify "$id" "$host"
+
+if [[ -n ${FAKE_CURL_SIGNAL:-} ]]; then
+  kill "-$FAKE_CURL_SIGNAL" "$PPID" "$$"
+fi
+
+case ",${FAKE_CURL_DOWN:-}," in
+  *",$host,"*)
+    echo "curl: (7) Failed to connect to $host port 8006" >&2
+    exit 7
+    ;;
+esac
+
+if [[ -n ${FAKE_CURL_REJECT:-} || ! -e $state/tokens/$id || $(<"$state/tokens/$id") != "$secret" ]]; then
+  echo "curl: (22) The requested URL returned error: 401" >&2
+  exit 22
+fi

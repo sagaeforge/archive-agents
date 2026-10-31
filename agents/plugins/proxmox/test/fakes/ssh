@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Stands in for ssh in the bootstrap tests. It reaches no node: it runs the remote
+# command the way sshd would, so the real remote script executes against the fake
+# pveum. FAKE_SSH_DOWN=1 refuses the connection.
+set -euo pipefail
+
+printf 'ssh %s\n' "$*" >>"$FAKE_PVE_STATE/argv.log"
+
+while (($# > 0)); do
+  case "$1" in
+    -o) shift 2 ;;
+    -n)
+      exec </dev/null
+      shift
+      ;;
+    *) break ;;
+  esac
+done
+
+host=$1
+shift
+record ssh "$host"
+
+if [[ -n ${FAKE_SSH_DOWN:-} ]]; then
+  echo "ssh: connect to host $host port 22: Connection refused" >&2
+  exit 255
+fi
+
+exec bash -c "$*"
