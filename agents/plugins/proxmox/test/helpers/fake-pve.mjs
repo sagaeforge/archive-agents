@@ -24,7 +24,8 @@ export async function listen(t, server) {
   return server.address().port;
 }
 
-// `requests` records what actually arrived, not what the client meant to send.
+// `requests` records what actually arrived, not what the client meant to send. `data` is what every
+// request gets, or a function that answers a request itself, or leaves it hanging.
 export async function startFakePve(t, credentials, data = { served: true }) {
   const requests = [];
   const server = https.createServer(credentials, (req, res) => {
@@ -33,6 +34,7 @@ export async function startFakePve(t, credentials, data = { served: true }) {
     req.on("end", () => {
       const { method, url, headers } = req;
       requests.push({ method, url, headers, body: Buffer.concat(chunks).toString("utf8") });
+      if (typeof data === "function") return data(req, res);
       res.writeHead(200, { "content-type": "application/json" });
       res.end(JSON.stringify({ data }));
     });

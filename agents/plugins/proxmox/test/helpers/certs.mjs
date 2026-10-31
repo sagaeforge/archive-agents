@@ -30,14 +30,15 @@ const name = (commonName) => sequence(der(0x31, sequence(oid(COMMON_NAME), der(0
 const utcTime = (ms) => der(0x17, Buffer.from(`${new Date(ms).toISOString().replace(/[-:T]/g, "").slice(2, 14)}Z`));
 const keyPair = () => generateKeyPairSync("ec", { namedCurve: "P-256" });
 
-function certificate({ subject, issuer, publicKey, signingKey, extension }) {
+function certificate({ subject, issuer, publicKey, signingKey, extension, expired = false }) {
   const now = Date.now();
+  const validity = expired ? [now - 2 * HOUR_MS, now - HOUR_MS] : [now - HOUR_MS, now + HOUR_MS];
   const tbs = sequence(
     der(0xa0, integer(2)), // X.509 v3
     integer(nextSerial++),
     signatureAlgorithm,
     name(issuer),
-    sequence(utcTime(now - HOUR_MS), utcTime(now + HOUR_MS)),
+    sequence(...validity.map(utcTime)),
     name(subject),
     publicKey.export({ type: "spki", format: "der" }),
     der(0xa3, sequence(extension)),
@@ -56,7 +57,7 @@ export function createCa(commonName) {
       extension: sequence(oid(BASIC_CONSTRAINTS), TRUE, octetString(sequence(TRUE))),
     }),
     // A server certificate naming one IPv4 address, the way PVE node certificates do.
-    issue(ip) {
+    issue(ip, { expired } = {}) {
       const server = keyPair();
       const address = der(0x87, Buffer.from(ip.split(".").map(Number)));
       return {
@@ -67,6 +68,7 @@ export function createCa(commonName) {
           publicKey: server.publicKey,
           signingKey: privateKey,
           extension: sequence(oid(SUBJECT_ALT_NAME), octetString(sequence(address))),
+          expired,
         }),
       };
     },
