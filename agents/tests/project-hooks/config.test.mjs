@@ -17,8 +17,9 @@ test("the settings file registers hooks and nothing else", () => {
   assert.deepEqual(Object.keys(settings.hooks).sort(), ["PreToolUse", "UserPromptSubmit"]);
 });
 
+// team-watcher-*.mjs (and their tests) belong to .claude/agents/team-watcher.md, which registers them, not settings.json.
 test("every hook on disk is registered, and nothing runs after a Write", () => {
-  const onDisk = fs.readdirSync(hooksDir).filter((file) => file !== "trail-env.sh").sort();
+  const onDisk = fs.readdirSync(hooksDir).filter((file) => file !== "trail-env.sh" && !/^team-watcher-[a-z-]+(\.test)?\.mjs$/.test(file)).sort();
   assert.deepEqual(commands.map((hook) => hook.command.match(/hooks\/([a-z-]+\.sh)/)[1]).sort(), onDisk);
   assert.deepEqual(onDisk, ["rtk-rewrite.sh", "trail-context.sh"]);
 });
