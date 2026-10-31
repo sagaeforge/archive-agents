@@ -1,0 +1,1 @@
+{ "one": { "url": "http://127.0.0.1:{{P_alpha}}/mcp" }, "two": { "url": "http://127.0.0.1:{{P_gamma}}/mcp" } }

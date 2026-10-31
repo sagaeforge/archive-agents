@@ -1,0 +1,28 @@
+{
+  "upstreams": {
+    "notes": {
+      "url": "http://127.0.0.1:4821/mcp",
+      "headers": { "Authorization": "Bearer ${NOTES_TOKEN}" },
+      "uriPrefixes": ["notes://"],
+      "autoApprove": ["search_notes"],
+      "callTimeoutMs": 60000,
+      "note": "An HTTP upstream. NOTES_TOKEN comes from ~/.config/tower/env. search_notes runs without asking, every other tool asks each time."
+    },
+    "py-tools": {
+      "command": "/absolute/path/to/python",
+      "args": ["-m", "py_tools"],
+      "cwd": "/absolute/path/to/py-tools",
+      "env": { "PY_TOOLS_API_KEY": "${PY_TOOLS_API_KEY}", "LOG_LEVEL": "warning" },
+      "uriPrefixes": [],
+      "enabled": false,
+      "note": "A stdio upstream, off until the placeholder paths are real. Disabled entries only get the schema check."
+    }
+  },
+  "routes": {
+    "app": {
+      "path": "/app",
+      "proxy": "http://127.0.0.1:4820",
+      "note": "A local web app. When it is down only this route answers 502."
+    }
+  }
+}

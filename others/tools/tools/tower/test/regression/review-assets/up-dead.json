@@ -1,0 +1,1 @@
+{ "alpha": { "url": "http://127.0.0.1:{{P_alpha}}/mcp" }, "dead": { "url": "http://127.0.0.1:{{P_never}}/mcp" }, "real": { "command": "{{NODE}}", "args": ["{{REGRESSION}}/review-assets/realts.mjs"] } }

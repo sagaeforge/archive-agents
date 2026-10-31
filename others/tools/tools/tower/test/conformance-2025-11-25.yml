@@ -1,0 +1,36 @@
+# Expected failures of tower against @modelcontextprotocol/conformance 0.2.0-alpha.12, `--requirements 2025-11-25`.
+# Setup: conformance-fixture.ts as upstream `test` (uriPrefixes ["test://"]) and, with FIXTURE_ROLE=json, as upstream `json`.
+# Entries are scenario names. The reason is the comment above each group. A baseline entry is still a failure.
+#
+# Classes: tower-design = tower does not do it and docs/design/tower.md says so (not a defect; the scenario is the only gap).
+#          fixture-gap = the port of the fixture cannot do it, so the fixture on its own fails the same way.
+#          upstream-limit = the SDK or the referee cannot do it. There is none in this leg.
+#          tower-defect = a bug against the design. There is none in this leg.
+
+server:
+  # tower-design (3: completion, logging and resources/subscribe are unsupported, the capabilities are not declared).
+  # tower answers -32601 Method not found. The fixture alone passes all five.
+  - logging-set-level
+  - completion-complete
+  - resources-subscribe
+  - resources-unsubscribe
+
+  # tower-design (3: logging is unsupported). The scenario sets the level first and gets -32601, so no log notification is
+  # looked for. notifications/message that an upstream tool emits mid-call are not relayed either, only progress is.
+  # The fixture alone passes.
+  - tools-call-with-logging
+
+  # fixture-gap and tower-design (4: server-to-client requests of a legacy upstream are not relayed, "S1 accepted limit").
+  # These four need the server to ask the caller for sampling or elicitation in the middle of a call. The fixture serves 2025 traffic
+  # through the stateless fallback of createMcpHandler, which has no channel for that, so it fails the same four scenarios when run
+  # directly. The original fixture passes them with its stateful session transport, which is not installed here. A stateful
+  # fixture would not change the tower result: tower reaches an HTTP upstream with the 2026 wire and has no relay for these requests.
+  - tools-call-sampling
+  - tools-call-elicitation
+  - elicitation-sep1034-defaults
+  - elicitation-sep1330-enums
+
+  # tower-design (docs/design/tower.md 281: "legacy sessions get GET 405 and no notifications"). A WARNING, which the baseline counts as a
+  # failure. 2025 traffic goes through the stateless fallback of createMcpHandler, so there is no Mcp-Session-Id to find. The fixture
+  # alone gives the same warning. The scenario passes its other check.
+  - server-sse-multiple-streams:server-sse-multiple-streams-session
