@@ -105,7 +105,7 @@ test("no version is pinned and the hooks are not part of the shipped plugin", ()
     assert.doesNotMatch(read(file), /"version"/, file);
   }
   const marketplace = JSON.parse(read(".claude-plugin/marketplace.json"));
-  assert.deepEqual(marketplace.plugins.map((plugin) => plugin.source), ["./plugins/proxmox"]);
+  assert.deepEqual(marketplace.plugins.map((plugin) => plugin.source), ["./plugins/proxmox", "./plugins/tower"]);
   const shipped = git(repoRoot, "ls-files", "--cached", "--others", "--exclude-standard", "plugins");
   assert.doesNotMatch(shipped, /rtk|trail-|\.claude\/hooks|tests\/project-hooks/);
   assert.equal(fs.existsSync(path.join(repoRoot, "plugins/proxmox/hooks")), false);

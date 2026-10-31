@@ -78,11 +78,11 @@ Trail 훅은 모든 모드에서 동작합니다.
 
 ## 끄는 방법
 
-세션 하나만 끌 때:
+세션 하나만 끌 때, rtk 훅만 끄려면 첫 줄을, Trail 훅만 끄려면 둘째 줄을 씁니다:
 
 ```sh
-RTK_DISABLED=1 claude     # rtk 훅만
-TRAIL_NO_HOOKS=1 claude   # Trail 훅만
+RTK_DISABLED=1 claude
+TRAIL_NO_HOOKS=1 claude
 ```
 
 계속 끄려면 메인 체크아웃의 `.claude/settings.local.json`에 넣습니다. 이 파일은 git에 올라가지 않고 모든 worktree에 적용됩니다.
