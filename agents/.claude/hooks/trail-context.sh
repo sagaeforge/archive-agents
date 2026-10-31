@@ -13,10 +13,16 @@
 
 input=$(cat)
 
-# Same gate as Trail's own hook: skip short prompts and background notices.
+# Only what a person typed, and not a short reply. Claude Code sends its own turns
+# through this hook too: a background notice, or in a headless session a message from
+# another agent. `source` will name them, but no version has sent it yet. Until then
+# they start with a tag, on the first line or under one lead-in line such as "Another
+# Claude session sent a message:". A person's prompt that looks the same only goes
+# without context.
 prompt=$(printf '%s' "$input" | jq -r '
-  .prompt | strings
-  | select(length >= 12 and (sub("^\\s+"; "") | startswith("<task-notification>") | not))
+  select((.source // "user") | . == "user" or . == "sdk")
+  | .prompt | strings
+  | select(length >= 12 and (test("\\A\\s*([^\\n]*\\n\\s*)?<[A-Za-z]") | not))
   ' 2>/dev/null)
 [ -n "$prompt" ] || exit 0
 
@@ -33,14 +39,21 @@ fi
 # A fresh checkout has no map yet. Build one so the first prompt gets context.
 [ -e "$root/graft/.graph/wiring.json" ] || timeout 5 "$trail" build "$root" >/dev/null 2>&1
 
+# Titles and pointers come from file names and code, and this output reaches the model
+# as hook context, so each stays on its own line whatever bytes it holds. Trail gives no
+# total, so asking for one more than is printed is how a cut list is known to be cut.
 printf '%s' "$prompt" |
-  timeout 5 "$trail" ask - "$root" --json -n 3 2>/dev/null |
+  timeout 5 "$trail" ask - "$root" --json -n 4 2>/dev/null |
   jq -r '
-    .hits |= map(select(.kind != "concept"))
+    def oneline: tostring | gsub("[\\p{C}\\p{Zl}\\p{Zp}]+"; " ");
+    (.hits | length > 3) as $cut
+    | .hits |= map(select(.kind != "concept"))
     | select((.hits | length > 0) and (
       ((.coverage | type) != "number" and (.coverageStrong | type) != "number")
       or (.coverageStrong // 0) >= 0.1 or (.coverage // 0) >= 0.5))
-    | "[trail] code pointers for this prompt:", (.hits[] | "- \(.title) \(.pointer)")
+    | "[trail] code pointers for this prompt:",
+      (.hits[:3][] | "- \(.title | oneline) \(.pointer | oneline)"),
+      (if $cut then "[trail] more matches exist, so this list is incomplete." else empty end)
     ' 2>/dev/null
 
 exit 0

@@ -338,6 +338,80 @@ export function session(box, { cwd, steps, substeps, prompt = "please go ahead",
   return { ...readRun(run), ms: Date.now() - started, runDir: run };
 }
 
+export const hasTmux = () => onPath("tmux");
+
+const teamDriver = `
+cd "$PROJECT"
+"$NODE_BIN" "$MOCK_FILE" &
+for _ in $(seq 1 100); do [ -e "$MOCK_READY" ] && break; sleep 0.05; done
+T="tmux -f /dev/null -L sealed"
+$T new-session -d -s lead -x 170 -y 50 -e ANTHROPIC_API_KEY -e ANTHROPIC_BASE_URL -e CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC -e DISABLE_AUTOUPDATER -e DISABLE_TELEMETRY -e DISABLE_ERROR_REPORTING "'$CLAUDE_BIN' --permission-mode bypassPermissions --setting-sources user,project,local; touch '$RUN_DIR/ended'"
+sleep 3
+$T send-keys -t lead -l "$PROMPT"
+sleep 0.5
+$T send-keys -t lead Enter
+for _ in $(seq 1 300); do [ "$(grep -c '"text":"DONE"' "$MOCK_LOG" 2>/dev/null)" -ge "$TURNS_TO_END" ] && break; sleep 0.1; done
+sleep 1
+$T send-keys -t lead -l "/exit"
+sleep 0.3
+$T send-keys -t lead Enter
+for _ in $(seq 1 30); do [ -e "$RUN_DIR/ended" ] && break; sleep 0.1; done
+$T kill-server 2>/dev/null
+kill %1 2>/dev/null
+`;
+
+/**
+ * An interactive session with agent teams on, through tmux, because a headless session
+ * gets no team. The same seal and scripted model as session(). It ends after that many
+ * turns have ended, counting the lead's and the teammate's.
+ */
+export function teamSession(box, { cwd, steps, substeps, prompt, teammateMode, turnsToEnd, timeout = 60000 }) {
+  const run = path.join(box.logs, `run-${++box.runs}`);
+  fs.mkdirSync(run, { recursive: true });
+  fs.writeFileSync(path.join(run, "script.json"), JSON.stringify({ steps, substeps }));
+  const mockFile = path.join(box.dir, "mock-api.mjs");
+  if (!fs.existsSync(mockFile)) fs.copyFileSync(path.join(here, "mock-api.mjs"), mockFile);
+  const hookLog = path.join(run, "prompt-hook.jsonl");
+  writeFile(path.join(box.home, ".claude/settings.json"), JSON.stringify({
+    skipDangerousModePermissionPrompt: true,
+    teammateMode,
+    env: { CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS: "1" },
+    hooks: { UserPromptSubmit: [{ hooks: [{ type: "command", command: `cat >> ${hookLog}; echo >> ${hookLog}` }] }] },
+  }));
+  const key = "sk-ant-sandbox-offline";
+  writeFile(path.join(box.home, ".claude.json"), JSON.stringify({
+    hasCompletedOnboarding: true,
+    lastOnboardingVersion: "2.1.316",
+    numStartups: 5,
+    customApiKeyResponses: { approved: [key.slice(-20)], rejected: [] },
+    projects: { [cwd]: { hasTrustDialogAccepted: true, hasCompletedProjectOnboarding: true } },
+  }));
+  const port = 20000 + crypto.randomInt(20000);
+  const mockLog = path.join(run, "mock.jsonl");
+  const env = {
+    TERM: "xterm-256color",
+    PROJECT: cwd,
+    ANTHROPIC_API_KEY: key,
+    ANTHROPIC_BASE_URL: `http://127.0.0.1:${port}`,
+    CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1",
+    DISABLE_AUTOUPDATER: "1",
+    DISABLE_TELEMETRY: "1",
+    DISABLE_ERROR_REPORTING: "1",
+    NODE_BIN: path.join(nodeRoot, "bin/node"),
+    MOCK_FILE: mockFile,
+    MOCK_PORT: port,
+    MOCK_SCRIPT: path.join(run, "script.json"),
+    MOCK_LOG: mockLog,
+    MOCK_READY: path.join(run, "mock.ready"),
+    CLAUDE_BIN: path.join(box.dir, "claude-bin"),
+    RUN_DIR: run,
+    PROMPT: prompt,
+    TURNS_TO_END: turnsToEnd,
+  };
+  sealed(box, cwd, ["/bin/bash", "-c", teamDriver], { env, timeout });
+  return { ...readRun(run), prompts: parseLines(hookLog).map((input) => input.prompt) };
+}
+
 /** The PreToolUse rewrites a session applied, as hook JSON. */
 export function rewrites(run) {
   return run.hooks.flatMap((hook) => {
