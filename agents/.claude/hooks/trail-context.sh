@@ -59,7 +59,7 @@ printf '%s' "$prompt" |
     def path: "[A-Za-z0-9_.#@/-]";
     def named: type == "string" and test("\\A\(code){1,64}( · [a-z]{1,16})?\\z");
     def placed: type == "string" and length <= 160 and test(
-      "\\A(node:[a-z0-9_/]+|(?!/)(?!(.*/)?\\.\\.(/|:|\\z))\(path)+(:L[0-9]+(-L[0-9]+)?)?)\\z");
+      "\\A(node:[a-z0-9_]+(/[a-z0-9_]+)*|(?!/)(?!(.*/)?\\.\\.(/|:|\\z))\(path)+(:L[0-9]+(-L[0-9]+)?)?)\\z");
     (.hits | length > 3) as $more
     | ([.scopes | objects | .alsoMatched | arrays | .[]] | length > 0) as $cut
     | (.hits | map(select(.kind != "concept"))) as $found
