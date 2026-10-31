@@ -174,6 +174,15 @@ test("a fresh worktree gets both hooks and writes nothing global", options, (t) 
   }
 });
 
+test("the project settings file alone is enough for both hooks", options, () => {
+  const box = repoCase("project-only");
+  const cwd = worktree(box);
+  const run = session(box, { cwd, prompt: question, steps: [bash("git status")], args: bypass, settingSources: "project" });
+  assert.equal(run.rc, 0, run.stderr);
+  assert.equal(rewrites(run).length, 1);
+  assert.ok(run.apiText.includes(trailHeader));
+});
+
 test("the memory canary check can fail: trail init itself copies the notes", options, () => {
   const box = repoCase("memory-control");
   plantMemory(box, box.project);
@@ -223,6 +232,21 @@ test("claude plugin validate passes with the wiring in place", options, (t) => {
     t.diagnostic(`${target}: ${run.stdout.trim()}`);
     assert.equal(run.status, 0, run.stdout + run.stderr);
   }
+});
+
+test("the plugin a machine installs carries none of this wiring", options, () => {
+  const box = repoCase("install");
+  session(box, { cwd: box.project, steps: [] });
+  const claude = path.join(box.dir, "claude-bin");
+  const env = { DISABLE_AUTOUPDATER: "1", CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1" };
+  const added = sealed(box, box.project, [claude, "plugin", "marketplace", "add", box.project], { env });
+  assert.equal(added.status, 0, added.stdout + added.stderr);
+  const installed = sealed(box, box.project, [claude, "plugin", "install", "proxmox@sagae"], { env });
+  assert.equal(installed.status, 0, installed.stdout + installed.stderr);
+  const cache = path.join(box.home, ".claude/plugins/cache");
+  const files = fs.readdirSync(cache, { recursive: true }).map(String);
+  assert.ok(files.some((file) => file.endsWith("server/pve.mjs")), "the plugin itself was installed");
+  assert.deepEqual(files.filter((file) => /rtk-rewrite|trail-|\.claude\/|project-hooks|project-tools/.test(file)), []);
 });
 
 test("a session started in a subdirectory gets no project hooks, as the guide says", options, () => {

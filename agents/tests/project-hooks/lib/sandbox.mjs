@@ -1,6 +1,6 @@
-// Shared helpers. Hook scripts run directly under a fake HOME. Full sessions run
-// the real Claude Code binary inside bwrap, with the real home hidden and only
-// loopback networking, against mock-api.mjs. Nothing here can reach the real home.
+// Shared helpers. Hook scripts run directly with HOME set to a fake home. Full
+// sessions run the real Claude Code binary inside bwrap, with the real home hidden
+// and only loopback networking, against mock-api.mjs.
 import { execFileSync, spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -202,7 +202,7 @@ function envArgs(box, extra) {
 const driver = `
 "$NODE_BIN" "$MOCK_FILE" &
 for _ in $(seq 1 100); do [ -e "$MOCK_READY" ] && break; sleep 0.05; done
-"$CLAUDE_BIN" -p "$PROMPT" --output-format stream-json --verbose --include-hook-events --model sonnet "$@" > "$RUN_DIR/out.ndjson" 2> "$RUN_DIR/err.txt"
+"$CLAUDE_BIN" -p "$PROMPT" --setting-sources "$SETTING_SOURCES" --output-format stream-json --verbose --include-hook-events --model sonnet "$@" > "$RUN_DIR/out.ndjson" 2> "$RUN_DIR/err.txt"
 echo $? > "$RUN_DIR/rc"
 kill %1 2>/dev/null
 `;
@@ -255,10 +255,10 @@ function readRun(dir) {
 
 /**
  * Runs one headless session with the real binary and a scripted model.
- * Settings sources are Claude Code's defaults: the fake home's user settings,
- * then the project and local files of the directory the session starts in.
+ * Settings sources are named explicitly: the fake home's user settings, then the
+ * project and local files of the directory the session starts in.
  */
-export function session(box, { cwd, steps, substeps, prompt = "please go ahead", args = [], env = {}, managedDir, hideJq, timeout = 90000 }) {
+export function session(box, { cwd, steps, substeps, prompt = "please go ahead", args = [], env = {}, settingSources = "user,project,local", managedDir, hideJq, timeout = 90000 }) {
   const run = path.join(box.logs, `run-${++box.runs}`);
   fs.mkdirSync(run, { recursive: true });
   const scriptFile = path.join(run, "script.json");
@@ -282,6 +282,7 @@ export function session(box, { cwd, steps, substeps, prompt = "please go ahead",
     CLAUDE_BIN: path.join(box.dir, "claude-bin"),
     RUN_DIR: run,
     PROMPT: prompt,
+    SETTING_SOURCES: settingSources,
     ...env,
   };
   const started = Date.now();

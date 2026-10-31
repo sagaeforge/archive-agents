@@ -146,6 +146,11 @@ test("everything else stays raw, starting with what reviewers need in full", () 
     "grep -rn needle . | cat",
     "git status | cat",
     "grep -rn needle . > out.txt",
+    // Quotes that would swallow the rtk half of the rewritten command.
+    "grep -n 'unbalanced a.txt",
+    'grep -n "unbalanced a.txt',
+    "grep -n \"it's\" a.txt",
+    "grep -n \"a' b\" 'c",
     // Near misses.
     " git status",
     "git status ",
@@ -247,6 +252,12 @@ test("a missing, wrong, broken, or slow rtk leaves the command raw", () => {
     const { rc, stdout } = runHook(hook, call("git status"), { home });
     assert.deepEqual({ rc, stdout }, { rc: 0, stdout: "" }, name);
   }
+});
+
+test("a working rtk of another version is not used", () => {
+  const home = fakeHome({ rtk: stubRtk.replace("rtk 1.1.0", "rtk 1.2.0") });
+  const { rc, stdout } = runHook(hook, call("git status"), { home });
+  assert.deepEqual({ rc, stdout }, { rc: 0, stdout: "" });
 });
 
 test("a hanging rtk is cut off well inside the five second hook timeout", () => {
@@ -358,6 +369,67 @@ test("grep shows every match or marks the cut, and hides no file", realOnly, () 
   assert.match(out, /long\.txt:1:needle k+\.\.\./, "a cut line carries a marker");
   const shown = out.split("\n").filter((line) => /^\S+:\d+:/.test(line)).length;
   assert.equal(shown + 15, raw.length);
+});
+
+// The limits and ignore lists rtk writes to its config on a real machine.
+const rtkConfig = `[filters]
+ignore_dirs = [".git", "node_modules", "target", "__pycache__", ".venv", "vendor"]
+ignore_files = ["*.lock", "*.min.js", "*.min.css"]
+
+[limits]
+grep_max_results = 200
+grep_max_per_file = 25
+status_max_files = 15
+status_max_untracked = 10
+passthrough_max_chars = 2000
+`;
+
+function configuredHome() {
+  const home = fakeHome({ rtk: "real" });
+  writeFile(path.join(home, ".config/rtk/config.toml"), rtkConfig);
+  return home;
+}
+
+test("git status lists every entry past rtk's configured limits", realOnly, () => {
+  const repo = fixture();
+  const home = configuredHome();
+  for (let i = 0; i < 30; i++) {
+    writeFile(path.join(repo, `staged-${i}.txt`), "new\n");
+    writeFile(path.join(repo, `untracked-${i}.txt`), "new\n");
+  }
+  git(repo, "add", "staged-*.txt");
+  const out = sh(rewrite(home, "git status", repo), repo, home).stdout;
+  for (let i = 0; i < 30; i++) {
+    assert.ok(out.includes(`staged-${i}.txt`), `staged-${i}.txt`);
+    assert.ok(out.includes(`untracked-${i}.txt`), `untracked-${i}.txt`);
+  }
+});
+
+test("grep past its total cap says how much it cut", realOnly, () => {
+  const dir = tempDir("grep-cap");
+  const home = configuredHome();
+  for (let file = 0; file < 30; file++) {
+    writeFile(path.join(dir, `f${file}.txt`), Array.from({ length: 10 }, (_, i) => `needle ${i}\n`).join(""));
+  }
+  const out = sh(rewrite(home, "grep -rn needle .", dir), dir, home).stdout;
+  assert.ok(out.startsWith("300 matches in 30 files:"), out.slice(0, 80));
+  const shown = out.split("\n").filter((line) => /:\d+:needle/.test(line)).length;
+  const inFile = [...out.matchAll(/^ {2}\+(\d+) more in /gm)].reduce((sum, match) => sum + Number(match[1]), 0);
+  const files = Number(out.match(/^\+(\d+) more files$/m)?.[1]);
+  assert.equal(shown, 200);
+  assert.ok(files > 0, "the files past the cap are counted");
+  assert.equal(shown + inFile + files * 10, 300, "shown plus marked accounts for every match");
+});
+
+test("rtk's ignore lists do not apply to grep", realOnly, () => {
+  const dir = tempDir("grep-noise");
+  const home = configuredHome();
+  const noise = ["node_modules/p/i.js", "vendor/v.txt", "target/t.txt", ".venv/c.txt", "__pycache__/c.txt", "yarn.lock", "a.min.js", "a.min.css"];
+  for (const file of noise) writeFile(path.join(dir, file), "needle\n");
+  writeFile(path.join(dir, "many.txt"), Array.from({ length: 40 }, (_, i) => `needle ${i}\n`).join(""));
+  const out = sh(rewrite(home, "grep -rn needle .", dir), dir, home).stdout;
+  assert.ok(out.startsWith("48 matches in 9 files:"), out.slice(0, 80));
+  for (const file of noise) assert.ok(out.includes(file), file);
 });
 
 test("a small grep result is left as it was", realOnly, () => {
