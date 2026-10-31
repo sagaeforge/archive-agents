@@ -8,6 +8,7 @@ import path from "node:path";
 import test from "node:test";
 import {
   copyRepo,
+  expiredTimeouts,
   git,
   gitCommand,
   hasTmux,
@@ -100,7 +101,16 @@ function filesContaining(dir, text) {
   return hits;
 }
 
-/** The files any session writes under HOME, from a session with no project hooks. */
+/**
+ * The files any session writes under HOME, from a session with no project hooks.
+ *
+ * Claude Code writes some of them only once a session has lived a few seconds (the
+ * first is .claude/.last-cleanup, from about 5 to 6 s). A short control would lack
+ * them, and the tested session would then seem to write what a hookless one does. So
+ * the control stays up for `controlSeconds`, past every such write seen so far, and
+ * this is read from the control, not listed by hand.
+ */
+const controlSeconds = 12;
 let controlShapes;
 function controlRun() {
   if (controlShapes) return controlShapes;
@@ -111,13 +121,20 @@ function controlRun() {
   writeFile(path.join(other, "plugins/note.txt"), "createClient\n");
   plantUserSettings(box, { statusLine: { type: "command", command: "echo user-status-line" } });
   const before = snapshot(box.home);
-  session(box, { cwd: other, prompt: question, steps: [bash("git status"), bash("grep -rn createClient plugins"), write(path.join(other, "plugins/new.txt"), "x\n")], args: bypass });
+  session(box, { cwd: other, prompt: question, steps: [bash("git status"), bash("grep -rn createClient plugins"), write(path.join(other, "plugins/new.txt"), "x\n"), bash(`sleep ${controlSeconds}`)], args: bypass });
   controlShapes = new Set(snapshotDiff(before, snapshot(box.home)).map(pathShape));
   return controlShapes;
 }
 
-test("a fresh worktree gets both hooks and writes nothing global", options, (t) => {
-  const box = repoCase("fresh");
+// The hooks give Trail 5 seconds to build a map and 5 more to answer, and give up quietly
+// when it runs out: the prompt goes on without context, as designed. On a machine busy
+// enough, a session in a fresh worktree hits that. The run below is then repeated in a
+// new worktree, but only when a Trail `timeout` is seen to have expired. Without that,
+// missing context fails the test at once. Nothing global may be written in any attempt.
+const attempts = 6;
+
+function freshWorktreeRun() {
+  const box = repoCase("fresh", { watchTimeouts: true });
   const statusLine = { type: "command", command: "echo user-status-line" };
   plantUserSettings(box, { statusLine });
   const userSettings = path.join(box.home, ".claude/settings.json");
@@ -136,56 +153,79 @@ test("a fresh worktree gets both hooks and writes nothing global", options, (t) 
   });
   const second = session(box, { cwd, prompt: "where is sessionRefreshProbe defined", steps: [], args: bypass });
   const after = snapshot(box.home);
+  return { box, statusLine, userSettings, userHash, cwd, before, after, first, second };
+}
 
-  assert.equal(first.rc, 0, first.stderr);
-  assert.equal(first.final.subtype, "success");
+/** The three things only Trail's answer can fail: its context reached the model, twice. */
+function trailContext({ first, second }) {
+  return [
+    ["Trail context reached the model request", first.apiText.includes(trailHeader)],
+    ["Trail names the code the prompt asks about", /- createClient · function plugins\/proxmox\/server\/pve\.mjs:L\d+/.test(first.apiText)],
+    ["the next prompt still found the new file", /- sessionRefreshProbe · function plugins\/proxmox\/server\/probe\.mjs/.test(second.apiText)],
+  ];
+}
 
-  // Both hooks fired, through the real engine.
-  const [status, ...others] = rewrites(first);
-  assert.match(status, /timeout -k 1 5 \S*\/\.local\/bin\/rtk git status \|\| git status$/);
-  assert.deepEqual(others, [], "only git status is rewritten");
-  assert.ok(first.results[0].text.startsWith("* fresh-"), first.results[0].text);
-  assert.doesNotMatch(first.results[0].text, /On branch/);
-  assert.match(first.results[1].text, /pve\.mjs/);
-  assert.ok(first.apiText.includes(trailHeader), "Trail context reached the model request");
-  assert.match(first.apiText, /- createClient · function plugins\/proxmox\/server\/pve\.mjs:L\d+/);
-  assert.ok(first.apiText.includes("rtk shortened this output"), "the model is told");
+test("a fresh worktree gets both hooks and writes nothing global", options, (t) => {
+  let run;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    run = freshWorktreeRun();
+    const { box, statusLine, userSettings, userHash, cwd, before, after, first, second } = run;
 
-  // Nothing ran after the Write, and the next prompt still found the new file.
-  assert.equal(first.hooks.some((hook) => hook.hook_name?.startsWith("PostToolUse")), false);
-  assert.match(second.apiText, /- sessionRefreshProbe · function plugins\/proxmox\/server\/probe\.mjs/);
+    assert.equal(first.rc, 0, first.stderr);
+    assert.equal(first.final.subtype, "success");
 
-  // No global write: the only home changes are ones any session makes.
-  const diff = snapshotDiff(before, after);
-  t.diagnostic(`fake home changes: ${JSON.stringify(diff)}`);
-  const extra = diff.map(pathShape).filter((shape) => !controlRun().has(shape));
-  assert.deepEqual(extra, [], "home writes a hookless session does not make");
-  for (const forbidden of [".claude/helpers", ".claude/skills", ".claude/RTK.md", ".trail", ".graft", ".gemini", ".codex", ".config/rtk", ".local/share/rtk", ".zshrc"]) {
-    assert.deepEqual(diff.filter((entry) => entry.includes(` ${forbidden}`)), [], forbidden);
+    // Both hooks fired, through the real engine.
+    const [status, ...others] = rewrites(first);
+    assert.match(status, /timeout -k 1 5 \S*\/\.local\/bin\/rtk git status \|\| git status$/);
+    assert.deepEqual(others, [], "only git status is rewritten");
+    assert.ok(first.results[0].text.startsWith("* fresh-"), first.results[0].text);
+    assert.doesNotMatch(first.results[0].text, /On branch/);
+    assert.match(first.results[1].text, /pve\.mjs/);
+    assert.ok(first.apiText.includes("rtk shortened this output"), "the model is told");
+
+    // Nothing ran after the Write.
+    assert.equal(first.hooks.some((hook) => hook.hook_name?.startsWith("PostToolUse")), false);
+
+    // No global write: the only home changes are ones any session makes.
+    const diff = snapshotDiff(before, after);
+    t.diagnostic(`fake home changes: ${JSON.stringify(diff)}`);
+    const extra = diff.map(pathShape).filter((shape) => !controlRun().has(shape));
+    assert.deepEqual(extra, [], "home writes a hookless session does not make");
+    for (const forbidden of [".claude/helpers", ".claude/skills", ".claude/RTK.md", ".trail", ".graft", ".gemini", ".codex", ".config/rtk", ".local/share/rtk", ".zshrc"]) {
+      assert.deepEqual(diff.filter((entry) => entry.includes(` ${forbidden}`)), [], forbidden);
+    }
+
+    // No statusLine, no default reapply.
+    assert.equal(sha256(userSettings), userHash);
+    assert.deepEqual(JSON.parse(fs.readFileSync(userSettings, "utf8")), { statusLine });
+    assert.equal(fs.existsSync(path.join(cwd, ".claude/settings.local.json")), false);
+    assert.equal(fs.existsSync(path.join(box.project, ".claude/settings.local.json")), false);
+    assert.deepEqual(Object.keys(JSON.parse(fs.readFileSync(path.join(cwd, ".claude/settings.json"), "utf8"))), ["hooks"]);
+    for (const dir of [cwd, box.project]) assert.equal(fs.existsSync(path.join(dir, ".trail")), false);
+
+    // The worktree stays clean apart from what the session itself wrote.
+    assert.equal(git(cwd, "status", "--short"), "?? plugins/proxmox/server/probe.mjs\n");
+
+    // Hooks ran no fetch, no upgrade, and no install. Each tool is logged by a shim.
+    const calls = shimCalls(box);
+    const gitCommands = gitCalls(box);
+    t.diagnostic(`git commands: ${JSON.stringify([...new Set(gitCommands)])}`);
+    assert.deepEqual(gitCommands.filter((command) => /^(fetch|pull|push|ls-remote|clone|gc|maintenance)\b/.test(command)), []);
+    assert.deepEqual(calls.filter(([tool]) => tool !== "git"), []);
+
+    // Memory was not copied.
+    for (const type of noteTypes) {
+      for (const dir of [cwd, box.project]) assert.deepEqual(filesContaining(dir, canary(type)), []);
+    }
+
+    // Trail's answer is the one thing a slow machine can take away.
+    if (trailContext(run).every(([, arrived]) => arrived)) break;
+    const gaveUp = expiredTimeouts(box).filter((command) => command.includes("trail"));
+    if (gaveUp.length === 0) break;
+    t.diagnostic(`attempt ${attempt}: the hook gave up on Trail, so it is repeated: ${JSON.stringify(gaveUp.map((command) => command.replace(/\S*\//g, "")))}`);
   }
 
-  // No statusLine, no default reapply.
-  assert.equal(sha256(userSettings), userHash);
-  assert.deepEqual(JSON.parse(fs.readFileSync(userSettings, "utf8")), { statusLine });
-  assert.equal(fs.existsSync(path.join(cwd, ".claude/settings.local.json")), false);
-  assert.equal(fs.existsSync(path.join(box.project, ".claude/settings.local.json")), false);
-  assert.deepEqual(Object.keys(JSON.parse(fs.readFileSync(path.join(cwd, ".claude/settings.json"), "utf8"))), ["hooks"]);
-  for (const dir of [cwd, box.project]) assert.equal(fs.existsSync(path.join(dir, ".trail")), false);
-
-  // The worktree stays clean apart from what the session itself wrote.
-  assert.equal(git(cwd, "status", "--short"), "?? plugins/proxmox/server/probe.mjs\n");
-
-  // Hooks ran no fetch, no upgrade, and no install. Each tool is logged by a shim.
-  const calls = shimCalls(box);
-  const gitCommands = gitCalls(box);
-  t.diagnostic(`git commands: ${JSON.stringify([...new Set(gitCommands)])}`);
-  assert.deepEqual(gitCommands.filter((command) => /^(fetch|pull|push|ls-remote|clone|gc|maintenance)\b/.test(command)), []);
-  assert.deepEqual(calls.filter(([tool]) => tool !== "git"), []);
-
-  // Memory was not copied.
-  for (const type of noteTypes) {
-    for (const dir of [cwd, box.project]) assert.deepEqual(filesContaining(dir, canary(type)), []);
-  }
+  for (const [what, arrived] of trailContext(run)) assert.ok(arrived, `${what}; Trail's own time limit expired in ${expiredTimeouts(run.box).filter((command) => command.includes("trail")).length} call(s)`);
 });
 
 test("the hooks add only local git calls that run nothing the repository configured", options, () => {

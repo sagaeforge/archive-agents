@@ -191,24 +191,40 @@ export function copyRepo(target) {
   return target;
 }
 
-const shimLog = "shim.log";
+// One file per call, in a directory of its own. Claude Code runs several git calls at
+// once, and appending lines to one shared log is not atomic: two writers interleave and a
+// line reads as another tool. A call is written under a dot name and renamed into place,
+// so a reader sees whole calls only.
+const callsDir = "calls";
 const argSeparator = "\x1f";
 
-// One line per call, with arguments split by a byte no argument here contains.
 const logArgv = (tool, logs) =>
-  `{ printf '%s' ${tool}; for arg in "$@"; do printf '\\037%s' "$arg"; done; echo; } >> ${logs}/${shimLog}`;
+  `d=${logs}/${callsDir}; n=$(date +%s%N).$$; { printf '%s' ${tool}; printf '\\037%s' "$@"; echo; } > "$d/.$n" && mv "$d/.$n" "$d/$n"`;
+
+// Wraps `timeout` the way a hook calls it and records the exit status of each call, so a
+// test can tell a limit that expired from a command that failed. Status 124 is a limit
+// that expired; 137 is the kill that follows `-k`.
+const timeoutShim = (logs) => `#!/bin/sh
+s=$(date +%s%N)
+/usr/bin/timeout "$@"
+rc=$?
+n=$s.$$
+{ printf '%s\\037%s' "$rc" "$*"; echo; } > "${logs}/${expiryDir}/.$n" && mv "${logs}/${expiryDir}/.$n" "${logs}/${expiryDir}/$n"
+exit $rc
+`;
+const expiryDir = "timeouts";
 
 // Logged and refused: a hook has no business calling these.
 const refusedTools = ["npm", "npx", "gh", "curl", "wget", "ssh"];
 
 /** A fake home and work area for a sealed session. */
-export function sessionCase(label, { rtkStub, trailStub } = {}) {
+export function sessionCase(label, { rtkStub, trailStub, watchTimeouts = false } = {}) {
   const dir = tempDir(label);
   const home = path.join(dir, "home");
   const logs = path.join(dir, "logs");
   const work = path.join(dir, "work");
   const shims = path.join(dir, "shims");
-  for (const sub of [home, logs, work, shims]) fs.mkdirSync(sub, { recursive: true });
+  for (const sub of [home, logs, work, shims, path.join(logs, callsDir), path.join(logs, expiryDir)]) fs.mkdirSync(sub, { recursive: true });
   fs.mkdirSync(path.join(home, ".local/bin"), { recursive: true });
   fs.mkdirSync(path.join(home, ".local/share"), { recursive: true });
   writeFile(path.join(home, ".gitconfig"), "[user]\n\tname = sandbox\n\temail = sandbox@example.invalid\n");
@@ -216,6 +232,7 @@ export function sessionCase(label, { rtkStub, trailStub } = {}) {
     writeFile(path.join(shims, tool), `#!/bin/sh\n${logArgv(tool, logs)}\nexit 1\n`, 0o755);
   }
   writeFile(path.join(shims, "git"), `#!/bin/sh\n${logArgv("git", logs)}\nexec /usr/bin/git "$@"\n`, 0o755);
+  if (watchTimeouts) writeFile(path.join(shims, "timeout"), timeoutShim(logs), 0o755);
   if (rtkStub) writeFile(path.join(home, ".local/bin/rtk"), rtkStub, 0o755);
   if (trailStub) writeFile(path.join(home, pinnedTrail), trailStub, 0o755);
   return { dir, home, logs, work, shims, rtkStub, trailStub, runs: 0 };
@@ -489,9 +506,29 @@ export function rewrites(run) {
 
 /** Every logged call as its argv, so a subcommand can be read past global options. */
 export const shimCalls = (box) => {
-  const file = path.join(box.logs, shimLog);
-  if (!fs.existsSync(file)) return [];
-  return fs.readFileSync(file, "utf8").split("\n").filter(Boolean).map((line) => line.split(argSeparator));
+  const dir = path.join(box.logs, callsDir);
+  if (!fs.existsSync(dir)) return [];
+  return fs
+    .readdirSync(dir)
+    .filter((name) => !name.startsWith("."))
+    .sort()
+    .map((name) => fs.readFileSync(path.join(dir, name), "utf8").replace(/\n$/, "").split(argSeparator));
+};
+
+/**
+ * The `timeout` calls whose limit expired, as their command lines. Only a case made
+ * with `watchTimeouts` records them. A hook that gives up this way fails open and
+ * prints nothing, which is what a machine too busy for it looks like.
+ */
+export const expiredTimeouts = (box) => {
+  const dir = path.join(box.logs, expiryDir);
+  if (!fs.existsSync(dir)) return [];
+  return fs
+    .readdirSync(dir)
+    .filter((name) => !name.startsWith("."))
+    .map((name) => fs.readFileSync(path.join(dir, name), "utf8").replace(/\n$/, "").split(argSeparator))
+    .filter(([rc]) => rc === "124" || rc === "137")
+    .map(([, command]) => command);
 };
 
 /** A logged git call from its subcommand on, past options such as `-c key=value`. */
