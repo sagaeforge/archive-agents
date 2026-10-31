@@ -29,7 +29,8 @@ case $mode in
   git)
     for arg; do [[ $arg == --log-opts=* ]] && opts=\${arg#--log-opts=}; done
     # shellcheck disable=SC2086
-    git -C "$repo" log -p -U0 $opts | grep -qa ${MARKER} && exit 1
+    # Added lines only, as gitleaks reads a diff: a later commit that removes the text must not count.
+    git -C "$repo" log -p -U0 $opts | grep -qaE "^\\+.*${MARKER}" && exit 1
     exit 0
     ;;
   dir)

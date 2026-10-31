@@ -30,17 +30,25 @@ const SCAN = "../../.github/scripts/gitleaks.sh";
 const BOOTSTRAP = "scripts/bootstrap-token.sh";
 const SMOKE = "test/smoke/live.mjs";
 const DOCTOR = "scripts/doctor-checks.mjs";
+// Most test files are slow only as a whole, so a mutant names the tests that own its guarantee. A
+// pattern that stops matching runs nothing, which reads as a survivor, so a renamed test cannot
+// quietly disarm a mutant.
+const named = (pattern, file) => [`--test-name-pattern=${pattern}`, file];
 const READ_ONLY_TESTS = ["test/readonly.test.mjs"];
 const LAUNCH_TESTS = ["test/launch.test.mjs"];
 const TOKEN_TESTS = ["test/token-guard.test.mjs"];
-const BOOTSTRAP_PROOF_TESTS = ["--test-name-pattern=no proof|no token in it", "test/bootstrap-token.test.mjs"];
-const BOOTSTRAP_SIGNAL_TESTS = ["--test-name-pattern=on the way out", "test/bootstrap-token.test.mjs"];
-// The doctor's file is slow, and only these scenarios are about the gate.
-const DOCTOR_GATE_TESTS = ["--test-name-pattern=stable", "test/doctor.test.mjs"];
-const GATE_TESTS = ["test/gate.test.mjs"];
-const SMOKE_TESTS = ["test/live-smoke.test.mjs"];
+const BOOTSTRAP_PROOF_TESTS = named("no proof|no token in it", "test/bootstrap-token.test.mjs");
+const BOOTSTRAP_SIGNAL_TESTS = named("on the way out", "test/bootstrap-token.test.mjs");
+const DOCTOR_GATE_TESTS = named("stable", "test/doctor.test.mjs");
+const GATE = "test/gate.test.mjs";
+const FLOW_TESTS = named("^CI flow", GATE);
+const PROMOTE_TESTS = named("^promote ", GATE);
+const ROLLBACK_TESTS = named("^rollback ", GATE);
+const HOOK_TESTS = named("^the hook ", GATE);
+const SMOKE_TEST_FILE = "test/live-smoke.test.mjs";
 const SCAN_TESTS = ["test/gitleaks.test.mjs"];
 const RULE_TESTS = ["test/repo-rules.test.mjs"];
+const DOC_TESTS = ["test/docs.test.mjs"];
 const REFUSE_STABLE = `    refs/heads/stable)
       echo "pre-push: stable moves only through CI. Push to main; see docs/stable-gate.md." >&2
       exit 1
@@ -70,48 +78,51 @@ const MUTANTS = [
   { id: "W1", breaks: "a wait that ignores TERM outlives its limit", file: "../../.claude/hooks/team-watcher-wait.mjs", from: '    "-k",\n    String(KILL_AFTER_SECONDS),\n', to: "", tests: ["../../.claude/hooks/team-watcher-wait.test.mjs"] },
   { id: "R1", breaks: "CI runs the mutation check on every leg", file: CI, from: "- if: github.event_name != 'schedule' && matrix.node == 26\n", to: "- if: github.event_name != 'schedule'\n", tests: RULE_TESTS },
   { id: "R2", breaks: "CI installs an action by tag", file: CI, from: "actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0\n        with:\n          node-version: ${{ matrix.node }}", to: "actions/setup-node@v7\n        with:\n          node-version: ${{ matrix.node }}", tests: RULE_TESTS },
-  { id: "G1", breaks: "promote stops waiting for check and the smoke", file: CI, from: "    needs: [check, live-smoke]\n", to: "", tests: GATE_TESTS },
-  { id: "G2", breaks: "promote runs before the owner turns the gate on", file: CI, from: "vars.STABLE_GATE_ENABLED == 'true' && ", to: "", tests: GATE_TESTS },
-  { id: "G3", breaks: "promote forces stable", file: PROMOTE, from: 'git push origin "$sha', to: 'git push --force origin "$sha', tests: GATE_TESTS },
-  { id: "G4", breaks: "promote creates stable", file: PROMOTE, from: "if [[ -z $stable ]]; then", to: 'if [[ -z $stable ]]; then git push origin "$sha:refs/heads/stable"; exit 0; fi; if false; then', tests: GATE_TESTS },
-  { id: "G5", breaks: "promote acts on a stale run", file: PROMOTE, from: 'if [[ $sha != "$main" ]]; then', to: "if false; then", tests: GATE_TESTS },
-  { id: "G6", breaks: "rollback can move stable forward", file: ROLLBACK, from: 'if ! git merge-base --is-ancestor "$sha" "$stable"; then', to: "if false; then", tests: GATE_TESTS },
-  { id: "G7", breaks: "rollback accepts a commit off main", file: ROLLBACK, from: 'if ! git merge-base --is-ancestor "$sha" "$main"; then', to: "if false; then", tests: GATE_TESTS },
-  { id: "G8", breaks: "rollback accepts a commit that failed CI", file: ROLLBACK, from: "if [[ ! $passed =~ ^[1-9][0-9]*$ ]]; then", to: "if false; then", tests: GATE_TESTS },
-  { id: "G9", breaks: "rollback drops its lease", file: ROLLBACK, from: '--force-with-lease="refs/heads/stable:$stable"', to: "--force", tests: GATE_TESTS },
-  { id: "G10", breaks: "the hook lets stable through", file: HOOK, from: REFUSE_STABLE, to: "", tests: GATE_TESTS },
-  { id: "G11", breaks: "the hook checks the working tree", file: HOOK, from: 'git archive "$target" | tar -x -C "$work"', to: 'cp -R . "$work"', tests: GATE_TESTS },
-  { id: "G12", breaks: "the hook hands GIT_DIR to the checks", file: HOOK, from: 'unset "${git_vars[@]}"\n', to: "", tests: GATE_TESTS },
-  { id: "G13", breaks: "a failed check no longer stops promote", file: CI, from: "      && needs.check.result == 'success'\n", to: "", tests: GATE_TESTS },
-  { id: "G14", breaks: "a failed smoke no longer stops promote", file: CI, from: "needs.live-smoke.result == 'success'", to: "needs.live-smoke.result != 'cancelled'", tests: GATE_TESTS },
-  { id: "G15", breaks: "the weekly run promotes", file: CI, from: " && github.event_name != 'schedule'", to: "", tests: GATE_TESTS },
-  { id: "G16", breaks: "a cancelled run still promotes", file: CI, from: "!cancelled() && ", to: "always() && ", tests: GATE_TESTS },
-  { id: "G17", breaks: "pull requests reach the runner", file: CI, from: "github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && !inputs.skip_smoke", to: "!inputs.skip_smoke", tests: GATE_TESTS },
-  { id: "G18", breaks: "the smoke waits for a runner nobody has turned on", file: CI, from: "if: vars.LIVE_SMOKE_ENABLED == 'true' && ", to: "if: ", tests: GATE_TESTS },
-  { id: "G19", breaks: "a failing job no longer fails the run", file: CI, from: "    runs-on: ubuntu-latest\n    timeout-minutes: 15\n", to: "    runs-on: ubuntu-latest\n    timeout-minutes: 15\n    continue-on-error: true\n", tests: GATE_TESTS },
-  { id: "G20", breaks: "promote moves to the runner next to the token", file: CI, from: "    runs-on: ubuntu-latest\n    timeout-minutes: 5\n", to: "    runs-on: [self-hosted, proxmox]\n    timeout-minutes: 5\n", tests: GATE_TESTS },
-  { id: "G21", breaks: "live-smoke stops running the smoke", file: CI, from: "      - run: node test/smoke/live.mjs\n", to: '      - run: "true"\n', tests: GATE_TESTS },
-  { id: "G22", breaks: "live-smoke no longer waits for check", file: CI, from: "    needs: check\n", to: "", tests: GATE_TESTS },
-  { id: "G23", breaks: "the hook scans with the working tree's script", file: HOOK, from: '"$work/.github/scripts/gitleaks.sh" "$repo" "$target"', to: '"$repo/.github/scripts/gitleaks.sh"', tests: GATE_TESTS },
-  { id: "G24", breaks: "the hook checks HEAD, not the pushed ref", file: HOOK, from: 'git archive "$target" | tar -x -C "$work"', to: 'git archive HEAD | tar -x -C "$work"', tests: GATE_TESTS },
-  { id: "G25", breaks: "the hook ignores a failing npm test", file: HOOK, from: "npm test\n", to: "npm test || true\n", tests: GATE_TESTS },
-  { id: "G26", breaks: "the hook lets a mirror push through", file: HOOK, from: 'echo "pre-push: a mirror push can delete stable unseen. Push branches by name." >&2\n      exit 1\n', to: "", tests: GATE_TESTS },
-  { id: "G27", breaks: "rollback counts a pull request's run", file: ROLLBACK, from: "--workflow ci.yml --branch main --commit", to: "--workflow ci.yml --commit", tests: GATE_TESTS },
+  { id: "K1", breaks: "a runbook command gets a comment back", file: "../../docs/stable-gate.md", from: "claude plugin marketplace remove sagae\n", to: "claude plugin marketplace remove sagae   # note\n", tests: DOC_TESTS },
+  { id: "K2", breaks: "the emergency inbox read loses --run", file: "../../docs/team-operations.md", from: "orca-ide orchestration check --run <run_id> --json\n", to: "orca-ide orchestration check --json\n", tests: DOC_TESTS },
+  { id: "M9", breaks: "a response stops being read as UTF-8", file: "server/pve.mjs", from: 'Buffer.concat(chunks).toString("utf8")', to: 'Buffer.concat(chunks).toString("latin1")', tests: named("UTF-8", "test/errors.test.mjs") },
+  { id: "G1", breaks: "promote stops waiting for check and the smoke", file: CI, from: "    needs: [check, live-smoke]\n", to: "", tests: named("promote waits", GATE) },
+  { id: "G2", breaks: "promote runs before the owner turns the gate on", file: CI, from: "vars.STABLE_GATE_ENABLED == 'true' && ", to: "", tests: FLOW_TESTS },
+  { id: "G3", breaks: "promote forces stable", file: PROMOTE, from: 'git push origin "$sha', to: 'git push --force origin "$sha', tests: PROMOTE_TESTS },
+  { id: "G4", breaks: "promote creates stable", file: PROMOTE, from: "if [[ -z $stable ]]; then", to: 'if [[ -z $stable ]]; then git push origin "$sha:refs/heads/stable"; exit 0; fi; if false; then', tests: PROMOTE_TESTS },
+  { id: "G5", breaks: "promote acts on a stale run", file: PROMOTE, from: 'if [[ $sha != "$main" ]]; then', to: "if false; then", tests: PROMOTE_TESTS },
+  { id: "G6", breaks: "rollback can move stable forward", file: ROLLBACK, from: 'if ! git merge-base --is-ancestor "$sha" "$stable"; then', to: "if false; then", tests: ROLLBACK_TESTS },
+  { id: "G7", breaks: "rollback accepts a commit off main", file: ROLLBACK, from: 'if ! git merge-base --is-ancestor "$sha" "$main"; then', to: "if false; then", tests: ROLLBACK_TESTS },
+  { id: "G8", breaks: "rollback accepts a commit that failed CI", file: ROLLBACK, from: "if [[ ! $passed =~ ^[1-9][0-9]*$ ]]; then", to: "if false; then", tests: ROLLBACK_TESTS },
+  { id: "G9", breaks: "rollback drops its lease", file: ROLLBACK, from: '--force-with-lease="refs/heads/stable:$stable"', to: "--force", tests: ROLLBACK_TESTS },
+  { id: "G10", breaks: "the hook lets stable through", file: HOOK, from: REFUSE_STABLE, to: "", tests: HOOK_TESTS },
+  { id: "G11", breaks: "the hook checks the working tree", file: HOOK, from: 'git archive "$target" | tar -x -C "$work"', to: 'cp -R . "$work"', tests: HOOK_TESTS },
+  { id: "G12", breaks: "the hook hands GIT_DIR to the checks", file: HOOK, from: 'unset "${git_vars[@]}"\n', to: "", tests: HOOK_TESTS },
+  { id: "G13", breaks: "a failed check no longer stops promote", file: CI, from: "      && needs.check.result == 'success'\n", to: "", tests: FLOW_TESTS },
+  { id: "G14", breaks: "a failed smoke no longer stops promote", file: CI, from: "needs.live-smoke.result == 'success'", to: "needs.live-smoke.result != 'cancelled'", tests: FLOW_TESTS },
+  { id: "G15", breaks: "the weekly run promotes", file: CI, from: " && github.event_name != 'schedule'", to: "", tests: FLOW_TESTS },
+  { id: "G16", breaks: "a cancelled run still promotes", file: CI, from: "!cancelled() && ", to: "always() && ", tests: FLOW_TESTS },
+  { id: "G17", breaks: "pull requests reach the runner", file: CI, from: "github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && !inputs.skip_smoke", to: "!inputs.skip_smoke", tests: FLOW_TESTS },
+  { id: "G18", breaks: "the smoke waits for a runner nobody has turned on", file: CI, from: "if: vars.LIVE_SMOKE_ENABLED == 'true' && ", to: "if: ", tests: FLOW_TESTS },
+  { id: "G19", breaks: "a failing job no longer fails the run", file: CI, from: "    runs-on: ubuntu-latest\n    timeout-minutes: 15\n", to: "    runs-on: ubuntu-latest\n    timeout-minutes: 15\n    continue-on-error: true\n", tests: named("no step or job", GATE) },
+  { id: "G20", breaks: "promote moves to the runner next to the token", file: CI, from: "    runs-on: ubuntu-latest\n    timeout-minutes: 5\n", to: "    runs-on: [self-hosted, proxmox]\n    timeout-minutes: 5\n", tests: named("hosted runners", GATE) },
+  { id: "G21", breaks: "live-smoke stops running the smoke", file: CI, from: "      - run: node test/smoke/live.mjs\n", to: '      - run: "true"\n', tests: named("live-smoke waits", GATE) },
+  { id: "G22", breaks: "live-smoke no longer waits for check", file: CI, from: "    needs: check\n", to: "", tests: named("live-smoke waits", GATE) },
+  { id: "G23", breaks: "the hook scans with the working tree's script", file: HOOK, from: '"$work/.github/scripts/gitleaks.sh" "$repo" "$target"', to: '"$repo/.github/scripts/gitleaks.sh"', tests: HOOK_TESTS },
+  { id: "G24", breaks: "the hook checks HEAD, not the pushed ref", file: HOOK, from: 'git archive "$target" | tar -x -C "$work"', to: 'git archive HEAD | tar -x -C "$work"', tests: HOOK_TESTS },
+  { id: "G25", breaks: "the hook ignores a failing npm test", file: HOOK, from: "npm test\n", to: "npm test || true\n", tests: HOOK_TESTS },
+  { id: "G26", breaks: "the hook lets a mirror push through", file: HOOK, from: 'echo "pre-push: a mirror push can delete stable unseen. Push branches by name." >&2\n      exit 1\n', to: "", tests: HOOK_TESTS },
+  { id: "G27", breaks: "rollback counts a pull request's run", file: ROLLBACK, from: "--workflow ci.yml --branch main --commit", to: "--workflow ci.yml --commit", tests: ROLLBACK_TESTS },
   { id: "S1", breaks: "the scan skips merge commits", file: SCAN, from: ' --full-history -m"', to: ' --full-history"', tests: SCAN_TESTS },
   { id: "S2", breaks: "the scan stops reading commit messages", file: SCAN, from: 'git -C "$repo" log --format=%B "$revisions" | "$work/gitleaks" stdin "${options[@]}"\n', to: "", tests: SCAN_TESTS },
   { id: "S3", breaks: "the scan stops reading the files at the tip", file: SCAN, from: '"$work/gitleaks" dir "${options[@]}" "$work/tree"\n', to: "", tests: SCAN_TESTS },
-  { id: "S4", breaks: "a canary stops being checked", file: SCAN, from: """printf '%s: %s\\n' 'value' "$CANARY_UUID" | must_find "pveum output"\n""", to: "", tests: SCAN_TESTS },
+  { id: "S4", breaks: "a canary stops being checked", file: SCAN, from: `printf '%s: %s\\n' 'value' "$CANARY_UUID" | must_find "pveum output"\n`, to: "", tests: SCAN_TESTS },
   { id: "S5", breaks: "the scan reads every branch, not the pushed commit", file: SCAN, from: "revisions=${2:---all}", to: "revisions=--all", tests: SCAN_TESTS },
-  { id: "L1", breaks: "the smoke prints the text of a tool error", file: SMOKE, from: '/^(?:PVE API \\d{3}|[A-Z_]{2,}(?=:)|All PVE hosts unreachable)/.exec(text)?.[0] ?? "tool error"', to: "text", tests: SMOKE_TESTS },
-  { id: "L2", breaks: "the smoke accepts privileges beyond .Audit", file: SMOKE, from: "expect(excess === 0,", to: "expect(true,", tests: SMOKE_TESTS },
-  { id: "L3", breaks: "the smoke accepts a token with no privileges", file: SMOKE, from: "expect(held.size > 0,", to: "expect(true,", tests: SMOKE_TESTS },
-  { id: "L4", breaks: "an outage reads as a plugin failure", file: SMOKE, from: "answered: !NO_ANSWER.has(code)", to: "answered: true", tests: SMOKE_TESTS },
-  { id: "L5", breaks: "a certificate failure reads as an outage", file: SMOKE, from: "answered: !NO_ANSWER.has(code)", to: "answered: false", tests: SMOKE_TESTS },
-  { id: "L6", breaks: "the weekly run ignores certificates about to expire", file: SMOKE, from: 'process.env.GITHUB_EVENT_NAME === "schedule" ? EXPIRY_WARNING_DAYS : 0', to: "0", tests: SMOKE_TESTS },
-  { id: "L7", breaks: "a server's stderr reaches the log", file: SMOKE, from: 'stderr: "ignore",', to: 'stderr: "inherit",', tests: SMOKE_TESTS },
-  { id: "L8", breaks: "the smoke stops asserting SDN entries", file: SMOKE, from: 'expect(sdn.length >= 1, "no SDN entries listed");', to: 'expect(true, "no SDN entries listed");', tests: SMOKE_TESTS },
-  { id: "L9", breaks: "the server loses its SDN filter", file: "server/tools.mjs", from: 'if (type !== "sdn") return pve.get("/cluster/resources", { type });', to: 'return pve.get("/cluster/resources", { type });', tests: SMOKE_TESTS },
-  { id: "L10", breaks: "a wrong hostname reads as a plugin failure", file: SMOKE, from: '"ENOTFOUND", ', to: "", tests: SMOKE_TESTS },
+  { id: "L1", breaks: "the smoke prints the text of a tool error", file: SMOKE, from: '/^(?:PVE API \\d{3}|[A-Z_]{2,}(?=:)|All PVE hosts unreachable)/.exec(text)?.[0] ?? "tool error"', to: "text", tests: named("a PVE error shows", SMOKE_TEST_FILE) },
+  { id: "L2", breaks: "the smoke accepts privileges beyond .Audit", file: SMOKE, from: "expect(excess === 0,", to: "expect(true,", tests: named("a privilege beyond", SMOKE_TEST_FILE) },
+  { id: "L3", breaks: "the smoke accepts a token with no privileges", file: SMOKE, from: "expect(held.size > 0,", to: "expect(true,", tests: named("no privileges at all", SMOKE_TEST_FILE) },
+  { id: "L4", breaks: "an outage reads as a plugin failure", file: SMOKE, from: "answered: !NO_ANSWER.has(code)", to: "answered: true", tests: named("reads as INFRA", SMOKE_TEST_FILE) },
+  { id: "L5", breaks: "a certificate failure reads as an outage", file: SMOKE, from: "answered: !NO_ANSWER.has(code)", to: "answered: false", tests: named("a certificate that fails", SMOKE_TEST_FILE) },
+  { id: "L6", breaks: "the weekly run ignores certificates about to expire", file: SMOKE, from: 'process.env.GITHUB_EVENT_NAME === "schedule" ? EXPIRY_WARNING_DAYS : 0', to: "0", tests: named("the weekly run fails", SMOKE_TEST_FILE) },
+  { id: "L7", breaks: "a server's stderr reaches the log", file: SMOKE, from: 'stderr: "ignore",', to: 'stderr: "inherit",', tests: named("what the server writes to stderr", SMOKE_TEST_FILE) },
+  { id: "L8", breaks: "the smoke stops asserting SDN entries", file: SMOKE, from: 'expect(sdn.length >= 1, "no SDN entries listed");', to: 'expect(true, "no SDN entries listed");', tests: named("no SDN entries", SMOKE_TEST_FILE) },
+  { id: "L9", breaks: "the server loses its SDN filter", file: "server/tools.mjs", from: 'if (type !== "sdn") return pve.get("/cluster/resources", { type });', to: 'return pve.get("/cluster/resources", { type });', tests: named("a healthy cluster", SMOKE_TEST_FILE) },
+  { id: "L10", breaks: "a wrong hostname reads as a plugin failure", file: SMOKE, from: '"ENOTFOUND", ', to: "", tests: named("ENOTFOUND", SMOKE_TEST_FILE) },
 ];
 
 // A developer's shell can hold a real token, and deliberately broken code has no use for one.
@@ -150,7 +161,7 @@ function runTests(cwd, files) {
 }
 
 function parses(path) {
-  if (path.endsWith(".yml")) return true; // The tests read workflows as text, so any text will do.
+  if (/\.(?:yml|md)$/.test(path)) return true; // The tests read these as text, so any text will do.
   if (path.endsWith(".json")) {
     try {
       JSON.parse(readFileSync(path, "utf8"));
