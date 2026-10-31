@@ -9,12 +9,18 @@ import { copyRepo, git, hooksDir, repoRoot, sealed, sessionCase, sessionSkipReas
 
 const read = (file) => fs.readFileSync(path.join(repoRoot, file), "utf8");
 const settings = JSON.parse(read(".claude/settings.json"));
-const scripts = ["rtk-rewrite.sh", "trail-context.sh", "trail-sync.sh", "trail-env.sh"];
+const scripts = ["rtk-rewrite.sh", "trail-context.sh", "trail-env.sh"];
 const commands = Object.values(settings.hooks).flatMap((groups) => groups.flatMap((group) => group.hooks));
 
 test("the settings file registers hooks and nothing else", () => {
   assert.deepEqual(Object.keys(settings), ["hooks"]);
-  assert.deepEqual(Object.keys(settings.hooks).sort(), ["PostToolUse", "PreToolUse", "UserPromptSubmit"]);
+  assert.deepEqual(Object.keys(settings.hooks).sort(), ["PreToolUse", "UserPromptSubmit"]);
+});
+
+test("every hook on disk is registered, and nothing runs after a Write", () => {
+  const onDisk = fs.readdirSync(hooksDir).filter((file) => file !== "trail-env.sh").sort();
+  assert.deepEqual(commands.map((hook) => hook.command.match(/hooks\/([a-z-]+\.sh)/)[1]).sort(), onDisk);
+  assert.deepEqual(onDisk, ["rtk-rewrite.sh", "trail-context.sh"]);
 });
 
 test("no hook can start Trail's self-heal", () => {

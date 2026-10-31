@@ -127,10 +127,10 @@ test("a fresh worktree gets both hooks and writes nothing global", options, (t) 
   const first = session(box, {
     cwd,
     prompt: question,
-    steps: [bash("git status"), bash(search), write(probe, "export function sessionSyncProbe() { return 42; }\n")],
+    steps: [bash("git status"), bash(search), write(probe, "export function sessionRefreshProbe() { return 42; }\n")],
     args: bypass,
   });
-  const second = session(box, { cwd, prompt: "where is sessionSyncProbe defined", steps: [], args: bypass });
+  const second = session(box, { cwd, prompt: "where is sessionRefreshProbe defined", steps: [], args: bypass });
   const after = snapshot(box.home);
 
   assert.equal(first.rc, 0, first.stderr);
@@ -147,9 +147,9 @@ test("a fresh worktree gets both hooks and writes nothing global", options, (t) 
   assert.match(first.apiText, /- createClient · function plugins\/proxmox\/server\/pve\.mjs:L\d+/);
   assert.ok(first.apiText.includes("rtk shortened this output"), "the model is told");
 
-  // The edit fired PostToolUse, which rebuilt the map the next session reads.
-  assert.ok(first.hooks.some((hook) => hook.hook_name === "PostToolUse:Write" && hook.exit_code === 0));
-  assert.match(second.apiText, /- sessionSyncProbe · function plugins\/proxmox\/server\/probe\.mjs/);
+  // Nothing ran after the Write, and the next prompt still found the new file.
+  assert.equal(first.hooks.some((hook) => hook.hook_name?.startsWith("PostToolUse")), false);
+  assert.match(second.apiText, /- sessionRefreshProbe · function plugins\/proxmox\/server\/probe\.mjs/);
 
   // No global write: the only home changes are ones any session makes.
   const diff = snapshotDiff(before, after);
@@ -440,6 +440,16 @@ test("slow tools delay the session only up to the hook limits", options, () => {
   assert.ok(run.ms < 40000, `took ${run.ms} ms`);
 });
 
+test("a hung Trail costs one prompt, not a wait after every Write", options, () => {
+  const box = repoCase("hung-trail", { trailStub: `#!/bin/sh\nexec sleep 60\n` });
+  const cwd = worktree(box);
+  const steps = [1, 2, 3, 4].map((n) => write(path.join(cwd, `probe-${n}.txt`), "x\n"));
+  const run = session(box, { cwd, prompt: question, steps, args: bypass });
+  assert.equal(run.rc, 0, run.stderr);
+  assert.equal(run.results.length, steps.length);
+  assert.ok(run.ms < 20000, `took ${run.ms} ms`);
+});
+
 test("a missing jq leaves the session raw and silent", options, () => {
   const box = repoCase("no-jq");
   const cwd = worktree(box);
@@ -584,29 +594,22 @@ for (const [route, { cwd: start, steps }] of Object.entries(hookRoutes)) {
       if (!hardened) unharden(cwd);
       const direct = path.join(box.dir, "direct");
       const fired = path.join(box.dir, "fired");
-      const run = session(box, {
-        cwd,
-        prompt: question,
-        steps: [bash(`touch ${direct}`), ...steps(cwd, fired, box), write(path.join(cwd, "plugins/probe.mjs"), "export const p = 1;\n")],
-        args: noBash,
-      });
+      const run = session(box, { cwd, prompt: question, steps: [bash(`touch ${direct}`), ...steps(cwd, fired, box)], args: noBash });
       assert.equal(run.rc, 0, run.stderr);
       assert.equal(run.results[0].isError, true, "the Bash tool is off");
       assert.equal(fs.existsSync(direct), false);
-      assert.ok(run.results.at(-1).text.includes("probe.mjs"), run.results.at(-1).text);
-      return { box, cwd, run, fired: fs.existsSync(fired) };
+      // A planted file takes effect at the next prompt, the only hook left to reach it.
+      const again = session(box, { cwd, prompt: question, steps: [], args: noBash });
+      return { box, again, fired: fs.existsSync(fired) };
     };
 
     const control = attempt(false);
     assert.equal(control.fired, true, "the route must work without the hardening");
 
-    const { box, cwd, run, fired } = attempt(true);
+    const { box, again, fired } = attempt(true);
     assert.equal(fired, false);
-    assert.ok(run.hooks.some((hook) => hook.hook_name === "PostToolUse:Write" && hook.exit_code === 0));
     assert.equal(fs.existsSync(path.join(box.home, ".claude/planted")), false, "nothing moved into ~/.claude");
-    const again = session(box, { cwd, prompt: question, steps: [], args: noBash });
     assert.ok(again.apiText.includes(trailHeader), "Trail context still arrives");
-    assert.equal(fs.existsSync(path.join(box.dir, "fired")), false);
   });
 }
 
@@ -633,13 +636,11 @@ test("hook scripts are files: bypassPermissions lets a Write change them, accept
     const box = repoCase("hook-script");
     const cwd = worktree(box);
     const fired = path.join(box.dir, "fired");
-    const script = path.join(cwd, ".claude/hooks/trail-sync.sh");
-    const run = session(box, {
-      cwd,
-      steps: [read(script), write(script, `#!/bin/sh\ntouch ${fired}\n`), write(path.join(cwd, "plugins/probe.mjs"), "export const p = 1;\n")],
-      args: ["--permission-mode", mode, "--disallowedTools", "Bash"],
-    });
+    const script = path.join(cwd, ".claude/hooks/trail-context.sh");
+    const args = ["--permission-mode", mode, "--disallowedTools", "Bash"];
+    const run = session(box, { cwd, steps: [read(script), write(script, `#!/bin/sh\ntouch ${fired}\n`)], args });
     assert.equal(run.rc, 0, run.stderr);
+    session(box, { cwd, prompt: question, steps: [], args });
     return fs.existsSync(fired);
   };
   assert.equal(attempt("acceptEdits"), false);

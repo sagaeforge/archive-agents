@@ -22,18 +22,6 @@
           }
         ]
       }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Write|Edit|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/trail-sync.sh\" 2>/dev/null || exit 0",
-            "timeout": 15
-          }
-        ]
-      }
     ]
   }
 }

@@ -8,7 +8,8 @@
 | :- | :- | :- | :- |
 | `rtk-rewrite.sh` | Bash 실행 전 | 옵션 없는 `git status`를 rtk로 실행합니다 | 5초 |
 | `trail-context.sh` | 프롬프트 제출 시 | `trail ask`로 찾은 코드 위치를 최대 3개 컨텍스트에 넣습니다. 맵이 없으면 먼저 `trail build`를 실행합니다 | 12초 |
-| `trail-sync.sh` | Write, Edit, MultiEdit 후 | 프로젝트 안의 파일이 바뀌면 `trail build`로 맵(`graft/`)을 갱신합니다 | 15초 |
+
+편집 뒤에 실행되는 훅은 없습니다. 맵(`graft/`)이 작업 트리와 달라지면 `trail ask`가 답하기 전에 스스로 갱신하므로, Write든 Bash든 다른 세션이든 어떤 경로로 바뀌어도 다음 프롬프트의 포인터는 최신입니다.
 
 ## rtk
 
@@ -39,6 +40,7 @@ Trail 훅은 모든 모드에서 동작합니다.
 
 - Trail은 영어 토큰으로 찾습니다. 한글만 있는 프롬프트에는 대개 아무것도 추가되지 않습니다. 파일명이나 심볼 이름을 함께 쓰면 찾습니다.
 - 훅은 `ask`와 `build`만 실행하고 노트를 읽지도 보여 주지도 않습니다. `TRAIL_HOME`을 존재할 수 없는 경로로 지정하므로 `~/.trail`을 읽지도 쓰지도 않습니다.
+- 포인터는 그래프에서만 나옵니다. `graft/` 아래의 `.md` 카드와 `INDEX.md`는 맵을 처음 만들 때만 쓰이고 그 뒤로는 갱신되지 않으므로, `find`나 `cat`으로 직접 읽으면 낡은 내용일 수 있습니다. 새로 만들려면 `rm -rf graft`를 실행합니다.
 - 프로젝트 파일은 데이터로만 다룹니다. 훅에서는 Trail이 `.env`를 읽지 않고, Trail이 실행하는 git에서는 저장소의 `core.fsmonitor`와 `core.hooksPath`가 꺼집니다. 직접 실행하는 `trail`에는 이 보호가 없습니다.
 
 `trail note`는 직접 실행할 때만 동작합니다.
@@ -58,7 +60,7 @@ Trail 훅은 모든 모드에서 동작합니다.
 
 ```sh
 RTK_DISABLED=1 claude     # rtk 훅만
-TRAIL_NO_HOOKS=1 claude   # Trail 훅 둘 다
+TRAIL_NO_HOOKS=1 claude   # Trail 훅만
 ```
 
 계속 끄려면 메인 체크아웃의 `.claude/settings.local.json`에 넣습니다. 이 파일은 git에 올라가지 않고 모든 worktree에 적용됩니다.
@@ -94,7 +96,7 @@ RTK_DISABLED=1 git status
 
 ```sh
 git rm .claude/settings.json .claude/hooks/rtk-rewrite.sh \
-  .claude/hooks/trail-context.sh .claude/hooks/trail-sync.sh .claude/hooks/trail-env.sh
+  .claude/hooks/trail-context.sh .claude/hooks/trail-env.sh
 git rm -r tests/project-hooks docs/project-tools.md
 rm -rf graft .graft .trail
 ```

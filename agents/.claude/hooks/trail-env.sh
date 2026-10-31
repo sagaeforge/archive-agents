@@ -1,4 +1,4 @@
-# Sourced by the Trail hooks. Finds the pinned Trail install or ends the hook.
+# Sourced by the Trail hook. Finds the pinned Trail install or ends the hook.
 #
 # This calls the pinned binary directly and never runs `trail init`, a
 # session-start hook, or `trail mcp`: those reach Trail's self-heal, which writes
@@ -13,7 +13,7 @@ command -v jq >/dev/null 2>&1 || exit 0
 command -v timeout >/dev/null 2>&1 || exit 0
 
 # A checkout with .trail/ is on Trail's own path: `ask` starts detached children and
-# the map moves out of graft/. Trail has no switch for either, so the hooks stand
+# the map moves out of graft/. Trail has no switch for either, so the hook stands
 # down. See docs/project-tools.md.
 [ ! -e "$root/.trail" ] || exit 0
 
