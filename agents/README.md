@@ -31,3 +31,7 @@ GitHub Actions는 검증만 하며 배포를 막지 않습니다. CI가 실패�
 ssh pve-node 'pveum user token remove claude-mcp@pve mcp'
 rm ~/.config/proxmox-mcp/token
 ```
+
+## 작업 폴더
+
+이 저장소의 작업은 WSL의 `~/sagae-claude-plugins`에서 `claude`를 실행해 진행합니다. `/mnt/c` 아래에 두면 파일 권한이 유지되지 않습니다.
