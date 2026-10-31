@@ -1,0 +1,270 @@
+index.js serve
+
+Start the 1mcp server
+
+Options:
+  -c, -c, --config                          Path to the config file (env:
+                                            ONE_MCP_CONFIG)             [string]
+  -d, -d, --config-dir                      Path to the config directory (env:
+                                            ONE_MCP_CONFIG_DIR)         [string]
+      --cli-session-cache-path              Path template for the run/inspect
+                                            CLI session cache file, supports
+                                            {pid} and {scope} (env:
+                                            ONE_MCP_CLI_SESSION_CACHE_PATH)
+                                                                        [string]
+      --log-level                           Set the log level (debug, info,
+                                            warn, error) (env:
+                                            ONE_MCP_LOG_LEVEL)
+   [string] [choices: "debug", "info", "warn", "error", "debug", "info", "warn",
+                                                                        "error"]
+      --log-file                            Write logs to a file in addition to
+                                            console (env: ONE_MCP_LOG_FILE)
+                                                                        [string]
+      --version                             Show version number        [boolean]
+  -h, --help                                Show help                  [boolean]
+      --status                              Report the state of the Background
+                                            Aggregated Runtime in the selected
+                                            Runtime Scope, then exit
+                                                      [boolean] [default: false]
+      --background                          Start the HTTP Aggregated Runtime as
+                                            a detached background process for
+                                            the selected Runtime Scope
+                                                      [boolean] [default: false]
+      --stop                                Stop the runtime in the selected
+                                            Runtime Scope, then exit
+                                                      [boolean] [default: false]
+      --restart                             Restart the Background Aggregated
+                                            Runtime in the selected Runtime
+                                            Scope (stop if running, then start a
+                                            fresh background runtime)
+                                                      [boolean] [default: false]
+      --drain-timeout                       Maximum seconds to drain backend
+                                            work before applying
+                                            --on-drain-timeout
+                                                          [number] [default: 30]
+      --on-drain-timeout                    Action when restart draining
+                                            expires: interrupt unfinished calls
+                                            and restart, or abort and resume
+                     [string] [choices: "restart", "abort"] [default: "restart"]
+  -t, --transport                           Transport type to use (stdio or
+                                            http, sse is deprecated)
+                                      [string] [choices: "stdio", "http", "sse"]
+  -P, --port                                HTTP port to listen on, applicable
+                                            when transport is http      [number]
+  -H, --host                                HTTP host to listen on, applicable
+                                            when transport is http      [string]
+  -u, --external-url                        External URL for the server (used
+                                            for OAuth callbacks and public URLs)
+                                                                        [string]
+  -f, --filter                              Filter expression for server
+                                            selection (supports simple
+                                            comma-separated or advanced boolean
+                                            logic)                      [string]
+      --preset                              Preset name for server selection
+                                                                        [string]
+  -p, --pagination                          Enable pagination
+                                                      [boolean] [default: false]
+      --auth                                Enable authentication (OAuth 2.1) -
+                                            deprecated, use --enable-auth
+                                                                       [boolean]
+      --credential-store                    Inbound and upstream OAuth
+                                            credential storage (file or native
+                                            OS store); restart required
+                                            [string] [choices: "file", "native"]
+      --enable-auth                         Enable authentication (OAuth 2.1)
+                                                                       [boolean]
+      --enable-scope-validation             Enable tag-based scope validation
+                                                                       [boolean]
+      --enable-enhanced-security            Enable enhanced security middleware
+                                                                       [boolean]
+      --session-ttl                         Session expiry time in minutes
+                                                                        [number]
+      --session-storage-path                Custom session storage directory
+                                            path                        [string]
+      --rate-limit-window                   OAuth rate limit window in minutes
+                                                                        [number]
+      --rate-limit-max                      Maximum requests per OAuth rate
+                                            limit window                [number]
+      --trust-proxy                         Trust proxy configuration for
+                                            Express.js (boolean, IP address,
+                                            subnet, or preset: loopback,
+                                            linklocal, uniquelocal)     [string]
+      --template-context-trust              Template context trust policy
+                                            (verified, disabled, or legacy)
+                            [string] [choices: "verified", "disabled", "legacy"]
+      --confirm-untrusted-template-context  Confirm legacy template context
+                                            trust when listening on a
+                                            non-loopback host
+                                                      [boolean] [default: false]
+      --health-info-level                   Health endpoint information detail
+                                            level (full, basic, minimal)
+             [string] [choices: "full", "basic", "minimal"] [default: "minimal"]
+      --enable-async-loading                Enable asynchronous MCP server
+                                            loading with listChanged
+                                            notifications              [boolean]
+      --async-min-servers                   Deprecated compatibility no-op; the
+                                            listener does not wait for a
+                                            server-count threshold      [number]
+      --async-timeout                       Deprecated compatibility no-op;
+                                            async loading does not create a
+                                            startup readiness timeout   [number]
+      --async-max-concurrent-loads          Maximum number of backend servers
+                                            loaded concurrently         [number]
+      --async-max-retries                   Maximum foreground retries per
+                                            backend after the initial attempt
+                                                                        [number]
+      --async-retry-delay                   Initial foreground retry delay in
+                                            milliseconds (exponential backoff)
+                                                                        [number]
+      --async-background-retry              Enable periodic retry of retryable
+                                            backend loading failures   [boolean]
+      --async-background-retry-interval     Background retry interval in
+                                            milliseconds                [number]
+      --async-background-retry-max-servers  Maximum failed backend servers
+                                            selected per background retry cycle
+                                                                        [number]
+      --async-batch-notifications           Coalesce capability-change
+                                            notifications within the async batch
+                                            delay window               [boolean]
+      --async-batch-delay                   Batch delay in milliseconds for
+                                            notifications (when async loading
+                                            enabled)                    [number]
+      --async-notify-on-snapshot            Notify clients when a completed
+                                            loading cycle publishes a changed
+                                            capability snapshot        [boolean]
+      --async-notify-on-ready               Deprecated alias for
+                                            --async-notify-on-snapshot [boolean]
+      --enable-lazy-loading                 Enable lazy loading for tools (tools
+                                            loaded on-demand, reduces token
+                                            usage by ~95%)             [boolean]
+      --lazy-mode                           Deprecated and ignored. Use
+                                            --enable-lazy-loading to expose
+                                            meta-tools, or omit it for full
+                                            direct exposure.
+                                [string] [choices: "metatool", "hybrid", "full"]
+      --lazy-cache-max-entries              Maximum number of tool schemas to
+                                            cache in LRU cache (when lazy
+                                            loading enabled)            [number]
+      --lazy-preload                        Comma-separated list of tool
+                                            patterns to preload at startup (when
+                                            lazy loading enabled)       [string]
+      --lazy-preload-keywords               Comma-separated list of tool name
+                                            keywords to preload at startup (when
+                                            lazy loading enabled)       [string]
+      --lazy-inline-catalog                 Include full tool catalog in
+                                            initialize template (when lazy
+                                            loading enabled)           [boolean]
+      --lazy-catalog-format                 Format for inline tool catalog
+                                            (flat, grouped, categorized)
+       [string] [choices: "flat", "grouped", "categorized"] [default: "grouped"]
+      --lazy-direct-expose                  Deprecated and ignored. Lazy loading
+                                            does not support direct tool
+                                            exposure.                   [string]
+      --lazy-cache-ttl                      Cache TTL in milliseconds for tool
+                                            schemas (optional, default: no TTL)
+                                                                        [number]
+      --lazy-fallback-on-error              Behavior when on-demand loading
+                                            fails (skip or full)
+                            [string] [choices: "skip", "full"] [default: "skip"]
+      --lazy-fallback-timeout               Timeout in milliseconds for
+                                            on-demand schema loading
+                                                        [number] [default: 5000]
+      --enable-config-reload                Enable automatic configuration
+                                            hot-reload on file changes [boolean]
+      --config-reload-debounce              Debounce delay in milliseconds for
+                                            config reload               [number]
+      --enable-env-substitution             Enable environment variable
+                                            substitution in config (${VAR_NAME}
+                                            and $VAR_NAME patterns)
+                                                       [boolean] [default: true]
+      --enable-session-persistence          Enable session persistence to disk
+                                                       [boolean] [default: true]
+      --session-persist-requests            Number of requests before persisting
+                                            session to disk
+                                                         [number] [default: 100]
+      --session-persist-interval            Time interval in minutes before
+                                            persisting session to disk
+                                                           [number] [default: 5]
+      --session-background-flush            Background flush interval in seconds
+                                            for dirty sessions
+                                                          [number] [default: 60]
+      --enable-client-notifications         Enable listChanged notifications to
+                                            clients on capability updates
+                                                       [boolean] [default: true]
+      --enable-jsonrpc-error-logging        Enable logging of JSON-RPC error
+                                            responses  [boolean] [default: true]
+      --enable-internal-tools               Enable internal MCP management tools
+                                            (installation, configuration, etc.)
+                                                      [boolean] [default: false]
+      --internal-tools                      Enable specific internal MCP tools
+                                            (comma-separated list:
+                                            "search,list,status" or categories:
+                                            "discovery,management,safe")[string]
+  -T, --instructions-template               Path to custom instructions template
+                                            file (Handlebars format). Defaults
+                                            to instructions-template.md in
+                                            config directory            [string]
+
+Examples:
+  index.js serve                            Start server with HTTP transport
+                                            (default)
+  index.js serve --transport=stdio          Start server with stdio transport
+  index.js serve --port=3000                Start HTTP server on port 3000
+  index.js serve --background               Start the runtime as a detached
+                                            background process
+  index.js serve --restart                  Stop the background runtime (if
+                                            running) and start a fresh one
+  index.js serve --stop                     Stop the background runtime in the
+                                            current Runtime Scope
+  index.js serve --filter="web,api"         Start server with filtered MCP
+                                            servers
+  index.js serve --enable-auth              Start server with OAuth
+                                            authentication enabled
+  index.js serve --enable-internal-tools    Enable all internal MCP management
+                                            tools
+  index.js serve                            Enable specific internal tools
+  --internal-tools="search,list,status"
+  index.js serve                            Enable tools by category
+  --internal-tools="discovery,management"
+  index.js serve --instructions-template=.  Use custom instructions template
+  /custom-template.md
+
+
+TRANSPORT OPTIONS:
+  stdio: Use stdin/stdout for communication (for programmatic use)
+  http:  Use HTTP server with SSE for web-based clients (default)
+
+FILTERING:
+  Use --filter to limit which MCP servers are exposed:
+  • Simple: "web,api,database" (OR logic)
+  • Advanced: "web AND database" or "(web OR api) AND database"
+
+AUTHENTICATION:
+  Use --enable-auth to enable OAuth 2.1 authentication with scope validation.
+  Configure OAuth providers in your MCP configuration file.
+
+CUSTOM TEMPLATES:
+  Use --instructions-template to customize the instructions template sent to
+  clients.
+  Template files use Handlebars syntax with variables like {{serverCount}},
+  {{serverList}}, etc.
+  Defaults to instructions-template.md in your config directory.
+
+INTERNAL TOOLS:
+  Use --enable-internal-tools to enable ALL internal MCP management tools.
+  Use --internal-tools with comma-separated list for selective control:
+  • Individual tools: "search,list,status,registry"
+  • Categories: "discovery,management,installation,safe"
+  • Examples: "safe" (read-only), "discovery,management" (no installation)
+
+LAZY LOADING:
+  Use --enable-lazy-loading to opt into stable meta-tool exposure for
+  progressive discovery.
+  Omit it (the default) for full direct tool exposure. Legacy --lazy-mode and
+  --lazy-direct-expose inputs are accepted temporarily but ignored with a
+  warning.
+  Examples:
+  • --enable-lazy-loading
+  • --enable-lazy-loading --lazy-cache-max-entries=2000
+
+For more information: https://github.com/1mcp-app/agent

@@ -1,0 +1,24 @@
+fastmcp-ts    modern
+  tools/list  tools=[alpha_status,alpha_link_doc,beta_status,beta_beta_echo] (5.4 ms)
+  call alpha  ok "{"source":"alpha","pid":2148569,"calls":1}" (22.3 ms)
+  call beta   isError "[{"type":"text","text":"Request timed out"}]" (60015.9 ms)
+mcp-use       modern
+  tools/list  tools=[alpha_status,alpha_link_doc,beta_status,beta_beta_echo] (5.1 ms)
+  call alpha  ok "{"source":"alpha","pid":2148569,"calls":2}" (13.4 ms)
+  call beta   isError "[{"type":"text","text":"Request timed out"}]" (60007.1 ms)
+baseline      modern
+  tools/list  tools=[alpha_status,alpha_link_doc] (60005.8 ms)
+  call alpha  ok "{"source":"alpha","pid":2148569,"calls":3}" (24.1 ms)
+  call beta   http=0 FETCH TimeoutError (85000.9 ms)
+agentgateway  legacy
+  tools/list  http=0 FETCH TimeoutError (85001.5 ms)
+  call alpha  ok "{"source":"alpha","pid":2148569,"calls":4}" (6 ms)
+  call beta   http=0 FETCH TimeoutError (85000.9 ms)
+1mcp          modern
+  tools/list  rpcError -32000 "Gateway transport failure" http=200 (60011.7 ms)
+  call alpha  http=0 FETCH TimeoutError (85001.2 ms)
+  call beta   rpcError -32602 "Tool definition is unavailable" http=200 (60022.7 ms)
+baseline      modern
+  tools/list  tools=[alpha_status,alpha_link_doc] (3005.4 ms)
+  call alpha  ok "{"source":"alpha","pid":2208437,"calls":1}" (21.8 ms)
+  call beta   http=0 FETCH TimeoutError (85001.4 ms)

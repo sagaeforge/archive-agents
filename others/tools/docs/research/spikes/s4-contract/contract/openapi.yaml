@@ -1,0 +1,402 @@
+openapi: 3.1.1
+info:
+  title: KB read API (SPIKE SAMPLE, not the KB contract)
+  version: 0.0.0-spike
+  summary: Sample written from docs/contracts/consumers/sagae-tools.md for toolchain evaluation only.
+servers:
+  - url: http://127.0.0.1:18401
+paths:
+  /v1/entities:
+    get:
+      operationId: listEntities
+      summary: Table view with server-side filter and cursor pagination.
+      parameters:
+        - $ref: '#/components/parameters/AsOfValid'
+        - $ref: '#/components/parameters/AsOfObserved'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - name: type
+          in: query
+          schema: { type: string, minLength: 1, maxLength: 64, pattern: '^[a-z_]+$' }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/EntityStatus' }
+      responses:
+        '200':
+          description: One page of entities.
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EntityPage' }
+        '400': { $ref: '#/components/responses/Problem' }
+  /v1/entities/{entity_id}:
+    parameters:
+      - $ref: '#/components/parameters/EntityId'
+    get:
+      operationId: getEntity
+      summary: Entity detail with current claims.
+      parameters:
+        - $ref: '#/components/parameters/AsOfValid'
+        - $ref: '#/components/parameters/AsOfObserved'
+        - $ref: '#/components/parameters/IfNoneMatch'
+      responses:
+        '200':
+          description: The entity.
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EntityDetailEnvelope' }
+        '304': { description: Not modified. }
+        '400': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /v1/entities/{entity_id}/claims:
+    parameters:
+      - $ref: '#/components/parameters/EntityId'
+    get:
+      operationId: listEntityClaims
+      summary: Supersession chain for one entity, both time axes.
+      parameters:
+        - $ref: '#/components/parameters/AsOfValid'
+        - $ref: '#/components/parameters/AsOfObserved'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: One page of claims.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClaimPage' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /v1/snapshots/{snapshot_id}:
+    get:
+      operationId: getSnapshot
+      summary: Source snapshot with citation locations.
+      parameters:
+        - name: snapshot_id
+          in: path
+          required: true
+          schema: { type: string, pattern: '^snp_[a-z0-9]+$' }
+      responses:
+        '200':
+          description: The snapshot.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SnapshotEnvelope' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /v1/overview:
+    get:
+      operationId: getOverview
+      summary: Bulk node and edge list. The type filter is mandatory.
+      parameters:
+        - $ref: '#/components/parameters/AsOfValid'
+        - $ref: '#/components/parameters/AsOfObserved'
+        - name: type
+          in: query
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 64, pattern: '^[a-z_]+$' }
+      responses:
+        '200':
+          description: The overview.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OverviewEnvelope' }
+        '400': { $ref: '#/components/responses/Problem' }
+  /v1/schema:
+    get:
+      operationId: getSchemaCatalog
+      summary: Self-description. Types are data, not an enum in this contract.
+      responses:
+        '200':
+          description: Catalog.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CatalogEnvelope' }
+components:
+  parameters:
+    AsOfValid:
+      name: as_of_valid
+      in: query
+      description: Valid-time axis. Defaults to now.
+      schema: { $ref: '#/components/schemas/Timestamp' }
+    AsOfObserved:
+      name: as_of_observed
+      in: query
+      description: Observation-time axis. Defaults to now.
+      schema: { $ref: '#/components/schemas/Timestamp' }
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string, minLength: 1, maxLength: 128, pattern: '^[A-Za-z0-9_-]+$' }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+    EntityId:
+      name: entity_id
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/EntityId' }
+    IfNoneMatch:
+      name: If-None-Match
+      in: header
+      schema: { type: string, minLength: 1, maxLength: 128 }
+  headers:
+    ETag:
+      description: Validator derived from the build id and the query.
+      schema: { type: string }
+  responses:
+    Problem:
+      description: RFC 9457 problem document.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+  schemas:
+    Timestamp:
+      type: string
+      format: date-time
+      description: RFC 3339, UTC.
+    EntityId:
+      type: string
+      pattern: '^ent_[a-z0-9]+$'
+    EntityStatus:
+      type: string
+      enum: [active, superseded, dead, merged]
+    Origin:
+      type: string
+      enum: [external, first_party]
+    Sensitivity:
+      type: string
+      enum: [public, internal, restricted]
+    ResponseMeta:
+      type: object
+      required: [schema_version, data_as_of, build_id]
+      properties:
+        schema_version: { type: string }
+        data_as_of: { $ref: '#/components/schemas/Timestamp' }
+        build_id: { type: string }
+    PageInfo:
+      type: object
+      required: [next_cursor, has_more]
+      properties:
+        next_cursor:
+          type: [string, 'null']
+          description: Null on the last page.
+        has_more: { type: boolean }
+        total:
+          type: [integer, 'null']
+          minimum: 0
+          description: Null when the count is not cheap.
+    Entity:
+      type: object
+      required: [id, type, label, status, origin, sensitivity, merged_into]
+      properties:
+        id: { $ref: '#/components/schemas/EntityId' }
+        type: { type: string, description: 'Open set, see /v1/schema.' }
+        label: { type: string }
+        status: { $ref: '#/components/schemas/EntityStatus' }
+        origin: { $ref: '#/components/schemas/Origin' }
+        sensitivity: { $ref: '#/components/schemas/Sensitivity' }
+        merged_into:
+          type: [string, 'null']
+          description: Immutable id of the survivor when merged.
+        description:
+          type: [string, 'null']
+    Claim:
+      type: object
+      required: [id, entity_id, predicate, value, valid_from, valid_to, observed_at, superseded_by, source]
+      properties:
+        id: { type: string }
+        entity_id: { $ref: '#/components/schemas/EntityId' }
+        predicate: { type: string }
+        value: { $ref: '#/components/schemas/ClaimValue' }
+        valid_from: { $ref: '#/components/schemas/Timestamp' }
+        valid_to:
+          type: [string, 'null']
+          format: date-time
+        observed_at: { $ref: '#/components/schemas/Timestamp' }
+        superseded_by: { type: [string, 'null'] }
+        supersede_reason:
+          type: [string, 'null']
+          enum: [correction, update, merge, null]
+        confidence:
+          type: [number, 'null']
+          minimum: 0
+          maximum: 1
+        source:
+          oneOf:
+            - $ref: '#/components/schemas/SourceRef'
+            - type: 'null'
+    SourceRef:
+      type: object
+      required: [snapshot_id]
+      properties:
+        snapshot_id: { type: string }
+        quote: { $ref: '#/components/schemas/QuoteLocation' }
+    ClaimValue:
+      oneOf:
+        - $ref: '#/components/schemas/TextValue'
+        - $ref: '#/components/schemas/NumberValue'
+        - $ref: '#/components/schemas/BooleanValue'
+        - $ref: '#/components/schemas/DateValue'
+        - $ref: '#/components/schemas/EntityRefValue'
+        - $ref: '#/components/schemas/ListValue'
+      discriminator:
+        propertyName: value_type
+        mapping:
+          text: '#/components/schemas/TextValue'
+          number: '#/components/schemas/NumberValue'
+          boolean: '#/components/schemas/BooleanValue'
+          date: '#/components/schemas/DateValue'
+          entity_ref: '#/components/schemas/EntityRefValue'
+          list: '#/components/schemas/ListValue'
+    TextValue:
+      type: object
+      required: [value_type, value]
+      properties:
+        value_type: { const: text }
+        value: { type: string }
+        lang: { type: [string, 'null'] }
+    NumberValue:
+      type: object
+      required: [value_type, value]
+      properties:
+        value_type: { const: number }
+        value: { type: number }
+        unit: { type: [string, 'null'] }
+    BooleanValue:
+      type: object
+      required: [value_type, value]
+      properties:
+        value_type: { type: string, enum: [boolean] }
+        value: { type: boolean }
+    DateValue:
+      type: object
+      required: [value_type, value]
+      properties:
+        value_type: { const: date }
+        value: { type: string, format: date }
+    EntityRefValue:
+      type: object
+      required: [value_type, entity_id]
+      properties:
+        value_type: { const: entity_ref }
+        entity_id: { $ref: '#/components/schemas/EntityId' }
+    ListValue:
+      type: object
+      required: [value_type, items]
+      properties:
+        value_type: { const: list }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/ClaimValue' }
+    QuoteLocation:
+      type: object
+      required: [unit, start, end, exact, prefix, suffix]
+      properties:
+        unit: { const: codepoint }
+        start: { type: integer, minimum: 0 }
+        end: { type: integer, minimum: 0 }
+        exact: { type: string }
+        prefix: { type: string }
+        suffix: { type: string }
+    Snapshot:
+      type: object
+      required: [id, media_type, body, captured_at]
+      properties:
+        id: { type: string }
+        media_type: { type: string }
+        body: { type: string }
+        captured_at: { $ref: '#/components/schemas/Timestamp' }
+    Edge:
+      type: object
+      required: [source, target, type]
+      properties:
+        source: { $ref: '#/components/schemas/EntityId' }
+        target: { $ref: '#/components/schemas/EntityId' }
+        type: { type: string }
+    Overview:
+      type: object
+      required: [nodes, edges, total, truncated]
+      properties:
+        nodes: { type: array, items: { $ref: '#/components/schemas/Entity' } }
+        edges: { type: array, items: { $ref: '#/components/schemas/Edge' } }
+        total:
+          type: object
+          required: [nodes, edges]
+          properties:
+            nodes: { type: integer, minimum: 0 }
+            edges: { type: integer, minimum: 0 }
+        truncated: { type: boolean }
+    Catalog:
+      type: object
+      required: [entity_types, relation_types]
+      properties:
+        entity_types: { type: array, items: { type: string } }
+        relation_types: { type: array, items: { type: string } }
+    EntityPage:
+      allOf:
+        - $ref: '#/components/schemas/ResponseMeta'
+        - type: object
+          required: [data, page]
+          properties:
+            data: { type: array, items: { $ref: '#/components/schemas/Entity' } }
+            page: { $ref: '#/components/schemas/PageInfo' }
+    ClaimPage:
+      allOf:
+        - $ref: '#/components/schemas/ResponseMeta'
+        - type: object
+          required: [data, page]
+          properties:
+            data: { type: array, items: { $ref: '#/components/schemas/Claim' } }
+            page: { $ref: '#/components/schemas/PageInfo' }
+    EntityDetail:
+      allOf:
+        - $ref: '#/components/schemas/Entity'
+        - type: object
+          required: [claims]
+          properties:
+            claims: { type: array, items: { $ref: '#/components/schemas/Claim' } }
+    EntityDetailEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ResponseMeta'
+        - type: object
+          required: [data]
+          properties:
+            data: { $ref: '#/components/schemas/EntityDetail' }
+    SnapshotEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ResponseMeta'
+        - type: object
+          required: [data]
+          properties:
+            data: { $ref: '#/components/schemas/Snapshot' }
+    OverviewEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ResponseMeta'
+        - type: object
+          required: [data]
+          properties:
+            data: { $ref: '#/components/schemas/Overview' }
+    CatalogEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ResponseMeta'
+        - type: object
+          required: [data]
+          properties:
+            data: { $ref: '#/components/schemas/Catalog' }
+    Problem:
+      type: object
+      description: RFC 9457. Extension members are allowed.
+      required: [type, title, status]
+      additionalProperties: true
+      properties:
+        type: { type: string, format: uri-reference, default: about:blank }
+        title: { type: string }
+        status: { type: integer, minimum: 100, maximum: 599 }
+        detail: { type: string }
+        instance: { type: string, format: uri-reference }
+        code: { type: string }

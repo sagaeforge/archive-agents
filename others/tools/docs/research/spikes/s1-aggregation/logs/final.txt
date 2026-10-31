@@ -1,0 +1,51 @@
+sha256 gateway.mjs: f7a061e8496687d1  LOC: 207
+### relay + korean + mrtr
+progress notifications received: 5 (upstream sends about 5)
+cancel: client returned after 1004 ms; upstream saw cancel=true stopped=true [{"ev":"cancelled","after":996},{"ev":"stopped","after":1000,"token":fals
+korean uri: listed kb://alpha/스냅샷/1 read ok, body=korean-uri-body
+tool=alpha_confirm client asked 1x result=confirmed isError=false
+70 s call: ok after 70118 ms: slept 70092 isError=false
+### probe
+== legacy: negotiated=2025-11-25 server=gateway/0.0.1 
+   instructions: "[alpha]\nALPHA_INSTRUCTIONS: use alpha for snapshots.\n\n[beta]\nBETA_INSTRUCTIONS: use beta for notes."
+   tools: alpha_status[out][_meta], alpha_link_doc, beta_status, beta_beta_echo  listMeta={}
+   resources: kb://alpha/snapshot/1, beta://notes/1
+   linkReadback alpha_link_doc -> kb://alpha/snapshot/1: {"ok":true,"uri":"kb://alpha/snapshot/1"}
+== modern: negotiated=2026-07-28 server=/ 
+   instructions: "[alpha]\nALPHA_INSTRUCTIONS: use alpha for snapshots.\n\n[beta]\nBETA_INSTRUCTIONS: use beta for notes."
+   tools: alpha_status[out][_meta], alpha_link_doc, beta_status, beta_beta_echo  listMeta={"resultType":"complete","ttlMs":0,"cach
+   resources: kb://alpha/snapshot/1, beta://notes/1
+   linkReadback alpha_link_doc -> kb://alpha/snapshot/1: {"ok":true,"uri":"kb://alpha/snapshot/1"}
+### lifecycle modern
+tools/list [alpha down]                      tools=[beta_status,beta_beta_echo] (4.6 ms)
+call alpha [alpha down]                      rpcError -32603 "fetch failed" http=200 (3.1 ms)
+call beta  [alpha down]                      ok "beta-echo:x pid=2241960" (2.2 ms)
+NEW session [alpha down]                     negotiated=2026-07-28 ok
+NEW session tools/list [alpha down]          tools=[beta_status,beta_beta_echo] (2.9 ms)
+tools/list [alpha back, same session]        tools=[alpha_status,alpha_link_doc,beta_status,beta_beta_echo] (25.4 ms)
+call alpha [alpha back, same session]        ok "{"source":"alpha","pid":2242170,"calls":1}" (9.3 ms)
+call beta [+3.3 s]                           ok "beta-echo:x pid=2242262" (3.6 ms)
+NEW session call beta                        ok "beta-echo:x pid=2242262" (4.4 ms)
+### lifecycle legacy
+tools/list [alpha down]                      tools=[beta_status,beta_beta_echo] (4.5 ms)
+NEW session tools/list [alpha down]          tools=[beta_status,beta_beta_echo] (2.7 ms)
+call beta [+3.3 s]                           ok "beta-echo:x pid=2243722" (4.5 ms)
+NEW session call beta                        ok "beta-echo:x pid=2243722" (2.9 ms)
+### session-based upstream
+call alpha [alpha back, same session]        ok "{"source":"alpha","pid":2250139,"calls":1}" (11.1 ms)
+NEW session call alpha                       ok "{"source":"alpha","pid":2250139,"calls":3}" (6.5 ms)
+### real Claude Code
+claude_code 2.1.316 model claude-sonnet-5-5
+init mcp tools (4): mcp__gw__alpha_link_doc, mcp__gw__alpha_status, mcp__gw__beta_beta_echo, mcp__gw__beta_status
+tool_use mcp__gw__alpha_status {} => {"source":"alpha","pid":2255906,"calls":1}
+tool_use mcp__gw__beta_status {} => [{"type":"text","text":"beta-status pid=2256038"}]
+tool_use mcp__gw__beta_beta_echo {"text":"hi"} => [{"type":"text","text":"beta-echo:hi pid=2256038"}]
+tool_use mcp__gw__alpha_link_doc {} => [{"type":"text","text":"see kb://alpha/snapshot/1"},{"type":"text","text":"[Resource link: alpha-snapshot] kb://alpha/snapshot/1"}]
+tool_use ReadMcpResourceTool {"server":"gw","uri":"kb://alpha/snapshot/1"} => {"contents":[{"uri":"kb://alpha/snapshot/1","mimeType":"text/plain","text":"alpha-body from 2255906"}]}
+tool_use ReadMcpResourceTool {"server":"gw","uri":"kb://alpha/snapshot/1"} => {"contents":[{"uri":"kb://alpha/snapshot/1","mimeType":"text/plain","text":"alpha-body from 2255906"}]}
+tool_use ReadMcpResourceTool {"server":"gw","uri":"beta://notes/1"} => {"contents":[{"uri":"beta://notes/1","mimeType":"text/plain","text":"beta-body from 2256038"}]}
+result: subtype=success turns=10 cost=$0.0218 duration=10999 ms
+requests still open when the tap stopped: POST subscriptions/listen
+server/discover=200 | prompts/list=200 | resources/list=200 | tools/list=200 | tools/call(alpha_status)=200 | tools/call(beta_status)=200 | tools/call(beta_beta_echo)=200 | tools/call(alpha_link_doc)=200 | resources/read(kb://alpha/snapshot/1)=200 | resources/
+header protocol versions: 2026-07-28 | body versions: 2026-07-28 | negotiated:  | supported: ["2026-07-28"] | sessions: 0
+beta spawns=0 exits=0

@@ -1,0 +1,26 @@
+##### agentgateway
+progress notifications received: 5 (upstream sends about 5)
+cancel: client returned after 1002 ms; upstream saw cancel=true stopped=true [{"ev":"cancelled","after":1000},{"ev":"stopped","after":1001,"token":false}]
+korean uri: listed alpha+kb://alpha/스냅샷/1 read FAILED Resource not found: kb://alpha/스냅샷/1
+##### 1mcp
+progress notifications received: 5 (upstream sends about 5)
+cancel: client returned after 1001 ms; upstream saw cancel=true stopped=true [{"ev":"cancelled","after":988},{"ev":"stopped","after":1001,"token":false}]
+korean uri: not listed (mcp+1mcp.15070794f9a7cc24+kb://alpha/snapshot/1, mcp+1mcp.fdf48a181cd555bf+beta://notes/1)
+##### fastmcp
+progress notifications received: 0 (upstream sends about 5)
+cancel: client returned after 1002 ms; upstream saw cancel=false stopped=false []
+korean uri: listed kb://alpha/alpha/스냅샷/1 read FAILED Resource not found: kb://alpha/스냅샷/1
+##### mcp-use
+progress notifications received: 5 (upstream sends about 5)
+cancel: client returned after 1001 ms; upstream saw cancel=true stopped=true [{"ev":"cancelled","after":996},{"ev":"stopped","after":1000,"token":true}]
+korean uri: listed mcp-use-proxy:///alpha/kb%3A%2F%2Falpha%2F%EC%8A%A4%EB%83%85%EC%83%B7%2F1 read FAILED Resource not found: kb://alpha/스냅샷/1
+##### baseline
+progress notifications received: 5 (upstream sends about 5)
+cancel: client returned after 1002 ms; upstream saw cancel=true stopped=true [{"ev":"cancelled","after":997},{"ev":"stopped","after":1000,"token":false}]
+korean uri: listed kb://alpha/스냅샷/1 read FAILED Resource not found: kb://alpha/스냅샷/1
+##### 70 s call, all five at once
+agentgateway: 70 s call: FAILED after 10012 ms: Error POSTing to endpoint: {"jsonrpc":"2.0","id":1,"error":{"code":-32603,"message":"failed to send message"}}
+fastmcp: 70 s call: ok after 60008 ms: Request timed out isError=true
+mcp-use: 70 s call: ok after 60016 ms: Request timed out isError=true
+1mcp: 70 s call: FAILED after 60031 ms: Tool execution may have occurred; the outcome is unknown
+baseline: 70 s call: ok after 70092 ms: slept 70073 isError=false

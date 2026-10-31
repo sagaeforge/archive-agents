@@ -1,0 +1,286 @@
+{
+ "legacy": {
+  "negotiated": "2025-11-25",
+  "serverInfo": {
+   "name": "gateway",
+   "version": "1.0.0"
+  },
+  "capabilities": {
+   "logging": {},
+   "tools": {
+    "listChanged": true
+   },
+   "prompts": {
+    "listChanged": true
+   },
+   "resources": {
+    "listChanged": true,
+    "subscribe": true
+   }
+  },
+  "toolsListMeta": {},
+  "tools": [
+   {
+    "name": "alpha_status",
+    "title": "Alpha status",
+    "hasOutputSchema": true,
+    "annotations": {
+     "readOnlyHint": true
+    },
+    "desc": "ALPHA status with structured output"
+   },
+   {
+    "name": "alpha_link_doc",
+    "hasOutputSchema": false,
+    "desc": "ALPHA returns a resource_link to its snapshot"
+   },
+   {
+    "name": "beta_status",
+    "hasOutputSchema": false,
+    "desc": "BETA status, plain text, no outputSchema"
+   },
+   {
+    "name": "beta_beta_echo",
+    "hasOutputSchema": false,
+    "desc": "BETA echoes text"
+   }
+  ],
+  "resources": [
+   {
+    "uri": "mcp-use-proxy:///alpha/kb%3A%2F%2Falpha%2Fsnapshot%2F1",
+    "name": "alpha_alpha-snapshot",
+    "mimeType": "text/plain"
+   },
+   {
+    "uri": "mcp-use-proxy:///beta/beta%3A%2F%2Fnotes%2F1",
+    "name": "beta_beta-notes",
+    "mimeType": "text/plain"
+   }
+  ],
+  "calls": {
+   "alpha_status": {
+    "status": 200,
+    "text": [
+     "{\"source\":\"alpha\",\"pid\":1572780,\"calls\":1}"
+    ],
+    "structuredContent": {
+     "source": "alpha",
+     "pid": 1572780,
+     "calls": 1
+    },
+    "resourceLinks": [],
+    "ms": 14.6
+   },
+   "alpha_link_doc": {
+    "status": 200,
+    "text": [
+     "see kb://alpha/snapshot/1"
+    ],
+    "resourceLinks": [
+     {
+      "uri": "kb://alpha/snapshot/1",
+      "name": "alpha-snapshot"
+     }
+    ],
+    "ms": 9.7
+   },
+   "beta_status": {
+    "status": 200,
+    "text": [
+     "beta-status pid=1593048"
+    ],
+    "resourceLinks": [],
+    "ms": 6.4
+   },
+   "beta_beta_echo": {
+    "status": 200,
+    "text": [
+     "beta-echo:x pid=1593048"
+    ],
+    "resourceLinks": [],
+    "ms": 3.9
+   }
+  },
+  "reads": {
+   "mcp-use-proxy:///alpha/kb%3A%2F%2Falpha%2Fsnapshot%2F1": {
+    "contents": [
+     {
+      "uri": "kb://alpha/snapshot/1",
+      "text": "alpha-body from 1572780"
+     }
+    ],
+    "ttlMs": 0,
+    "cacheScope": "private"
+   },
+   "mcp-use-proxy:///beta/beta%3A%2F%2Fnotes%2F1": {
+    "contents": [
+     {
+      "uri": "beta://notes/1",
+      "text": "beta-body from 1593048"
+     }
+    ]
+   }
+  },
+  "linkReadback": {
+   "alpha_link_doc -> kb://alpha/snapshot/1": {
+    "status": 200,
+    "error": {
+     "code": -32602,
+     "message": "Resource not found: kb://alpha/snapshot/1",
+     "data": {
+      "uri": "kb://alpha/snapshot/1"
+     }
+    }
+   }
+  },
+  "prompts": 0
+ },
+ "modern": {
+  "negotiated": "2026-07-28",
+  "capabilities": {
+   "logging": {},
+   "tools": {
+    "listChanged": true
+   },
+   "prompts": {
+    "listChanged": true
+   },
+   "resources": {
+    "listChanged": true,
+    "subscribe": true
+   }
+  },
+  "toolsListMeta": {
+   "resultType": "complete",
+   "ttlMs": 0,
+   "cacheScope": "private",
+   "_meta": {
+    "io.modelcontextprotocol/serverInfo": {
+     "name": "gateway",
+     "version": "1.0.0"
+    }
+   }
+  },
+  "tools": [
+   {
+    "name": "alpha_status",
+    "title": "Alpha status",
+    "hasOutputSchema": true,
+    "annotations": {
+     "readOnlyHint": true
+    },
+    "desc": "ALPHA status with structured output"
+   },
+   {
+    "name": "alpha_link_doc",
+    "hasOutputSchema": false,
+    "desc": "ALPHA returns a resource_link to its snapshot"
+   },
+   {
+    "name": "beta_status",
+    "hasOutputSchema": false,
+    "desc": "BETA status, plain text, no outputSchema"
+   },
+   {
+    "name": "beta_beta_echo",
+    "hasOutputSchema": false,
+    "desc": "BETA echoes text"
+   }
+  ],
+  "resources": [
+   {
+    "uri": "mcp-use-proxy:///alpha/kb%3A%2F%2Falpha%2Fsnapshot%2F1",
+    "name": "alpha_alpha-snapshot",
+    "mimeType": "text/plain"
+   },
+   {
+    "uri": "mcp-use-proxy:///beta/beta%3A%2F%2Fnotes%2F1",
+    "name": "beta_beta-notes",
+    "mimeType": "text/plain"
+   }
+  ],
+  "calls": {
+   "alpha_status": {
+    "status": 200,
+    "text": [
+     "{\"source\":\"alpha\",\"pid\":1572780,\"calls\":2}"
+    ],
+    "structuredContent": {
+     "source": "alpha",
+     "pid": 1572780,
+     "calls": 2
+    },
+    "resourceLinks": [],
+    "resultType": "complete",
+    "ms": 8.3
+   },
+   "alpha_link_doc": {
+    "status": 200,
+    "text": [
+     "see kb://alpha/snapshot/1"
+    ],
+    "resourceLinks": [
+     {
+      "uri": "kb://alpha/snapshot/1",
+      "name": "alpha-snapshot"
+     }
+    ],
+    "resultType": "complete",
+    "ms": 6.4
+   },
+   "beta_status": {
+    "status": 200,
+    "text": [
+     "beta-status pid=1593048"
+    ],
+    "resourceLinks": [],
+    "resultType": "complete",
+    "ms": 3.2
+   },
+   "beta_beta_echo": {
+    "status": 200,
+    "text": [
+     "beta-echo:x pid=1593048"
+    ],
+    "resourceLinks": [],
+    "resultType": "complete",
+    "ms": 3.2
+   }
+  },
+  "reads": {
+   "mcp-use-proxy:///alpha/kb%3A%2F%2Falpha%2Fsnapshot%2F1": {
+    "contents": [
+     {
+      "uri": "kb://alpha/snapshot/1",
+      "text": "alpha-body from 1572780"
+     }
+    ],
+    "ttlMs": 0,
+    "cacheScope": "private"
+   },
+   "mcp-use-proxy:///beta/beta%3A%2F%2Fnotes%2F1": {
+    "contents": [
+     {
+      "uri": "beta://notes/1",
+      "text": "beta-body from 1593048"
+     }
+    ],
+    "ttlMs": 0,
+    "cacheScope": "private"
+   }
+  },
+  "linkReadback": {
+   "alpha_link_doc -> kb://alpha/snapshot/1": {
+    "status": 200,
+    "error": {
+     "code": -32602,
+     "message": "Resource not found: kb://alpha/snapshot/1",
+     "data": {
+      "uri": "kb://alpha/snapshot/1"
+     }
+    }
+   }
+  },
+  "prompts": 0
+ }
+}

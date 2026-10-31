@@ -1,0 +1,26 @@
+{
+  "meta": { "schema_version": "0.0.0-spike", "data_as_of": "2026-10-31T00:00:00Z", "build_id": "bld_spike1" },
+  "entities": [
+    { "id": "ent_acme", "type": "organization", "label": "아크메 코리아", "status": "active", "origin": "external", "sensitivity": "public", "merged_into": null, "description": "소급 정정이 있는 조직" },
+    { "id": "ent_acme2", "type": "organization", "label": "아크메코리아 주식회사", "status": "merged", "origin": "external", "sensitivity": "public", "merged_into": "ent_acme", "description": null },
+    { "id": "ent_gone", "type": "organization", "label": "폐업한 회사", "status": "dead", "origin": "external", "sensitivity": "public", "merged_into": null },
+    { "id": "ent_note", "type": "note", "label": "내부 메모", "status": "active", "origin": "first_party", "sensitivity": "restricted", "merged_into": null },
+    { "id": "ent_kim", "type": "person", "label": "김채널", "status": "active", "origin": "external", "sensitivity": "internal", "merged_into": null }
+  ],
+  "claims": [
+    { "id": "clm_1", "entity_id": "ent_acme", "predicate": "headcount", "value": { "value_type": "number", "value": 120, "unit": "명" }, "valid_from": "2025-01-01T00:00:00Z", "valid_to": "2026-01-01T00:00:00Z", "observed_at": "2025-02-01T00:00:00Z", "superseded_by": "clm_2", "supersede_reason": "correction", "confidence": 0.8, "source": { "snapshot_id": "snp_a1" } },
+    { "id": "clm_2", "entity_id": "ent_acme", "predicate": "headcount", "value": { "value_type": "number", "value": 150, "unit": "명" }, "valid_from": "2025-01-01T00:00:00Z", "valid_to": "2026-01-01T00:00:00Z", "observed_at": "2026-03-01T00:00:00Z", "superseded_by": null, "supersede_reason": null, "confidence": 0.95, "source": { "snapshot_id": "snp_a1", "quote": { "unit": "codepoint", "start": 7, "end": 15, "exact": "임직원 150명", "prefix": "아크메 코리아", "suffix": "을 고용" } } },
+    { "id": "clm_3", "entity_id": "ent_acme", "predicate": "ceo", "value": { "value_type": "entity_ref", "entity_id": "ent_kim" }, "valid_from": "2024-01-01T00:00:00Z", "valid_to": null, "observed_at": "2024-02-01T00:00:00Z", "superseded_by": null, "source": null },
+    { "id": "clm_4", "entity_id": "ent_acme", "predicate": "motto", "value": { "value_type": "text", "value": "광고와 채널", "lang": "ko" }, "valid_from": "2024-01-01T00:00:00Z", "valid_to": null, "observed_at": "2024-02-01T00:00:00Z", "superseded_by": null, "source": null },
+    { "id": "clm_5", "entity_id": "ent_acme", "predicate": "public_company", "value": { "value_type": "boolean", "value": false }, "valid_from": "2024-01-01T00:00:00Z", "valid_to": null, "observed_at": "2024-02-01T00:00:00Z", "superseded_by": null, "source": null },
+    { "id": "clm_6", "entity_id": "ent_acme", "predicate": "founded", "value": { "value_type": "date", "value": "2011-05-02" }, "valid_from": "2011-05-02T00:00:00Z", "valid_to": null, "observed_at": "2024-02-01T00:00:00Z", "superseded_by": null, "source": null },
+    { "id": "clm_7", "entity_id": "ent_acme", "predicate": "brands", "value": { "value_type": "list", "items": [ { "value_type": "text", "value": "채널" }, { "value_type": "list", "items": [ { "value_type": "number", "value": 1 } ] } ] }, "valid_from": "2024-01-01T00:00:00Z", "valid_to": null, "observed_at": "2024-02-01T00:00:00Z", "superseded_by": null, "source": null }
+  ],
+  "snapshots": [
+    { "id": "snp_a1", "media_type": "text/plain", "body": "아크메 코리아임직원 150명을 고용한다.", "captured_at": "2026-02-20T00:00:00Z" }
+  ],
+  "edges": [
+    { "source": "ent_acme", "target": "ent_kim", "type": "ceo" }
+  ],
+  "catalog": { "entity_types": ["organization", "person", "note"], "relation_types": ["ceo"] }
+}

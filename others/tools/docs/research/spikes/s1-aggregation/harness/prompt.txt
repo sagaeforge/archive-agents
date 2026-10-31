@@ -1,0 +1,9 @@
+This is a connectivity test of the MCP server named gw. Do exactly these steps, then stop. Do not retry a failed step.
+1. If the gw tools are deferred, load them with ToolSearch.
+2. Call the gw tool that reports ALPHA status.
+3. Call the gw tool that reports BETA status.
+4. Call the gw tool that echoes text, with text "hi".
+5. Call the gw tool that returns a resource_link.
+6. Call ReadMcpResourceTool for server gw with the exact URI that step 5 returned in its resource link.
+7. Call ListMcpResourcesTool for server gw, then ReadMcpResourceTool on each URI it lists.
+Final answer: the exact list of gw tool names you saw, then one short line per step with its raw result or error.

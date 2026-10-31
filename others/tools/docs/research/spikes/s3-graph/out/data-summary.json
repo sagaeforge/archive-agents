@@ -1,0 +1,324 @@
+{
+ "payload-1k": {
+  "n": 1000,
+  "m": 5000,
+  "distinctSyllables": 1797,
+  "minS": 2,
+  "maxS": 20,
+  "hist": {
+   "2-5": 345,
+   "6-10": 326,
+   "16-20": 114,
+   "11-15": 215
+  },
+  "maxDeg": 73,
+  "jsonBytes": 101845,
+  "gzBytes": 48624,
+  "layoutMs": 1700,
+  "checkpoints": [
+   {
+    "iters": 50,
+    "ms": 210,
+    "edgeLenRatio": 0.1649
+   },
+   {
+    "iters": 100,
+    "ms": 377,
+    "edgeLenRatio": 0.1556
+   },
+   {
+    "iters": 200,
+    "ms": 725,
+    "edgeLenRatio": 0.151
+   },
+   {
+    "iters": 300,
+    "ms": 1064,
+    "edgeLenRatio": 0.1528
+   },
+   {
+    "iters": 500,
+    "ms": 1700,
+    "edgeLenRatio": 0.1563
+   }
+  ],
+  "louvain": {
+   "ms": 12.2,
+   "communities": 11,
+   "modularity": 0.286
+  },
+  "barnesHut": false,
+  "sl": 10,
+  "grav": 0.05
+ },
+ "payload-5k": {
+  "n": 5000,
+  "m": 25000,
+  "distinctSyllables": 2226,
+  "minS": 2,
+  "maxS": 20,
+  "hist": {
+   "6-10": 1628,
+   "11-15": 1051,
+   "2-5": 1704,
+   "16-20": 617
+  },
+  "maxDeg": 298,
+  "jsonBytes": 541626,
+  "gzBytes": 247849,
+  "layoutMs": 7443,
+  "checkpoints": [
+   {
+    "iters": 50,
+    "ms": 1088,
+    "edgeLenRatio": 0.1056
+   },
+   {
+    "iters": 100,
+    "ms": 1794,
+    "edgeLenRatio": 0.0807
+   },
+   {
+    "iters": 200,
+    "ms": 3285,
+    "edgeLenRatio": 0.0727
+   },
+   {
+    "iters": 300,
+    "ms": 4677,
+    "edgeLenRatio": 0.0716
+   },
+   {
+    "iters": 500,
+    "ms": 7442,
+    "edgeLenRatio": 0.0714
+   }
+  ],
+  "louvain": {
+   "ms": 20.9,
+   "communities": 28,
+   "modularity": 0.282
+  },
+  "barnesHut": true,
+  "sl": 10,
+  "grav": 0.05
+ },
+ "payload-full": {
+  "n": 10000,
+  "m": 50938,
+  "distinctSyllables": 2256,
+  "minS": 2,
+  "maxS": 20,
+  "hist": {
+   "6-10": 3405,
+   "2-5": 3243,
+   "11-15": 2116,
+   "16-20": 1236
+  },
+  "maxDeg": 446,
+  "jsonBytes": 1122655,
+  "gzBytes": 517166,
+  "layoutMs": 31733,
+  "checkpoints": [
+   {
+    "iters": 50,
+    "ms": 1589,
+    "edgeLenRatio": 0.1037
+   },
+   {
+    "iters": 100,
+    "ms": 3189,
+    "edgeLenRatio": 0.0784
+   },
+   {
+    "iters": 200,
+    "ms": 6448,
+    "edgeLenRatio": 0.0696
+   },
+   {
+    "iters": 300,
+    "ms": 9608,
+    "edgeLenRatio": 0.0686
+   },
+   {
+    "iters": 500,
+    "ms": 15846,
+    "edgeLenRatio": 0.0683
+   },
+   {
+    "iters": 1000,
+    "ms": 31729,
+    "edgeLenRatio": 0.0683
+   }
+  ],
+  "louvain": {
+   "ms": 54.9,
+   "communities": 28,
+   "modularity": 0.276
+  },
+  "barnesHut": true,
+  "sl": 10,
+  "grav": 0.05
+ },
+ "community-1k": {
+  "n": 1000,
+  "m": 5000,
+  "distinctSyllables": 1812,
+  "minS": 2,
+  "maxS": 20,
+  "hist": {
+   "2-5": 333,
+   "6-10": 326,
+   "11-15": 218,
+   "16-20": 123
+  },
+  "maxDeg": 113,
+  "jsonBytes": 103454,
+  "gzBytes": 48953,
+  "layoutMs": 1749,
+  "checkpoints": [
+   {
+    "iters": 50,
+    "ms": 174,
+    "edgeLenRatio": 0.0914
+   },
+   {
+    "iters": 100,
+    "ms": 344,
+    "edgeLenRatio": 0.0801
+   },
+   {
+    "iters": 200,
+    "ms": 686,
+    "edgeLenRatio": 0.0788
+   },
+   {
+    "iters": 300,
+    "ms": 1035,
+    "edgeLenRatio": 0.0788
+   },
+   {
+    "iters": 500,
+    "ms": 1749,
+    "edgeLenRatio": 0.079
+   }
+  ],
+  "louvain": {
+   "ms": 1.5,
+   "communities": 9,
+   "modularity": 0.695
+  },
+  "barnesHut": false,
+  "sl": 10,
+  "grav": 0.05
+ },
+ "community-5k": {
+  "n": 5000,
+  "m": 25000,
+  "distinctSyllables": 2230,
+  "minS": 2,
+  "maxS": 20,
+  "hist": {
+   "6-10": 1655,
+   "16-20": 668,
+   "11-15": 1081,
+   "2-5": 1596
+  },
+  "maxDeg": 234,
+  "jsonBytes": 568924,
+  "gzBytes": 256380,
+  "layoutMs": 5625,
+  "checkpoints": [
+   {
+    "iters": 50,
+    "ms": 660,
+    "edgeLenRatio": 0.0875
+   },
+   {
+    "iters": 100,
+    "ms": 1220,
+    "edgeLenRatio": 0.069
+   },
+   {
+    "iters": 200,
+    "ms": 2297,
+    "edgeLenRatio": 0.0656
+   },
+   {
+    "iters": 300,
+    "ms": 3372,
+    "edgeLenRatio": 0.0652
+   },
+   {
+    "iters": 500,
+    "ms": 5623,
+    "edgeLenRatio": 0.0657
+   }
+  ],
+  "louvain": {
+   "ms": 8.1,
+   "communities": 21,
+   "modularity": 0.767
+  },
+  "barnesHut": true,
+  "sl": 10,
+  "grav": 0.05
+ },
+ "community-full": {
+  "n": 10000,
+  "m": 51354,
+  "distinctSyllables": 2255,
+  "minS": 2,
+  "maxS": 20,
+  "hist": {
+   "6-10": 3349,
+   "11-15": 2120,
+   "16-20": 1181,
+   "2-5": 3350
+  },
+  "maxDeg": 314,
+  "jsonBytes": 1167878,
+  "gzBytes": 531716,
+  "layoutMs": 26229,
+  "checkpoints": [
+   {
+    "iters": 50,
+    "ms": 1528,
+    "edgeLenRatio": 0.0918
+   },
+   {
+    "iters": 100,
+    "ms": 2937,
+    "edgeLenRatio": 0.0602
+   },
+   {
+    "iters": 200,
+    "ms": 5661,
+    "edgeLenRatio": 0.0547
+   },
+   {
+    "iters": 300,
+    "ms": 8260,
+    "edgeLenRatio": 0.0535
+   },
+   {
+    "iters": 500,
+    "ms": 13472,
+    "edgeLenRatio": 0.0535
+   },
+   {
+    "iters": 1000,
+    "ms": 26225,
+    "edgeLenRatio": 0.0555
+   }
+  ],
+  "louvain": {
+   "ms": 20.2,
+   "communities": 44,
+   "modularity": 0.792
+  },
+  "barnesHut": true,
+  "sl": 10,
+  "grav": 0.05
+ }
+}

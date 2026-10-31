@@ -1,0 +1,16 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.env
+.env.*
+
+# python venvs for the real-server regression fixtures (tools/tower/test/.venv-*)
+.venv/
+.venv-*/
+__pycache__/
+*.pyc
+
+# regression run output and generated copies
+tools/tower/test/regression/.gen/
+tools/tower/test/regression/.run/
+tools/tower/test/regression/results/

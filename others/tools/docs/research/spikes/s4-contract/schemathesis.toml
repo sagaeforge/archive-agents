@@ -1,0 +1,14 @@
+# Opaque cursors: a schema-valid string can still be unknown to the server, and that is a client error.
+# RFC 9457 400 is declared as acceptable only on operations that take a cursor.
+[[operations]]
+include-name = "GET /v1/entities"
+checks.positive_data_acceptance.expected-statuses = ["2xx", "3xx", "400", "401", "403", "404", "409", "429", "5xx"]
+
+[[operations]]
+include-name = "GET /v1/entities/{entity_id}/claims"
+checks.positive_data_acceptance.expected-statuses = ["2xx", "3xx", "400", "401", "403", "404", "409", "429", "5xx"]
+
+# Random ids only reach the 404 branch. Pin one real fixture id so the handler runs.
+[[operations]]
+include-name = "GET /v1/snapshots/{snapshot_id}"
+parameters = { snapshot_id = "snp_a1" }

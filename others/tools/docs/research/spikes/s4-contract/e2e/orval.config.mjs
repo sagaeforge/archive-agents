@@ -1,0 +1,2 @@
+export default { kb: { input: { target: '../contract/openapi.yaml' }, output: { mode: 'split', target: 'src/client/kb.ts', schemas: 'src/client/model', client: 'react-query', httpClient: 'fetch', clean: true,
+  override: { mutator: { path: 'src/lib/kbFetch.ts', name: 'kbFetch' }, fetch: { includeHttpResponseReturnType: false }, query: { useQuery: true, version: 5, useInfinite: true, useInfiniteQueryParam: 'cursor' } } } } };
