@@ -29,6 +29,8 @@ const TEMPLATE = "debian-13-standard_13.6-1_amd64.tar.zst";
 const TOKEN_ID = "ci-runner-202611";
 const REPO = "sagaeforge/sagae-claude-plugins";
 
+const PVE_NODES = ["192.0.2.1", "192.0.2.1", "192.0.2.1"];
+
 const REGISTRATION_TOKEN = "sentinel-registration-token";
 const PVE_SECRET = "sentinel-pve-secret";
 const AUDIT_ONLY = JSON.stringify({ data: { "/": { "Sys.Audit": 1, "VM.Audit": 1 }, "/vms": { "VM.Audit": 1 } } });
@@ -49,12 +51,20 @@ function findTool(name) {
   return null;
 }
 
+// GET /cluster/status as a node answers it, with every node of nftables.conf
+// online. `changes` replaces fields of the node at each address.
+function clusterStatus(changes = {}) {
+  const nodes = PVE_NODES.map((ip, i) => ({ type: "node", id: `node/n${i}`, name: `n${i}`, nodeid: i + 1, local: 0, level: "", online: 1, ip, ...changes[ip] }));
+  return JSON.stringify([{ type: "cluster", id: "cluster", name: "test", nodes: nodes.length, quorate: 1, version: 3 }, ...nodes]);
+}
+
 const sandboxDirs = [];
 after(() => {
   for (const dir of sandboxDirs) rmSync(dir, { recursive: true, force: true });
 });
 
-function sandbox(env = {}) {
+// `clock` fixes the instant date reports, and date formats it as usual.
+function sandbox(env = {}, { clock } = {}) {
   const dir = mkdtempSync(join(tmpdir(), "runner-test-"));
   sandboxDirs.push(dir);
   const bin = join(dir, "bin");
@@ -63,10 +73,17 @@ function sandbox(env = {}) {
   writeFileSync(log, "");
   for (const name of FAKE_TOOLS) symlinkSync(FAKE_TOOL, join(bin, name));
   for (const name of REAL_TOOLS) symlinkSync(findTool(name), join(bin, name));
+  if (clock) {
+    rmSync(join(bin, "date"));
+    writeFileSync(join(bin, "date"), `#!${findTool("bash")}\nexec ${findTool("date")} -d '${clock}' "$@"\n`, { mode: 0o755 });
+  }
 
   return {
+    dir,
+    // A soft size limit of zero kills whatever writes a byte to a regular file, so
+    // no run can leave a secret in a local file. Only fake-tool.sh lifts it.
     run(script, args) {
-      return spawnSync(join(bin, "bash"), [script, ...args], {
+      return spawnSync(join(bin, "bash"), ["-c", 'ulimit -S -f 0 && exec bash "$@"', "bash", script, ...args], {
         encoding: "utf8",
         stdio: ["ignore", "pipe", "pipe"],
         env: {
@@ -142,15 +159,20 @@ test("provision --dry-run prints the whole plan and runs nothing", () => {
     "--rootfs local-lvm:32",
     "--net0 name=eth0,bridge=vmbr0,ip=dhcp",
     "[pve-node] pct start 101",
+    "apt-get install -y --no-install-recommends ca-certificates curl git nftables unattended-upgrades",
     "useradd --create-home --shell /bin/bash runner",
+    "passwd --lock root",
     "apt-get purge -y sudo openssh-server",
     "sed -i 's#http://#https://#'",
+    "https://github.com/actions/runner/releases/download/v",
     "sha256sum --check --strict",
     "nft -c -f /etc/nftables.conf",
     "systemctl enable --now nftables",
+    "# A node the cluster does not report online skips its 8006 probe, with a warning.",
     `[local] gh api -X POST repos/${REPO}/actions/runners/registration-token --jq .token | [pve-node] pct exec 101 -- runuser -l runner -c`,
     `./config.sh --unattended --replace --url https://github.com/${REPO} --name pve-runner-01 --labels proxmox`,
     "./svc.sh install runner",
+    "./svc.sh start",
     "# Next: infra/runner/issue-token.sh --node pve-node --vmid 101",
   ]) {
     assert.ok(result.stdout.includes(expected), `plan is missing: ${expected}`);
@@ -164,17 +186,25 @@ test("provision --dry-run applies and checks the firewall before the runner can 
     /pveam download local/,
     /pct create 101/,
     /apt-get install/,
+    /apt-get update --error-on=any/,
     /sha256sum --check/,
     /cat > \/etc\/nftables\.conf/,
     /nft -c -f/,
     /systemctl enable --now nftables/,
     /pct config 101/,
+    /systemctl is-enabled nftables/,
     /sudo -n true/,
+    /nft list ruleset/,
+    /pvesh get \/cluster\/status/,
     /dev\/tcp\/192\.168\.0\.10\/22/,
     /dev\/tcp\/192\.168\.0\.10\/8006/,
     /dev\/tcp\/github\.com\/443/,
+    /apt-get update --error-on=any/,
     /registration-token/,
     /svc\.sh install runner/,
+    /require-firewall\.conf/,
+    /--property=Requires,After/,
+    /svc\.sh start/,
     /actions\/runners --jq/,
   ]);
 });
@@ -236,24 +266,25 @@ test("the runner tarball is pinned to a version and a full SHA-256", () => {
 // Dry run: issue-token.sh
 
 test("issue-token --dry-run prints the whole plan and runs nothing", () => {
-  const box = sandbox();
+  // The default ID carries the local month. In UTC this instant is still October.
+  const box = sandbox({ TZ: "KST-9" }, { clock: "2026-11-01T00:30:00+09:00" });
   const result = box.run(ISSUE_TOKEN, ["--dry-run", "--node", "pve-node", "--vmid", "101"]);
 
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(box.calls(), [], "a dry run must not start any tool");
 
-  const yearMonth = new Date().toISOString().slice(0, 7).replace("-", "");
   for (const expected of [
     "[pve-node] pct exec 101 -- getent group runner",
-    `[pve-node] pveum user token add claude-mcp@pve ci-runner-${yearMonth} --privsep 1 --expire `,
-    `[pve-node] pveum acl modify / --tokens 'claude-mcp@pve!ci-runner-${yearMonth}' --roles PVEAuditor`,
-    "--cacert /etc/pve/pve-root-ca.pem --header @- https://localhost:8006/api2/json/version",
+    "[pve-node] pveum user token add claude-mcp@pve ci-runner-202611 --privsep 1 --expire ",
+    "[pve-node] pveum acl modify / --tokens 'claude-mcp@pve!ci-runner-202611' --roles PVEAuditor",
+    "curl --fail --silent --show-error --cacert /etc/pve/pve-root-ca.pem --header @- https://localhost:8006/api2/json/version",
     "https://localhost:8006/api2/json/access/permissions | python3 -c",
     "install -d -m 750 -o root -g runner /etc/proxmox-mcp",
+    "(umask 077 && cat > /etc/proxmox-mcp/token.new)",
     "chown root:runner /etc/proxmox-mcp/token.new",
     "chmod 640 /etc/proxmox-mcp/token.new",
+    `stat -c '%U:%G %a' /etc/proxmox-mcp/token.new`,
     "mv -f /etc/proxmox-mcp/token.new /etc/proxmox-mcp/token",
-    `stat -c '%U:%G %a' /etc/proxmox-mcp/token`,
   ]) {
     assert.ok(result.stdout.includes(expected), `plan is missing: ${expected}`);
   }
@@ -270,8 +301,9 @@ test("issue-token --dry-run shows a placeholder and installs only after the chec
     /pveum acl modify/,
     /api2\/json\/version/,
     /api2\/json\/access\/permissions/,
-    /mv -f \/etc\/proxmox-mcp\/token\.new/,
+    /cat > \/etc\/proxmox-mcp\/token\.new/,
     /stat -c/,
+    /mv -f \/etc\/proxmox-mcp\/token\.new/,
   ]);
 });
 
@@ -348,6 +380,16 @@ test("--help prints usage and exits 0 for both scripts", () => {
 
 // Fake run: the real code paths, against fakes
 
+test("a script under test cannot write a local file", () => {
+  const box = sandbox();
+  const writer = join(box.dir, "writer.sh");
+  const target = join(box.dir, "written");
+  writeFileSync(writer, 'printf secret > "$1"\n');
+
+  assert.notEqual(box.run(writer, [target]).status, 0);
+  assert.equal(readFileSync(target, "utf8"), "");
+});
+
 test("a dry run lists exactly what a real provision sends to the node", () => {
   const dry = sandbox().run(PROVISION, ["--dry-run", ...PROVISION_ARGS]);
   const box = sandbox();
@@ -387,11 +429,25 @@ test("provision parses back into the intended words on the node", () => {
   assert.deepEqual(firewall.argv.slice(0, 4), ["exec", VMID, "--", "sh"]);
   assert.equal(firewall.stdin, readFileSync(NFT_CONF, "utf8"));
 
-  assert.deepEqual(find("sudo -n true").argv.slice(3), ["runuser", "-u", "runner", "--", "bash", "-c", "! sudo -n true 2>/dev/null"]);
+  const asRunner = ["runuser", "-u", "runner", "--"];
+  assert.deepEqual(find("sudo -n true").argv.slice(3), [...asRunner, "bash", "-c", "! sudo -n true 2>/dev/null"]);
+  assert.deepEqual(find("nft list ruleset").argv.slice(3), [...asRunner, "bash", "-c", "! /usr/sbin/nft list ruleset 2>/dev/null"]);
+  assert.deepEqual(find("/dev/tcp/192.0.2.1/22").argv.slice(3), [...asRunner, "bash", "-c", "! timeout 5 bash -c 'exec 3<>/dev/tcp/192.0.2.1/22' 2>/dev/null"]);
+  assert.deepEqual(find("/dev/tcp/192.0.2.1/8006").argv.slice(3), [...asRunner, "timeout", "5", "bash", "-c", "exec 3<>/dev/tcp/192.0.2.1/8006"]);
 
   assert.equal(
     find("20auto-upgrades").argv.at(-1),
     `printf '%s\\n' 'APT::Periodic::Update-Package-Lists "1";' 'APT::Periodic::Unattended-Upgrade "1";' > /etc/apt/apt.conf.d/20auto-upgrades`,
+  );
+
+  const unit = "$(cat /home/runner/actions-runner/.service)";
+  assert.equal(
+    find("require-firewall.conf").argv.at(-1),
+    `dir=/etc/systemd/system/${unit}.d && mkdir -p "$dir" && printf '%s\\n' '[Unit]' 'Requires=nftables.service' 'After=nftables.service' > "$dir/require-firewall.conf" && systemctl daemon-reload`,
+  );
+  assert.equal(
+    find("--property=Requires,After").argv.at(-1),
+    `test "$(systemctl show --property=Requires,After --value "${unit}" | grep -cwF nftables.service)" = 2`,
   );
 });
 
@@ -426,6 +482,7 @@ test("the registration token reaches config.sh over stdin only", () => {
 
 for (const [label, env, reached] of [
   ["gh has no admin rights", { FAKE_GH_ADMIN: "false" }, /^$/],
+  ["gh gives no answer on admin rights", { FAKE_GH_ADMIN: "" }, /^$/],
   ["the SSH target is another node", { FAKE_HOSTNAME: "other-node" }, /hostname -s/],
 ]) {
   test(`provision changes nothing when ${label}`, () => {
@@ -459,24 +516,72 @@ test("provision stops at a bad runner checksum, before the firewall and registra
   assert.ok(!called(calls, /registration-token/));
 });
 
-for (const [label, env] of [
-  ["the firewall does not parse", { FAKE_FAIL_MATCH: "nft -c" }],
-  ["the firewall does not load", { FAKE_FAIL_MATCH: "enable --now nftables" }],
-  ["the firewall table is missing", { FAKE_FAIL_MATCH: "nft list table" }],
-  ["the LXC is privileged", { FAKE_PCT_CONFIG: "unprivileged: 0" }],
-  ["runner can use sudo", { FAKE_FAIL_MATCH: "sudo -n true" }],
-  ["runner can read the firewall", { FAKE_FAIL_MATCH: "nft list ruleset" }],
-  ["node SSH is reachable", { FAKE_FAIL_MATCH: "/22" }],
-  ["the PVE API is blocked", { FAKE_FAIL_MATCH: "/8006" }],
-  ["external 443 is blocked", { FAKE_FAIL_MATCH: "github.com/443" }],
-  ["apt fails through the firewall", { FAKE_FAIL_MATCH: "update --error-on=any" }],
+const NODE_1_DOWN = { "192.0.2.1": { online: 0 } };
+const ALL_DOWN = Object.fromEntries(PVE_NODES.map((ip) => [ip, { online: 0 }]));
+
+for (const [label, env, message] of [
+  ["apt cannot use its https sources", { FAKE_FAIL_MATCH: "update --error-on=any" }, /forced failure/],
+  ["the firewall does not parse", { FAKE_FAIL_MATCH: "nft -c" }, /forced failure/],
+  ["the firewall does not load", { FAKE_FAIL_MATCH: "enable --now nftables" }, /forced failure/],
+  ["the firewall table is missing", { FAKE_FAIL_MATCH: "nft list table" }, /forced failure/],
+  ["the firewall is off for the next boot", { FAKE_FAIL_MATCH: "is-enabled nftables" }, /forced failure/],
+  ["the LXC is privileged", { FAKE_PCT_CONFIG: "unprivileged: 0" }, /not unprivileged/],
+  ["runner can use sudo", { FAKE_FAIL_MATCH: "sudo -n true" }, /can use sudo/],
+  ["runner can read the firewall", { FAKE_FAIL_MATCH: "nft list ruleset" }, /can read the firewall/],
+  ["node SSH is reachable", { FAKE_FAIL_MATCH: "/22" }, /192\.168\.0\.10:22 must be blocked/],
+  ["the PVE API is blocked", { FAKE_FAIL_MATCH: "/8006" }, /192\.168\.0\.10:8006 must be reachable/],
+  ["external 443 is blocked", { FAKE_FAIL_MATCH: "github.com/443" }, /github\.com:443 must be reachable/],
+  ["apt fails through the firewall", { FAKE_FAIL_MATCH: "update --error-on=any", FAKE_FAIL_AFTER: "enable --now nftables" }, /apt cannot reach its mirrors/],
+  ["the cluster status cannot be read", { FAKE_FAIL_MATCH: "cluster/status" }, /cannot read the cluster status/],
+  ["the cluster status is not JSON", { FAKE_CLUSTER_STATUS: "<html>" }, /cannot read the cluster status/],
+  ["an online node has no address", { FAKE_CLUSTER_STATUS: clusterStatus({ "192.0.2.1": { ip: undefined } }) }, /cannot read the cluster status/],
+  ["the cluster reports no node online", { FAKE_CLUSTER_STATUS: clusterStatus(ALL_DOWN) }, /no node online/],
+  ["an online node is not in the firewall", { FAKE_CLUSTER_STATUS: clusterStatus({ "192.0.2.1": { ip: "192.168.x.x" } }) }, /192\.168\.0\.30 is online but not in PVE_NODES/],
+  ["an online node blocks the API while another node is down", { FAKE_CLUSTER_STATUS: clusterStatus(NODE_1_DOWN), FAKE_FAIL_MATCH: "/dev/tcp/192.0.2.1/8006" }, /192\.168\.0\.20:8006 must be reachable/],
+  ["SSH to a down node is not rejected", { FAKE_CLUSTER_STATUS: clusterStatus(NODE_1_DOWN), FAKE_FAIL_MATCH: "/dev/tcp/192.0.2.1/22" }, /192\.168\.0\.10:22 must be blocked/],
 ]) {
   test(`provision never registers a runner when ${label}`, () => {
     const box = sandbox(env);
     const result = box.run(PROVISION, PROVISION_ARGS);
 
     assert.equal(result.status, 1, result.stdout);
+    assert.match(result.stderr, message);
     assert.ok(!called(box.calls(), /registration-token/));
+  });
+}
+
+for (const [label, change] of [
+  ["reported offline", { online: 0 }],
+  ["reported offline with no address", { online: 0, ip: undefined }],
+]) {
+  test(`provision finishes with a node ${label}, skipping only that node's API probe`, () => {
+    const box = sandbox({
+      FAKE_CLUSTER_STATUS: clusterStatus({ "192.0.2.1": change }),
+      FAKE_FAIL_MATCH: "/dev/tcp/192.0.2.1/8006",
+    });
+    const result = box.run(PROVISION, PROVISION_ARGS);
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stderr, /warning: skipped 192\.168\.0\.10:8006/);
+
+    const calls = box.calls();
+    assert.ok(!called(calls, /\/dev\/tcp\/192\.168\.0\.10\/8006/));
+    for (const expected of [/\/dev\/tcp\/192\.168\.0\.10\/22/, /\/dev\/tcp\/192\.168\.0\.11\/8006/, /\/dev\/tcp\/192\.168\.0\.20\/8006/, /registration-token/, /svc\.sh start/]) {
+      assert.ok(called(calls, expected), String(expected));
+    }
+  });
+}
+
+for (const [label, env] of [
+  ["the firewall requirement cannot be written", { FAKE_FAIL_MATCH: "require-firewall.conf" }],
+  ["the service does not end up requiring the firewall", { FAKE_FAIL_MATCH: "--property=Requires,After" }],
+]) {
+  test(`provision never starts the runner when ${label}`, () => {
+    const box = sandbox(env);
+    const result = box.run(PROVISION, PROVISION_ARGS);
+
+    assert.equal(result.status, 1);
+    assert.ok(!called(box.calls(), /svc\.sh start/));
   });
 }
 
@@ -513,7 +618,8 @@ test("issue-token checks the token before installing it and keeps it off every c
       /^curl .*\/version$/,
       /^curl .*\/access\/permissions$/,
       /^pct exec 205 -- sh -c /,
-      /^pct exec 205 -- stat -c/,
+      /^pct exec 205 -- stat -c %U:%G %a \/etc\/proxmox-mcp\/token\.new$/,
+      /^pct exec 205 -- mv -f \/etc\/proxmox-mcp\/token\.new \/etc\/proxmox-mcp\/token$/,
     ],
   );
 
@@ -530,7 +636,10 @@ test("issue-token checks the token before installing it and keeps it off every c
 });
 
 for (const [label, env, message] of [
+  ["pveum prints no value", { FAKE_PVE_SECRET: "" }, /returned no token value/],
   ["its privileges go beyond audit", { FAKE_PERMISSIONS: JSON.stringify({ data: { "/": { "Sys.Audit": 1, "VM.PowerMgmt": 1 } } }) }, /VM\.PowerMgmt/],
+  ["a write privilege sits below /", { FAKE_PERMISSIONS: JSON.stringify({ data: { "/": { "VM.Audit": 1 }, "/vms/100": { "VM.Audit": 1, "VM.Allocate": 1 } } }) }, /VM\.Allocate/],
+  ["a privilege name only contains Audit", { FAKE_PERMISSIONS: JSON.stringify({ data: { "/": { "Sys.Audit": 1, "Sys.AuditLog": 1 } } }) }, /Sys\.AuditLog/],
   ["it holds no privileges", { FAKE_PERMISSIONS: JSON.stringify({ data: {} }) }, /no privileges/],
   ["the role grant fails", { FAKE_FAIL_MATCH: "acl modify" }, /forced failure/],
   ["the token does not work", { FAKE_FAIL_MATCH: "api2/json/version" }, /forced failure/],
@@ -557,12 +666,27 @@ test("issue-token revokes the token when it cannot be installed", () => {
   assert.ok(called(box.calls(), /^pveum user token remove claude-mcp@pve ci-runner-202611$/));
 });
 
-test("issue-token revokes the token when the file has the wrong owner or mode", () => {
-  const box = sandbox({ FAKE_TOKEN_FILE_STAT: "root:root 644" });
+for (const [label, env, message] of [
+  ["the new file has the wrong owner or mode", { FAKE_TOKEN_FILE_STAT: "root:root 644" }, /token\.new is 'root:root 644', expected 'root:runner 640'/],
+  ["the new file cannot be checked", { FAKE_FAIL_MATCH: "stat -c" }, /forced failure/],
+]) {
+  test(`issue-token leaves the previous token in place when ${label}`, () => {
+    const box = sandbox(env);
+    const result = box.run(ISSUE_TOKEN, ISSUE_ARGS);
+
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, message);
+    const calls = box.calls();
+    assert.ok(called(calls, /^pveum user token remove claude-mcp@pve ci-runner-202611$/));
+    assert.ok(!called(calls, /mv -f/), "the swap must not run");
+  });
+}
+
+test("issue-token revokes the new token when the swap fails", () => {
+  const box = sandbox({ FAKE_FAIL_MATCH: "mv -f" });
   const result = box.run(ISSUE_TOKEN, ISSUE_ARGS);
 
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /expected 'root:runner 640'/);
+  assert.notEqual(result.status, 0);
   assert.ok(called(box.calls(), /^pveum user token remove claude-mcp@pve ci-runner-202611$/));
 });
 
@@ -571,6 +695,7 @@ test("issue-token never removes a token it did not create", () => {
   const result = box.run(ISSUE_TOKEN, ISSUE_ARGS);
 
   assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /did not issue ci-runner-202611\..*--token-id/);
   const calls = box.calls();
   assert.ok(!called(calls, /token remove/));
   assert.ok(!called(calls, /acl modify/));
@@ -599,7 +724,7 @@ function parseNft(text) {
       .split("\n")
       .map((line) => line.replace(/#.*/, "").trim())
       .filter(Boolean);
-    chains.set(name, { policy: /policy (\w+);/.exec(lines[0])[1], rules: lines.slice(1) });
+    chains.set(name, { hook: /hook (\w+)/.exec(lines[0])[1], policy: /policy (\w+);/.exec(lines[0])[1], rules: lines.slice(1) });
   }
   return { defines, chains };
 }
@@ -649,7 +774,12 @@ function verdict({ defines, chains }, chain, packet) {
 const nft = parseNft(readFileSync(NFT_CONF, "utf8"));
 const leaving = (proto, daddr, dport) => verdict(nft, "output", { proto, daddr, dport, sport: 40000 });
 
-for (const ip of ["192.0.2.1", "192.0.2.1", "192.0.2.1"]) {
+test("firewall lists exactly the PVE nodes and the resolvers", () => {
+  assert.deepEqual(nft.defines.get("PVE_NODES"), PVE_NODES);
+  assert.deepEqual(nft.defines.get("DNS_SERVERS"), ["1.1.1.1", "192.0.2.1"]);
+});
+
+for (const ip of PVE_NODES) {
   test(`firewall allows the PVE API on ${ip} and blocks SSH and other ports`, () => {
     assert.equal(leaving("tcp", ip, 8006), "accept");
     assert.equal(leaving("tcp", ip, 22), "reject");
@@ -665,11 +795,12 @@ test("firewall allows external 443 and DNS only", () => {
 
   assert.equal(leaving("tcp", "140.82.121.4", 80), "reject");
   assert.equal(leaving("tcp", "140.82.121.4", 22), "reject");
+  assert.equal(leaving("udp", "140.82.121.4", 443), "reject");
   assert.equal(leaving("udp", "8.8.8.8", 53), "reject");
 });
 
 test("firewall closes the rest of the LAN and the other private ranges", () => {
-  for (const ip of ["192.0.2.1", "192.0.2.1", "192.0.2.1", "10.x.x.x", "172.x.x.x", "100.64.0.1", "169.254.169.254"]) {
+  for (const ip of ["192.0.2.1", "192.0.2.1", "192.0.2.1", "10.x.x.x", "172.x.x.x", "100.64.0.1", "169.254.169.254", "0.1.2.3", "127.0.0.2", "224.0.0.1", "240.0.0.1"]) {
     assert.equal(leaving("tcp", ip, 443), "reject", ip);
     assert.equal(leaving("tcp", ip, 8006), "reject", ip);
     assert.equal(leaving("tcp", ip, 22), "reject", ip);
@@ -693,6 +824,15 @@ test("firewall allows DHCP renewal and no new inbound connection", () => {
 test("firewall defaults to drop on every chain and has no forwarding rule", () => {
   for (const chain of ["input", "forward", "output"]) assert.equal(nft.chains.get(chain).policy, "drop");
   assert.deepEqual(nft.chains.get("forward").rules, []);
+});
+
+test("firewall replaces the whole ruleset and hooks each chain by its name", () => {
+  const text = readFileSync(NFT_CONF, "utf8");
+
+  assert.match(text, /^flush ruleset$/m);
+  assert.match(text, /^table inet runner \{$/m);
+  for (const chain of ["input", "forward", "output"]) assert.equal(nft.chains.get(chain).hook, chain);
+  for (const chain of ["input", "output"]) assert.ok(nft.chains.get(chain).rules.includes("ct state established,related accept"), chain);
 });
 
 // Tooling
@@ -727,7 +867,21 @@ test("shellcheck passes", { skip: findTool("shellcheck") ? false : "shellcheck i
   assert.equal(result.status, 0, result.stdout);
 });
 
-test("nft accepts nftables.conf", { skip: findTool("nft") ? false : "nft is not installed" }, () => {
-  const result = spawnSync(findTool("nft"), ["-c", "-f", NFT_CONF], { encoding: "utf8" });
-  assert.equal(result.status, 0, result.stderr);
+test("nft accepts nftables.conf", { skip: findTool("nft") ? false : "nft is not installed" }, (t) => {
+  const check = (input) => spawnSync(findTool("nft"), ["-c", "-f", "-"], { encoding: "utf8", input });
+  const conf = readFileSync(NFT_CONF, "utf8");
+
+  // Without CAP_NET_ADMIN, nft still parses and evaluates the whole file, and only
+  // the kernel's own check of the batch is refused. Nothing else is tolerated.
+  const refused = /Could not process rule: Operation not permitted/;
+  const result = check(conf);
+  if (refused.test(result.stderr)) {
+    t.diagnostic("parsed and evaluated only: the kernel check needs CAP_NET_ADMIN");
+  } else {
+    assert.equal(result.status, 0, result.stderr);
+  }
+
+  const broken = check(conf.replace("policy drop;", "policy dorp;"));
+  assert.notEqual(broken.status, 0);
+  assert.doesNotMatch(broken.stderr, refused);
 });

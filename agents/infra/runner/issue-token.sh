@@ -182,7 +182,8 @@ issue_token() {
   # A failure here leaves TOKEN_ISSUED at 0, so an existing token with this ID
   # is never revoked by mistake.
   response=$(on_node pveum user token add "$PVE_USER" "$TOKEN_ID" \
-    --privsep 1 --expire "$expire" --comment "GitHub Actions runner LXC $VMID" --output-format json)
+    --privsep 1 --expire "$expire" --comment "GitHub Actions runner LXC $VMID" --output-format json) ||
+    die "pveum did not issue $TOKEN_ID. If that ID already exists, as on a rebuild in the month of the last issue, pass a new one with --token-id"
 
   if ((DRY_RUN)); then
     FULL_TOKEN="$PVE_USER!$TOKEN_ID=<secret>"
@@ -210,17 +211,20 @@ check_token() {
 
 install_token() {
   step "Install the token in LXC $VMID"
-  local script remote
+  local script remote mode
 
   # cat reads the open stdin. install would have to reopen /dev/stdin, which an
   # unprivileged LXC can refuse for a pipe owned by the host.
-  script="install -d -m 750 -o root -g runner $TOKEN_DIR && (umask 077 && cat > $TOKEN_FILE.new) && chown root:runner $TOKEN_FILE.new && chmod 640 $TOKEN_FILE.new && mv -f $TOKEN_FILE.new $TOKEN_FILE"
+  script="install -d -m 750 -o root -g runner $TOKEN_DIR && (umask 077 && cat > $TOKEN_FILE.new) && chown root:runner $TOKEN_FILE.new && chmod 640 $TOKEN_FILE.new"
   remote=$(shell_join pct exec "$VMID" -- sh -c "$script")
   send_line "$FULL_TOKEN" "$remote"
 
-  local mode
-  mode=$(on_node pct exec "$VMID" -- stat -c '%U:%G %a' "$TOKEN_FILE")
-  ((DRY_RUN)) || [[ $mode == "root:runner 640" ]] || die "$TOKEN_FILE is '$mode', expected 'root:runner 640'"
+  # Any failure up to the swap revokes the new token, so the previous token has
+  # to stay in place until nothing else can fail.
+  mode=$(on_node pct exec "$VMID" -- stat -c '%U:%G %a' "$TOKEN_FILE.new")
+  ((DRY_RUN)) || [[ $mode == "root:runner 640" ]] || die "$TOKEN_FILE.new is '$mode', expected 'root:runner 640'"
+
+  on_node pct exec "$VMID" -- mv -f "$TOKEN_FILE.new" "$TOKEN_FILE"
   TOKEN_INSTALLED=1
 }
 

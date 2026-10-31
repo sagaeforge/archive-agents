@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Provisions the self-hosted GitHub Actions runner: an unprivileged LXC on a
 # Proxmox node, locked down by nftables, then registered to this repository.
-# The firewall is applied and checked first, so a runner without its network
-# limits never takes a job.
+# The firewall is applied and checked first, and the runner's service requires
+# it on every later boot, so a runner without its network limits never takes a
+# job. A node that is down does not stop a rebuild: see check_nodes.
 #
 # Runs on an admin machine with root SSH access to the node and a gh CLI that
 # has admin rights on the repository. --dry-run prints the commands and runs
@@ -31,6 +32,10 @@ BRIDGE="vmbr0"
 LAN_GATEWAY="192.0.2.1"
 # Must stay in DNS_SERVERS of nftables.conf.
 NAMESERVER="1.1.1.1"
+
+# Prints the address of every node the cluster reports online, on one line. An
+# online node without an address stops here instead of passing as offline.
+ONLINE_NODES_FILTER='import json, sys; print(*[n["ip"] for n in json.load(sys.stdin) if n.get("online") == 1])'
 
 RETRIES=30
 RETRY_DELAY=5
@@ -319,9 +324,38 @@ assert_blocked() {
     die "$1:$2 must be blocked from the LXC"
 }
 
+# The rebuild runbook runs while a node is down, so the cluster decides which
+# nodes must answer on 8006. Port 22 is checked on every node regardless, and an
+# unreadable answer stops the run.
+check_nodes() {
+  local list ip online=()
+
+  list=$(on_node bash -c "pvesh get /cluster/status --output-format json | python3 -c $(shell_join "$ONLINE_NODES_FILTER")") ||
+    die "cannot read the cluster status from $SSH_HOST"
+  read -r -a online <<<"$list"
+  ((DRY_RUN)) || ((${#online[@]} > 0)) || die "the cluster reports no node online"
+
+  # Without this, a node that moved to a new address would pass as offline.
+  for ip in "${online[@]}"; do
+    [[ " ${NODE_IPS[*]} " == *" $ip "* ]] || die "node $ip is online but not in PVE_NODES of nftables.conf"
+  done
+
+  if ((DRY_RUN)); then
+    plan "# A node the cluster does not report online skips its 8006 probe, with a warning."
+  fi
+  for ip in "${NODE_IPS[@]}"; do
+    assert_blocked "$ip" 22
+    if ((DRY_RUN)) || [[ " ${online[*]} " == *" $ip "* ]]; then
+      assert_open "$ip" 8006
+    else
+      printf 'warning: skipped %s:8006, the cluster does not report that node online\n' "$ip" >&2
+    fi
+  done
+}
+
 check_posture() {
   step "Check the LXC before it can take jobs"
-  local config ip
+  local config
 
   config=$(on_node pct config "$VMID")
   ((DRY_RUN)) || [[ $config == *"unprivileged: 1"* ]] || die "LXC $VMID is not unprivileged"
@@ -332,10 +366,7 @@ check_posture() {
   in_lxc runuser -u runner -- bash -c '! /usr/sbin/nft list ruleset 2>/dev/null' ||
     die "the runner account can read the firewall"
 
-  for ip in "${NODE_IPS[@]}"; do
-    assert_blocked "$ip" 22
-    assert_open "$ip" 8006
-  done
+  check_nodes
   assert_open github.com 443
   apt_in_lxc apt-get update --error-on=any || die "apt cannot reach its mirrors through the firewall"
 }
@@ -351,6 +382,17 @@ wait_for_idle() {
     sleep "$RETRY_DELAY"
   done
   die "runner $RUNNER_NAME is not online and idle; last state: ${state:-not listed}"
+}
+
+# The unit from svc.sh only waits for the network. With this, a boot where the
+# firewall fails to load leaves the runner stopped. svc.sh records the unit's
+# name in .service, and the name depends on the repository and the runner.
+require_firewall() {
+  local unit="\$(cat $RUNNER_DIR/.service)"
+
+  in_lxc sh -c "dir=/etc/systemd/system/$unit.d && mkdir -p \"\$dir\" && printf '%s\n' '[Unit]' 'Requires=nftables.service' 'After=nftables.service' > \"\$dir/require-firewall.conf\" && systemctl daemon-reload"
+  in_lxc sh -c "test \"\$(systemctl show --property=Requires,After --value \"$unit\" | grep -cwF nftables.service)\" = 2" ||
+    die "the runner service does not require the firewall"
 }
 
 register_runner() {
@@ -370,7 +412,9 @@ register_runner() {
     "${token_cmd[@]}" | ssh_node "$remote"
   fi
 
-  in_lxc sh -c "cd $RUNNER_DIR && ./svc.sh install runner && ./svc.sh start"
+  in_lxc sh -c "cd $RUNNER_DIR && ./svc.sh install runner"
+  require_firewall
+  in_lxc sh -c "cd $RUNNER_DIR && ./svc.sh start"
   wait_for_idle
 }
 

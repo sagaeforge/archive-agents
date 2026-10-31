@@ -8,6 +8,10 @@
 # newlines. The last field of a record is the stdin the tool received.
 set -uo pipefail
 
+# A test can forbid the scripts any local file write through a soft size limit
+# of zero. The fakes stand outside that promise: they keep the log.
+ulimit -S -f "$(ulimit -H -f)"
+
 tool=${0##*/}
 
 record() {
@@ -30,16 +34,26 @@ if [[ ! -t 0 ]]; then
 fi
 record "$stdin" "$@"
 
-if [[ -n ${FAKE_FAIL_MATCH:-} && "$tool $*" == *"$FAKE_FAIL_MATCH"* ]]; then
+# FAKE_FAIL_AFTER holds the failure back until that text has reached the log,
+# for a command that a script runs more than once.
+forced_failure() {
+  [[ -n ${FAKE_FAIL_MATCH:-} && "$tool $*" == *"$FAKE_FAIL_MATCH"* ]] || return 1
+  [[ -z ${FAKE_FAIL_AFTER:-} || $(<"$FAKE_LOG") == *"$FAKE_FAIL_AFTER"* ]]
+}
+
+if forced_failure "$@"; then
   printf 'fake %s: forced failure\n' "$tool" >&2
   exit 1
 fi
+
+# All three nodes online, in the shape of GET /cluster/status.
+ALL_NODES_ONLINE='[{"type":"cluster","id":"cluster","name":"test","nodes":3,"quorate":1,"version":3},{"type":"node","id":"node/n1","name":"n1","nodeid":1,"local":1,"level":"","online":1,"ip":"192.0.2.1"},{"type":"node","id":"node/n2","name":"n2","nodeid":2,"local":0,"level":"","online":1,"ip":"192.0.2.1"},{"type":"node","id":"node/n3","name":"n3","nodeid":3,"local":0,"level":"","online":1,"ip":"192.0.2.1"}]'
 
 case $tool in
   gh)
     case "$*" in
       *registration-token*) printf '%s\n' "$FAKE_REGISTRATION_TOKEN" ;;
-      *permissions.admin*) printf '%s\n' "${FAKE_GH_ADMIN:-true}" ;;
+      *permissions.admin*) printf '%s\n' "${FAKE_GH_ADMIN-true}" ;;
       *actions/runners*) printf '%s\n' "${FAKE_RUNNER_STATE:-online false}" ;;
     esac
     ;;
@@ -52,6 +66,11 @@ case $tool in
         debian-12-standard_12.12-1_amd64.tar.zst \
         debian-13-standard_13.6-1_amd64.tar.zst \
         debian-13-standard_13.6-1_arm64.tar.zst
+    fi
+    ;;
+  pvesh)
+    if [[ "$*" == *cluster/status* ]]; then
+      printf '%s\n' "${FAKE_CLUSTER_STATUS:-$ALL_NODES_ONLINE}"
     fi
     ;;
   pveum)
