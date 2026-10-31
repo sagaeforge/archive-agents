@@ -21,6 +21,10 @@ const LEAK = "LEAKED";
 const TOOLS = ["api_get", "cluster_overview", "guest_config", "list_resources", "node_status", "recent_tasks"];
 const NODES = ["pve-node", "pve-node", "pve-node"];
 const DAY_S = 86_400;
+// Every fake listens on LOOPBACK alone, so this refuses the connection whatever the port, and no test
+// running next to these can come to own it.
+const NOTHING_LISTENS = "127.0.0.2";
+const ANY_PORT = 1;
 
 const ca = createCa("fake cluster CA");
 const otherCa = createCa("some other CA");
@@ -110,15 +114,6 @@ function assertFailed(result, verdict) {
   assert.ok(result.stdout.endsWith(`live smoke: ${verdict}\n`), result.stdout);
   assert.match(result.summary, new RegExp(`^### Live smoke: ${verdict}$`, "m"));
   assertNothingEscaped(result);
-}
-
-// A port something was just listening on, so nothing is.
-async function closedPort() {
-  const server = net.createServer();
-  await new Promise((resolve) => server.listen(0, LOOPBACK, resolve));
-  const { port } = server.address();
-  await new Promise((resolve) => server.close(resolve));
-  return port;
 }
 
 // Every test owns its fake and its directory, and spends nearly all its time waiting for a process.
@@ -221,10 +216,10 @@ describe("live smoke", { concurrency: true }, () => {
   });
 
   test("hosts that refuse the connection read as INFRA, and no tool is called", async (t) => {
-    const result = await runSmoke(t, await closedPort());
+    const result = await runSmoke(t, ANY_PORT, { PVE_HOSTS: NOTHING_LISTENS });
 
     assertFailed(result, "FAIL INFRA: no host answered");
-    assert.match(result.stdout, /^host 127\.0\.0\.1: ECONNREFUSED$/m);
+    assert.match(result.stdout, /^host 127\.0\.0\.2: ECONNREFUSED$/m);
     assert.doesNotMatch(result.stdout, /^(?:PASS|FAIL) /m);
   });
 
@@ -239,8 +234,7 @@ describe("live smoke", { concurrency: true }, () => {
 
   test("one host down is no failure, and it shows", async (t) => {
     const { port } = await startCluster(t);
-    const down = "127.0.0.2"; // The fake listens on 127.0.0.1 only.
-    const result = await runSmoke(t, port, { PVE_HOSTS: `${down},${LOOPBACK}` });
+    const result = await runSmoke(t, port, { PVE_HOSTS: `${NOTHING_LISTENS},${LOOPBACK}` });
 
     assertPassed(result);
     assert.match(result.stdout, /^host 127\.0\.0\.2: ECONNREFUSED$/m);

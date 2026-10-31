@@ -2,7 +2,7 @@
 // CI runs this on the runner LXC. It needs a token and the cluster, so it stays out of npm test.
 //
 // GitHub keeps Actions logs, so nothing from a response reaches the output. Every line is made of
-// counts, names written in this file, and error codes. See docs/live-smoke.md.
+// hosts, counts, names written in this file, and error codes. See docs/live-smoke.md.
 import { appendFileSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -151,7 +151,7 @@ async function runChecks() {
         command,
         args: args.map((arg) => arg.replaceAll("${CLAUDE_PLUGIN_ROOT}", PLUGIN_ROOT)),
         env: process.env,
-        stderr: "ignore", // Whatever the server writes there is not this script's to vouch for.
+        stderr: "ignore", // The default hands it to this process, and so to the Actions log.
       }),
     );
     for (const [name, check] of Object.entries(CHECKS)) {
