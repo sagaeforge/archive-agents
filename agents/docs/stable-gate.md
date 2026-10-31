@@ -8,7 +8,7 @@ CI를 통과한 커밋만 머신에 나가게 하는 장치입니다. 머신은 
 
 | 파일 | 하는 일 | 꺼져 있을 때 |
 |---|---|---|
-| `.github/workflows/ci.yml`의 `promote` 잡 | `check`가 통과하면 `stable`을 그 커밋으로 fast-forward합니다. 강제 push를 하지 않고 브랜치를 만들지도 않습니다 | 건너뜁니다. 쓰기 토큰도 생기지 않습니다 |
+| `.github/workflows/ci.yml`의 `promote` 잡 | `check`와 [라이브 스모크](live-smoke.md)가 통과하면 `stable`을 그 커밋으로 fast-forward합니다. 강제 push를 하지 않고 브랜치를 만들지도 않습니다 | 건너뜁니다. 쓰기 토큰도 생기지 않습니다 |
 | `.github/workflows/rollback.yml` | 수동 실행으로 `stable`을 CI를 통과했던 이전 커밋으로 되돌립니다 | `stable`이 없으므로 실패합니다 |
 | `.githooks/pre-push` | `stable` 직접 push와 삭제를 거부합니다. `main` push 전에 매니페스트 검증, `npm test`, 비밀값 검사를 실행합니다 | `core.hooksPath`를 설정하기 전에는 실행되지 않습니다 |
 
@@ -16,7 +16,14 @@ CI를 통과한 커밋만 머신에 나가게 하는 장치입니다. 머신은 
 
 훅은 작업 트리가 아니라 push하는 커밋을 임시 폴더에 풀어서 검사합니다. 그래서 커밋하지 않은 수정이 결과를 바꾸지 않습니다. `main` push 때마다 `npm ci`와 gitleaks 내려받기를 거치므로 네트워크가 필요하고, `gitleaks.sh`가 Linux x64 전용이므로 훅도 그 환경에서만 통과합니다. PATH에 `claude`가 없어도 push가 멈춥니다.
 
-현재 `promote`는 `check`만 요구합니다. 라이브 스모크(W8)가 들어오면 `needs`에 추가합니다. 건너뛴 스모크를 허용하려고 `if`에 `always()`를 넣으면 실패한 `check`도 통과하므로, 그때는 `needs.check.result == 'success'`를 함께 적습니다.
+`promote`는 `check`와 라이브 스모크를 모두 기다립니다. 스모크가 건너뛰어도 판단할 수 있도록 `if`에 `!cancelled()`가 있고, 이 함수가 "모든 선행 잡 통과" 규칙을 없애므로 `needs.check.result == 'success'`를 따로 적습니다. 이 줄을 지우면 실패한 `check`도 통과합니다. `npm test`와 변이 검사가 이를 막습니다.
+
+스모크 없이 전진하는 길은 두 가지뿐입니다.
+
+- `skip_smoke`로 수동 실행합니다. 러너나 클러스터가 멈췄을 때 그 실행 한 번만 건너뜁니다.
+- `LIVE_SMOKE_ENABLED`를 꺼 둡니다. 러너가 없는 동안의 상태로, `promote`는 `check`만 요구합니다. 러너가 잠시 멈췄다고 이 변수를 끄지 마세요.
+
+`check`가 실패하면 어느 쪽이든 전진하지 않습니다. 주간 실행은 스모크가 통과해도 `promote`를 실행하지 않습니다. 롤백한 뒤 `main`에 남아 있는 커밋을 다시 내보내면 안 되기 때문입니다.
 
 ## 켜기
 
@@ -42,7 +49,7 @@ CI를 통과한 커밋만 머신에 나가게 하는 장치입니다. 머신은 
    gh workflow run ci.yml
    ```
 
-   Actions에서 `promote`가 `stable already contains`로 끝나는지 봅니다. 실제 전진은 다음 `main` push 때 처음 일어납니다.
+   Actions에서 `promote`가 `stable already contains`로 끝나는지 봅니다. 실제 전진은 다음 `main` push 때 처음 일어납니다. 스모크가 켜져 있는데 러너가 멈춰 있으면 `gh workflow run ci.yml -f skip_smoke=true`로 실행합니다.
 
 5. [머신별 재등록](#머신별-재등록)을 진행합니다. 재등록 전의 머신은 계속 `main`을 따라갑니다.
 6. push하는 clone마다 훅을 켭니다. 이 설정은 그 clone의 모든 worktree에 적용됩니다.
@@ -83,11 +90,13 @@ doctor가 병합되어 있으면 `~/.claude/plugins/marketplaces/sagae/plugins/p
 
 ## 평소 동작
 
-`main`에 push하면 `check`가 통과한 뒤 `promote`가 `stable`을 그 커밋으로 옮깁니다. 머신은 auto-update로 따라옵니다. PR과 `main` 외 브랜치에서는 `promote`가 실행되지 않습니다.
+`main`에 push하면 `check`와 `live-smoke`가 통과한 뒤 `promote`가 `stable`을 그 커밋으로 옮깁니다. 머신은 auto-update로 따라옵니다. PR과 `main` 외 브랜치, 주간 실행에서는 `promote`가 실행되지 않습니다.
 
 | 보이는 현상 | 뜻 | 대처 |
 |---|---|---|
 | `check` 실패, `promote` 건너뜀 | 게이트가 막았습니다. 머신에는 영향이 없습니다 | 고쳐서 다시 push합니다 |
+| `live-smoke` 실패, `promote` 건너뜀 | 게이트가 막았습니다. 머신에는 영향이 없습니다 | 요약의 `INFRA`, `PLUGIN`을 봅니다. [결과 읽기](live-smoke.md#결과-읽기) |
+| `live-smoke` 대기 중 | 러너가 꺼져 있습니다. 24시간 뒤 실패합니다 | 러너를 복구하거나 `gh workflow run ci.yml -f skip_smoke=true`를 실행합니다 |
 | `main is at ... so its own run decides` | 더 새로운 push가 있어 그 실행이 결정합니다 | 없음 |
 | `stable does not exist` | 게이트는 켜져 있는데 브랜치가 없습니다 | [켜기](#켜기)의 2, 3번을 실행합니다 |
 | `push`가 `non-fast-forward`로 거부 | `stable`에 직접 push했거나 `main`을 강제 push했습니다 | 두 브랜치의 공통 조상으로 [롤백](#롤백)합니다 |
@@ -111,7 +120,8 @@ workflow를 바꿀 때마다 이 절차가 필요하고 그 번거로움이 크�
 
 1. CI가 막은 경우: 머신에는 영향이 없습니다. `git revert <sha> && git push`로 끝납니다.
 2. 이미 `stable`로 나간 경우: 같은 revert를 push합니다. CI를 통과하면 `stable`이 전진합니다.
-3. CI를 기다릴 수 없거나 멈춘 경우: revert를 push한 뒤 `rollback.yml`로 `stable`을 CI를 통과한 커밋으로 되돌립니다.
+3. 러너나 클러스터가 멈춰 스모크를 기다릴 수 없는 경우: revert를 push한 뒤 `gh workflow run ci.yml -f skip_smoke=true`로 `check`만 통과시켜 전진시킵니다.
+4. CI 자체를 기다릴 수 없거나 멈춘 경우: revert를 push한 뒤 `rollback.yml`로 `stable`을 CI를 통과한 커밋으로 되돌립니다.
 
    ```sh
    gh run list --workflow ci.yml --branch main --status success --limit 5 --json headSha,displayTitle
@@ -126,7 +136,7 @@ workflow를 바꿀 때마다 이 절차가 필요하고 그 번거로움이 크�
    git push --no-verify --force-with-lease=refs/heads/stable:<지금 stable SHA> origin <전체 SHA>:refs/heads/stable
    ```
 
-4. 각 머신에서 바로 반영합니다.
+5. 각 머신에서 바로 반영합니다.
 
    ```sh
    claude plugin marketplace update sagae && claude plugin update proxmox@sagae
@@ -134,7 +144,7 @@ workflow를 바꿀 때마다 이 절차가 필요하고 그 번거로움이 크�
 
    세션 안에서는 `/reload-plugins`를 실행합니다. `stable`이 뒤로 움직여도 이 명령은 이전 버전으로 되돌립니다.
 
-5. 긴급 차단이 필요하면 `claude plugin disable proxmox@sagae`를 실행하고, 복구 후 `enable`합니다.
+6. 긴급 차단이 필요하면 `claude plugin disable proxmox@sagae`를 실행하고, 복구 후 `enable`합니다.
 
 ## 잠시 멈추기와 끄기
 
@@ -158,9 +168,10 @@ git config --unset core.hooksPath
 |---|---|
 | `promote.sh`, `rollback.sh`, `pre-push`의 동작 | `npm test`가 실제 git과 임시 bare 저장소로 검사합니다 |
 | 재등록과 `stable` 전진, 후진의 머신 반영 | 임시 설정 폴더와 로컬 저장소로 실행했습니다(Claude Code 2.1.316, `git` URL 소스, 수동 update 명령) |
+| `promote`의 실행 조건 | `npm test`가 `ci.yml`의 실제 `if` 식을 경우별로 평가합니다. 작업 상태 규칙은 테스트가 흉내 낸 것입니다 |
 | GitHub Actions에서의 `promote`, `rollback.yml` 실행 | **미검증.** 아직 한 번도 실행되지 않았습니다 |
 | `GITHUB_TOKEN`의 `stable` push와 workflow 파일 제약 | **미검증.** 첫 사례는 W8이 `ci.yml`을 바꿀 때입니다 |
 | `owner/repo#ref` 형식 등록 | **미검증.** 공식 문서의 형식이며 실제로는 URL 형식만 실행했습니다 |
-| `stable`이 뒤로 움직였을 때의 백그라운드 auto-update | **미검증.** 수동 명령만 확인했습니다. 롤백할 때는 4번을 실행합니다 |
+| `stable`이 뒤로 움직였을 때의 백그라운드 auto-update | **미검증.** 수동 명령만 확인했습니다. 롤백할 때는 5번을 실행합니다 |
 
 `--no-verify`로 `main`의 커밋을 `stable`에 직접 올리면 fast-forward인 한 탐지되지 않습니다. 이 게이트는 실수를 막는 장치이고, 소유자의 자격 증명은 막지 못합니다.
