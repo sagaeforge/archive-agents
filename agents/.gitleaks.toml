@@ -1,0 +1,18 @@
+# The default rules do not recognise a Proxmox API token in the token file, the Authorization header
+# or pveum output, so a default scan would pass with the one secret this repository has in it.
+title = "sagae-claude-plugins"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "proxmox-api-token"
+description = "Proxmox API token: user@realm!tokenid=secret"
+regex = '''(?i)[\w.-]+@[\w.-]+![\w.-]+=[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}'''
+
+# A bare UUID is not enough to flag: VM configs are full of them. The word before it is what marks
+# the one place a secret is printed alone, the output of `pveum user token add`.
+[[rules]]
+id = "proxmox-token-secret"
+description = "Proxmox token secret as printed by pveum user token add"
+regex = '''(?i)\bvalue\b[^0-9a-z\n]{1,16}[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}'''
