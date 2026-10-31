@@ -8,9 +8,12 @@
 # it against /version, swap the file atomically, delete the old token. A failure
 # before the swap leaves the old token and file as they were.
 #
-# Deletions are limited to the ID in the local token file (read from before the
-# "=" only) and to a token this run issued but could not put in place. The shared
-# "mcp" token is never deleted here: other machines may still depend on it.
+# Deletions are limited to a token this run issued but could not put in place, and
+# to the ID in the local token file (read from before the "=" only), which must be
+# named after this machine. The shared "mcp" token and a file copied from elsewhere
+# name tokens that others may still depend on, so those are never deleted here.
+# Neither is an ID this run has no proof of making: if the connection is lost during
+# the issue, the script names the ID to check by hand.
 set -euo pipefail
 
 PVE_USER="claude-mcp@pve"
@@ -20,6 +23,8 @@ TOKEN_ID_PATTERN='^[A-Za-z][A-Za-z0-9._-]+$'
 TOKEN_LIFETIME_DAYS=365
 # Same list as server/index.mjs: verification must reach the hosts the server uses.
 DEFAULT_PVE_HOSTS="192.0.2.1,192.0.2.1,192.0.2.1"
+# Every call is bounded because an interrupt waits for the ssh in progress.
+SSH_OPTIONS=(-o BatchMode=yes -o ConnectTimeout=10 -o ServerAliveInterval=5 -o ServerAliveCountMax=3)
 
 PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TOKEN_FILE="${PVE_TOKEN_FILE:-$HOME/.config/proxmox-mcp/token}"
@@ -33,6 +38,9 @@ KEEP_OLD=false
 OLD_ID=""
 TMP_FILE=""
 ISSUED_ID="" # Set while the new token exists on the node but not yet in the local file.
+UNDELETED_ID="" # Set from the swap until the old token is known to be gone from the node.
+HOLD_SIGNALS=false
+HELD_STATUS=0
 
 usage() {
   cat <<EOF
@@ -43,7 +51,8 @@ Usage: bootstrap-token.sh [--host <ssh-host>] [--name <token-id>] [--rotate] [--
                       within a month adds -2, -3, ...)
   --rotate            Replace the token in the existing token file
   --keep-old          With --rotate, leave the old token on the node. Required
-                      while the token file still holds the shared "mcp" token.
+                      while the token file holds the shared "mcp" token or an ID
+                      not named after this machine.
 EOF
 }
 
@@ -70,10 +79,26 @@ file_token_id() {
   fi
 }
 
+# This machine's name as it appears in a token ID. Empty if the hostname has no
+# usable characters.
+machine_name() {
+  local host
+  host=$(hostname -s 2>/dev/null || uname -n)
+  printf '%s' "${host%%.*}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-//; s/-$//'
+}
+
+# True for the IDs default_token_id gives this machine. The name is all a token file
+# has to go on, so a file copied from another machine fails here, and so does an ID
+# chosen with --name.
+is_own_token_id() {
+  local host
+  host=$(machine_name)
+  [[ -n $host && $1 =~ ^m-$host-[0-9]{6}(-[0-9]+)?$ ]]
+}
+
 default_token_id() {
   local host base
-  host=$(hostname -s 2>/dev/null || uname -n)
-  host=$(printf '%s' "${host%%.*}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-//; s/-$//')
+  host=$(machine_name)
   [[ -n $host ]] || die "Cannot derive a token ID from this hostname. Pass --name."
   base="m-$host-$(date +%Y%m)"
 
@@ -88,10 +113,11 @@ default_token_id() {
   fi
 }
 
-# Prints the new secret and nothing else on stdout. A token that cannot be completed
-# is removed again, so a failure leaves no half-made token on the node.
+# Prints the new secret and nothing else on stdout. The node removes a token it cannot
+# finish or hand over, which covers a client that is already gone. A reply lost on its
+# way back cannot be seen from there, so the caller has to report that case.
 remote_issue() {
-  ssh -o BatchMode=yes -o ConnectTimeout=10 "$SSH_HOST" bash -s -- "$PVE_USER" "$1" "$2" <<'REMOTE'
+  ssh "${SSH_OPTIONS[@]}" "$SSH_HOST" bash -s -- "$PVE_USER" "$1" "$2" <<'REMOTE'
 set -euo pipefail
 user=$1 id=$2 expire=$3
 
@@ -102,28 +128,34 @@ pveum acl modify / --users "$user" --roles PVEAuditor >/dev/null
 issued=$(pveum user token add "$user" "$id" --privsep 1 --expire "$expire" \
   --comment "Claude Code MCP" --output-format json)
 
-if ! value=$(printf '%s' "$issued" | python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])') \
-  || ! pveum acl modify / --tokens "$user!$id" --roles PVEAuditor >/dev/null; then
-  pveum user token remove "$user" "$id" >/dev/null || true
-  exit 1
-fi
+# Armed only now: a refused add may mean the ID is someone else's token.
+delivered=false
+trap '$delivered || pveum user token remove "$user" "$id" >/dev/null 2>&1' EXIT
+
+value=$(printf '%s' "$issued" | python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])')
+pveum acl modify / --tokens "$user!$id" --roles PVEAuditor >/dev/null
 printf '%s\n' "$value"
+delivered=true
 REMOTE
 }
 
 remote_remove() {
-  ssh -n -o BatchMode=yes -o ConnectTimeout=10 "$SSH_HOST" pveum user token remove "$PVE_USER" "$1"
+  ssh -n "${SSH_OPTIONS[@]}" "$SSH_HOST" pveum user token remove "$PVE_USER" "$1"
 }
 
 # Goes through the server's hosts and pinned CA, so a pass proves this machine can
 # use the token. The token reaches curl on stdin to stay out of the process list.
+# -q has to come first: it keeps out ~/.curlrc, where "insecure" would undo --cacert.
+# --capath replaces the built-in CA directory, which curl keeps trusting next to
+# --cacert. The server trusts the pinned CA alone, so verification has to as well.
 verify_token() {
   local host
   local -a hosts
   IFS=', ' read -r -a hosts <<<"${PVE_HOSTS:-$DEFAULT_PVE_HOSTS}"
   for host in "${hosts[@]}"; do
     if printf 'header = "Authorization: PVEAPIToken=%s"\n' "$(<"$TMP_FILE")" |
-      curl --silent --show-error --fail --max-time 8 --noproxy '*' --cacert "$CA_FILE" \
+      curl -q --silent --show-error --fail --max-time 8 --noproxy '*' \
+        --cacert "$CA_FILE" --capath "$PLUGIN_ROOT/certs" \
         --config - --output /dev/null "https://$host:8006/api2/json/version"; then
       return 0
     fi
@@ -131,9 +163,26 @@ verify_token() {
   return 1
 }
 
+# bash runs a signal handler between commands, so the ssh or curl in progress finishes
+# first. While HOLD_SIGNALS is true the exit also waits for release_signals, which
+# keeps a step together with the record of how it went.
+on_signal() {
+  if $HOLD_SIGNALS; then
+    HELD_STATUS=$1
+  else
+    exit "$1"
+  fi
+}
+
+release_signals() {
+  HOLD_SIGNALS=false
+  ((HELD_STATUS == 0)) || exit "$HELD_STATUS"
+}
+
 cleanup() {
   local status=$?
   trap - EXIT
+  HOLD_SIGNALS=true
   rm -f "$TMP_FILE"
   if [[ -n $ISSUED_ID ]]; then
     if remote_remove "$ISSUED_ID"; then
@@ -141,6 +190,9 @@ cleanup() {
     else
       echo "bootstrap-token: could not revoke $ISSUED_ID. Delete it with: ssh $SSH_HOST pveum user token remove $PVE_USER $ISSUED_ID" >&2
     fi
+  fi
+  if [[ -n $UNDELETED_ID ]]; then
+    echo "bootstrap-token: The new token is in place, but old token $UNDELETED_ID may still be on the node. Delete it with: ssh $SSH_HOST pveum user token remove $PVE_USER $UNDELETED_ID" >&2
   fi
   exit "$status"
 }
@@ -190,6 +242,7 @@ if [[ -s $TOKEN_FILE ]]; then
   if ! $KEEP_OLD; then
     [[ -n $OLD_ID ]] || die "Cannot read a $PVE_USER token ID from $TOKEN_FILE, so nothing can be deleted safely. Re-run with --rotate --keep-old to replace the file and leave the node alone."
     [[ $OLD_ID != "$SHARED_TOKEN_ID" ]] || die "$TOKEN_FILE holds the shared \"$SHARED_TOKEN_ID\" token, which other machines may still use. Re-run with --rotate --keep-old, and remove it by hand once every machine has moved."
+    is_own_token_id "$OLD_ID" || die "$TOKEN_FILE holds $OLD_ID, which is not named after this machine, so it may belong to another one. Re-run with --rotate --keep-old to replace the file and leave the node alone, and remove the old token by hand if it is unused."
   fi
 fi
 
@@ -204,29 +257,41 @@ done
 
 umask 077
 mkdir -p "$(dirname "$TOKEN_FILE")"
-TMP_FILE=$(mktemp "$TOKEN_FILE.XXXXXX")
 trap cleanup EXIT
+trap 'on_signal 129' HUP
+trap 'on_signal 130' INT
+trap 'on_signal 143' TERM
+TMP_FILE=$(mktemp "$TOKEN_FILE.XXXXXX")
 
 expire_at=$(($(date +%s) + TOKEN_LIFETIME_DAYS * 86400))
+
+# Held so a reply that arrives always gets recorded. Only a reply proves this run made
+# the token: the ID may be older, so without one it is named here and never deleted.
+HOLD_SIGNALS=true
 if ! secret=$(remote_issue "$NEW_ID" "$expire_at"); then
-  die "Could not issue token $NEW_ID on $SSH_HOST. The existing token and file are unchanged. If the ID already exists, delete it on the node or pick another with --name."
+  die "Could not issue token $NEW_ID on $SSH_HOST. The existing token and file are unchanged. The ID may exist on the node if it was there already or the connection was lost after the node made it. Check with: ssh $SSH_HOST pveum user token list $PVE_USER. If it is this machine's leftover, delete it with: ssh $SSH_HOST pveum user token remove $PVE_USER $NEW_ID. Otherwise pick another ID with --name."
 fi
 ISSUED_ID=$NEW_ID
+release_signals
 
 [[ $secret =~ ^[0-9A-Za-z-]+$ ]] || die "$SSH_HOST returned a malformed token. The existing token and file are unchanged."
 printf '%s!%s=%s\n' "$PVE_USER" "$NEW_ID" "$secret" >"$TMP_FILE"
 
 verify_token || die "New token $NEW_ID failed verification. The existing token and file are unchanged."
 
-mv -f "$TMP_FILE" "$TOKEN_FILE"
+# Held so the file and ISSUED_ID change together: an exit in between would revoke the
+# token now in the file. A killed mv may have renamed already, which the temp file shows.
+HOLD_SIGNALS=true
+mv -f "$TMP_FILE" "$TOKEN_FILE" || [[ ! -e $TMP_FILE ]] || die "Could not move the new token to $TOKEN_FILE. The existing token and file are unchanged."
 ISSUED_ID=""
+$KEEP_OLD || UNDELETED_ID=$OLD_ID
 echo "Token $PVE_USER!$NEW_ID written to $TOKEN_FILE (valid for $TOKEN_LIFETIME_DAYS days)."
+release_signals
 
-if [[ -n $OLD_ID ]]; then
-  if $KEEP_OLD; then
-    echo "Old token $OLD_ID left on the node."
-  else
-    remote_remove "$OLD_ID" || die "The new token is in place, but old token $OLD_ID could not be deleted. Delete it with: ssh $SSH_HOST pveum user token remove $PVE_USER $OLD_ID"
-    echo "Old token $OLD_ID deleted."
-  fi
+if [[ -n $UNDELETED_ID ]]; then
+  remote_remove "$UNDELETED_ID" || exit 1
+  UNDELETED_ID=""
+  echo "Old token $OLD_ID deleted."
+elif [[ -n $OLD_ID ]]; then
+  echo "Old token $OLD_ID left on the node."
 fi

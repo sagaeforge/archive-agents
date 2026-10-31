@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# File-backed stand-in for pveum. $FAKE_PVE_STATE/tokens holds one file per token
-# ID, containing its secret. FAKE_PVEUM_FAIL names one operation to fail.
+# File-backed stand-in for pveum that refuses what a real node refuses. Each user is
+# a directory under $FAKE_PVE_STATE/tokens, holding one file per token ID with its
+# secret. FAKE_PVEUM_FAIL names one operation to fail.
 set -euo pipefail
 
 state=$FAKE_PVE_STATE
@@ -15,39 +16,53 @@ step() {
   fi
 }
 
+refuse() {
+  echo "$*" >&2
+  exit 255
+}
+
 case "$1 $2" in
   "user list")
-    if [[ -e $state/user ]]; then
-      printf '[{"userid":"%s"}]\n' "$(<"$state/user")"
-    else
-      echo '[]'
-    fi
+    rows=()
+    for dir in "$tokens"/*/; do
+      dir=${dir%/}
+      rows+=("{\"userid\":\"${dir##*/}\"}")
+    done
+    (
+      IFS=,
+      printf '[%s]\n' "${rows[*]}"
+    )
     ;;
   "user add")
     step user-add "$3"
-    printf '%s' "$3" >"$state/user"
+    [[ ! -e $tokens/$3 ]] || refuse "create user failed: user '$3' already exists"
+    mkdir "$tokens/$3"
     ;;
   "acl modify")
-    # pveum acl modify / --users|--tokens <who> --roles <role>
-    step "acl-${4#--}" "${5#*!}" "$7"
+    # pveum acl modify <path> --users|--tokens <who> --roles <role>
+    kind=${4#--} who=$5
+    step "acl-$kind" "$who" "$3" "$7"
+    case "$kind" in
+      users) [[ -d $tokens/$who ]] || refuse "user '$who' does not exist" ;;
+      tokens) [[ -e $tokens/${who/!//} ]] || refuse "token '$who' does not exist" ;;
+    esac
     ;;
   "user token")
-    action=$3 id=$5
+    action=$3 user=$4 id=$5
     shift 5
     case "$action" in
       add)
-        step token-add "$id" "$@"
-        if [[ -e $tokens/$id ]]; then
-          echo "Token already exists." >&2
-          exit 255
-        fi
+        step token-add "$user!$id" "$@"
+        [[ -d $tokens/$user ]] || refuse "no such user ('$user')"
+        [[ ! -e $tokens/$user/$id ]] || refuse "Token already exists."
         value=$(printf '%08x-%04x-4000-8000-%012x' "$RANDOM" "$RANDOM" "$RANDOM$RANDOM")
-        printf '%s' "$value" >"$tokens/$id"
-        printf '{"full-tokenid":"%s!%s","info":{"privsep":"1"},"value":"%s"}\n' "$(<"$state/user")" "$id" "$value"
+        printf '%s' "$value" >"$tokens/$user/$id"
+        printf '{"full-tokenid":"%s!%s","info":{"privsep":"1"},"value":"%s"}\n' "$user" "$id" "$value"
         ;;
       remove)
-        step token-remove "$id"
-        rm "$tokens/$id"
+        step token-remove "$user!$id"
+        [[ -e $tokens/$user/$id ]] || refuse "no such token '$id' for user '$user'"
+        rm "$tokens/$user/$id"
         ;;
       *)
         echo "fake pveum: unexpected token action: $action" >&2

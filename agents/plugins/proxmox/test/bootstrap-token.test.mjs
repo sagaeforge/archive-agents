@@ -10,6 +10,7 @@ import {
   readdirSync,
   rmSync,
   statSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import https from "node:https";
@@ -28,26 +29,45 @@ const EPOCH = 1_800_000_000;
 const ID = `m-sagae-windows-${MONTH}`;
 const OLD_ID = "m-sagae-windows-202511";
 const OLD_SECRET = "old-secret-value";
+const SIGNAL_STATUS = { HUP: 129, INT: 130, TERM: 143 };
 
-// Every run goes through here. The fakes are copied and marked executable so a
-// checkout that lost its mode bits fails loudly instead of reaching the real ssh.
+// Everything a run must not get from the machine running the tests. Named here, not
+// read from test/fakes, so a fake that goes missing stops the sandbox from building.
+const FAKED = ["curl", "date", "hostname", "injected", "pveum", "record", "ssh", "uname"];
+
+// The only real programs a run can find. ssh, curl, and anything else that could
+// reach a node are left out on purpose, because PATH holds nothing beyond this.
+const REAL_TOOLS = "bash cat cut dirname grep head ls mkdir mktemp mv python3 rm sed tr".split(" ");
+const realToolPaths = execFileSync("sh", ["-c", 'for tool; do command -v "$tool" || exit 1; done', "sh", ...REAL_TOOLS], {
+  encoding: "utf8",
+})
+  .trim()
+  .split("\n");
+
+// Every run goes through here. PATH is the sandbox and nothing else, so a fake that
+// is missing or cannot execute has no real program to fall through to. The fakes are
+// copied and marked executable in case a checkout lost its mode bits.
 function sandbox(t) {
   const dir = mkdtempSync(join(tmpdir(), "bootstrap-token-"));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
 
   const bin = join(dir, "bin");
+  const tools = join(dir, "tools");
   const state = join(dir, "state");
   const tokenFile = join(dir, "home", ".config", "proxmox-mcp", "token");
+  const removed = new Set();
   mkdirSync(bin);
-  mkdirSync(join(state, "tokens"), { recursive: true });
-  for (const name of readdirSync(FAKES)) {
+  mkdirSync(tools);
+  // Every node has root@pam, which a run must leave alone.
+  mkdirSync(join(state, "tokens", "root@pam"), { recursive: true });
+  for (const name of FAKED) {
     copyFileSync(join(FAKES, name), join(bin, name));
     chmodSync(join(bin, name), 0o755);
   }
+  REAL_TOOLS.forEach((name, i) => symlinkSync(realToolPaths[i], join(tools, name)));
 
   const read = (name) => (existsSync(join(state, name)) ? readFileSync(join(state, name), "utf8") : "");
   const scriptEnv = (env) => ({
-    PATH: `${bin}:${process.env.PATH}`,
     HOME: join(dir, "home"),
     PVE_TOKEN_FILE: tokenFile,
     FAKE_PVE_STATE: state,
@@ -55,38 +75,78 @@ function sandbox(t) {
     FAKE_YYYYMM: MONTH,
     FAKE_EPOCH: String(EPOCH),
     ...env,
+    PATH: `${bin}:${tools}`,
   });
+
+  // Checked before anything starts, so a fake that cannot run, as on a noexec temp
+  // directory, stops the test with the reason instead of showing up as other failures.
+  // The -x test is needed because bash answers with a non-executable file as a last resort.
+  const assertFakesInPlace = () => {
+    const lookup = 'for tool; do path=$(command -v "$tool") && [[ -x $path ]] && echo "$path" || echo "no $tool"; done';
+    const { stdout } = spawnSync(join(tools, "bash"), ["-c", lookup, "bash", ...FAKED], {
+      encoding: "utf8",
+      env: scriptEnv(),
+    });
+    const expected = FAKED.map((name) => (removed.has(name) ? `no ${name}` : join(bin, name)));
+    assert.equal(stdout, `${expected.join("\n")}\n`, `The fakes cannot run here (temp directory noexec?). Lookups found:\n${stdout}`);
+  };
+
+  // The shell records the script's PID for the fakes, then becomes the script.
+  const launch = (args) => ["-c", 'echo "$$" >"$FAKE_PVE_STATE/script.pid"; exec "$0" "$@"', SCRIPT, ...args];
+
+  // Every run's hostile inputs try to run the injected fake. It must never have run.
+  const finished = (result) => {
+    assert.ok(!existsSync(join(state, "injected")), "a test input ran as a command");
+    return result;
+  };
 
   return {
     dir,
     bin,
     tokenFile,
+    scriptEnv,
+    assertFakesInPlace,
     run(args = [], env = {}) {
-      const result = spawnSync(SCRIPT, args, { encoding: "utf8", env: scriptEnv(env) });
+      assertFakesInPlace();
+      const result = spawnSync(join(tools, "bash"), launch(args), { encoding: "utf8", env: scriptEnv(env) });
       assert.equal(result.error, undefined);
-      return result;
+      return finished(result);
     },
     // For tests that serve requests in this process, which a blocking run would starve.
-    runAsync(args = [], env = {}) {
+    async runAsync(args = [], env = {}) {
+      assertFakesInPlace();
       return new Promise((resolve, reject) => {
-        const child = spawn(SCRIPT, args, { env: scriptEnv(env), stdio: ["ignore", "ignore", "pipe"] });
+        const child = spawn(join(tools, "bash"), launch(args), { env: scriptEnv(env), stdio: ["ignore", "ignore", "pipe"] });
         let stderr = "";
         child.stderr.on("data", (chunk) => (stderr += chunk));
         child.on("error", reject);
         child.on("close", (status) => resolve({ status, stderr }));
-      });
+      }).then(finished);
     },
+    // Takes a fake away. The check above then requires that nothing answers to its name.
+    removeFake(name) {
+      rmSync(join(bin, name));
+      removed.add(name);
+    },
+    // Puts a program ahead of the real tools. realTool() is how it reaches the one it hides.
+    override(name, body) {
+      writeFileSync(join(bin, name), `#!/usr/bin/env bash\n${body}\n`, { mode: 0o755 });
+    },
+    realTool: (name) => join(tools, name),
     // Puts a token on the fake node and, by default, in the local file.
     seed(id, secret = OLD_SECRET, { local = true } = {}) {
-      writeFileSync(join(state, "user"), USER);
-      writeFileSync(join(state, "tokens", id), secret);
+      mkdirSync(join(state, "tokens", USER), { recursive: true });
+      writeFileSync(join(state, "tokens", USER, id), secret);
       if (local) {
         mkdirSync(dirname(tokenFile), { recursive: true });
         writeFileSync(tokenFile, `${USER}!${id}=${secret}\n`, { mode: 0o600 });
       }
     },
-    nodeTokens: () => readdirSync(join(state, "tokens")).sort(),
-    secretOf: (id) => readFileSync(join(state, "tokens", id), "utf8"),
+    nodeTokens: (user = USER) => {
+      const dirOfUser = join(state, "tokens", user);
+      return existsSync(dirOfUser) ? readdirSync(dirOfUser).sort() : [];
+    },
+    secretOf: (id) => readFileSync(join(state, "tokens", USER, id), "utf8"),
     // Events in order, as "<event> file=<token held locally at that moment>".
     calls: () =>
       read("calls.log")
@@ -107,11 +167,38 @@ function steps(s) {
     .map((c) => c.replace(/^(\S+ \S+) .*( file=\S+)$/, "$1$2"));
 }
 
-const held = (id) => `file=${USER}!${id}`;
+const full = (id) => `${USER}!${id}`;
+const held = (id) => `file=${full(id)}`;
 
 function hasTool(command, versionFlag) {
   return spawnSync(command, [versionFlag], { stdio: "ignore" }).status === 0;
 }
+
+test("no name a run looks up can reach anything outside the sandbox", (t) => {
+  const s = sandbox(t);
+  // Starts nothing, so this stays safe even if PATH regresses. A test cannot widen it either.
+  for (const entry of s.scriptEnv({ PATH: "/usr/bin" }).PATH.split(":")) assert.ok(entry.startsWith(s.dir), entry);
+
+  for (const name of FAKED) s.removeFake(name);
+  s.assertFakesInPlace();
+});
+
+test("a hostile input that runs as a command fails the test", (t) => {
+  const s = sandbox(t);
+  s.override("hostname", "injected\necho sagae-windows");
+
+  assert.throws(() => s.run(), /a test input ran as a command/);
+});
+
+test("a fake that cannot execute stops the test before the script starts", async (t) => {
+  const s = sandbox(t);
+  chmodSync(join(s.bin, "ssh"), 0o644);
+
+  assert.throws(() => s.run(), /The fakes cannot run here/);
+  await assert.rejects(s.runAsync(), /The fakes cannot run here/);
+  assert.deepEqual(s.calls(), []);
+  assert.equal(s.argv(), "");
+});
 
 test("a first run issues a machine token and stores it privately", (t) => {
   const s = sandbox(t);
@@ -119,11 +206,12 @@ test("a first run issues a machine token and stores it privately", (t) => {
 
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(s.nodeTokens(), [ID]);
+  assert.deepEqual(s.nodeTokens("root@pam"), []);
   assert.equal(readFileSync(s.tokenFile, "utf8"), `${USER}!${ID}=${s.secretOf(ID)}\n`);
   assert.equal(statSync(s.tokenFile).mode & 0o777, 0o600);
   assert.equal(statSync(dirname(s.tokenFile)).mode & 0o777, 0o700);
   assert.deepEqual(s.tokenDirEntries(), ["token"]);
-  assert.deepEqual(steps(s), [`token-add ${ID} file=none`, `verify ${ID} file=none`]);
+  assert.deepEqual(steps(s), [`token-add ${full(ID)} file=none`, `verify ${full(ID)} file=none`]);
 });
 
 test("an empty token file counts as missing", (t) => {
@@ -144,9 +232,17 @@ test("a token is read-only, privilege-separated, and expires in 365 days", (t) =
   assert.match(add, /--privsep 1 /);
   assert.match(add, new RegExp(`--expire ${EPOCH + 365 * 86400} `));
   assert.ok(calls.includes(`user-add ${USER} file=none`));
-  assert.ok(calls.includes(`acl-users ${USER} PVEAuditor file=none`));
-  assert.ok(calls.includes(`acl-tokens ${ID} PVEAuditor file=none`));
-  assert.ok(calls.indexOf(`acl-tokens ${ID} PVEAuditor file=none`) > calls.indexOf(add));
+  assert.ok(calls.includes(`acl-users ${USER} / PVEAuditor file=none`));
+  assert.ok(calls.includes(`acl-tokens ${full(ID)} / PVEAuditor file=none`));
+  assert.ok(calls.indexOf(`acl-tokens ${full(ID)} / PVEAuditor file=none`) > calls.indexOf(add));
+});
+
+test("a user that already exists is not added again", (t) => {
+  const s = sandbox(t);
+  s.seed(OLD_ID);
+
+  assert.equal(s.run(["--rotate"]).status, 0);
+  assert.ok(!s.calls().some((c) => c.startsWith("user-add")));
 });
 
 test("the token ID comes from the normalized short hostname", (t) => {
@@ -161,6 +257,14 @@ test("the token ID comes from the normalized short hostname", (t) => {
     assert.equal(s.run([], { FAKE_HOSTNAME: hostname }).status, 0);
     assert.deepEqual(s.nodeTokens(), [id]);
   }
+});
+
+test("uname names the machine when hostname is unavailable", (t) => {
+  const s = sandbox(t);
+  s.removeFake("hostname");
+
+  assert.equal(s.run([], { FAKE_UNAME: "Build-Box.corp.example" }).status, 0);
+  assert.deepEqual(s.nodeTokens(), [`m-build-box-${MONTH}`]);
 });
 
 test("a hostname with no usable characters needs --name", (t) => {
@@ -202,11 +306,12 @@ test("rotation issues, verifies, swaps the file, then deletes, in that order", (
   const result = s.run(["--rotate"]);
 
   assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stderr, "");
   assert.notEqual(statSync(s.tokenFile).ino, ino, "the file must be renamed into place, not rewritten");
   assert.deepEqual(steps(s), [
-    `token-add ${ID} ${held(OLD_ID)}`,
-    `verify ${ID} ${held(OLD_ID)}`,
-    `token-remove ${OLD_ID} ${held(ID)}`,
+    `token-add ${full(ID)} ${held(OLD_ID)}`,
+    `verify ${full(ID)} ${held(OLD_ID)}`,
+    `token-remove ${full(OLD_ID)} ${held(ID)}`,
   ]);
   assert.deepEqual(s.nodeTokens(), [ID]);
   assert.equal(readFileSync(s.tokenFile, "utf8"), `${USER}!${ID}=${s.secretOf(ID)}\n`);
@@ -232,7 +337,7 @@ test("--rotate on a machine without a token file issues one and deletes nothing"
   const result = s.run(["--rotate"]);
 
   assert.equal(result.status, 0, result.stderr);
-  assert.deepEqual(steps(s), [`token-add ${ID} file=none`, `verify ${ID} file=none`]);
+  assert.deepEqual(steps(s), [`token-add ${full(ID)} file=none`, `verify ${full(ID)} file=none`]);
 });
 
 test("--keep-old leaves the old token on the node", (t) => {
@@ -254,6 +359,7 @@ test("rotation off the shared token needs --keep-old and never deletes it", (t) 
 
   const refused = s.run(["--rotate"]);
   assert.equal(refused.status, 1);
+  assert.match(refused.stderr, /the shared "mcp" token/);
   assert.match(refused.stderr, /--keep-old/);
   assert.deepEqual(s.calls(), []);
   assert.equal(readFileSync(s.tokenFile, "utf8"), before);
@@ -288,14 +394,63 @@ test("--name cannot take over or delete another machine's token", (t) => {
   assert.ok(!s.calls().some((c) => c.startsWith("token-remove")));
 });
 
+test("an ID not named after this machine is never deleted", (t) => {
+  for (const other of [
+    "m-other-machine-202611",
+    "m-sagae-windows-laptop-202611",
+    "x-m-sagae-windows-202611",
+    "ci-runner-202611",
+    "custom-name",
+    "m-sagae-windows",
+    "m-sagae-windows-2026",
+    "m-sagae-windows-202611-x",
+  ]) {
+    const s = sandbox(t);
+    s.seed(other);
+    const before = readFileSync(s.tokenFile, "utf8");
+
+    const refused = s.run(["--rotate"]);
+
+    assert.equal(refused.status, 1, other);
+    assert.ok(refused.stderr.includes(other), refused.stderr);
+    assert.match(refused.stderr, /--keep-old/);
+    assert.deepEqual(s.calls(), [], other);
+    assert.equal(readFileSync(s.tokenFile, "utf8"), before);
+
+    assert.equal(s.run(["--rotate", "--keep-old"]).status, 0);
+    assert.deepEqual(s.nodeTokens(), [ID, other].sort());
+    assert.match(readFileSync(s.tokenFile, "utf8"), new RegExp(`^${USER}!${ID}=`));
+  }
+});
+
+test("an ID is compared with the normalized hostname", (t) => {
+  const s = sandbox(t);
+  s.seed(`${OLD_ID}-3`);
+
+  assert.equal(s.run(["--rotate"], { FAKE_HOSTNAME: "SAGAE_Windows.corp.example" }).status, 0);
+  assert.deepEqual(s.nodeTokens(), [ID]);
+});
+
+test("a hostname with no usable characters owns no token", (t) => {
+  const s = sandbox(t);
+  s.seed(`m--${MONTH}`);
+
+  const result = s.run(["--rotate", "--name", "m-laptop-202611"], { FAKE_HOSTNAME: "___" });
+
+  assert.equal(result.status, 1);
+  assert.deepEqual(s.calls(), []);
+});
+
 test("a token file the script cannot attribute to its own user is never acted on", (t) => {
   for (const content of [
     `root@pam!${OLD_ID}=${OLD_SECRET}\n`,
     `${OLD_ID}=${OLD_SECRET}\n`,
-    `${USER}!bad;touch /tmp/owned=${OLD_SECRET}\n`,
-    `${USER}!$(reboot)=${OLD_SECRET}\n`,
+    `${USER}!bad;injected=${OLD_SECRET}\n`,
+    `${USER}!$(injected)=${OLD_SECRET}\n`,
     `${OLD_SECRET}\n`,
     `${USER}!=${OLD_SECRET}\n`,
+    `${USER}!${OLD_ID}\n`,
+    `${OLD_SECRET}\n${USER}!${OLD_ID}=${OLD_SECRET}\n`,
   ]) {
     const s = sandbox(t);
     s.seed(OLD_ID);
@@ -304,6 +459,7 @@ test("a token file the script cannot attribute to its own user is never acted on
     const result = s.run(["--rotate"]);
 
     assert.equal(result.status, 1);
+    assert.match(result.stderr, /Cannot read a /);
     assert.match(result.stderr, /--keep-old/);
     assert.ok(!result.stderr.includes(OLD_SECRET));
     assert.deepEqual(s.calls(), [], content);
@@ -333,7 +489,7 @@ test("rotating again within a month gets a new ID each time", (t) => {
   assert.match(readFileSync(s.tokenFile, "utf8"), new RegExp(`^${USER}!${expected[2]}=`));
   assert.deepEqual(
     steps(s).filter((c) => c.startsWith("token-remove")),
-    [`token-remove ${expected[0]} ${held(expected[1])}`, `token-remove ${expected[1]} ${held(expected[2])}`],
+    [`token-remove ${full(expected[0])} ${held(expected[1])}`, `token-remove ${full(expected[1])} ${held(expected[2])}`],
   );
 });
 
@@ -363,12 +519,12 @@ test("bad arguments stop before any remote call", (t) => {
     ["--name", "1abc"],
     ["--name", "a"],
     ["--name", "bad id"],
-    ["--name", "x;reboot"],
-    ["--name", "$(reboot)"],
+    ["--name", "x;injected"],
+    ["--name", "$(injected)"],
     ["--name"],
     ["--host"],
-    ["--host", "-oProxyCommand=reboot"],
-    ["--host", "node;reboot"],
+    ["--host", "-oProxyCommand=injected"],
+    ["--host", "node;injected"],
     ["pve-node"],
     ["--unknown"],
   ]) {
@@ -400,14 +556,36 @@ test("--host selects the node, and the default is pve-node", (t) => {
   assert.ok(fallback.calls().includes("ssh pve-node file=none"));
 });
 
-test("every ssh call refuses to prompt", (t) => {
+test("every ssh call refuses to prompt and cannot hang", (t) => {
   const s = sandbox(t);
   s.seed(OLD_ID);
   assert.equal(s.run(["--rotate"]).status, 0);
 
   const calls = s.argv().split("\n").filter((line) => line.startsWith("ssh "));
   assert.equal(calls.length, 2);
-  for (const call of calls) assert.match(call, /-o BatchMode=yes /);
+  for (const call of calls) {
+    assert.match(call, /-o BatchMode=yes /);
+    assert.match(call, /-o ConnectTimeout=10 /);
+    assert.match(call, /-o ServerAliveInterval=5 -o ServerAliveCountMax=3 /);
+  }
+});
+
+test("a missing ssh or curl is reported before the node is touched", (t) => {
+  for (const tool of ["ssh", "curl"]) {
+    const s = sandbox(t);
+    s.seed(OLD_ID);
+    const before = readFileSync(s.tokenFile, "utf8");
+    s.removeFake(tool);
+
+    const result = s.run(["--rotate"]);
+
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, new RegExp(`${tool} is required`));
+    assert.deepEqual(s.calls(), []);
+    assert.deepEqual(s.nodeTokens(), [OLD_ID]);
+    assert.equal(readFileSync(s.tokenFile, "utf8"), before);
+    assert.deepEqual(s.tokenDirEntries(), ["token"]);
+  }
 });
 
 test("a failed issue leaves the old token and file untouched", (t) => {
@@ -460,7 +638,59 @@ test("a token whose ACL cannot be set is removed on the node", (t) => {
   assert.equal(result.status, 1);
   assert.deepEqual(s.nodeTokens(), [OLD_ID]);
   assert.equal(readFileSync(s.tokenFile, "utf8"), before);
-  assert.deepEqual(steps(s), [`token-add ${ID} ${held(OLD_ID)}`, `token-remove ${ID} ${held(OLD_ID)}`]);
+  assert.deepEqual(steps(s), [`token-add ${full(ID)} ${held(OLD_ID)}`, `token-remove ${full(ID)} ${held(OLD_ID)}`]);
+});
+
+test("a client gone before the reply leaves no token on the node", (t) => {
+  const s = sandbox(t);
+  s.seed(OLD_ID);
+  const before = readFileSync(s.tokenFile, "utf8");
+
+  const result = s.run(["--rotate"], { FAKE_SSH_CLIENT_GONE: "1" });
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /unchanged/);
+  assert.deepEqual(s.nodeTokens(), [OLD_ID]);
+  assert.equal(readFileSync(s.tokenFile, "utf8"), before);
+  assert.deepEqual(s.tokenDirEntries(), ["token"]);
+});
+
+test("a reply lost after the node finished is reported, because only a reply proves the token is ours", (t) => {
+  const s = sandbox(t);
+  s.seed(OLD_ID);
+  const before = readFileSync(s.tokenFile, "utf8");
+
+  const result = s.run(["--rotate"], { FAKE_SSH_LOSE_REPLY: "1" });
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /unchanged/);
+  assert.ok(result.stderr.includes(`pveum user token list ${USER}`), result.stderr);
+  assert.ok(result.stderr.includes(`pveum user token remove ${USER} ${ID}`), result.stderr);
+  assert.match(result.stderr, /--name/);
+  assert.deepEqual(s.nodeTokens(), [ID, OLD_ID].sort());
+  assert.ok(!s.calls().some((c) => c.startsWith("token-remove")));
+  assert.equal(readFileSync(s.tokenFile, "utf8"), before);
+  assert.deepEqual(s.tokenDirEntries(), ["token"]);
+});
+
+test("an interrupt during the issue waits for the reply, then revokes the token", (t) => {
+  for (const [event, signal] of [
+    ["ssh", "TERM"],
+    ["token-add", "INT"],
+    ["acl-tokens", "HUP"],
+  ]) {
+    const s = sandbox(t);
+    s.seed(OLD_ID);
+    const before = readFileSync(s.tokenFile, "utf8");
+
+    const result = s.run(["--rotate"], { FAKE_SIGNAL_ON: event, FAKE_SIGNAL: signal });
+
+    assert.equal(result.status, SIGNAL_STATUS[signal], event);
+    assert.ok(result.stderr.includes(`revoked unused token ${ID}`), result.stderr);
+    assert.deepEqual(s.nodeTokens(), [OLD_ID], event);
+    assert.equal(readFileSync(s.tokenFile, "utf8"), before);
+    assert.deepEqual(s.tokenDirEntries(), ["token"]);
+  }
 });
 
 test("failed verification revokes only the new token and keeps the old one", (t) => {
@@ -480,7 +710,44 @@ test("failed verification revokes only the new token and keeps the old one", (t)
     assert.equal(readFileSync(s.tokenFile, "utf8"), before);
     assert.deepEqual(s.nodeTokens(), [OLD_ID]);
     assert.deepEqual(s.tokenDirEntries(), ["token"]);
-    assert.equal(steps(s).at(-1), `token-remove ${ID} ${held(OLD_ID)}`);
+    assert.equal(steps(s).at(-1), `token-remove ${full(ID)} ${held(OLD_ID)}`);
+  }
+});
+
+test("a swap that does not happen revokes the new token and keeps the old one", (t) => {
+  for (const body of ["exit 1", 'kill -TERM "$PPID" "$$"']) {
+    const s = sandbox(t);
+    s.seed(OLD_ID);
+    const before = readFileSync(s.tokenFile, "utf8");
+    s.override("mv", body);
+
+    const result = s.run(["--rotate"]);
+
+    assert.notEqual(result.status, 0, body);
+    assert.ok(result.stderr.includes(`revoked unused token ${ID}`), result.stderr);
+    assert.equal(readFileSync(s.tokenFile, "utf8"), before);
+    assert.deepEqual(s.nodeTokens(), [OLD_ID]);
+    assert.deepEqual(s.tokenDirEntries(), ["token"]);
+  }
+});
+
+test("an interrupt as the swap completes keeps the new token and names the old one", (t) => {
+  // The script alone is signaled, then the script and mv together, as a terminal does.
+  for (const targets of ['"$PPID"', '"$PPID" "$$"']) {
+    for (const signal of ["INT", "TERM", "HUP"]) {
+      const s = sandbox(t);
+      s.seed(OLD_ID);
+      s.override("mv", `${s.realTool("mv")} "$@"\nkill -${signal} ${targets}`);
+
+      const result = s.run(["--rotate"]);
+
+      assert.equal(result.status, SIGNAL_STATUS[signal], result.stderr);
+      assert.doesNotMatch(result.stderr, /revoked/);
+      assert.equal(readFileSync(s.tokenFile, "utf8"), `${USER}!${ID}=${s.secretOf(ID)}\n`);
+      assert.deepEqual(s.nodeTokens(), [ID, OLD_ID].sort());
+      assert.ok(result.stderr.includes(`pveum user token remove ${USER} ${OLD_ID}`), result.stderr);
+      assert.deepEqual(s.tokenDirEntries(), ["token"]);
+    }
   }
 });
 
@@ -510,6 +777,19 @@ test("being interrupted before the swap cleans up like a failure", (t) => {
   }
 });
 
+test("a second interrupt does not cut the cleanup short", (t) => {
+  const s = sandbox(t);
+  s.seed(OLD_ID);
+  const before = readFileSync(s.tokenFile, "utf8");
+
+  const result = s.run(["--rotate"], { FAKE_CURL_REJECT: "1", FAKE_SIGNAL_ON: "token-remove", FAKE_SIGNAL: "TERM" });
+
+  assert.equal(result.status, 1);
+  assert.ok(result.stderr.includes(`revoked unused token ${ID}`), result.stderr);
+  assert.deepEqual(s.nodeTokens(), [OLD_ID]);
+  assert.equal(readFileSync(s.tokenFile, "utf8"), before);
+});
+
 test("a malformed answer from the node never reaches the token file", (t) => {
   const s = sandbox(t);
   s.seed(OLD_ID);
@@ -537,6 +817,19 @@ test("a failed delete keeps the new token and names the old one to delete", (t) 
   assert.deepEqual(s.nodeTokens(), [ID, OLD_ID].sort());
 });
 
+test("an interrupt during the old token's delete names it", (t) => {
+  for (const env of [{}, { FAKE_PVEUM_FAIL: "token-remove" }]) {
+    const s = sandbox(t);
+    s.seed(OLD_ID);
+
+    const result = s.run(["--rotate"], { FAKE_SIGNAL_ON: "token-remove", FAKE_SIGNAL: "TERM", ...env });
+
+    assert.equal(result.status, SIGNAL_STATUS.TERM);
+    assert.ok(result.stderr.includes(`pveum user token remove ${USER} ${OLD_ID}`), result.stderr);
+    assert.match(readFileSync(s.tokenFile, "utf8"), new RegExp(`^${USER}!${ID}=`));
+  }
+});
+
 test("verification fails over to the next host", (t) => {
   const s = sandbox(t);
   s.seed(OLD_ID);
@@ -547,8 +840,8 @@ test("verification fails over to the next host", (t) => {
   assert.deepEqual(
     s.calls().filter((c) => c.startsWith("verify ")),
     [
-      `verify ${ID} 192.0.2.1 ${held(OLD_ID)}`,
-      `verify ${ID} 192.0.2.1 ${held(OLD_ID)}`,
+      `verify ${full(ID)} 192.0.2.1 ${held(OLD_ID)}`,
+      `verify ${full(ID)} 192.0.2.1 ${held(OLD_ID)}`,
     ],
   );
 });
@@ -569,7 +862,12 @@ test("verification pins the plugin CA and never disables TLS checks", (t) => {
   s.run();
 
   const curl = s.argv().split("\n").find((line) => line.startsWith("curl "));
+  // curl only honors -q as its first argument, and without it ~/.curlrc can undo --cacert.
+  assert.ok(curl.startsWith("curl -q "), curl);
   assert.ok(curl.includes(`--cacert ${join(ROOT, "certs", "pve-root-ca.pem")} `), curl);
+  // Without --capath the built-in CA directory stays trusted next to --cacert.
+  assert.ok(curl.includes(`--capath ${join(ROOT, "certs")} `), curl);
+  assert.match(curl, / --max-time 8 /);
   assert.ok(curl.endsWith(" https://192.0.2.1:8006/api2/json/version"), curl);
   assert.doesNotMatch(curl, /(^|\s)(-k|--insecure)(\s|$)/);
 });
@@ -604,12 +902,17 @@ test(
     await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
     t.after(() => server.close());
 
-    // Only the port differs from what the script asked for; the rest is real curl.
+    // Only the port differs from what the script asked for; the rest is real curl. Real
+    // curl is on PATH for this test alone, so it refuses any host but the local server.
     const realCurl = execFileSync("sh", ["-c", "command -v curl"], { encoding: "utf8" }).trim();
-    writeFileSync(
-      join(s.bin, "curl"),
-      `#!/usr/bin/env bash\nurl=\${!#}\nexec ${realCurl} "\${@:1:$#-1}" "\${url/:8006/:${server.address().port}}"\n`,
+    s.override(
+      "curl",
+      `url=\${!#}\n[[ $url == https://127.0.0.1:8006/* ]] || exit 7\n` +
+        `exec ${realCurl} "\${@:1:$#-1}" "\${url/:8006/:${server.address().port}}"`,
     );
+
+    // Stays in place for every run below: the pinned CA has to win over the user's curl config.
+    writeFileSync(join(s.dir, "home", ".curlrc"), "insecure\n");
 
     const untrusted = await s.runAsync(["--rotate"], { PVE_HOSTS: "127.0.0.1" });
     assert.equal(untrusted.status, 1, untrusted.stderr);

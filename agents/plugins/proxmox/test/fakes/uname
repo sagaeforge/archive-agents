@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Stands in for uname, which the script falls back to when hostname is unavailable.
+printf '%s\n' "$FAKE_UNAME"
