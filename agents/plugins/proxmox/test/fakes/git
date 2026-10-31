@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Stands in for git in the doctor tests, as a remote holding the refs in
+# $FAKE_STATE/remote-refs, one "<sha><tab><ref>" per line. It answers ls-remote the way
+# git does, with only the refs asked for, and refuses anything else. FAKE_GIT_DOWN=1
+# fails as an unreachable remote does, with the URL in the message, as git prints it.
+set -euo pipefail
+
+printf 'git %s\n' "$*" >>"$FAKE_STATE/commands.log"
+
+if [[ ${1:-} != ls-remote || ${2:-} != -- ]]; then
+  echo "fake git: unexpected arguments: $*" >&2
+  exit 64
+fi
+url=$3
+shift 3
+
+if [[ -n ${FAKE_GIT_DOWN:-} ]]; then
+  echo "fatal: unable to access '$url': Could not resolve host" >&2
+  exit 128
+fi
+
+while IFS=$'\t' read -r sha ref; do
+  for wanted in "$@"; do
+    if [[ $ref == "$wanted" ]]; then
+      printf '%s\t%s\n' "$sha" "$ref"
+    fi
+  done
+done <"$FAKE_STATE/remote-refs"
