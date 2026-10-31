@@ -21,7 +21,7 @@ SHARED_TOKEN_ID="mcp"
 # PVE's own pattern for token IDs (PVE::AccessControl::token_subid_regex).
 TOKEN_ID_PATTERN='^[A-Za-z][A-Za-z0-9._-]+$'
 TOKEN_LIFETIME_DAYS=365
-# Same list as server/index.mjs: verification must reach the hosts the server uses.
+# Same list as server/pve.mjs: verification must reach the hosts the server uses.
 DEFAULT_PVE_HOSTS="192.0.2.1,192.0.2.1,192.0.2.1"
 # Every call is bounded because an interrupt waits for the ssh in progress.
 SSH_OPTIONS=(-o BatchMode=yes -o ConnectTimeout=10 -o ServerAliveInterval=5 -o ServerAliveCountMax=3)

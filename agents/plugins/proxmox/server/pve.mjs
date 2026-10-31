@@ -2,7 +2,10 @@ import { readFileSync } from "node:fs";
 import https from "node:https";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
+const DEFAULT_HOSTS = "192.0.2.1,192.0.2.1,192.0.2.1";
+const DEFAULT_CA_FILE = fileURLToPath(new URL("../certs/pve-root-ca.pem", import.meta.url));
 const DEFAULT_TOKEN_FILE = join(homedir(), ".config", "proxmox-mcp", "token");
 const REQUEST_TIMEOUT_MS = 8000;
 
@@ -42,11 +45,12 @@ export class PveApiError extends Error {
   }
 }
 
-// A call that ended without an answer from PVE. `code` says why.
+// A call that ended without an answer from PVE. `code` says why, and `failures` what each host did.
 export class PveRequestError extends Error {
-  constructor(code, message) {
+  constructor(code, message, failures = []) {
     super(`${code}: ${message}`);
     this.code = code;
+    this.failures = failures;
   }
 }
 
@@ -55,9 +59,16 @@ export function classifyTransportError({ code = "" }) {
   return TRANSPORT_CODES[code] ?? (TLS_VERIFY_CODES.test(code) ? "TLS_VERIFY" : "UNREACHABLE");
 }
 
+// Where this process talks to PVE, for anything that has to see the cluster the way the server does.
+export function connectionSettings(env = process.env) {
+  return { hosts: (env.PVE_HOSTS || DEFAULT_HOSTS).split(","), caFile: env.PVE_CA_FILE || DEFAULT_CA_FILE };
+}
+
+export const tokenFile = (env = process.env) => env.PVE_TOKEN_FILE || DEFAULT_TOKEN_FILE;
+
 export function loadToken(env = process.env) {
   if (env.PVE_API_TOKEN) return env.PVE_API_TOKEN.trim();
-  const file = env.PVE_TOKEN_FILE || DEFAULT_TOKEN_FILE;
+  const file = tokenFile(env);
   try {
     return readFileSync(file, "utf8").trim();
   } catch {
@@ -169,7 +180,7 @@ function allHostsFailed(failures) {
   const codes = new Set(failures.map(({ code }) => code));
   const code = codes.size === 1 ? [...codes][0] : "UNREACHABLE";
   const [summary, advice] = NO_HOST_SERVED[code];
-  return new PveRequestError(code, `${summary} (${failures.map(({ detail }) => detail).join("; ")}). ${advice}`);
+  return new PveRequestError(code, `${summary} (${failures.map(({ detail }) => detail).join("; ")}). ${advice}`, failures);
 }
 
 export function createClient({ hosts, getToken, transport, log = () => {} }) {

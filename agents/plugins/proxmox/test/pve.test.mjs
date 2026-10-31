@@ -266,6 +266,20 @@ test("hosts that fail in different ways are unreachable, each with its own reaso
   });
 });
 
+test("a call that no host served keeps what each host did, for callers that report by host", async () => {
+  const c = client(async (host) =>
+    host === "a" ? fail("UNABLE_TO_VERIFY_LEAF_SIGNATURE", "bad certificate") : fail("ETIMEDOUT", "timeout after 8000ms"),
+  );
+
+  await assert.rejects(c.get("/x"), (err) => {
+    assert.deepEqual(err.failures, [
+      { code: "TLS_VERIFY", detail: "a: UNABLE_TO_VERIFY_LEAF_SIGNATURE" },
+      { code: "TIMEOUT", detail: "b: timeout after 8000ms" },
+    ]);
+    return true;
+  });
+});
+
 test("a failure with no message still names its code", async () => {
   const c = client(async () => fail("ECONNREFUSED", ""));
 
