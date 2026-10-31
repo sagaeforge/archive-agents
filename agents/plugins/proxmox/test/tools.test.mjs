@@ -158,7 +158,7 @@ test("guest_config reads an LXC guest when asked", async (t) => {
 // does not know, so the lookup has to start before the read gives up. Time is mocked here so that
 // the delay can be pinned exactly; errors.test.mjs goes through it for real.
 
-const NODE_CHECK_DELAY_MS = 1000;
+const STALL_MS = 1000;
 const NO_HANG = { timeout: 5000 }; // These reads never end by themselves, so a regression must not hang the run.
 const CLUSTER = [
   { type: "cluster", id: "cluster", name: "example-cluster", nodes: 2, quorate: 1 },
@@ -189,7 +189,7 @@ async function stallRead(t, client, pve, name, args) {
   mockTime(t);
   const result = call(client, name, args);
   await until(() => pve.calls.length === 1);
-  t.mock.timers.tick(NODE_CHECK_DELAY_MS);
+  t.mock.timers.tick(STALL_MS);
   await until(() => pve.calls.length === 2);
   return { result };
 }
@@ -209,7 +209,7 @@ for (const [name, args, pathOf] of nodeReads) {
     mockTime(t);
 
     assert.deepEqual(await call(client, name, args(NODE)), success({ ok: true }));
-    t.mock.timers.tick(10 * NODE_CHECK_DELAY_MS);
+    t.mock.timers.tick(10 * STALL_MS);
     await turn();
 
     assert.deepEqual(paths(pve), [pathOf(NODE)]);
@@ -222,7 +222,7 @@ for (const [name, args, pathOf] of nodeReads) {
 
     const result = call(client, name, args("ghost"));
     await until(() => pve.calls.length === 1);
-    t.mock.timers.tick(NODE_CHECK_DELAY_MS - 1);
+    t.mock.timers.tick(STALL_MS - 1);
     await turn();
     assert.deepEqual(paths(pve), [pathOf("ghost")]);
 
@@ -283,6 +283,81 @@ test("a stalled read is not held back by a lookup that stalls too", NO_HANG, asy
   finish({ ok: true });
 
   assert.deepEqual(await result, success({ ok: true }));
+});
+
+// This wait is the same one the node check exists to remove, so it has a limit too. On a cluster that
+// is already failing, the lookup can stall on every host.
+test("a stalled lookup holds a failed read back by the delay and no longer", NO_HANG, async (t) => {
+  const path = `/nodes/${NODE}/status`;
+  const pve = fakePve({
+    "/cluster/status": stall,
+    [path]: () => {
+      throw new PveApiError(500, "pvestatd is down");
+    },
+  });
+  const client = await connect(t, pve);
+  mockTime(t);
+
+  let finished = false;
+  const result = call(client, "node_status", { node: NODE }).finally(() => {
+    finished = true;
+  });
+  await until(() => pve.calls.length === 2);
+  t.mock.timers.tick(STALL_MS - 1);
+  await turn();
+  assert.equal(finished, false);
+
+  t.mock.timers.tick(1);
+
+  assert.deepEqual(await result, failure("PVE API 500: pvestatd is down"));
+});
+
+test("a lookup that answers in time still finds a failed read's node missing", NO_HANG, async (t) => {
+  let answerLookup;
+  const path = "/nodes/ghost/status";
+  const pve = fakePve({
+    "/cluster/status": () => new Promise((resolve) => (answerLookup = resolve)),
+    [path]: () => {
+      throw new PveApiError(500, "hostname lookup 'ghost' failed");
+    },
+  });
+  const client = await connect(t, pve);
+  mockTime(t);
+
+  const result = call(client, "node_status", { node: "ghost" });
+  await until(() => pve.calls.length === 2);
+  t.mock.timers.tick(STALL_MS - 1);
+  await turn();
+  answerLookup(CLUSTER);
+
+  assert.deepEqual(await result, unknownNode("ghost"));
+});
+
+test("a lookup that comes back late for a failed read changes nothing, and does no harm", NO_HANG, async (t) => {
+  let answerLookup;
+  const path = "/nodes/ghost/status";
+  const pve = fakePve({
+    "/cluster/status": () => new Promise((resolve) => (answerLookup = resolve)),
+    [path]: () => {
+      throw new PveApiError(500, "pvestatd is down");
+    },
+  });
+  const client = await connect(t, pve);
+  const unhandled = [];
+  const record = (reason) => unhandled.push(reason);
+  process.on("unhandledRejection", record);
+  t.after(() => process.off("unhandledRejection", record));
+  mockTime(t);
+
+  const result = call(client, "node_status", { node: "ghost" });
+  await until(() => pve.calls.length === 2);
+  t.mock.timers.tick(STALL_MS);
+  assert.deepEqual(await result, failure("PVE API 500: pvestatd is down"));
+
+  answerLookup(CLUSTER); // Says the node is missing, with nobody left to tell.
+  await turn();
+
+  assert.deepEqual(unhandled, []);
 });
 
 test("a stalled read keeps its own failure when the lookup stalls too", NO_HANG, async (t) => {
@@ -371,6 +446,7 @@ const unrelatedFailures = [
   ["a missing token", () => new PveRequestError("NO_TOKEN", "API token not found")],
   ["a TLS failure", () => new PveRequestError("TLS_VERIFY", "No PVE host passed certificate verification")],
   ["refused connections", () => new PveRequestError("REFUSED", "Every PVE host refused the connection")],
+  ["a response that is not PVE's", () => new PveRequestError("BAD_RESPONSE", "No PVE host sent a PVE API response")],
 ];
 
 for (const [failing, error] of unrelatedFailures) {

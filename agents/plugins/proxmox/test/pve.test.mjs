@@ -29,8 +29,39 @@ test("buildPath encodes params and drops undefined", () => {
   assert.equal(buildPath("/x", { q: "a b&c" }), "/x?q=a+b%26c");
 });
 
+// A path can carry its own query, and api_get takes params on top of that.
+
+const pathsParamsJoin = [
+  ["a query", "/x?a=1", "/x?a=1&b=2"],
+  ["a query with several pairs", "/x?a=1&c=3", "/x?a=1&c=3&b=2"],
+  ["an empty query", "/x?", "/x?b=2"], // PVE answers 400 to /x?&b=2.
+  ["a query that ends in a separator", "/x?a=1&", "/x?a=1&b=2"],
+  ["a fragment", "/x#f", "/x?b=2"],
+  ["a query and a fragment", "/x?a=1#f", "/x?a=1&b=2"],
+  ["a fragment holding a question mark", "/x#f?c=3", "/x?b=2"],
+];
+
+for (const [what, path, expected] of pathsParamsJoin) {
+  test(`buildPath adds params to a path with ${what}`, () => {
+    assert.equal(buildPath(path, { b: "2" }), expected);
+  });
+}
+
+test("buildPath cuts a fragment even with no params to add", () => {
+  assert.equal(buildPath("/x#f"), "/x");
+  assert.equal(buildPath("/x?a=1#f"), "/x?a=1");
+});
+
+test("buildPath leaves a path's query alone when every param is undefined", () => {
+  assert.equal(buildPath("/x?a=1", { b: undefined }), "/x?a=1");
+});
+
 test("get unwraps the data envelope", async () => {
   assert.deepEqual(await client(async () => ok([1])).get("/version"), [1]);
+});
+
+test("get takes null data for an answer, as PVE sends for a call with nothing to return", async () => {
+  assert.equal(await client(async () => ok(null)).get("/x"), null);
 });
 
 test("get fails over and then sticks to the working host", async () => {
@@ -69,6 +100,21 @@ test("loadToken prefers env and explains a missing file", () => {
 
 test("a missing token has its own code", () => {
   assert.throws(() => loadToken({ PVE_TOKEN_FILE: "/nonexistent" }), { code: "NO_TOKEN" });
+});
+
+// A tool caller sees this text without having loaded the skill, and until every machine has its own
+// token the script it names takes the shared token away from the others.
+test("a missing token leaves the next step to the user and says why", () => {
+  assert.throws(
+    () => loadToken({ PVE_TOKEN_FILE: "/nonexistent" }),
+    (err) => {
+      assert.match(err.message, /^NO_TOKEN: API token not found at \/nonexistent\. Ask the user how to provide one\. /);
+      assert.match(err.message, /Do not run scripts\/bootstrap-token\.sh from this plugin without their approval: /);
+      assert.match(err.message, /changes tokens on the cluster/);
+      assert.match(err.message, /if machines still share one token, it locks the others out/);
+      return true;
+    },
+  );
 });
 
 // buildPath judges what PVE will decode, not the text it is handed.
@@ -262,6 +308,19 @@ test("a 401 says the token was rejected and how to replace it", async () => {
   });
 });
 
+// The script changes tokens on the cluster, and this text is all a caller without the skill sees.
+test("a 401 sends nobody to the token script without the user's approval", async () => {
+  await assert.rejects(failedWith(401, "Authentication failed!").get("/x"), /--rotate from this plugin, with the user's approval\./);
+});
+
+// Before per-machine tokens the script takes --rotate for a host name, finds the token file and exits 0.
+test("a 401 says what to do when the token script cannot rotate", async () => {
+  await assert.rejects(
+    failedWith(401, "Authentication failed!").get("/x"),
+    /If that reports nothing to do, this version of the script cannot rotate, so ask the user for a working token file instead\./,
+  );
+});
+
 test("a 403 says retrying will not help, and keeps the permission PVE named", async () => {
   await assert.rejects(failedWith(403, "Permission check failed (/nodes/n1, Sys.Syslog)").get("/x"), (err) => {
     assert.match(err.message, /^PVE API 403: Permission check failed \(\/nodes\/n1, Sys\.Syslog\)\n/);
@@ -313,6 +372,95 @@ for (const [reason, body] of bodiesWithoutDetails) {
     await assert.rejects(failedWith(400, "Bad", body).get("/x"), { message: "PVE API 400: Bad" });
   });
 }
+
+// A 200 that did not come from PVE, such as a proxy's login page. The body must not reach the error.
+
+const BODY_MARKER = "proxy-login-marker";
+
+const bodiesNotFromPve = [
+  ["HTML", `<html>${BODY_MARKER}</html>`],
+  ["an empty body", ""],
+  ["a body of null", "null"],
+  ["a number", "1"],
+  ["text", `"${BODY_MARKER}"`],
+  ["a list", `["${BODY_MARKER}"]`],
+  ["an object without data", `{"login":"${BODY_MARKER}"}`],
+];
+
+for (const [what, body] of bodiesNotFromPve) {
+  test(`a 200 with ${what} is no answer, on any host`, async () => {
+    const calls = [];
+    const c = client(async (host) => {
+      calls.push(host);
+      return { status: 200, reason: "OK", body };
+    });
+
+    await assert.rejects(c.get("/x"), (err) => {
+      assert.ok(err instanceof PveRequestError);
+      assert.equal(err.code, "BAD_RESPONSE");
+      assert.equal(
+        err.message,
+        "BAD_RESPONSE: No PVE host sent a PVE API response (a: a 200 without a PVE API body; b: a 200 without a PVE API body). Something other than PVE may be answering, such as a proxy. Check PVE_HOSTS and what listens on port 8006.",
+      );
+      return true;
+    });
+    assert.deepEqual(calls, ["a", "b"]);
+  });
+}
+
+test("a host that sends something other than PVE is passed over, and stays passed over", async () => {
+  const calls = [];
+  const c = client(async (host) => {
+    calls.push(host);
+    return host === "a" ? { status: 200, reason: "OK", body: "<html>" } : ok(host);
+  });
+
+  assert.equal(await c.get("/x"), "b");
+  assert.equal(await c.get("/x"), "b");
+  assert.deepEqual(calls, ["a", "b", "b"]);
+});
+
+test("every host gets its turn while the ones before it send something other than PVE", async () => {
+  const calls = [];
+  const c = createClient({
+    hosts: ["a", "b", "c"],
+    getToken: () => "t",
+    transport: async (host) => {
+      calls.push(host);
+      return host === "c" ? ok(host) : { status: 200, reason: "OK", body: "<html>" };
+    },
+  });
+
+  assert.equal(await c.get("/x"), "c");
+  assert.deepEqual(calls, ["a", "b", "c"]);
+});
+
+test("a host that sent something other than PVE is not the one tried first next time", async () => {
+  const calls = [];
+  let down = true;
+  const c = client(async (host) => {
+    calls.push(host);
+    if (!down) return ok(host);
+    return host === "a" ? fail("ETIMEDOUT", "timeout") : { status: 200, reason: "OK", body: "<html>" };
+  });
+
+  await assert.rejects(c.get("/x"), { code: "UNREACHABLE" });
+  down = false;
+
+  assert.equal(await c.get("/x"), "a");
+  assert.deepEqual(calls, ["a", "b", "a"]);
+});
+
+test("a host that sends something other than PVE and one that fails are unreachable, each with its reason", async () => {
+  const c = client(async (host) =>
+    host === "a" ? { status: 200, reason: "OK", body: "<html>" } : fail("ETIMEDOUT", "timeout after 8000ms"),
+  );
+
+  await assert.rejects(c.get("/x"), {
+    code: "UNREACHABLE",
+    message: /\(a: a 200 without a PVE API body; b: timeout after 8000ms\)/,
+  });
+});
 
 // One entry per call, with the outcome and without anything a client could not safely print.
 
@@ -392,12 +540,33 @@ test("a call without a token logs why it never left", async () => {
   assert.deepEqual(withoutTime(entries), [{ host: null, failover: false, status: "NO_TOKEN", path: "/x" }]);
 });
 
-test("a response that cannot be parsed still logs the status it came with", async () => {
+test("a call that got no PVE answer logs that, not the 200 it came with", async () => {
   const { pve, entries } = logged(async () => ({ status: 200, reason: "OK", body: "<html>" }));
 
-  await assert.rejects(pve.get("/x"), SyntaxError);
+  await assert.rejects(pve.get("/x"), { code: "BAD_RESPONSE" });
 
-  assert.deepEqual(withoutTime(entries), [{ host: "a", failover: false, status: 200, path: "/x" }]);
+  assert.deepEqual(withoutTime(entries), [{ host: "b", failover: true, status: "BAD_RESPONSE", path: "/x" }]);
+});
+
+test("a call that got past a host sending something other than PVE logs a failover", async () => {
+  const { pve, entries } = logged(async (host) => (host === "a" ? { status: 200, reason: "OK", body: "<html>" } : ok(1)));
+
+  await pve.get("/x");
+
+  assert.deepEqual(withoutTime(entries), [{ host: "b", failover: true, status: 200, path: "/x" }]);
+});
+
+// `ms` is how long the whole call took, so it has to come from the clock and cover every host tried.
+test("a call logs how long it took across the hosts it tried", async (t) => {
+  t.mock.timers.enable({ apis: ["Date"] });
+  const { pve, entries } = logged(async (host) => {
+    t.mock.timers.tick(host === "a" ? 300 : 40);
+    return host === "a" ? fail("ETIMEDOUT", "timeout") : ok(1);
+  });
+
+  await pve.get("/x");
+
+  assert.equal(entries[0].ms, 340);
 });
 
 // A stalled host, on real sockets. Without the timeout it would hang the call and keep get() from

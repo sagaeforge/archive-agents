@@ -2,7 +2,7 @@
 // real sockets. Scenario letters are those of the audit. tools.test.mjs covers the logic in detail.
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { cpSync, symlinkSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, readFileSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { createInterface } from "node:readline";
 import { test } from "node:test";
@@ -114,6 +114,22 @@ for (const [name, args, readUrl] of unknownNodeReads) {
   });
 }
 
+// A read PVE has already failed, on a cluster whose /cluster/status stalls on every host.
+
+test("a read that failed comes back without waiting out a lookup that stalls", WAIT, async (t) => {
+  const server = await startFakePve(t, ca.issue(LOOPBACK), (req, res) => {
+    if (req.url === "/api2/json/nodes/n1/status") reply(res, 500, "pvestatd is down", { data: null });
+  });
+  const { client } = await start(t, server.port);
+
+  const started = Date.now();
+  const result = await client.callTool({ name: "node_status", arguments: { node: "n1" } });
+  const elapsed = Date.now() - started;
+
+  assert.deepEqual(result, failure("PVE API 500: pvestatd is down"));
+  assert.ok(elapsed < HOST_TIMEOUT_MS, `took ${elapsed} ms`);
+});
+
 // Scenario H3: PVE refuses a query value. The status line alone does not say which one.
 
 test("a parameter PVE refuses is named in the error", async (t) => {
@@ -137,6 +153,42 @@ test("a parameter PVE refuses is named in the error", async (t) => {
       "PVE API 400: Parameter verification failed. (type: value 'network' does not have a value in the enumeration 'vm, storage, node, sdn')",
     ),
   );
+});
+
+// A path with its own query or fragment, plus params, as api_get allows.
+
+test("params arrive in one query with the path's own, and a fragment does not arrive at all", async (t) => {
+  const server = await startFakePve(t, ca.issue(LOOPBACK));
+  const { client } = await start(t, server.port);
+
+  for (const path of ["/x?a=1", "/x#f", "/x?a=1#f"]) {
+    await client.callTool({ name: "api_get", arguments: { path, params: { b: "2" } } });
+  }
+
+  assert.deepEqual(
+    server.requests.map(({ url }) => url),
+    ["/api2/json/x?a=1&b=2", "/api2/json/x?b=2", "/api2/json/x?a=1&b=2"],
+  );
+});
+
+// Something other than PVE answering on the API port, such as a proxy with a login page.
+
+test("a 200 that is not a PVE answer is tried on every host and reported as such, without its body", WAIT, async (t) => {
+  const server = await startFakePve(t, ca.issue(LOOPBACK), (req, res) => {
+    res.writeHead(200, { "content-type": "text/html" });
+    res.end(`<html>${BODY_VALUE}</html>`);
+  });
+  const hosts = [LOOPBACK, LOOPBACK, LOOPBACK].join(",");
+  const { client, stderr } = await start(t, server.port, { PVE_CA_FILE: caFileIn(t), PVE_HOSTS: hosts });
+
+  const result = await client.callTool({ name: "api_get", arguments: { path: "/version" } });
+
+  assert.equal(result.isError, true);
+  assert.match(result.content[0].text, /^BAD_RESPONSE: No PVE host sent a PVE API response \(127\.0\.0\.1: /);
+  assert.ok(!result.content[0].text.includes(BODY_VALUE), result.content[0].text);
+  assert.equal(server.requests.length, 3);
+  const [entry] = await logEntries(stderr, 1);
+  assert.equal(entry.status, "BAD_RESPONSE");
 });
 
 // Scenario G: a token PVE rejects.
@@ -261,16 +313,11 @@ for (const [kind, credentials, count] of servers) {
   });
 }
 
-// Without a guard, the first log line after this kills the process. The MCP SDK client gives no way
-// to close the real pipe, so this test speaks JSON-RPC to the server itself.
-test("a log reader that goes away does not stop the server", WAIT, async (t) => {
-  const server = await startFakePve(t, ca.issue(LOOPBACK));
-  const { command, args, env } = entryPointProcess(t, {
-    token: TOKEN,
-    port: server.port,
-    env: { PVE_CA_FILE: caFileIn(t) },
-  });
-  const child = spawn(command, args, { env, stdio: "pipe" });
+// The MCP SDK client gives no way to close the real pipe, so these tests speak JSON-RPC to the server
+// themselves. stderr is gone from the start here, where Claude Code drops it after connecting.
+async function startWithoutStderrReader(t, port, env) {
+  const spawned = entryPointProcess(t, { token: TOKEN, port, env });
+  const child = spawn(spawned.command, spawned.args, { env: spawned.env, stdio: "pipe" });
   t.after(() => child.kill());
   child.stderr.destroy();
   const replies = createInterface({ input: child.stdout })[Symbol.asyncIterator]();
@@ -287,12 +334,78 @@ test("a log reader that goes away does not stop the server", WAIT, async (t) => 
     clientInfo: { name: "stderr-test", version: "0.0.0" },
   });
   child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" })}\n`);
+  return { child, request };
+}
+
+// Without a guard, the first log line after this kills the process.
+test("a log reader that goes away does not stop the server", WAIT, async (t) => {
+  const server = await startFakePve(t, ca.issue(LOOPBACK));
+  const { child, request } = await startWithoutStderrReader(t, server.port, { PVE_CA_FILE: caFileIn(t) });
 
   for (const id of [2, 3, 4]) {
     const { result } = await request(id, "tools/call", { name: "api_get", arguments: { path: "/version" } });
     assert.equal(result.isError, undefined);
   }
   assert.equal(child.exitCode, null);
+});
+
+// PVE_LOG_FILE, the only copy of the log that a Claude Code session keeps.
+
+const logLines = (text) => text.split("\n").filter((line) => line.startsWith("{"));
+
+test("PVE_LOG_FILE keeps the log with nothing reading stderr, as in a Claude Code session", WAIT, async (t) => {
+  const logFile = join(tempDir(t), "calls.jsonl");
+  const server = await startFakePve(t, ca.issue(LOOPBACK));
+  const { request } = await startWithoutStderrReader(t, server.port, {
+    PVE_CA_FILE: caFileIn(t),
+    PVE_LOG_FILE: logFile,
+  });
+
+  for (const id of [2, 3]) {
+    await request(id, "tools/call", { name: "api_get", arguments: { path: "/version" } });
+  }
+
+  const entries = logLines(readFileSync(logFile, "utf8")).map((line) => JSON.parse(line));
+  assert.deepEqual(
+    entries.map(({ ts, ms, ...entry }) => entry),
+    Array(2).fill({ tool: "api_get", host: LOOPBACK, path: "/version", status: 200, failover: false }),
+  );
+});
+
+test("PVE_LOG_FILE gets exactly what stderr gets, in a file for this user alone", WAIT, async (t) => {
+  const logFile = join(tempDir(t), "calls.jsonl");
+  const server = await startFakePve(t, ca.issue(LOOPBACK), answerOrReject);
+  const { client, stderr } = await start(t, server.port, { PVE_CA_FILE: caFileIn(t), PVE_LOG_FILE: logFile });
+
+  for (const [name, args] of loggedCalls) await client.callTool({ name, arguments: args });
+  await logEntries(stderr, 6);
+
+  assert.deepEqual(logLines(readFileSync(logFile, "utf8")), logLines(stderr()));
+  assert.equal(statSync(logFile).mode & 0o777, 0o600);
+});
+
+test("PVE_LOG_FILE adds to what is already in the file", WAIT, async (t) => {
+  const logFile = join(tempDir(t), "calls.jsonl");
+  writeFileSync(logFile, '{"from":"an earlier session"}\n');
+  const server = await startFakePve(t, ca.issue(LOOPBACK));
+  const { client } = await start(t, server.port, { PVE_CA_FILE: caFileIn(t), PVE_LOG_FILE: logFile });
+
+  await client.callTool({ name: "api_get", arguments: { path: "/version" } });
+
+  const [earlier, added] = logLines(readFileSync(logFile, "utf8")).map((line) => JSON.parse(line));
+  assert.deepEqual(earlier, { from: "an earlier session" });
+  assert.equal(added.path, "/version");
+});
+
+test("a log file that cannot be written fails no call", WAIT, async (t) => {
+  const logFile = join(tempDir(t), "no-such-folder", "calls.jsonl");
+  const server = await startFakePve(t, ca.issue(LOOPBACK));
+  const { client } = await start(t, server.port, { PVE_CA_FILE: caFileIn(t), PVE_LOG_FILE: logFile });
+
+  const result = await client.callTool({ name: "api_get", arguments: { path: "/version" } });
+
+  assert.equal(result.isError, undefined);
+  assert.equal(existsSync(logFile), false);
 });
 
 // The plugin cache names each install after its commit.

@@ -5,8 +5,23 @@ import { PveRequestError } from "./pve.mjs";
 const node = z.string().regex(/^[\w.-]+$/).describe("Node name, e.g. pve-node");
 const vmid = z.number().int().positive().describe("Guest VMID");
 
-// Well past a healthy answer, which takes milliseconds, and well short of a host timing out.
-const NODE_CHECK_DELAY_MS = 1000;
+// A PVE call slower than this has stalled: well past a healthy answer, which takes milliseconds, and
+// well short of a host timing out.
+const STALL_MS = 1000;
+const STALLED = Symbol("stalled");
+
+// The outcome of `promise`, or STALLED if it takes too long. The promise itself goes on regardless.
+async function orStalled(promise) {
+  let timer;
+  const stalled = new Promise((resolve) => {
+    timer = setTimeout(resolve, STALL_MS, STALLED);
+  });
+  try {
+    return await Promise.race([promise, stalled]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 // Only a list that names nodes can prove one missing, so a failed lookup proves nothing.
 async function clusterNodes(pve) {
@@ -31,24 +46,20 @@ async function assertClusterNode(pve, node) {
 // PVE does not refuse a node name it does not know: every host stalls until it times out, which
 // takes 24 s and then looks like an outage. So a read that stalls or fails gets its node looked up,
 // and a healthy read sends nothing extra. The read stays the answer unless the node is missing, and
-// the lookup never holds back a read that has finished.
+// a lookup that stalls holds a finished read back by STALL_MS at most.
 async function readFromNode(pve, node, path) {
   const read = pve.get(path);
   const lookUp = () => assertClusterNode(pve, node).then(() => read);
 
-  let timer;
-  const stalled = new Promise((resolve) => {
-    timer = setTimeout(resolve, NODE_CHECK_DELAY_MS, "stalled");
-  });
   const settled = read.then(
     () => "answered",
     (err) => (err.status >= 500 ? "failed" : "answered"),
   );
-  const first = await Promise.race([settled, stalled]);
-  clearTimeout(timer);
+  const first = await orStalled(settled);
 
-  if (first === "stalled") return Promise.race([read, lookUp()]);
-  return first === "failed" ? lookUp() : read;
+  if (first === STALLED) return Promise.race([read, lookUp()]);
+  if (first === "failed") await orStalled(lookUp());
+  return read;
 }
 
 export function registerTools(server, pve) {

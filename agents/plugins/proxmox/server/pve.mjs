@@ -7,7 +7,7 @@ const DEFAULT_TOKEN_FILE = join(homedir(), ".config", "proxmox-mcp", "token");
 const REQUEST_TIMEOUT_MS = 8000;
 
 const STATUS_HINTS = {
-  401: "The token was rejected: it was revoked, rotated or has expired. To replace it, run scripts/bootstrap-token.sh --rotate from this plugin, with the user's approval.",
+  401: "The token was rejected: it was revoked, rotated or has expired. To replace it, run scripts/bootstrap-token.sh --rotate from this plugin, with the user's approval. If that reports nothing to do, this version of the script cannot rotate, so ask the user for a working token file instead.",
   403: "The token's role lacks this permission, so retrying will not help.",
 };
 
@@ -19,6 +19,10 @@ const NO_HOST_SERVED = {
   ],
   TIMEOUT: ["No PVE host answered in time", "Check that this machine can reach the cluster, and any node name in the path."],
   REFUSED: ["Every PVE host refused the connection", "Check PVE_HOSTS and that pveproxy is running on the nodes."],
+  BAD_RESPONSE: [
+    "No PVE host sent a PVE API response",
+    "Something other than PVE may be answering, such as a proxy. Check PVE_HOSTS and what listens on port 8006.",
+  ],
   UNREACHABLE: ["All PVE hosts unreachable", "Check that this machine can reach the cluster."],
 };
 
@@ -59,7 +63,7 @@ export function loadToken(env = process.env) {
   } catch {
     throw new PveRequestError(
       "NO_TOKEN",
-      `API token not found at ${file}. Run plugins/proxmox/scripts/bootstrap-token.sh first.`,
+      `API token not found at ${file}. Ask the user how to provide one. Do not run scripts/bootstrap-token.sh from this plugin without their approval: it changes tokens on the cluster, and if machines still share one token, it locks the others out.`,
     );
   }
 }
@@ -129,8 +133,23 @@ export function buildPath(path, params = {}) {
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined) query.set(key, String(value));
   }
+  // PVE stops reading at a fragment, so whatever followed one would be lost.
+  const target = path.split("#", 1)[0];
   const qs = query.toString();
-  return qs ? `${path}?${qs}` : path;
+  if (!qs) return target;
+  // PVE refuses a query with an empty pair, so one left open takes no further separator.
+  const separator = /[?&]$/.test(target) ? "" : target.includes("?") ? "&" : "?";
+  return `${target}${separator}${qs}`;
+}
+
+// PVE wraps every success in { data }, so anything else came from something other than PVE.
+function pveEnvelope(body) {
+  try {
+    const envelope = JSON.parse(body);
+    return "data" in envelope ? envelope : null;
+  } catch {
+    return null; // Not JSON, or JSON that is not an object.
+  }
 }
 
 // PVE's status line only says that verification failed. The offending parameters are in the body.
@@ -182,10 +201,16 @@ export function createClient({ hosts, getToken, transport, log = () => {} }) {
             failures.push({ code, detail: `${host}: ${code === "TLS_VERIFY" ? err.code : err.message || err.code}` });
             continue;
           }
+          const envelope = res.status === 200 ? pveEnvelope(res.body) : null;
+          if (res.status === 200 && !envelope) {
+            // The body stays out of this: it is not PVE's, and the message reaches the tool result.
+            failures.push({ code: "BAD_RESPONSE", detail: `${host}: a 200 without a PVE API body` });
+            continue;
+          }
           preferred = index;
           outcome.status = res.status;
           if (res.status !== 200) throw new PveApiError(res.status, failureReason(res));
-          return JSON.parse(res.body).data;
+          return envelope.data;
         }
         throw allHostsFailed(failures);
       } catch (err) {
