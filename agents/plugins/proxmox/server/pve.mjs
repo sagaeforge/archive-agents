@@ -24,14 +24,14 @@ export function loadToken(env = process.env) {
 }
 
 // The cluster CA signs every node certificate, so all hosts share one trust root.
-export function httpsTransport({ caFile }) {
+export function httpsTransport({ caFile, port = 8006 }) {
   const ca = readFileSync(caFile);
   return (host, path, token) =>
     new Promise((resolve, reject) => {
       const req = https.request(
         {
           host,
-          port: 8006,
+          port,
           path: `/api2/json${path}`,
           method: "GET",
           ca,
