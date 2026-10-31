@@ -155,7 +155,7 @@ export function sessionCase(label, { rtkStub, trailStub } = {}) {
   return { dir, home, logs, work, shims, rtkStub, trailStub, runs: 0 };
 }
 
-function sandboxArgs(box, { managedDir, hideJq }) {
+function sandboxArgs(box, { managedDir, hide = [] }) {
   const claude = path.join(box.dir, "claude-bin");
   if (!fs.existsSync(claude)) fs.writeFileSync(claude, "");
   const args = [
@@ -173,7 +173,7 @@ function sandboxArgs(box, { managedDir, hideJq }) {
   if (managedDir) {
     args.push("--overlay-src", "/etc", "--tmp-overlay", "/etc", "--ro-bind", managedDir, "/etc/claude-code");
   }
-  if (hideJq) args.push("--ro-bind", "/dev/null", "/usr/bin/jq");
+  for (const tool of hide) if (fs.existsSync(tool)) args.push("--ro-bind", "/dev/null", tool);
   args.push("--unshare-net", "--unshare-pid", "--die-with-parent", "--clearenv");
   return args;
 }
@@ -263,7 +263,7 @@ function readRun(dir) {
  * Settings sources are named explicitly: the fake home's user settings, then the
  * project and local files of the directory the session starts in.
  */
-export function session(box, { cwd, steps, substeps, prompt = "please go ahead", args = [], env = {}, settingSources = "user,project,local", managedDir, hideJq, timeout = 90000 }) {
+export function session(box, { cwd, steps, substeps, prompt = "please go ahead", args = [], env = {}, settingSources = "user,project,local", managedDir, hide, timeout = 90000 }) {
   const run = path.join(box.logs, `run-${++box.runs}`);
   fs.mkdirSync(run, { recursive: true });
   const scriptFile = path.join(run, "script.json");
@@ -292,7 +292,7 @@ export function session(box, { cwd, steps, substeps, prompt = "please go ahead",
   };
   const started = Date.now();
   const bwrapArgs = [
-    ...sandboxArgs(box, { managedDir, hideJq }),
+    ...sandboxArgs(box, { managedDir, hide }),
     "--chdir", cwd,
     ...envArgs(box, sessionEnv),
     "/bin/bash", "-c", driver, "--", ...args,

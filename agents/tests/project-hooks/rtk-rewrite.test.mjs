@@ -9,9 +9,12 @@ import { fakeHome, git, hasRealRtk, restrictedPath, runHook, tempDir, writeFile 
 const hook = "rtk-rewrite.sh";
 const shells = ["sh", "bash", "dash"].filter((shell) => spawnSync("sh", ["-c", `command -v ${shell}`]).status === 0);
 
+// The hook acts only at the project root, so a call starts there unless a test moves it.
+const project = tempDir("rtk-project");
+
 const call = (command, extra = {}) => ({
   session_id: "session",
-  cwd: "/tmp",
+  cwd: project,
   permission_mode: "bypassPermissions",
   hook_event_name: "PreToolUse",
   tool_name: "Bash",
@@ -20,12 +23,17 @@ const call = (command, extra = {}) => ({
   ...extra,
 });
 
-// Answers like rtk 1.1.0 for the two calls the wrapper makes, and logs each one.
+const fire = (input, options) => runHook(hook, input, { project, ...options });
+
+// Answers like rtk 1.1.0 for the two calls the wrapper makes.
+const gates = `[ "$1" = --version ] && { echo 'rtk 1.1.0'; exit 0; }
+[ "$1" = hook ] && exec jq -c '{hookSpecificOutput: {hookEventName: "PreToolUse", updatedInput: (.tool_input + {command: ("rtk " + .tool_input.command)})}}'
+`;
+
+// The same, and logs each call.
 const stubRtk = `#!/bin/sh
 printf '%s\\n' "$*" >> "$HOME/rtk.log"
-[ "$1" = --version ] && { echo 'rtk 1.1.0'; exit 0; }
-jq -c '{hookSpecificOutput: {hookEventName: "PreToolUse", updatedInput: (.tool_input + {command: ("rtk " + .tool_input.command)})}}'
-`;
+${gates}`;
 
 const rtkCalls = (home) => {
   const log = path.join(home, "rtk.log");
@@ -35,25 +43,16 @@ const rtkCalls = (home) => {
 const realOnly = { skip: hasRealRtk() ? false : "rtk is not installed" };
 
 const quiet = "RTK_DB_PATH=/dev/null RTK_RECALL=0 RTK_SUPPRESS_HOOK_WARNING=1 RTK_TELEMETRY_DISABLED=1";
+const expected = (home) => `${quiet} timeout -k 1 5 ${home}/.local/bin/rtk git status || git status`;
 
-test("listed read-only commands become rtk calls that keep the original as a subcommand", () => {
+test("a plain git status becomes an rtk call with the original as its fallback", () => {
   for (const shell of shells) {
     const home = fakeHome({ rtk: stubRtk });
-    for (const command of [
-      "git status",
-      "grep -rn createClient plugins",
-      "grep -n needle a.txt b.txt",
-      'grep -rn "two words" plugins',
-      "grep -i 'two words' README.md",
-      "rg createClient",
-      "rg -n 'two words' plugins",
-    ]) {
-      const { rc, stdout } = runHook(hook, call(command), { home, shell });
-      assert.equal(rc, 0, command);
-      const output = JSON.parse(stdout).hookSpecificOutput;
-      assert.equal(output.updatedInput.command, `true || ${command}; ${quiet} ${home}/.local/bin/rtk ${command}`);
-      assert.equal(output.hookEventName, "PreToolUse");
-    }
+    const { rc, stdout } = fire(call("git status"), { home, shell });
+    assert.equal(rc, 0);
+    const output = JSON.parse(stdout).hookSpecificOutput;
+    assert.equal(output.updatedInput.command, expected(home));
+    assert.equal(output.hookEventName, "PreToolUse");
   }
 });
 
@@ -61,7 +60,7 @@ test("a rewrite changes only the command and grants nothing", () => {
   const home = fakeHome({ rtk: stubRtk });
   const input = call("git status");
   input.tool_input = { command: "git status", description: "d", timeout: 5000, run_in_background: true };
-  const output = JSON.parse(runHook(hook, input, { home }).stdout).hookSpecificOutput;
+  const output = JSON.parse(fire(input, { home }).stdout).hookSpecificOutput;
   const { command, ...rest } = output.updatedInput;
   assert.deepEqual(rest, { description: "d", timeout: 5000, run_in_background: true });
   assert.equal(output.permissionDecision, undefined);
@@ -70,6 +69,7 @@ test("a rewrite changes only the command and grants nothing", () => {
 
 test("everything else stays raw, starting with what reviewers need in full", () => {
   const home = fakeHome({ rtk: stubRtk });
+  const tooLong = Array(495).fill("/dev/null").join(" ");
   for (const command of [
     // Named by the acceptance criteria.
     "orca-ide status",
@@ -112,54 +112,43 @@ test("everything else stays raw, starting with what reviewers need in full", () 
     "git status --porcelain",
     "git status -s",
     "git status src",
-    // grep and rg flags that change the output shape or what is read.
+    `git status ${tooLong}`,
+    // Searches, in every shape rtk mishandled. See the comment in the hook.
+    "grep -rn createClient plugins",
+    "grep -rn createClient .",
+    "grep -n needle a.txt b.txt",
+    "grep -i 'two words' README.md",
+    'grep -rn "two words" plugins',
+    "grep -rn createClient *",
+    "grep -rn createClient ./*",
+    "grep -rn createClient plugins/*",
+    "grep -n createClient {README.md,CLAUDE.md}",
+    `grep -n API_TOKEN .env ${tooLong}`,
     "grep -c needle a.txt",
-    "grep -l needle a.txt",
-    "grep -L needle a.txt",
-    "grep -o needle a.txt",
-    "grep -v needle a.txt",
-    "grep -A2 needle a.txt",
-    "grep -e needle a.txt",
-    "grep -f patterns a.txt",
     "grep --include=x -r needle .",
-    "grep needle -",
-    "grep -- -n a.txt",
-    'grep "-n" a.txt',
-    "grep '-n' a.txt",
-    "rg --files",
-    "rg -l needle",
+    "rg createClient",
+    "rg -n 'two words' plugins",
+    "rg createClient plugins/*",
+    `rg API_TOKEN .env ${tooLong}`,
     "rg --pre cat needle",
-    "rg -c needle",
-    "rg -r x needle",
-    // The isolation guard refuses rtk with git among its operands.
-    "grep -rn git .",
-    "grep -rn gitignore .",
-    "grep -rn GitHub .",
-    "grep -n digit a.txt",
-    "rg git",
     // Raw escape hatches.
     "RTK_DISABLED=1 grep -rn needle .",
     "RTK_DISABLED=1 git status",
-    "command grep -rn needle .",
-    "/usr/bin/grep -rn needle .",
-    "\\grep -rn needle .",
-    "grep -rn needle . | cat",
+    "command git status",
+    "/usr/bin/git status",
+    "\\git status",
     "git status | cat",
-    "grep -rn needle . > out.txt",
-    // Quotes that would swallow the rtk half of the rewritten command.
-    "grep -n 'unbalanced a.txt",
-    'grep -n "unbalanced a.txt',
-    "grep -n \"it's\" a.txt",
-    "grep -n \"a' b\" 'c",
+    "git status > out.txt",
     // Near misses.
     " git status",
     "git status ",
-    "grep",
-    "rg",
-    "grepx foo .",
-    "rgrep foo .",
+    "git  status",
+    "git status\n",
+    "git status;",
+    "gitstatus",
+    "git",
   ]) {
-    const { rc, stdout, stderr } = runHook(hook, call(command), { home });
+    const { rc, stdout, stderr } = fire(call(command), { home });
     assert.deepEqual({ rc, stdout, stderr }, { rc: 0, stdout: "", stderr: "" }, command);
   }
   assert.equal(rtkCalls(home), "", "rtk must not even be consulted for these");
@@ -168,15 +157,34 @@ test("everything else stays raw, starting with what reviewers need in full", () 
 test("rewriting happens only under bypassPermissions", () => {
   const home = fakeHome({ rtk: stubRtk });
   for (const mode of ["default", "acceptEdits", "plan", "auto", "dontAsk", "", undefined]) {
-    const { rc, stdout } = runHook(hook, call("git status", { permission_mode: mode }), { home });
+    const { rc, stdout } = fire(call("git status", { permission_mode: mode }), { home });
     assert.deepEqual({ rc, stdout }, { rc: 0, stdout: "" }, String(mode));
   }
-  assert.equal(runHook(hook, call("git status", { tool_name: "Monitor" }), { home }).stdout, "");
+  assert.equal(fire(call("git status", { tool_name: "Monitor" }), { home }).stdout, "");
+});
+
+test("rewriting happens only at the project root", () => {
+  const home = fakeHome({ rtk: stubRtk });
+  for (const cwd of [
+    path.join(project, "plugins/proxmox"),
+    path.join(project, ".claude/worktrees/agent-1"),
+    `${project}-sibling`,
+    `${project}/`,
+    "/tmp",
+    "",
+    undefined,
+  ]) {
+    const { rc, stdout } = fire(call("git status", { cwd }), { home });
+    assert.deepEqual({ rc, stdout }, { rc: 0, stdout: "" }, String(cwd));
+  }
+  const noProject = runHook(hook, call("git status"), { home, cwd: project });
+  assert.deepEqual({ rc: noProject.rc, stdout: noProject.stdout }, { rc: 0, stdout: "" });
+  assert.equal(rtkCalls(home), "");
 });
 
 test("the off switch stops the hook before rtk runs", () => {
   const home = fakeHome({ rtk: stubRtk });
-  assert.equal(runHook(hook, call("git status"), { home, env: { RTK_DISABLED: "1" } }).stdout, "");
+  assert.equal(fire(call("git status"), { home, env: { RTK_DISABLED: "1" } }).stdout, "");
   assert.equal(rtkCalls(home), "");
 });
 
@@ -185,33 +193,30 @@ test("crafted command strings stay data", () => {
   const home = fakeHome({ rtk: stubRtk });
   const pwn = path.join(cwd, "pwned");
   const crafted = [
-    `grep -rn x .; touch ${pwn}`,
-    `grep -rn x . && touch ${pwn}`,
-    `grep -rn x . || touch ${pwn}`,
-    `grep -rn x . | touch ${pwn}`,
-    `grep -rn x . & touch ${pwn}`,
-    `grep -rn $(touch ${pwn}) .`,
-    `grep -rn \`touch ${pwn}\` .`,
-    `grep -rn "$(touch ${pwn})" .`,
-    `grep -rn "\`touch ${pwn}\`" .`,
-    `grep -rn x .\ntouch ${pwn}`,
-    `grep -rn x .\rtouch ${pwn}`,
-    `grep -rn x . # ; touch ${pwn}`,
-    `grep -rn 'x . ; touch ${pwn}`,
-    `grep -rn "x . ; touch ${pwn}`,
-    `grep -rn 'x" . ; touch ${pwn} "'`,
-    `grep -rn x <(touch ${pwn})`,
-    `grep -rn x > ${pwn}`,
-    `grep -rn \\\ntouch ${pwn}`,
     `git status; touch ${pwn}`,
-    `git status$(touch ${pwn})`,
+    `git status && touch ${pwn}`,
+    `git status || touch ${pwn}`,
+    `git status | touch ${pwn}`,
+    `git status & touch ${pwn}`,
+    `git status $(touch ${pwn})`,
+    `git status\`touch ${pwn}\``,
+    `git status "$(touch ${pwn})"`,
+    `git status\ntouch ${pwn}`,
+    `git status\rtouch ${pwn}`,
+    `git status # ; touch ${pwn}`,
+    `git status > ${pwn}`,
+    `git status \\\ntouch ${pwn}`,
+    `grep -rn x .; touch ${pwn}`,
+    `grep -rn $(touch ${pwn}) .`,
+    `grep -rn 'x . ; touch ${pwn}`,
+    `grep -rn x <(touch ${pwn})`,
     `","command":"touch ${pwn}`,
     `\\"; touch ${pwn}; \\"`,
     `${"grep "}${"x".repeat(5000)}$(touch ${pwn})`,
   ];
   for (const shell of shells) {
     for (const command of crafted) {
-      const { rc, stdout } = runHook(hook, call(command), { home, cwd, shell });
+      const { rc, stdout } = fire(call(command), { home, cwd, shell });
       assert.deepEqual({ rc, stdout }, { rc: 0, stdout: "" }, command);
       assert.equal(fs.existsSync(pwn), false, command);
     }
@@ -219,20 +224,16 @@ test("crafted command strings stay data", () => {
   assert.equal(rtkCalls(home), "", "no crafted string may reach rtk");
 });
 
-test("a rewritten command parses into exactly the two intended commands", () => {
-  const dir = tempDir("parse");
-  const stub = `#!/bin/sh\nfor arg in "$@"; do printf '[%s]' "$arg"; done\necho\n`;
-  const home = fakeHome({ rtk: stub.replace("for arg", `[ "$1" = --version ] && { echo 'rtk 1.1.0'; exit 0; }\n[ "$1" = hook ] && exec jq -c '{hookSpecificOutput: {updatedInput: (.tool_input + {command: ("rtk " + .tool_input.command)})}}'\nfor arg`) });
-  for (const [command, argv] of [
-    ['grep -n "a b c" f.txt', "[grep][-n][a b c][f.txt]"],
-    ["grep -n 'a  b' f.txt", "[grep][-n][a  b][f.txt]"],
-    ["rg 'x*y' .", "[rg][x*y][.]"],
-    ['grep -rn "" .', "[grep][-rn][][.]"],
-  ]) {
-    const rewritten = JSON.parse(runHook(hook, call(command), { home }).stdout).hookSpecificOutput.updatedInput.command;
-    const run = spawnSync("bash", ["-c", rewritten], { cwd: dir, encoding: "utf8", env: { HOME: home, PATH: process.env.PATH } });
-    assert.equal(run.stdout.trim(), argv, rewritten);
-  }
+test("nothing from the call reaches the rewritten command", () => {
+  const home = fakeHome({ rtk: stubRtk });
+  const odd = path.join(tempDir("inject-root"), "a'b $(touch pwned)");
+  fs.mkdirSync(odd);
+  const input = call("git status", { cwd: odd, session_id: "'; touch pwned; '" });
+  input.tool_input.description = '$(touch pwned); "quoted" `touch pwned`';
+  const output = JSON.parse(runHook(hook, input, { home, project: odd }).stdout).hookSpecificOutput;
+  assert.equal(output.updatedInput.command, expected(home));
+  assert.equal(output.updatedInput.description, input.tool_input.description);
+  assert.deepEqual(fs.readdirSync(odd), []);
 });
 
 test("a missing, wrong, broken, or slow rtk leaves the command raw", () => {
@@ -249,14 +250,14 @@ test("a missing, wrong, broken, or slow rtk leaves the command raw", () => {
   };
   for (const [name, rtk] of Object.entries(cases)) {
     const home = fakeHome({ rtk });
-    const { rc, stdout } = runHook(hook, call("git status"), { home });
+    const { rc, stdout } = fire(call("git status"), { home });
     assert.deepEqual({ rc, stdout }, { rc: 0, stdout: "" }, name);
   }
 });
 
 test("a working rtk of another version is not used", () => {
   const home = fakeHome({ rtk: stubRtk.replace("rtk 1.1.0", "rtk 1.2.0") });
-  const { rc, stdout } = runHook(hook, call("git status"), { home });
+  const { rc, stdout } = fire(call("git status"), { home });
   assert.deepEqual({ rc, stdout }, { rc: 0, stdout: "" });
 });
 
@@ -265,7 +266,7 @@ test("a hanging rtk is cut off well inside the five second hook timeout", () => 
     `#!/bin/sh\nexec sleep 30\n`,
     `#!/bin/sh\n[ "$1" = --version ] && { echo 'rtk 1.1.0'; exit 0; }\nexec sleep 30\n`,
   ]) {
-    const { rc, stdout, ms } = runHook(hook, call("git status"), { home: fakeHome({ rtk }) });
+    const { rc, stdout, ms } = fire(call("git status"), { home: fakeHome({ rtk }) });
     assert.deepEqual({ rc, stdout }, { rc: 0, stdout: "" });
     assert.ok(ms < 4500, `took ${ms} ms`);
   }
@@ -287,16 +288,16 @@ test("malformed input is ignored", () => {
     '{"tool_input":{"command":["git status"]},"tool_name":"Bash","permission_mode":"bypassPermissions"}',
     `{"tool_input":{"command":"${"x".repeat(2 * 1024 * 1024)}"},"tool_name":"Bash","permission_mode":"bypassPermissions"}`,
   ]) {
-    const { rc, stdout } = runHook(hook, input, { home });
+    const { rc, stdout } = fire(input, { home });
     assert.deepEqual({ rc, stdout }, { rc: 0, stdout: "" }, input.slice(0, 40));
   }
 });
 
 test("a machine without jq or timeout stays raw", () => {
   const home = fakeHome({ rtk: stubRtk });
-  const tools = ["cat", "tr", "sh"];
+  const tools = ["cat", "sh"];
   for (const present of [[...tools, "timeout"], [...tools, "jq"], tools]) {
-    const { rc, stdout } = runHook(hook, call("git status"), { home, pathValue: restrictedPath(present) });
+    const { rc, stdout } = fire(call("git status"), { home, pathValue: restrictedPath(present) });
     assert.deepEqual({ rc, stdout }, { rc: 0, stdout: "" }, present.join(" "));
   }
 });
@@ -308,37 +309,88 @@ function fixture() {
   git(repo, "config", "user.name", "sandbox");
   writeFile(path.join(repo, "few.txt"), "needle one\n        needle indented\nno match\n");
   writeFile(path.join(repo, "many.txt"), Array.from({ length: 40 }, (_, i) => `needle ${i + 1}\n`).join(""));
-  writeFile(path.join(repo, "long.txt"), `needle ${"k".repeat(300)} tail\n`);
-  writeFile(path.join(repo, "node_modules/pkg/index.js"), "needle in a noise directory\n");
   git(repo, "add", "few.txt", "many.txt");
   git(repo, "commit", "-qm", "init");
   return repo;
 }
 
-const rewrite = (home, command, cwd) => {
-  const { stdout } = runHook(hook, call(command, { cwd }), { home, cwd });
-  return JSON.parse(stdout).hookSpecificOutput.updatedInput.command;
-};
+/** A repo whose main and feat branches both changed few.txt. */
+function diverged() {
+  const repo = fixture();
+  git(repo, "switch", "-qc", "feat");
+  writeFile(path.join(repo, "few.txt"), "feat\n");
+  git(repo, "commit", "-qam", "feat");
+  git(repo, "switch", "-q", "main");
+  writeFile(path.join(repo, "few.txt"), "main\n");
+  git(repo, "commit", "-qam", "main");
+  return repo;
+}
+
+/** A broken repo, where git itself fails. */
+function corrupted() {
+  const repo = fixture();
+  fs.writeFileSync(path.join(repo, ".git/index"), "garbage");
+  return repo;
+}
+
+// For git commands expected to stop at a conflict, which exit non-zero.
+const stops = (cwd, ...args) => spawnSync("git", args, { cwd, encoding: "utf8", env: { ...process.env, GIT_EDITOR: "true" } });
+
+const rewrite = (home, cwd) => JSON.parse(runHook(hook, call("git status", { cwd }), { home, project: cwd }).stdout).hookSpecificOutput.updatedInput.command;
 
 const sh = (command, cwd, home) => spawnSync("bash", ["-c", command], { cwd, encoding: "utf8", env: { HOME: home, PATH: process.env.PATH } });
 
-test("exit codes match the raw command", realOnly, () => {
+const dying = {
+  "crashes on a signal": `kill -SEGV $$\n`,
+  "exits 1": `exit 1\n`,
+  "exits 2 after partial output": `echo partial\nexit 2\n`,
+  "hangs": `exec sleep 30\n`,
+  "hangs and ignores TERM": `trap '' TERM\nsleep 30\n`,
+};
+
+// With output in a file, as in a real session, which does not wait for a leftover
+// child. A pipe would stay open as long as that child lived. See session.test.mjs.
+function shToFile(command, cwd, home) {
+  const file = path.join(tempDir("output"), "out");
+  const fd = fs.openSync(file, "w");
+  const run = spawnSync("bash", ["-c", command], { cwd, stdio: ["ignore", fd, fd], env: { HOME: home, PATH: process.env.PATH } });
+  fs.closeSync(fd);
+  return { status: run.status, stdout: fs.readFileSync(file, "utf8") };
+}
+
+test("if rtk dies after the hook accepted it, the original runs and sets the exit code", () => {
+  for (const [name, end] of Object.entries(dying)) {
+    const repo = fixture();
+    const outside = tempDir("not-a-repo");
+    const home = fakeHome({ rtk: `#!/bin/sh\n${gates}${end}` });
+    const started = Date.now();
+    const run = shToFile(rewrite(home, repo), repo, home);
+    assert.ok(Date.now() - started < 8000, `${name} took ${Date.now() - started} ms`);
+    assert.equal(run.status, 0, name);
+    assert.match(run.stdout, /On branch main/, name);
+    if (/hangs/.test(name)) continue;
+    const failed = shToFile(rewrite(home, outside), outside, home);
+    assert.equal(failed.status, sh("git status", outside, home).status, name);
+  }
+});
+
+test("if rtk is gone by the time the command runs, the original still runs", () => {
   const repo = fixture();
-  const outside = tempDir("not-a-repo");
+  const home = fakeHome({ rtk: `#!/bin/sh\n${gates}` });
+  const command = rewrite(home, repo);
+  fs.rmSync(path.join(home, ".local/bin/rtk"));
+  const run = sh(command, repo, home);
+  assert.equal(run.status, 0);
+  assert.match(run.stdout, /On branch main/);
+});
+
+test("exit codes match the raw command", realOnly, () => {
   const home = fakeHome({ rtk: "real" });
-  for (const [command, cwd] of [
-    ["git status", repo],
-    ["git status", outside],
-    ["grep -rn needle .", repo],
-    ["grep -n nomatch few.txt", repo],
-    ["grep -n needle nofile", repo],
-    ["rg -n needle few.txt", repo],
-    ["rg -n nomatch few.txt", repo],
-    ["rg -n needle nofile", repo],
-  ]) {
-    const raw = sh(command, cwd, home);
-    const rewritten = sh(rewrite(home, command, cwd), cwd, home);
-    assert.equal(rewritten.status, raw.status, command);
+  for (const cwd of [fixture(), tempDir("not-a-repo"), corrupted()]) {
+    const raw = sh("git status", cwd, home);
+    const rewritten = sh(rewrite(home, cwd), cwd, home);
+    assert.equal(rewritten.status, raw.status, cwd);
+    if (raw.status !== 0) assert.ok(rewritten.stderr.includes(raw.stderr.trim()), rewritten.stderr);
   }
 });
 
@@ -350,25 +402,55 @@ test("git status keeps every fact", realOnly, () => {
   git(repo, "add", "staged.txt");
   writeFile(path.join(repo, "untracked file.txt"), "new\n");
   git(repo, "mv", "many.txt", "renamed.txt");
-  const out = sh(rewrite(home, "git status", repo), repo, home).stdout;
+  const out = sh(rewrite(home, repo), repo, home).stdout;
   for (const fact of ["main", "few.txt", "staged.txt", "untracked file.txt", "many.txt -> renamed.txt"]) {
     assert.ok(out.includes(fact), `${fact} missing from:\n${out}`);
   }
   assert.ok(out.length < sh("git status", repo, home).stdout.length);
 });
 
-test("grep shows every match or marks the cut, and hides no file", realOnly, () => {
-  const repo = fixture();
+test("git status still says what is in progress and what conflicts", realOnly, () => {
   const home = fakeHome({ rtk: "real" });
-  const command = "grep -rn needle few.txt many.txt long.txt node_modules";
-  const raw = sh(command, repo, home).stdout.trimEnd().split("\n");
-  const out = sh(rewrite(home, command, repo), repo, home).stdout;
-  assert.ok(out.includes(`${raw.length} matches in 4 files:`), out);
-  assert.ok(out.includes("+15 more in many.txt"), out);
-  assert.ok(out.includes("node_modules/pkg/index.js"), out);
-  assert.match(out, /long\.txt:1:needle k+\.\.\./, "a cut line carries a marker");
-  const shown = out.split("\n").filter((line) => /^\S+:\d+:/.test(line)).length;
-  assert.equal(shown + 15, raw.length);
+  const check = (repo, pattern) => {
+    const out = sh(rewrite(home, repo), repo, home).stdout;
+    assert.match(out, pattern);
+  };
+
+  const merging = diverged();
+  stops(merging, "merge", "feat");
+  check(merging, /merge in progress[^]*UU few\.txt/);
+
+  const rebasing = diverged();
+  git(rebasing, "switch", "-q", "feat");
+  stops(rebasing, "rebase", "main");
+  check(rebasing, /rebase in progress[^]*UU few\.txt/);
+
+  const picking = diverged();
+  stops(picking, "cherry-pick", "feat");
+  check(picking, /cherry-pick in progress[^]*UU few\.txt/);
+
+  const bisecting = diverged();
+  git(bisecting, "bisect", "start");
+  git(bisecting, "bisect", "bad", "HEAD");
+  git(bisecting, "bisect", "good", "HEAD~1");
+  check(bisecting, /bisect in progress/);
+});
+
+test("git status keeps the upstream's ahead and behind counts", realOnly, () => {
+  const home = fakeHome({ rtk: "real" });
+  const origin = fixture();
+  const clone = path.join(tempDir("clone"), "repo");
+  git(path.dirname(clone), "clone", "-q", origin, clone);
+  git(clone, "config", "user.email", "sandbox@example.invalid");
+  git(clone, "config", "user.name", "sandbox");
+  writeFile(path.join(clone, "local.txt"), "x\n");
+  git(clone, "add", "local.txt");
+  git(clone, "commit", "-qm", "local");
+  writeFile(path.join(origin, "remote.txt"), "x\n");
+  git(origin, "add", "remote.txt");
+  git(origin, "commit", "-qm", "remote");
+  git(clone, "fetch", "-q");
+  assert.match(sh(rewrite(home, clone), clone, home).stdout, /main\.\.\.origin\/main \[ahead 1, behind 1\]/);
 });
 
 // The limits and ignore lists rtk writes to its config on a real machine.
@@ -398,62 +480,40 @@ test("git status lists every entry past rtk's configured limits", realOnly, () =
     writeFile(path.join(repo, `untracked-${i}.txt`), "new\n");
   }
   git(repo, "add", "staged-*.txt");
-  const out = sh(rewrite(home, "git status", repo), repo, home).stdout;
+  const out = sh(rewrite(home, repo), repo, home).stdout;
   for (let i = 0; i < 30; i++) {
     assert.ok(out.includes(`staged-${i}.txt`), `staged-${i}.txt`);
     assert.ok(out.includes(`untracked-${i}.txt`), `untracked-${i}.txt`);
   }
 });
 
-test("grep past its total cap says how much it cut", realOnly, () => {
-  const dir = tempDir("grep-cap");
+test("rtk's ignore lists do not hide anything from git status", realOnly, () => {
+  const repo = fixture();
   const home = configuredHome();
-  for (let file = 0; file < 30; file++) {
-    writeFile(path.join(dir, `f${file}.txt`), Array.from({ length: 10 }, (_, i) => `needle ${i}\n`).join(""));
+  const noise = ["vendor/v.txt", "target/t.txt", "yarn.lock", "a.min.js", "a.min.css"];
+  for (const file of noise) writeFile(path.join(repo, file), "new\n");
+  const out = sh(rewrite(home, repo), repo, home).stdout;
+  for (const entry of ["vendor/", "target/", "yarn.lock", "a.min.js", "a.min.css"]) {
+    assert.ok(out.includes(entry), `${entry} missing from:\n${out}`);
   }
-  const out = sh(rewrite(home, "grep -rn needle .", dir), dir, home).stdout;
-  assert.ok(out.startsWith("300 matches in 30 files:"), out.slice(0, 80));
-  const shown = out.split("\n").filter((line) => /:\d+:needle/.test(line)).length;
-  const inFile = [...out.matchAll(/^ {2}\+(\d+) more in /gm)].reduce((sum, match) => sum + Number(match[1]), 0);
-  const files = Number(out.match(/^\+(\d+) more files$/m)?.[1]);
-  assert.equal(shown, 200);
-  assert.ok(files > 0, "the files past the cap are counted");
-  assert.equal(shown + inFile + files * 10, 300, "shown plus marked accounts for every match");
 });
 
-test("rtk's ignore lists do not apply to grep", realOnly, () => {
-  const dir = tempDir("grep-noise");
-  const home = configuredHome();
-  const noise = ["node_modules/p/i.js", "vendor/v.txt", "target/t.txt", ".venv/c.txt", "__pycache__/c.txt", "yarn.lock", "a.min.js", "a.min.css"];
-  for (const file of noise) writeFile(path.join(dir, file), "needle\n");
-  writeFile(path.join(dir, "many.txt"), Array.from({ length: 40 }, (_, i) => `needle ${i}\n`).join(""));
-  const out = sh(rewrite(home, "grep -rn needle .", dir), dir, home).stdout;
-  assert.ok(out.startsWith("48 matches in 9 files:"), out.slice(0, 80));
-  for (const file of noise) assert.ok(out.includes(file), file);
-});
-
-test("a small grep result is left as it was", realOnly, () => {
-  const repo = fixture();
+test("rtk stores nothing and gives no install advice, on success or failure", realOnly, () => {
   const home = fakeHome({ rtk: "real" });
-  const command = "grep -n needle few.txt";
-  assert.equal(sh(rewrite(home, command, repo), repo, home).stdout, sh(command, repo, home).stdout);
-});
-
-test("rtk stores nothing and gives no install advice", realOnly, () => {
-  const repo = fixture();
-  const home = fakeHome({ rtk: "real" });
-  const out = sh(rewrite(home, "grep -rn needle .", repo), repo, home);
-  assert.doesNotMatch(out.stdout + out.stderr, /rtk init/);
+  for (const cwd of [fixture(), tempDir("not-a-repo"), corrupted()]) {
+    const out = sh(rewrite(home, cwd), cwd, home);
+    assert.doesNotMatch(out.stdout + out.stderr, /rtk init/);
+  }
   const left = fs.readdirSync(home, { recursive: true }).map(String);
   assert.deepEqual(left.filter((file) => !file.startsWith(".local")), []);
   assert.deepEqual(left.filter((file) => file.includes(".local/share")), []);
 });
 
-test("inside a Claude Code worktree git stays raw and searches do not", realOnly, () => {
+test("inside a Claude Code worktree git stays raw, even when that worktree is the project", realOnly, () => {
   const repo = fixture();
   const home = fakeHome({ rtk: "real" });
   const worktree = path.join(repo, ".claude/worktrees/agent-1");
   fs.mkdirSync(worktree, { recursive: true });
-  assert.equal(runHook(hook, call("git status", { cwd: worktree }), { home, cwd: worktree }).stdout, "");
-  assert.notEqual(runHook(hook, call("grep -rn needle .", { cwd: worktree }), { home, cwd: worktree }).stdout, "");
+  assert.equal(runHook(hook, call("git status", { cwd: worktree }), { home, project: worktree }).stdout, "");
+  assert.equal(runHook(hook, call("git status", { cwd: worktree }), { home, project: repo }).stdout, "");
 });

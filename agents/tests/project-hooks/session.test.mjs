@@ -32,6 +32,11 @@ const write = (file_path, content) => ({ tool: "Write", input: { file_path, cont
 const trailHeader = "[trail] code pointers for this prompt:";
 const question = "how does createClient fail over between hosts";
 const search = "grep -rn createClient plugins/proxmox/server";
+const zsh = { SHELL: "/usr/bin/zsh" };
+const zshOnly = { skip: skip ?? (fs.existsSync(zsh.SHELL) ? false : "zsh is not installed") };
+const trailBin = path.join(realHome, ".local/share/trail-code/0.28.1/node_modules/.bin/trail");
+const quietTrail = { DO_NOT_TRACK: "1", TRAIL_NO_FETCH: "1", TRAIL_NO_LOOK_BACK: "1" };
+const refusal = /Refusing to run|cannot be shown not to be git/;
 
 const realSettings = path.join(realHome, ".claude/settings.json");
 const realHash = fs.existsSync(realSettings) ? sha256(realSettings) : null;
@@ -131,14 +136,15 @@ test("a fresh worktree gets both hooks and writes nothing global", options, (t) 
   assert.equal(first.final.subtype, "success");
 
   // Both hooks fired, through the real engine.
-  const [status, grep] = rewrites(first);
-  assert.match(status, /^true \|\| git status; .*\/\.local\/bin\/rtk git status$/);
-  assert.match(grep, /^true \|\| grep -rn createClient plugins\/proxmox\/server; .*rtk grep -rn createClient plugins\/proxmox\/server$/);
+  const [status, ...others] = rewrites(first);
+  assert.match(status, /timeout -k 1 5 \S*\/\.local\/bin\/rtk git status \|\| git status$/);
+  assert.deepEqual(others, [], "only git status is rewritten");
   assert.ok(first.results[0].text.startsWith("* fresh-"), first.results[0].text);
   assert.doesNotMatch(first.results[0].text, /On branch/);
+  assert.match(first.results[1].text, /pve\.mjs/);
   assert.ok(first.apiText.includes(trailHeader), "Trail context reached the model request");
   assert.match(first.apiText, /- createClient · function plugins\/proxmox\/server\/pve\.mjs:L\d+/);
-  assert.ok(first.apiText.includes("rtk may have shortened this output"), "the model is told");
+  assert.ok(first.apiText.includes("rtk shortened this output"), "the model is told");
 
   // The edit fired PostToolUse, which rebuilt the map the next session reads.
   assert.ok(first.hooks.some((hook) => hook.hook_name === "PostToolUse:Write" && hook.exit_code === 0));
@@ -205,22 +211,18 @@ test("the project settings file alone is enough for both hooks", options, () => 
 test("the memory canary check can fail: trail init itself copies the notes", options, () => {
   const box = repoCase("memory-control");
   plantMemory(box, box.project);
-  const trail = path.join(realHome, ".local/share/trail-code/0.28.1/node_modules/.bin/trail");
-  const run = sealed(box, box.project, [trail, "init", "--yes", "--no-statusline", "--no-global", "--no-agents"], {
-    env: { DO_NOT_TRACK: "1", TRAIL_NO_FETCH: "1", TRAIL_NO_LOOK_BACK: "1" },
-  });
+  const run = sealed(box, box.project, [trailBin, "init", "--yes", "--no-statusline", "--no-global", "--no-agents"], { env: quietTrail });
   assert.equal(run.error, undefined);
   assert.notDeepEqual(filesContaining(box.project, canary("project")), [], "control must copy, or the check proves nothing");
   assert.ok(fs.existsSync(path.join(box.project, ".trail/learnings")));
 });
 
-test("a worktree under .claude/worktrees keeps git raw and still gets both hooks", options, () => {
+test("a worktree under .claude/worktrees keeps git raw and still gets Trail context", options, () => {
   const box = repoCase("nested");
   const cwd = worktree(box, path.join(box.project, ".claude/worktrees/fresh"));
   const run = session(box, { cwd, prompt: question, steps: [bash("git status"), bash(search)], args: bypass });
   assert.equal(run.rc, 0, run.stderr);
-  assert.equal(rewrites(run).length, 1);
-  assert.match(rewrites(run)[0], /rtk grep -rn createClient/);
+  assert.deepEqual(rewrites(run), []);
   assert.match(run.results[0].text, /On branch/);
   assert.ok(run.apiText.includes(trailHeader));
   assert.equal(git(cwd, "status", "--short"), "");
@@ -307,61 +309,61 @@ const ruleSources = {
 
 for (const [source, apply] of Object.entries(ruleSources)) {
   for (const kind of ["deny", "ask"]) {
-    for (const [label, command, pattern] of [
-      ["a search", search, "grep:*"],
-      ["git status", "git status", "git status:*"],
-    ]) {
-      test(`${kind} rule from ${source} still stops ${label}`, options, () => {
-        const box = repoCase(`rule-${kind}`);
-        const cwd = worktree(box);
-        const extra = apply(box, cwd, rule(kind, pattern)) ?? {};
-        const run = session(box, { cwd, steps: [bash(command)], args: [...bypass, ...(extra.args ?? [])], managedDir: extra.managedDir });
-        assert.equal(run.rc, 0, run.stderr);
-        assert.equal(run.denials.length, 1, `${run.results[0]?.text}\n${run.stderr}`);
-        assert.equal(run.results[0].isError, true);
-        assert.doesNotMatch(run.results[0].text, /pve\.mjs:\d+|^\* fresh/);
-      });
-    }
-  }
-}
-
-for (const kind of ["--disallowedTools"]) {
-  for (const [label, command, pattern] of [
-    ["a search", search, "Bash(grep:*)"],
-    ["git status", "git status", "Bash(git status:*)"],
-  ]) {
-    test(`a ${kind} rule stops ${label} after it is rewritten`, options, () => {
-      const box = repoCase("rule-flag");
+    test(`${kind} rule from ${source} still stops git status`, options, () => {
+      const box = repoCase(`rule-${kind}`);
       const cwd = worktree(box);
-      const run = session(box, { cwd, steps: [bash(command)], args: [...bypass, kind, pattern] });
-      assert.equal(rewrites(run).length, 1, "rtk had rewritten it, and the rule still fired");
-      assert.equal(run.denials.length, 1, run.results[0]?.text);
+      const extra = apply(box, cwd, rule(kind, "git status:*")) ?? {};
+      const run = session(box, { cwd, steps: [bash("git status")], args: [...bypass, ...(extra.args ?? [])], managedDir: extra.managedDir });
+      assert.equal(run.rc, 0, run.stderr);
+      assert.equal(run.denials.length, 1, `${run.results[0]?.text}\n${run.stderr}`);
       assert.equal(run.results[0].isError, true);
+      assert.doesNotMatch(run.results[0].text, /^\* fresh|On branch/);
     });
   }
 }
+
+test("a --disallowedTools rule stops git status after it is rewritten", options, () => {
+  const box = repoCase("rule-flag");
+  const cwd = worktree(box);
+  const run = session(box, { cwd, steps: [bash("git status")], args: [...bypass, "--disallowedTools", "Bash(git status:*)"] });
+  assert.equal(rewrites(run).length, 1, "rtk had rewritten it, and the rule still fired");
+  assert.equal(run.denials.length, 1, run.results[0]?.text);
+  assert.equal(run.results[0].isError, true);
+});
 
 test("the rule checks can fail: a bare rtk rewrite slips past the same rule", options, () => {
   const box = repoCase("rule-control");
   const cwd = worktree(box);
   const hook = path.join(cwd, ".claude/hooks/rtk-rewrite.sh");
   const source = fs.readFileSync(hook, "utf8");
-  const bare = source.replace('"true || $cmd; $quiet $rtk $cmd"', '"$quiet $rtk $cmd"');
+  const bare = source.replace("$rtk git status || git status", "$rtk git status");
   assert.notEqual(bare, source);
   fs.writeFileSync(hook, bare);
-  const run = session(box, { cwd, steps: [bash(search)], args: [...bypass, "--disallowedTools", "Bash(grep:*)"] });
+  const run = session(box, { cwd, steps: [bash("git status")], args: [...bypass, "--disallowedTools", "Bash(git status:*)"] });
   assert.equal(rewrites(run).length, 1);
   assert.deepEqual(run.denials, [], "without the original as a subcommand the rule does not fire");
-  assert.match(run.results[0].text, /createClient/);
+  assert.ok(run.results[0].text.startsWith("* fresh-"), run.results[0].text);
 });
 
 test("a rule on an unrelated command leaves rewriting alone", options, () => {
   const box = repoCase("rule-unrelated");
   const cwd = worktree(box);
-  const run = session(box, { cwd, steps: [bash(search)], args: [...bypass, "--disallowedTools", "Bash(git push:*)"] });
+  const run = session(box, { cwd, steps: [bash("git status")], args: [...bypass, "--disallowedTools", "Bash(git push:*)"] });
   assert.equal(rewrites(run).length, 1);
   assert.deepEqual(run.denials, []);
-  assert.match(run.results[0].text, /createClient/);
+  assert.ok(run.results[0].text.startsWith("* fresh-"), run.results[0].text);
+});
+
+test("a command too long for rule checks stays raw, so a Read deny rule still stops it", options, () => {
+  const box = repoCase("rule-long");
+  const cwd = worktree(box);
+  writeFile(path.join(cwd, ".env"), `API_TOKEN=${canary("long")}\n`);
+  const command = `grep -n API_TOKEN .env ${Array(495).fill("/dev/null").join(" ")}`;
+  const settings = JSON.stringify({ permissions: { deny: ["Read(./.env)"] } });
+  const run = session(box, { cwd, steps: [bash(command)], args: [...bypass, "--settings", settings] });
+  assert.deepEqual(rewrites(run), []);
+  assert.equal(run.denials.length, 1, run.results[0]?.text);
+  assert.equal(run.apiText.includes(canary("long")), false);
 });
 
 test("the session itself adds no permission rule", options, () => {
@@ -404,6 +406,28 @@ for (const [name, stub] of Object.entries(stubs)) {
   });
 }
 
+const gates = `[ "$1" = --version ] && { echo 'rtk 1.1.0'; exit 0; }
+[ "$1" = hook ] && exec jq -c '{hookSpecificOutput: {hookEventName: "PreToolUse", updatedInput: (.tool_input + {command: ("rtk " + .tool_input.command)})}}'
+`;
+
+for (const [name, end] of Object.entries({
+  crashes: `kill -SEGV $$\n`,
+  hangs: `exec sleep 60\n`,
+  "hangs in a child": `sleep 60\n`,
+  "hangs in a child and ignores TERM": `trap '' TERM\nsleep 60\n`,
+})) {
+  test(`the original runs and answers when rtk ${name} after the rewrite`, options, () => {
+    const box = repoCase("rtk-dies", { rtkStub: `#!/bin/sh\n${gates}${end}` });
+    const cwd = worktree(box);
+    const run = session(box, { cwd, steps: [bash("git status")], args: bypass, timeout: 40000 });
+    assert.equal(run.rc, 0, run.stderr);
+    assert.equal(rewrites(run).length, 1);
+    assert.equal(run.results[0].isError, false, run.results[0].text);
+    assert.match(run.results[0].text, /On branch fresh-/);
+    assert.ok(run.ms < 15000, `took ${run.ms} ms`);
+  });
+}
+
 test("slow tools delay the session only up to the hook limits", options, () => {
   const hang = `#!/bin/sh\nexec sleep 60\n`;
   const box = repoCase("slow", { rtkStub: hang, trailStub: hang });
@@ -418,35 +442,136 @@ test("slow tools delay the session only up to the hook limits", options, () => {
 test("a missing jq leaves the session raw and silent", options, () => {
   const box = repoCase("no-jq");
   const cwd = worktree(box);
-  const run = session(box, { cwd, prompt: question, steps: [bash("git status")], args: bypass, hideJq: true });
+  const run = session(box, { cwd, prompt: question, steps: [bash("git status")], args: bypass, hide: ["/usr/bin/jq"] });
   assert.equal(run.rc, 0, run.stderr);
   assert.deepEqual(rewrites(run), []);
   assert.match(run.results[0].text, /On branch/);
   assert.equal(run.apiText.includes(trailHeader), false);
 });
 
-test("a worktree-isolated subagent runs rewritten searches, and raw git, without refusal", options, () => {
+test("a worktree-isolated subagent runs git and every search form raw, without refusal", zshOnly, () => {
   const box = repoCase("isolated");
+  const substeps = [
+    "git status",
+    search,
+    "grep -rn gitignore README.md",
+    "rg createClient plugins/proxmox/server",
+    "grep -rn createClient *",
+    "grep -rn createClient ./*",
+    "grep -rn createClient plugins/*",
+    "rg createClient plugins/*",
+    "grep -n createClient {README.md,CLAUDE.md}",
+    "grep -n createClient plugins/proxmox/{server,test}/*.mjs",
+    "grep -rn createClient plugins/proxmox/{server,test}",
+  ].map(bash);
   const run = session(box, {
     cwd: box.project,
     steps: [{ tool: "Agent", input: { description: "iso", prompt: "SUBAGENT-MARKER go", subagent_type: "general-purpose", isolation: "worktree" } }],
-    substeps: [bash(search), bash("git status"), bash("grep -rn gitignore README.md"), bash("rg createClient plugins/proxmox/server")],
+    substeps,
     args: bypass,
+    env: zsh,
   });
   assert.equal(run.rc, 0, run.stderr);
-  assert.equal(rewrites(run).length, 2, "grep and rg rewritten, the git forms left alone");
+  assert.deepEqual(rewrites(run), []);
   const texts = run.results.map((result) => result.text);
+  assert.equal(texts.length, substeps.length + 1, "the Agent call and every subagent step answered");
   assert.ok(texts.some((text) => /On branch/.test(text)), "raw git status");
   for (const result of run.results) assert.equal(result.isError, false, result.text);
-  assert.doesNotMatch(texts.join("\n"), /Refusing to run|cannot be shown not to be git/);
+  assert.doesNotMatch(texts.join("\n"), refusal);
+});
+
+test("a --worktree session keeps git and globs raw and still gets Trail context", options, () => {
+  const box = repoCase("worktree-flag");
+  const run = session(box, { cwd: box.project, prompt: question, steps: [bash("git status"), bash("grep -rn createClient *")], args: [...bypass, "--worktree", "flagged"] });
+  assert.equal(run.rc, 0, run.stderr);
+  assert.deepEqual(rewrites(run), []);
+  assert.match(run.results[0].text, /On branch/);
+  assert.equal(run.results[1].isError, false, run.results[1].text);
+  assert.doesNotMatch(run.results[1].text, refusal);
+  assert.ok(run.apiText.includes(trailHeader));
+});
+
+test("after a cd that persists, git status stays raw and its paths stay true", options, () => {
+  const box = repoCase("persisted-cd");
+  const cwd = worktree(box);
+  fs.appendFileSync(path.join(cwd, "README.md"), "\nchanged\n");
+  const run = session(box, { cwd, steps: [bash("cd plugins/proxmox && pwd"), bash("git status")], args: bypass });
+  assert.equal(run.rc, 0, run.stderr);
+  assert.deepEqual(rewrites(run), []);
+  assert.match(run.results[1].text, /modified: +\.\.\/\.\.\/README\.md/);
+});
+
+test("searches stay Claude Code's own: ignored files are not read and results are not buried", zshOnly, () => {
+  const box = repoCase("search-scope");
+  const cwd = worktree(box);
+  const secret = canary("secret");
+  writeFile(path.join(cwd, ".env"), `API_TOKEN=${secret}\n`);
+  writeFile(path.join(cwd, "node_modules/pkg/index.js"), `${canary("noise")}\n`);
+  const commands = ["grep -rn REQUEST_TIMEOUT_MS .", `grep -rn ${secret} .`, `grep -rn ${canary("noise")} .`, "rg REQUEST_TIMEOUT_MS plugins", `rg ${secret} .`];
+  // The prompt builds graft/ first, the map whose cache a raw GNU grep would read.
+  const run = session(box, { cwd, prompt: question, steps: commands.map(bash), args: bypass, env: zsh });
+  assert.equal(run.rc, 0, run.stderr);
+  assert.ok(fs.existsSync(path.join(cwd, "graft/.graph/wiring.json")));
+  assert.deepEqual(rewrites(run), []);
+  const [timeouts, secretHit, noiseHit, rgTimeouts, rgSecret] = run.results;
+  assert.equal(timeouts.text.split("\n").filter((line) => line.startsWith("plugins/proxmox/server/pve.mjs:")).length, 3, timeouts.text);
+  assert.doesNotMatch(timeouts.text, /graft\/|Output too large/);
+  assert.equal(rgTimeouts.text.trim().split("\n").length, 3, rgTimeouts.text);
+  for (const hit of [secretHit, noiseHit, rgSecret]) assert.equal(hit.isError, false, hit.text);
+  assert.equal(run.apiText.includes(`API_TOKEN=${secret}`), false, "the secret never reached the model");
+});
+
+test("a search that finds nothing is a success, with or without a system rg", zshOnly, () => {
+  const box = repoCase("no-match");
+  const cwd = worktree(box);
+  const commands = ["grep -n nomatch-at-all README.md", "rg nomatch-at-all README.md", "rg createClient plugins/proxmox/server/pve.mjs"];
+  const run = session(box, { cwd, steps: commands.map(bash), args: bypass, env: zsh, hide: ["/usr/bin/rg"] });
+  assert.equal(run.rc, 0, run.stderr);
+  assert.deepEqual(rewrites(run), []);
+  for (const result of run.results) assert.equal(result.isError, false, result.text);
+  assert.match(run.results[2].text, /createClient/);
+  assert.equal(run.hooks.some((hook) => hook.hook_name?.startsWith("PostToolUseFailure")), false);
+});
+
+test("Trail notes and a workspace connection change nothing the hooks do", options, () => {
+  const box = repoCase("notes");
+  const repoKey = "github.invalid/sagae/plugins";
+  git(box.project, "remote", "add", "origin", `https://${repoKey}.git`);
+  const note = sealed(box, box.project, [trailBin, "note", "--title", "Proxmox client host order", "--personal", "--anyway", "-m", `${canary("note")} createClient in plugins/proxmox/server/pve.mjs tries hosts in order.`], { env: quietTrail });
+  assert.equal(note.status, 0, note.stdout + note.stderr);
+  writeFile(path.join(box.home, ".trail/cloud.json"), JSON.stringify({ token: "synthetic", url: "https://trail.invalid", workspace: { id: "w", slug: "sagae" }, repos: [repoKey], linkedAt: 1 }));
+
+  // A brand-new worktree shares the notes' key, and Trail has not seen its path.
+  const cwd = worktree(box);
+  const before = snapshot(box.home);
+  const run = session(box, { cwd, prompt: question, steps: [bash("git status"), write(path.join(cwd, "plugins/proxmox/server/probe.mjs"), "export const probe = 1;\n")], args: bypass });
+  assert.equal(run.rc, 0, run.stderr);
+  assert.ok(run.apiText.includes(trailHeader), "context still arrives");
+  assert.equal(run.apiText.includes(canary("note")), false, "the hook does not surface notes");
+  assert.deepEqual(snapshotDiff(before, snapshot(box.home)).filter((entry) => entry.includes(" .trail")), []);
+  // Trail writes each of these just before it starts the matching detached child.
+  assert.equal(fs.existsSync(path.join(cwd, "graft/.cache/trail-branches.json")), false, "no background branch refresh");
+  assert.equal(fs.existsSync(path.join(cwd, "graft/.cache/trail-workspace-sync.json")), false, "no background sync");
+
+  // The same lookup outside the hook, so this check can fail. Trail records the
+  // repo in its home and reaches both children.
+  const other = worktree(box);
+  const controlBefore = snapshot(box.home);
+  assert.equal(sealed(box, other, [trailBin, "build", other], { env: quietTrail }).status, 0);
+  const asked = sealed(box, other, [trailBin, "ask", question, other, "--json", "-n", "3"], { env: quietTrail });
+  assert.equal(asked.status, 0, asked.stderr);
+  const homeWrites = snapshotDiff(controlBefore, snapshot(box.home)).filter((entry) => entry.includes(" .trail"));
+  assert.ok(homeWrites.some((entry) => entry.endsWith(".trail/repos/known.json")), homeWrites.join("\n"));
+  assert.ok(fs.existsSync(path.join(other, "graft/.cache/trail-branches.json")), "the refresh started");
+  assert.ok(fs.existsSync(path.join(other, "graft/.cache/trail-workspace-sync.json")), "the sync started");
 });
 
 test("a raw escape in a real session is not rewritten", options, () => {
   const box = repoCase("escape");
   const cwd = worktree(box);
-  const run = session(box, { cwd, steps: [bash(`RTK_DISABLED=1 ${search}`), bash(`${search} | cat`)], args: bypass });
+  const run = session(box, { cwd, steps: [bash("RTK_DISABLED=1 git status"), bash("git status | cat")], args: bypass });
   assert.deepEqual(rewrites(run), []);
-  assert.doesNotMatch(run.results[0].text, /matches in/);
+  for (const result of run.results) assert.match(result.text, /On branch/);
 });
 
 test("the off switch the guide gives, in the main checkout, reaches a worktree's hooks", options, () => {
@@ -469,15 +594,13 @@ test("disableAllHooks in local settings turns every project hook off", options, 
   assert.equal(run.apiText.includes(trailHeader), false);
 });
 
-test("the rewritten command also runs under zsh, the shell on this machine", { ...options, skip: options.skip || (fs.existsSync("/usr/bin/zsh") ? false : "zsh is not installed") }, () => {
+test("the rewritten command also runs under zsh, the shell on this machine", zshOnly, () => {
   const box = repoCase("zsh");
   const cwd = worktree(box);
-  const run = session(box, { cwd, steps: [bash("git status"), bash(search), bash("grep -n nomatch-at-all README.md")], args: bypass, env: { SHELL: "/usr/bin/zsh" } });
+  const run = session(box, { cwd, steps: [bash("git status")], args: bypass, env: zsh });
   assert.equal(run.rc, 0, run.stderr);
-  assert.equal(rewrites(run).length, 3);
+  assert.equal(rewrites(run).length, 1);
   assert.ok(run.results[0].text.startsWith("* fresh-"), run.results[0].text);
-  assert.match(run.results[1].text, /createClient/);
-  assert.match(run.results[2].text, /exit code 1/i, "a rewritten command keeps its exit code");
 });
 
 test("a user hook that answers {} beside the project hook does not disturb it", options, () => {

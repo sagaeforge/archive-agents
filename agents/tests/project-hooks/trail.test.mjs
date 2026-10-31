@@ -1,9 +1,10 @@
 // The two Trail wrappers on their own, with a stub Trail and with the real one.
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
-import { copyRepo, fakeHome, hasRealTrail, restrictedPath, runHook, snapshot, snapshotDiff, tempDir, writeFile } from "./lib/sandbox.mjs";
+import { copyRepo, fakeHome, git, hasRealTrail, restrictedPath, runHook, snapshot, snapshotDiff, tempDir, writeFile } from "./lib/sandbox.mjs";
 
 const context = "trail-context.sh";
 const sync = "trail-sync.sh";
@@ -111,11 +112,11 @@ test("a crafted prompt stays data", () => {
   }
 });
 
-test("every Trail call runs with telemetry, fetches, and look-back off", () => {
+test("every Trail call runs with telemetry, fetches, look-back, and its home off", () => {
   const box = setup({ map: false });
   runHook(context, prompt(question), box);
   const env = fs.readFileSync(path.join(box.home, "trail.env"), "utf8").split("\n");
-  for (const line of ["DO_NOT_TRACK=1", "TRAIL_NO_FETCH=1", "TRAIL_NO_LOOK_BACK=1", "GRAFT_NO_IGNORE=1"]) {
+  for (const line of ["DO_NOT_TRACK=1", "TRAIL_NO_FETCH=1", "TRAIL_NO_LOOK_BACK=1", "GRAFT_NO_IGNORE=1", "TRAIL_HOME=/dev/null/trail"]) {
     assert.ok(env.includes(line), line);
   }
 });
@@ -125,6 +126,15 @@ test("the off switch stops both hooks before Trail runs", () => {
   const env = { TRAIL_NO_HOOKS: "1" };
   runHook(context, prompt(question), { ...box, env });
   runHook(sync, edit(path.join(box.project, "a.mjs")), { ...box, env });
+  assert.deepEqual(trailCalls(box.home), []);
+});
+
+test("a checkout with .trail/ stands both hooks down before Trail runs", () => {
+  const box = setup({ map: false, reply: answer({ coverageStrong: 1 }) });
+  fs.mkdirSync(path.join(box.project, ".trail"));
+  const asked = runHook(context, prompt(question), box);
+  assert.deepEqual({ rc: asked.rc, stdout: asked.stdout }, { rc: 0, stdout: "" });
+  assert.equal(runHook(sync, edit(path.join(box.project, "a.mjs")), box).rc, 0);
   assert.deepEqual(trailCalls(box.home), []);
 });
 
@@ -210,6 +220,76 @@ test("the real Trail gives context and a fresh map without touching home", realO
   assert.match(runHook(context, prompt("where is trailSyncProbe defined here"), { home, project }).stdout, /trailSyncProbe/);
   assert.deepEqual(snapshotDiff(before, snapshot(home)), []);
   assert.equal(fs.existsSync(path.join(project, ".trail")), false);
+});
+
+const lookup = "how does createClient fail over between hosts";
+const note = ["note", "--title", "Proxmox client host order", "--anyway", "-m", "createClient in plugins/proxmox/server/pve.mjs tries hosts in order."];
+
+// Trail as a person runs it, outside the hooks and without their environment.
+const byHand = (home, cwd, ...args) =>
+  spawnSync(path.join(home, ".local/share/trail-code/0.28.1/node_modules/.bin/trail"), args, {
+    cwd,
+    encoding: "utf8",
+    env: { HOME: home, PATH: process.env.PATH, DO_NOT_TRACK: "1", TRAIL_NO_FETCH: "1", TRAIL_NO_LOOK_BACK: "1" },
+  });
+
+test("a personal note changes nothing the hook does, even in a brand-new worktree", realOnly, () => {
+  const dir = tempDir("trail-note");
+  const project = copyRepo(path.join(dir, "repo"));
+  const home = fakeHome({ trail: "real" });
+  const made = byHand(home, project, ...note, "--personal");
+  assert.equal(made.status, 0, made.stderr);
+  assert.ok(fs.existsSync(path.join(home, ".trail/repos")), "the note went to Trail's home");
+
+  const fresh = path.join(dir, "fresh");
+  git(project, "worktree", "add", "-q", "-b", "fresh", fresh);
+  const before = snapshot(home);
+  const { rc, stdout } = runHook(context, prompt(lookup), { home, project: fresh });
+  assert.equal(rc, 0);
+  assert.match(stdout, /createClient/);
+  assert.deepEqual(snapshotDiff(before, snapshot(home)), []);
+  // Trail writes this file just before it starts the detached _trail-branches.
+  assert.equal(fs.existsSync(path.join(fresh, "graft/.cache/trail-branches.json")), false);
+
+  // The same lookup without the hook's environment, so these checks can fail.
+  const control = path.join(dir, "control");
+  git(project, "worktree", "add", "-q", "-b", "control", control);
+  assert.equal(byHand(home, control, "build", control).status, 0);
+  assert.equal(byHand(home, control, "ask", lookup, control, "--json").status, 0);
+  assert.deepEqual(snapshotDiff(before, snapshot(home)), ["changed .trail/repos/known.json"]);
+  assert.equal(fs.existsSync(path.join(control, "graft/.cache/trail-branches.json")), true);
+});
+
+test("a repo note stands the hooks down, they touch nothing, and removing .trail/ brings them back", realOnly, () => {
+  const dir = tempDir("trail-repo-note");
+  const project = copyRepo(path.join(dir, "repo"));
+  const home = fakeHome({ trail: "real" });
+  assert.notEqual(runHook(context, prompt(lookup), { home, project }).stdout, "");
+  const made = byHand(home, project, ...note);
+  assert.equal(made.status, 0, made.stderr);
+  assert.ok(fs.existsSync(path.join(project, ".trail")), "a repo note lives in the checkout");
+
+  const homeBefore = snapshot(home);
+  const projectBefore = snapshot(project);
+  for (let i = 0; i < 3; i++) {
+    const { rc, stdout } = runHook(context, prompt(lookup), { home, project });
+    assert.deepEqual({ rc, stdout }, { rc: 0, stdout: "" });
+  }
+  assert.equal(runHook(sync, edit(path.join(project, "README.md")), { home, project }).rc, 0);
+  assert.deepEqual(snapshotDiff(homeBefore, snapshot(home)), []);
+  assert.deepEqual(snapshotDiff(projectBefore, snapshot(project)), []);
+
+  // .trail/ is ignored by git, so a new worktree has none and the hooks work there.
+  const fresh = path.join(dir, "fresh");
+  git(project, "worktree", "add", "-q", "-b", "fresh", fresh);
+  assert.match(runHook(context, prompt(lookup), { home, project: fresh }).stdout, /createClient/);
+  assert.equal(fs.existsSync(path.join(fresh, ".trail")), false);
+  assert.equal(fs.existsSync(path.join(fresh, "graft/.cache/trail-branches.json")), false);
+  assert.deepEqual(snapshotDiff(homeBefore, snapshot(home)), []);
+
+  fs.rmSync(path.join(project, ".trail"), { recursive: true });
+  assert.match(runHook(context, prompt(lookup), { home, project }).stdout, /createClient/);
+  assert.deepEqual(snapshotDiff(homeBefore, snapshot(home)), []);
 });
 
 test("real Trail stays quiet on a Korean prompt with no code terms", realOnly, () => {
