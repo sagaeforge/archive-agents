@@ -114,7 +114,7 @@ PVE_TOKEN_FILE=/tmp/fake-token PVE_HOSTS=192.0.2.1,192.0.2.2,192.0.2.3 node test
 | 항목 | 단언 |
 |---|---|
 | `cluster_overview` | 노드 수가 3이고 이름 3개가 모두 있으며 HA 상태가 있습니다. 쿼럼 값은 기록만 합니다 |
-| `list_resources` | 노드가 3건 이상입니다. `sdn` 1건 이상은 W4가 병합되면 저절로 켜집니다. 그 전에는 `sdn=unchecked`로 표시합니다 |
+| `list_resources` | 노드가 3건 이상이고 `sdn`이 1건 이상입니다. 서버에 W4의 `sdn` 필터가 없는 커밋에서는 `sdn=unchecked`로 표시합니다 |
 | `node_status` | 세 노드 모두 `pveversion`이 있습니다 |
 | `guest_config` | 게스트 1대의 설정에 `digest` 키가 있습니다 |
 | `recent_tasks` | 배열이고 길이가 5 이하입니다 |
@@ -125,7 +125,7 @@ PVE_TOKEN_FILE=/tmp/fake-token PVE_HOSTS=192.0.2.1,192.0.2.2,192.0.2.3 node test
 
 Actions 로그는 GitHub에 저장되므로 응답 내용을 남기지 않습니다. 호스트별 응답 시간, 검사별 통과 여부와 소요 시간, 개수, 쿼럼 값, 인증서 만료까지 남은 일수만 출력합니다. 오류는 `PVE API 403` 같은 상태와 코드만 남기고 문구는 버립니다. 서버의 stderr도 받지 않습니다. `npm test`가 응답의 모든 자유 입력 칸에 표식을 넣은 가짜 PVE로 이를 확인합니다.
 
-어떤 호스트가 어떤 도구를 처리했는지는 W4 이후 서버 로그에만 있습니다. 스모크 로그의 `host` 줄은 호스트별 연결 상태입니다.
+어떤 호스트가 어떤 도구를 처리했는지는 [서버 로그](../README.md#서버-로그)에만 있습니다. 스모크 로그의 `host` 줄은 호스트별 연결 상태입니다.
 
 ## 확인한 범위
 

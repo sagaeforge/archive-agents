@@ -86,7 +86,7 @@ jq -r '.plugins["proxmox@sagae"][0].version' ~/.claude/plugins/installed_plugins
 gh api repos/sagaeforge/sagae-claude-plugins/commits/stable --jq .sha
 ```
 
-doctor가 병합되어 있으면 `~/.claude/plugins/marketplaces/sagae/plugins/proxmox/scripts/doctor.sh`로 마무리합니다.
+`~/.claude/plugins/marketplaces/sagae/plugins/proxmox/scripts/doctor.sh`로 마무리합니다. 2번에 `ref stable`과 `auto-update on`이 나오고 3번이 통과해야 합니다.
 
 ## 평소 동작
 
@@ -170,8 +170,10 @@ git config --unset core.hooksPath
 | 재등록과 `stable` 전진, 후진의 머신 반영 | 임시 설정 폴더와 로컬 저장소로 실행했습니다(Claude Code 2.1.316, `git` URL 소스, 수동 update 명령) |
 | `promote`의 실행 조건 | `npm test`가 `ci.yml`의 실제 `if` 식을 경우별로 평가합니다. 작업 상태 규칙은 테스트가 흉내 낸 것입니다 |
 | GitHub Actions에서의 `promote`, `rollback.yml` 실행 | **미검증.** 아직 한 번도 실행되지 않았습니다 |
-| `GITHUB_TOKEN`의 `stable` push와 workflow 파일 제약 | **미검증.** 첫 사례는 W8이 `ci.yml`을 바꿀 때입니다 |
+| `GITHUB_TOKEN`의 `stable` push와 workflow 파일 제약 | **미검증.** 첫 사례는 `stable`을 만든 뒤 workflow 파일을 처음 바꾸는 커밋입니다 |
 | `owner/repo#ref` 형식 등록 | **미검증.** 공식 문서의 형식이며 실제로는 URL 형식만 실행했습니다 |
 | `stable`이 뒤로 움직였을 때의 백그라운드 auto-update | **미검증.** 수동 명령만 확인했습니다. 롤백할 때는 5번을 실행합니다 |
+
+실제 롤백 연습과 소요 시간 기록은 [리허설 체크리스트](rehearsals.md#3-롤백)에 있습니다.
 
 `--no-verify`로 `main`의 커밋을 `stable`에 직접 올리면 fast-forward인 한 탐지되지 않습니다. 이 게이트는 실수를 막는 장치이고, 소유자의 자격 증명은 막지 못합니다.
