@@ -6,7 +6,7 @@ Private Claude Code plugin marketplace (`sagae`). While the `stable` gate is off
 
 - `.claude-plugin/marketplace.json`: plugin list
 - `plugins/<name>/`: one plugin each, with `.claude-plugin/plugin.json`, `skills/`, `.mcp.json`
-- `plugins/proxmox/server/`: Node MCP server. `pve.mjs` is the API client, `index.mjs` defines tools
+- `plugins/proxmox/server/`: Node MCP server. `pve.mjs` is the API client, `tools.mjs` defines tools, `index.mjs` wires them together
 
 ## Before pushing
 
@@ -18,7 +18,7 @@ claude plugin validate . && claude plugin validate plugins/proxmox
 ## Rules
 
 - Never set `version` in `plugin.json` or `marketplace.json`. Updates are detected from the commit SHA, and a pinned version silently stops them.
-- Never commit secrets. The API token lives only in `~/.config/proxmox-mcp/token`. `certs/pve-root-ca.pem` is a public CA certificate.
+- Never commit secrets. A machine's API token lives only in `~/.config/proxmox-mcp/token`, and the runner's only in `/etc/proxmox-mcp/token` inside its LXC. `certs/pve-root-ca.pem` is a public CA certificate.
 - The proxmox server is read-only by design: `pve.mjs` can only send GET and the token has only `PVEAuditor`. Adding write tools needs a separate decision, a separate token with a narrower role, and explicit gating for each tool. Do not widen the existing token.
 - New dependencies must be in `package-lock.json`.
 - User-facing docs are in Korean; code, comments, and commits are in English.
@@ -34,7 +34,8 @@ When a node is added, removed, renamed, or readdressed, change every copy of the
 - `plugins/proxmox/skills/proxmox/SKILL.md`: `description`, the node table, the node count, and the quorum rule
 - `plugins/proxmox/test/smoke/live.mjs`: `HOSTS` and `NODES`. Its count has to match the cluster, or `live-smoke` fails
 - `infra/runner/nftables.conf`: `PVE_NODES`
-- Any other copy: `git grep -nE '<old name>|192\\?\.168\\?\.0\\?\.<old last octet>\b'` finds tests that pin these lists, including addresses written as escaped regexes, tool descriptions, and examples in the docs
+- Any other copy: `git grep -nE '<name>|192\\?\.168\\?\.0\\?\.<last octet>\b'` finds tests that pin these lists, including addresses written as escaped regexes, tool descriptions, and examples in the docs. Use the node that changes, or for a new node one that stays
+- The node count written out, which that search cannot find: `git grep -nE '노드 3개|세 노드|노드 수가 3|이름 3개|노드가 3건' -- README.md docs/`
 
 Then:
 
