@@ -393,10 +393,97 @@ function job(text, name) {
   return block[1];
 }
 
-test("promote needs check to pass and the owner to have turned the gate on", () => {
+// The job's `if` as a function of the contexts. Nothing here can run a workflow, so this is the closest
+// thing to one: the real expressions from ci.yml, evaluated. They use only what reads the same in
+// JavaScript, and an empty value is falsy in both. The rest of GitHub's behaviour is in simulate.
+function condition(name) {
+  const [, block, line] = job(workflow("ci.yml"), name).match(/^ {4}if: (?:>-\n((?: {6}.+\n)+)|(.+)\n)/m);
+  const expression = (block ?? line).replaceAll("needs.live-smoke", 'needs["live-smoke"]');
+  return new Function("github", "vars", "inputs", "needs", "cancelled", "always", `return Boolean(${expression});`);
+}
+
+// `smoke` is how the live-smoke job ends if it gets to run.
+function simulate({
+  event = "push",
+  ref = "refs/heads/main",
+  smokeOn = "true",
+  gateOn = "true",
+  skipSmoke,
+  check = "success",
+  smoke = "success",
+  cancelled = false,
+}) {
+  const github = { event_name: event, ref };
+  const vars = { LIVE_SMOKE_ENABLED: smokeOn, STABLE_GATE_ENABLED: gateOn };
+  const inputs = event === "workflow_dispatch" ? { skip_smoke: skipSmoke ?? false } : {};
+
+  // With no status function in its `if`, a job also waits for the jobs it needs to have passed.
+  const smokeRuns = !cancelled && check === "success" && condition("live-smoke")(github, vars, inputs);
+  const needs = { check: { result: check }, "live-smoke": { result: smokeRuns ? smoke : "skipped" } };
+  const promotes = condition("promote")(github, vars, inputs, needs, () => cancelled, () => true);
+  return { smokeRuns, promotes };
+}
+
+const DISPATCH = { event: "workflow_dispatch" };
+
+for (const [scenario, run, expected] of [
+  ["a push to main that passes", {}, { smokeRuns: true, promotes: true }],
+  ["a failing smoke", { smoke: "failure" }, { smokeRuns: true, promotes: false }],
+  ["a smoke that timed out or was cancelled", { smoke: "cancelled" }, { smokeRuns: true, promotes: false }],
+  ["a failing check", { check: "failure" }, { smokeRuns: false, promotes: false }],
+  ["a pull request", { event: "pull_request", ref: "refs/pull/1/merge" }, { smokeRuns: false, promotes: false }],
+  ["a manual run on main", DISPATCH, { smokeRuns: true, promotes: true }],
+  ["a manual run on another branch", { ...DISPATCH, ref: "refs/heads/feature" }, { smokeRuns: false, promotes: false }],
+  ["skip_smoke on main", { ...DISPATCH, skipSmoke: true }, { smokeRuns: false, promotes: true }],
+  ["skip_smoke with a failing check", { ...DISPATCH, skipSmoke: true, check: "failure" }, { smokeRuns: false, promotes: false }],
+  ["skip_smoke in a cancelled run", { ...DISPATCH, skipSmoke: true, cancelled: true }, { smokeRuns: false, promotes: false }],
+  ["skip_smoke on another branch", { ...DISPATCH, skipSmoke: true, ref: "refs/heads/feature" }, { smokeRuns: false, promotes: false }],
+  ["skip_smoke with the gate off", { ...DISPATCH, skipSmoke: true, gateOn: "" }, { smokeRuns: false, promotes: false }],
+  ["the weekly run", { event: "schedule" }, { smokeRuns: true, promotes: false }],
+  ["the weekly run with a failing smoke", { event: "schedule", smoke: "failure" }, { smokeRuns: true, promotes: false }],
+  ["the weekly run before the smoke is on", { event: "schedule", smokeOn: "" }, { smokeRuns: false, promotes: false }],
+  ["the gate off with the smoke on", { gateOn: "" }, { smokeRuns: true, promotes: false }],
+  ["both off, as merged", { smokeOn: "", gateOn: "" }, { smokeRuns: false, promotes: false }],
+  ["the smoke off with the gate on, which is check alone", { smokeOn: "" }, { smokeRuns: false, promotes: true }],
+  ["the smoke off with a failing check", { smokeOn: "", check: "failure" }, { smokeRuns: false, promotes: false }],
+]) {
+  test(`CI flow: ${scenario}`, () => {
+    assert.deepEqual(simulate(run), expected);
+  });
+}
+
+test("a pull request stays off the runner on the event alone, whatever its ref says", () => {
+  assert.equal(simulate({ event: "pull_request" }).smokeRuns, false);
+});
+
+test("promote waits for both jobs, including one that was skipped", () => {
   const promoteJob = job(workflow("ci.yml"), "promote");
-  assert.match(promoteJob, /^ {4}needs: check$/m);
-  assert.match(promoteJob, /^ {4}if: vars\.STABLE_GATE_ENABLED == 'true' && github\.ref == 'refs\/heads\/main'$/m);
+  assert.match(promoteJob, /^ {4}needs: \[check, live-smoke\]$/m);
+  // Without this a skipped smoke skips promote before its `if` is even read.
+  assert.match(promoteJob, /^ {6}!cancelled\(\)/m);
+});
+
+test("live-smoke runs on the runner W7 builds, with the token W7 installs", () => {
+  const smoke = job(workflow("ci.yml"), "live-smoke");
+  const scripts = (name) => readFileSync(join(REPO, "infra/runner", name), "utf8");
+
+  const [, label] = scripts("provision.sh").match(/^RUNNER_LABEL="(.+)"$/m);
+  assert.match(smoke, new RegExp(`^ {4}runs-on: \\[self-hosted, ${label}\\]$`, "m"));
+
+  const [, tokenDir] = scripts("issue-token.sh").match(/^TOKEN_DIR="(.+)"$/m);
+  assert.match(scripts("issue-token.sh"), /^TOKEN_FILE="\$TOKEN_DIR\/token"$/m);
+  assert.match(smoke, new RegExp(`^ {6}PVE_TOKEN_FILE: ${tokenDir}/token$`, "m"));
+});
+
+test("live-smoke gets a time limit and no credentials to keep on the runner's disk", () => {
+  const smoke = job(workflow("ci.yml"), "live-smoke");
+  assert.match(smoke, /^ {4}timeout-minutes: \d+$/m);
+  assert.match(smoke, /^ {10}persist-credentials: false\b/m);
+  assert.doesNotMatch(smoke, /permissions:|secrets\.|GITHUB_TOKEN|github\.token/);
+});
+
+test("the weekly run is on Monday morning in Korea", () => {
+  assert.match(workflow("ci.yml"), /^ {4}- cron: "0 21 \* \* 0"/m);
 });
 
 test("promote moves stable to the commit that was tested, not to wherever main is now", () => {
