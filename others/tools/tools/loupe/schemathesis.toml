@@ -1,0 +1,85 @@
+# Schemathesis 4.32.7 settings, run against the KB's openapi.yaml. The same file is used for the real KB at T3.
+# Opaque cursors: a schema-valid string can still be unknown to the server, and that is a client error (400 or 410).
+[[operations]]
+include-name = "GET /v1/nodes"
+checks.positive_data_acceptance.expected-statuses = ["2xx", "3xx", "400", "401", "403", "404", "409", "410", "429", "5xx"]
+[[operations]]
+include-name = "GET /v1/nodes/{id}/claims"
+parameters = { id = "e:feature:claude-code-hooks" }
+checks.positive_data_acceptance.expected-statuses = ["2xx", "3xx", "400", "401", "403", "404", "409", "410", "429", "5xx"]
+[[operations]]
+include-name = "GET /v1/nodes/{id}/edges"
+parameters = { id = "e:feature:claude-code-hooks" }
+checks.positive_data_acceptance.expected-statuses = ["2xx", "3xx", "400", "401", "403", "404", "409", "410", "429", "5xx"]
+[[operations]]
+include-name = "GET /v1/search"
+checks.positive_data_acceptance.expected-statuses = ["2xx", "3xx", "400", "401", "403", "404", "409", "410", "429", "5xx"]
+[[operations]]
+include-name = "GET /v1/changes"
+checks.positive_data_acceptance.expected-statuses = ["2xx", "3xx", "400", "401", "403", "404", "409", "410", "429", "5xx"]
+[[operations]]
+include-name = "GET /v1/overview"
+checks.positive_data_acceptance.expected-statuses = ["2xx", "3xx", "400", "401", "403", "404", "409", "410", "429", "5xx"]
+[[operations]]
+include-name = "GET /v1/ops/tickets"
+checks.positive_data_acceptance.expected-statuses = ["2xx", "3xx", "400", "401", "403", "404", "409", "410", "429", "5xx"]
+
+# Windows past the end of a body are a client error even though the integers are schema-valid.
+[[operations]]
+include-name = "GET /v1/snapshots/{id}/text"
+parameters = { id = "n-3fa9c01b77aa12ef" }
+checks.positive_data_acceptance.expected-statuses = ["2xx", "3xx", "400", "401", "403", "404", "409", "429", "5xx"]
+[[operations]]
+include-name = "GET /v1/nodes/{id}/body"
+parameters = { id = "f-01JC8ZQ3T9XYZ" }
+checks.positive_data_acceptance.expected-statuses = ["2xx", "3xx", "400", "401", "403", "404", "409", "429", "5xx"]
+
+# /raw answers any media type. A JSON snapshot comes back as application/json and a 206 slice is not JSON.
+[[operations]]
+include-name = "GET /v1/snapshots/{id}/raw"
+parameters = { id = "n-json000000000001" }
+checks.response_schema_conformance.enabled = false
+checks.content_type_conformance.enabled = false
+checks.positive_data_acceptance.expected-statuses = ["2xx", "3xx", "400", "401", "403", "404", "409", "416", "429", "5xx"]
+# The export file is zstd, not JSON.
+[[operations]]
+include-name = "GET /v1/export/graph"
+checks.response_schema_conformance.enabled = false
+
+# Random ids only reach the 404 branch. Pin one real id per id route so the handlers run.
+[[operations]]
+include-name = "GET /v1/nodes/{id}"
+parameters = { id = "e:feature:claude-code-hooks" }
+checks.positive_data_acceptance.expected-statuses = ["2xx", "3xx", "400", "401", "403", "404", "409", "410", "429", "5xx"]
+[[operations]]
+include-name = "GET /v1/nodes/{id}/neighbors"
+parameters = { id = "e:product:claude-code" }
+checks.positive_data_acceptance.expected-statuses = ["2xx", "3xx", "400", "401", "403", "404", "409", "410", "429", "5xx"]
+[[operations]]
+include-name = "GET /v1/nodes/{id}/history"
+parameters = { id = "e:product:claude-code" }
+[[operations]]
+include-name = "GET /v1/claims/{id}"
+parameters = { id = "c-8k2p4q7m1xab" }
+checks.positive_data_acceptance.expected-statuses = ["2xx", "3xx", "400", "401", "403", "404", "409", "410", "429", "5xx"]
+[[operations]]
+include-name = "GET /v1/edges/{id}"
+parameters = { id = "r-partof000001" }
+checks.positive_data_acceptance.expected-statuses = ["2xx", "3xx", "400", "401", "403", "404", "409", "410", "429", "5xx"]
+[[operations]]
+include-name = "GET /v1/series/{id}"
+parameters = { id = "s:netflix-top10-kr" }
+checks.positive_data_acceptance.expected-statuses = ["2xx", "3xx", "400", "401", "403", "404", "409", "410", "429", "5xx"]
+[[operations]]
+include-name = "GET /v1/snapshots/{id}"
+parameters = { id = "n-3fa9c01b77aa12ef" }
+
+# openapi.yaml 0.3.0 declares as_of_valid as an unconstrained string, so an empty one is schema-valid. The prose (2.9) says RFC 3339 or
+# YYYY-MM-DD, and a KB answers an empty value with 400. Asked of the contract owner; until then 400 is an accepted answer on the
+# time-aware operations below (and on the five id routes above).
+[[operations]]
+include-name = "GET /v1/facets"
+checks.positive_data_acceptance.expected-statuses = ["2xx", "3xx", "400", "401", "403", "404", "409", "410", "429", "5xx"]
+[[operations]]
+include-name = "GET /v1/counts"
+checks.positive_data_acceptance.expected-statuses = ["2xx", "3xx", "400", "401", "403", "404", "409", "410", "429", "5xx"]
