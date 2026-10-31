@@ -4,10 +4,10 @@
 # Fail open. Any failure prints nothing and exits 0, and the prompt goes on
 # without context. The prompt is data: it reaches Trail on stdin.
 #
-# Nothing needs to run after an edit. `trail ask` rebuilds a map that drifted from
-# the working tree before it answers, whoever made the change, and it only answers
-# from that map here: a card under graft/ is the one thing it reads that a query does
-# not refresh, so kind "concept" stays out of the printed lines.
+# Nothing needs to run after an edit. Before it answers, `trail ask` rebuilds a map
+# that has drifted from the working tree, whoever made the change. The one thing it
+# reads and does not refresh is a card under graft/, so hits of kind "concept" are
+# not printed.
 
 . "$(dirname "$0")/trail-env.sh"
 
@@ -15,10 +15,10 @@ input=$(cat)
 
 # Only what a person typed, and not a short reply. Claude Code sends its own turns
 # through this hook too: a background notice, or in a headless session a message from
-# another agent. `source` will name them, but no version has sent it yet. Until then
-# they start with a tag, on the first line or under one lead-in line such as "Another
-# Claude session sent a message:". A person's prompt that looks the same only goes
-# without context.
+# another agent. The hook input's schema has `source` to name them, but 2.1.316 does
+# not send it. Without it they start with a tag, on the first line or under one lead-in
+# line such as "Another Claude session sent a message:". A person's prompt that looks
+# the same only goes without context.
 prompt=$(printf '%s' "$input" | jq -r '
   select((.source // "user") | . == "user" or . == "sdk")
   | .prompt | strings
