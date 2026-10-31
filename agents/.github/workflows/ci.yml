@@ -3,18 +3,57 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        # The lowest entry has to match engines in plugins/proxmox/package.json; npm test checks it.
+        node: [20, 22, 26]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: 22
-      - run: npx -y @anthropic-ai/claude-code plugin validate .
-      - run: npx -y @anthropic-ai/claude-code plugin validate plugins/proxmox
-      - run: npm ci
+          fetch-depth: 0 # The secret scan reads every commit.
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+      # The CLI needs Node 22 or newer. Manifests do not vary with Node, so the other legs cover it.
+      # No --ignore-scripts here: the CLI's postinstall sets up its native binary.
+      - if: matrix.node >= 22
+        run: npx -y @anthropic-ai/claude-code@2.1.314 plugin validate .
+      - if: matrix.node >= 22
+        run: npx -y @anthropic-ai/claude-code@2.1.314 plugin validate plugins/proxmox
+      - run: .github/scripts/gitleaks.sh
+      - run: npm ci --ignore-scripts
         working-directory: plugins/proxmox
       - run: npm test
         working-directory: plugins/proxmox
+      - run: node test/mutation.mjs
+        working-directory: plugins/proxmox
+      - run: node test/smoke/boot.mjs
+        working-directory: plugins/proxmox
+
+  # Moves stable, the branch machines follow once the gate is on. Until the owner sets this variable
+  # the job is skipped, so no write token exists and stable is not touched. See docs/stable-gate.md.
+  promote:
+    needs: check
+    if: vars.STABLE_GATE_ENABLED == 'true' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    concurrency: promote # Shared with rollback.yml, so the two never race.
+    steps:
+      # promote.sh compares this commit with stable, and its push uses the credentials this step keeps.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - run: .github/scripts/promote.sh "$GITHUB_SHA"
