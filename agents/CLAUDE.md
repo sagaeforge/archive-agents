@@ -5,8 +5,8 @@ Private Claude Code plugin marketplace (`sagae`). While the `stable` gate is off
 ## Layout
 
 - `.claude-plugin/marketplace.json`: plugin list
-- `plugins/<name>/`: one plugin each, with `.claude-plugin/plugin.json`, `skills/`, `.mcp.json`
-- `plugins/proxmox/server/`: Node MCP server. `pve.mjs` is the API client, `tools.mjs` defines tools, `index.mjs` wires them together
+- `plugins/<name>/`: one plugin each, with `.claude-plugin/plugin.json` and `skills/`. A plugin does not register MCP servers: the `tower` plugin's `.mcp.json` is the only registration, and the proxmox plugin has none (its tools are `mcp__plugin_tower_tower__proxmox_*`)
+- `plugins/proxmox/server/`: Node MCP server, run by tower from a checkout of this repo and not registered by the plugin. `pve.mjs` is the API client, `tools.mjs` defines tools, `index.mjs` wires them together
 
 ## Before pushing
 
@@ -19,6 +19,7 @@ sh tests/project-hooks/run.sh
 ## Rules
 
 - Never set `version` in `plugin.json` or `marketplace.json`. Updates are detected from the commit SHA, and a pinned version silently stops them.
+- MCP servers do not go in plugin extensions. A plugin must not ship its own `.mcp.json` (or an `mcpServers` entry in `plugin.json`) for an MCP server: Claude Code gets one MCP endpoint, tower's merged one, registered only by the `tower` plugin. Run a new server as a tower upstream (`~/.config/tower/tower.json`), with its code in `plugins/<name>/server/` if it belongs here. Adding a server then changes no Claude Code setting. `plugins/proxmox/test/repo-rules.test.mjs` fails if a plugin other than `tower` has one.
 - Never commit secrets. A machine's API token lives only in `~/.config/proxmox-mcp/token`, and the runner's only in `/etc/proxmox-mcp/token` inside its LXC. `certs/pve-root-ca.pem` is a public CA certificate.
 - The proxmox server is read-only by design: `pve.mjs` can only send GET and the token has only `PVEAuditor`. Adding write tools needs a separate decision, a separate token with a narrower role, and explicit gating for each tool. Do not widen the existing token.
 - New dependencies must be in `package-lock.json`.

@@ -667,7 +667,7 @@ scenarios([
     marketplace: { source: { source: "github", repo: "someone/else" }, autoUpdate: true },
     statuses: { 2: "fail", 3: "skip" },
     exitCode: 2,
-    expect: wantedAt(2, "action", /removes its plugin too/),
+    expect: wantedAt(2, "action", /claude plugin install proxmox@sagae and claude plugin install tower@sagae\. Removing a marketplace removes its plugins too/),
   },
   {
     name: "a repository with a similar name is another repository",

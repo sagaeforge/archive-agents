@@ -32,6 +32,18 @@ function versionKeys(value, path = "") {
   ]);
 }
 
+// A plugin's .mcp.json or mcpServers entry registers a second MCP server with Claude Code. The one
+// registration is tower's merged endpoint (CLAUDE.md, Rules), so only the tower plugin may have one.
+test("only the tower plugin registers an MCP server", () => {
+  const plugins = readdirSync(join(REPO, "plugins"));
+  assert.ok(plugins.includes("tower") && plugins.includes("proxmox"));
+  for (const plugin of plugins.filter((name) => name !== "tower")) {
+    const files = readdirSync(join(REPO, "plugins", plugin), { recursive: true });
+    assert.deepEqual(files.filter((file) => file.split("/").pop() === ".mcp.json" && !file.startsWith("node_modules")), [], plugin);
+    assert.equal("mcpServers" in JSON.parse(read(`plugins/${plugin}/.claude-plugin/plugin.json`)), false, plugin);
+  }
+});
+
 test("no manifest sets a version, which would silently stop updates", () => {
   assert.ok(MANIFESTS.includes("plugins/proxmox/.claude-plugin/plugin.json"));
   for (const manifest of MANIFESTS) {

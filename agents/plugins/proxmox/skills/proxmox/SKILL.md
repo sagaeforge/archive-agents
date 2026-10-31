@@ -1,6 +1,6 @@
 ---
 name: proxmox
-description: Inspect the sagae internal Proxmox VE cluster (example-cluster; nodes pve-node, pve-node, pve-node) through the proxmox MCP tools. Use for questions about VMs, LXC containers, node health, storage, quorum, HA, or recent cluster tasks.
+description: Inspect the sagae internal Proxmox VE cluster (example-cluster; nodes pve-node, pve-node, pve-node) through the proxmox tools served by tower. Use for questions about VMs, LXC containers, node health, storage, quorum, HA, or recent cluster tasks.
 ---
 
 # Proxmox cluster
@@ -15,18 +15,22 @@ Three-node PVE 9 cluster `example-cluster` on the internal network.
 
 ## Choosing a tool
 
+The tools come from the `tower` plugin, which must be installed and its server running. Tower merges the proxmox server's tools under a `proxmox_` prefix, so the model sees them as `mcp__plugin_tower_tower__proxmox_<tool>`. The names below omit the `mcp__plugin_tower_tower__` part.
+
 Prefer these, in order:
 
-1. `cluster_overview` for quorum and HA.
-2. `list_resources` to find guests and which node holds them. Run this before `guest_config`, which needs the node.
-3. `node_status`, `guest_config`, `recent_tasks` for detail.
-4. `api_get` for any other read, such as `/nodes/<node>/disks/list` or `/nodes/<node>/qemu/<vmid>/snapshot`.
+1. `proxmox_cluster_overview` for quorum and HA.
+2. `proxmox_list_resources` to find guests and which node holds them. Run this before `proxmox_guest_config`, which needs the node.
+3. `proxmox_node_status`, `proxmox_guest_config`, `proxmox_recent_tasks` for detail.
+4. `proxmox_api_get` for any other read, such as `/nodes/<node>/disks/list` or `/nodes/<node>/qemu/<vmid>/snapshot`.
 
 ## Rules
 
 - The MCP token holds only `PVEAuditor`, and the server issues only GET requests. A 403 means the role lacks that permission, not that the request needs retrying.
 - For changes (start, stop, migrate, delete), do not fall back to `ssh root@...` on your own. Show the exact command and get the user's approval for that specific action. SSH reaches these nodes as root, so nothing else stands between a mistake and the cluster.
-- Quorum needs two of three nodes. Before suggesting a reboot or maintenance, check `cluster_overview` and confirm the other two nodes are online.
+- Quorum needs two of three nodes. Before suggesting a reboot or maintenance, check `proxmox_cluster_overview` and confirm the other two nodes are online.
+
+If the proxmox tools are missing, check that the `tower` plugin is installed and tower is running. If they report a missing token, run `scripts/bootstrap-token.sh` from this plugin.
 
 ## When a tool reports an error
 
@@ -59,4 +63,4 @@ Each check reports `pass`, `warn`, `fail` or `skip`, with what to do. A `skip` m
 
 Each API call writes one JSON line to the server's stderr: time, tool, host, path, duration, status and whether it failed over. Tokens, response bodies and query values never go in it, and a path that looks like it holds a token, even percent-encoded, or that runs past 1,024 characters, is written as `<redacted>`. This is how to see which node answered and how long it took.
 
-As of Claude Code 2.1.316, Claude Code stops reading a server's stderr once it has connected, so in a session the place to read is the file `.mcp.json` sends the same lines to: `${CLAUDE_PLUGIN_DATA}/calls.jsonl`, normally `~/.claude/plugins/data/proxmox-sagae/calls.jsonl`. At 5 MiB it moves to `calls.jsonl.1`, replacing the one before, so there is at most about 10 MiB of history. Uninstalling the plugin deletes both.
+The server runs as a tower upstream, so tower receives stderr. The same lines also go to the file named by `PVE_LOG_FILE` in the `proxmox` upstream's `env` in `~/.config/tower/tower.json`, if it sets one (read it with `jq -r .upstreams.proxmox.env.PVE_LOG_FILE ~/.config/tower/tower.json`); the plugin sets nothing, so with no value there is no file. At 5 MiB the file moves to `<file>.1`, replacing the one before, so there is at most about 10 MiB of history.

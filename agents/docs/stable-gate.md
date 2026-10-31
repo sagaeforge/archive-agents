@@ -68,11 +68,12 @@ CI를 통과한 커밋만 머신에 나가게 하는 장치입니다. 머신은 
 claude plugin marketplace remove sagae
 claude plugin marketplace add sagaeforge/sagae-claude-plugins#stable
 claude plugin install proxmox@sagae
+claude plugin install tower@sagae
 ```
 
 이어서 세션을 열고 `/plugin` > Marketplaces > `sagae` > Enable auto-update를 선택합니다. **이 단계를 빠뜨리면 그 머신은 조용히 갱신을 멈춥니다.** `remove`가 `autoUpdate` 설정까지 지우고, 기본값은 꺼짐입니다.
 
-- `marketplace remove`는 플러그인도 함께 제거합니다. 플러그인 데이터 폴더의 [호출 로그](../README.md#서버-로그)도 이때 지워집니다.
+- `marketplace remove`는 플러그인도 함께 제거하므로 `tower`도 다시 설치해야 합니다. 빠뜨리면 MCP 등록이 없어 proxmox 도구가 사라집니다. [호출 로그](../README.md#서버-로그)는 tower 설정이 가리키는 파일이라 지워지지 않고, tower의 전용 체크아웃도 그대로입니다.
 - 토큰 파일 `~/.config/proxmox-mcp/token`은 건드리지 않으므로 다시 발급할 필요가 없습니다.
 - `remove` 없이 `add`만 실행하면 `its source doesn't match its extraKnownMarketplaces entry` 오류로 실패합니다.
 - `settings.json`의 `source`만 고치는 방법은 쓰지 마세요. CLI가 `Marketplace 'sagae' not found`를 내고 업데이트가 되지 않습니다.
@@ -137,15 +138,20 @@ workflow를 바꿀 때마다 이 절차가 필요하고 그 번거로움이 크�
    git push --no-verify --force-with-lease=refs/heads/stable:<지금 stable SHA> origin <전체 SHA>:refs/heads/stable
    ```
 
-5. 각 머신에서 바로 반영합니다.
+5. 각 머신에서 바로 반영합니다. 스킬은 플러그인으로, 서버 코드는 tower의 전용 체크아웃으로 되돌립니다. 서버는 이 체크아웃에서 돌므로 `plugin update`만으로는 서버 코드가 바뀌지 않습니다.
 
    ```sh
    claude plugin marketplace update sagae && claude plugin update proxmox@sagae
+   cd ~/.local/share/tower/checkouts/sagae-claude-plugins
+   git fetch
+   git checkout --detach <CI를 통과한 커밋>
+   (cd plugins/proxmox && npm ci --ignore-scripts --omit=dev)
+   tower restart proxmox
    ```
 
-   세션 안에서는 `/reload-plugins`를 실행합니다. `stable`이 뒤로 움직여도 이 명령은 이전 버전으로 되돌립니다.
+   세션 안에서는 `/reload-plugins`를 실행합니다. `stable`이 뒤로 움직여도 첫 명령은 이전 버전으로 되돌립니다.
 
-6. 긴급 차단이 필요하면 `claude plugin disable proxmox@sagae`를 실행하고, 복구 후 `enable`합니다.
+6. 긴급 차단이 필요하면 `~/.config/tower/tower.json`의 `proxmox` 업스트림에 `"enabled": false`를 넣고 저장합니다. tower가 그 업스트림을 종료하고 목록에서 뺍니다. 복구 후 `"enabled": true`로 되돌립니다. `claude plugin disable proxmox@sagae`는 스킬만 끄고 서버는 멈추지 않습니다.
 
 ## 잠시 멈추기와 끄기
 

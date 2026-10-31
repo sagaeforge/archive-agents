@@ -15,6 +15,7 @@ import { PveApiError, connectionSettings, createClient, httpsTransport, loadToke
 
 const MARKETPLACE = "sagae";
 const PLUGIN = `proxmox@${MARKETPLACE}`;
+const TOWER_PLUGIN = `tower@${MARKETPLACE}`; // The only MCP registration, so a re-registration has to restore it too.
 const REPO = "sagaeforge/sagae-claude-plugins";
 
 const STABLE = "stable";
@@ -72,7 +73,7 @@ function register(hasStable) {
 }
 
 const reregister = (hasStable) =>
-  `claude plugin marketplace remove ${MARKETPLACE}, then ${register(hasStable)} and claude plugin install ${PLUGIN}. Removing a marketplace removes its plugin too and turns auto-update off, so enable that again afterwards.`;
+  `claude plugin marketplace remove ${MARKETPLACE}, then ${register(hasStable)} and claude plugin install ${PLUGIN} and claude plugin install ${TOWER_PLUGIN}. Removing a marketplace removes its plugins too, tower included, and turns auto-update off, so enable that again afterwards.`;
 
 const day = (ms) => new Date(ms).toISOString().slice(0, 10);
 const shortSha = (sha) => sha.slice(0, 12);

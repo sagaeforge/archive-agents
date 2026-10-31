@@ -45,12 +45,13 @@
 - [ ] `bootstrap-token.sh`를 실행합니다. `Token claude-mcp@pve!m-<호스트>-<연월> written to ...`가 나옵니다.
 - [ ] auto-update를 켭니다.
 - [ ] doctor를 실행합니다.
-- [ ] 새 세션의 `/mcp`와 `클러스터 상태 알려줘`로 확인합니다.
+- [ ] 새 세션의 `/mcp`(`tower`)와 `클러스터 상태 알려줘`로 확인합니다.
 - [ ] 호출 로그가 남았는지 봅니다. 방금 호출한 도구의 줄이 있고 권한이 `600`이어야 합니다. 토큰 값이 없어야 합니다.
 
   ```sh
-  stat -c '%a' ~/.claude/plugins/data/proxmox-sagae/calls.jsonl
-  tail -n 5 ~/.claude/plugins/data/proxmox-sagae/calls.jsonl
+  LOG="$(jq -r .upstreams.proxmox.env.PVE_LOG_FILE ~/.config/tower/tower.json)"
+  stat -c '%a' "$LOG"
+  tail -n 5 "$LOG"
   ```
 
 - [ ] 끝 시각을 적습니다.
