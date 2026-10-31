@@ -3,25 +3,59 @@
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import https from "node:https";
+import net from "node:net";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { createClient, httpsTransport } from "../server/pve.mjs";
 import { createCa } from "./helpers/certs.mjs";
 import { ENTRY_POINT, startEntryPoint as runEntryPoint } from "./helpers/entry-point.mjs";
-import { LOOPBACK, startFakePve, tempDir } from "./helpers/fake-pve.mjs";
+import { LOOPBACK, listen, startFakePve, tempDir } from "./helpers/fake-pve.mjs";
 
 const TOKEN = "tester@pve!unit=not-a-real-secret";
 const AUTHORIZATION = `PVEAPIToken=${TOKEN}`;
 
-// Tool name to input names. An input is a way to steer a request, so a new one has to fail too.
+// Each tool's whole input schema, as a client receives it. An input is a way to steer a request, so a
+// new one has to fail, and so does a wider one: the node pattern is all that keeps percent-encoded
+// segments out of a path, and an enum is the list of what a tool can ask PVE for.
+const toolInput = (properties, required) => ({
+  type: "object",
+  properties,
+  ...(required && { required }),
+  $schema: "http://json-schema.org/draft-07/schema#",
+});
+const NODE_INPUT = { type: "string", pattern: "^[\\w.-]+$", description: "Node name, e.g. pve-node" };
 const READ_ONLY_TOOLS = {
-  api_get: ["params", "path"],
-  cluster_overview: [],
-  guest_config: ["kind", "node", "vmid"],
-  list_resources: ["type"],
-  node_status: ["node"],
-  recent_tasks: ["limit"],
+  api_get: toolInput(
+    {
+      path: { type: "string", description: "API path after /api2/json, starting with /" },
+      params: {
+        description: "Query parameters",
+        type: "object",
+        propertyNames: { type: "string" },
+        additionalProperties: { type: "string" },
+      },
+    },
+    ["path"],
+  ),
+  cluster_overview: toolInput({}),
+  guest_config: toolInput(
+    {
+      node: NODE_INPUT,
+      vmid: { type: "integer", exclusiveMinimum: 0, maximum: Number.MAX_SAFE_INTEGER, description: "Guest VMID" },
+      kind: { default: "qemu", type: "string", enum: ["qemu", "lxc"] },
+    },
+    ["node", "vmid"],
+  ),
+  list_resources: toolInput({
+    type: {
+      description: "Filter; vm includes QEMU and LXC, sdn means SDN entries such as network zones",
+      type: "string",
+      enum: ["vm", "node", "storage", "sdn"],
+    },
+  }),
+  node_status: toolInput({ node: NODE_INPUT }, ["node"]),
+  recent_tasks: toolInput({ limit: { default: 30, type: "integer", minimum: 1, maximum: 200 } }),
 };
 
 const fromTest = (path) => fileURLToPath(new URL(path, import.meta.url));
@@ -149,10 +183,7 @@ test("the server entry point offers exactly the read-only tools", async (t) => {
   const { tools } = await client.listTools();
 
   assert.deepEqual(Object.keys(client.getServerCapabilities()), ["tools"]);
-  assert.deepEqual(
-    Object.fromEntries(tools.map(({ name, inputSchema }) => [name, Object.keys(inputSchema.properties).sort()])),
-    READ_ONLY_TOOLS,
-  );
+  assert.deepEqual(Object.fromEntries(tools.map(({ name, inputSchema }) => [name, inputSchema])), READ_ONLY_TOOLS);
   for (const { name, annotations, inputSchema } of tools) {
     assert.deepEqual(annotations, { readOnlyHint: true, openWorldHint: false }, name);
     assert.equal(inputSchema.additionalProperties, undefined, name);
@@ -235,4 +266,36 @@ test("by default the entry point dials the API port and trusts only the reposito
       headers: { Authorization: AUTHORIZATION },
     },
   ]);
+});
+
+// The real list, in the real order, on the real entry point. FAKE_PVE_HOST keeps every address on this
+// machine, and a host that cuts each connection makes the client walk the whole list.
+test("with no PVE_HOSTS the entry point tries the three cluster hosts, in order", async (t) => {
+  const port = await listen(t, net.createServer((socket) => socket.destroy()));
+  const { client, httpsRequests } = await startEntryPoint(t, port, { PVE_HOSTS: "", FAKE_PVE_HOST: LOOPBACK });
+
+  const result = await client.callTool({ name: "api_get", arguments: { path: "/version" } });
+
+  assert.equal(result.isError, true);
+  assert.deepEqual(
+    httpsRequests().map(({ host }) => host),
+    ["192.0.2.1", "192.0.2.1", "192.0.2.1"],
+  );
+});
+
+test("the entry point takes the token from PVE_TOKEN_FILE and reads it for every call", async (t) => {
+  const tokenFile = join(tempDir(t), "token");
+  const server = await startFakePve(t, pinnedCa.issue(LOOPBACK));
+  const { client } = await startEntryPoint(t, server.port, { PVE_CA_FILE: pinnedCaFile(t), PVE_TOKEN_FILE: tokenFile });
+
+  // A rotation swaps this file under a running server, which must not need a restart.
+  for (const token of ["rotated@pve!first=one", "rotated@pve!second=two"]) {
+    writeFileSync(tokenFile, `${token}\n`);
+    await client.callTool({ name: "api_get", arguments: { path: "/version" } });
+  }
+
+  assert.deepEqual(
+    server.requests.map(({ headers }) => headers.authorization),
+    ["PVEAPIToken=rotated@pve!first=one", "PVEAPIToken=rotated@pve!second=two"],
+  );
 });

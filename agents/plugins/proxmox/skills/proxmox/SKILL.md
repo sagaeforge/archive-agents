@@ -57,6 +57,6 @@ Each check reports `pass`, `warn`, `fail` or `skip`, with what to do. A `skip` m
 
 ## Server log
 
-Each API call writes one JSON line to the server's stderr: time, tool, host, path, duration, status and whether it failed over. Tokens, response bodies and query values never go in it. This is how to see which node answered and how long it took.
+Each API call writes one JSON line to the server's stderr: time, tool, host, path, duration, status and whether it failed over. Tokens, response bodies and query values never go in it, and a path that looks like it holds a token is written as `<redacted>`. This is how to see which node answered and how long it took.
 
-As of Claude Code 2.1.316, Claude Code stops reading a server's stderr once it has connected, so in a session those lines are lost and nothing here can show them. To keep them, the user starts Claude Code with `PVE_LOG_FILE` set to an absolute path in a folder that exists. The server appends the same lines to that file, which it creates with mode 600 and never trims.
+As of Claude Code 2.1.316, Claude Code stops reading a server's stderr once it has connected, so in a session the place to read is the file `.mcp.json` sends the same lines to: `${CLAUDE_PLUGIN_DATA}/calls.jsonl`, normally `~/.claude/plugins/data/proxmox-sagae/calls.jsonl`. At 5 MiB it moves to `calls.jsonl.1`, replacing the one before, so there is at most about 10 MiB of history. Uninstalling the plugin deletes both.

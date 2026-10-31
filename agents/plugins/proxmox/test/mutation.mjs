@@ -28,6 +28,8 @@ const ROLLBACK = "../../.github/scripts/rollback.sh";
 const HOOK = "../../.githooks/pre-push";
 const SMOKE = "test/smoke/live.mjs";
 const READ_ONLY_TESTS = ["test/readonly.test.mjs"];
+const LAUNCH_TESTS = ["test/launch.test.mjs"];
+const TOKEN_TESTS = ["test/token-guard.test.mjs"];
 const GATE_TESTS = ["test/gate.test.mjs"];
 const SMOKE_TESTS = ["test/live-smoke.test.mjs"];
 const REFUSE_STABLE = `    refs/heads/stable)
@@ -41,6 +43,16 @@ const MUTANTS = [
   { id: "M2", breaks: "the client gains post()", file: "server/pve.mjs", from: GET_ONLY, to: POST_METHOD + GET_ONLY, tests: READ_ONLY_TESTS },
   { id: "M3", breaks: "tools stop being read-only", file: "server/tools.mjs", from: "readOnlyHint: true", to: "readOnlyHint: false", tests: READ_ONLY_TESTS },
   { id: "M4", breaks: "the CA pin is dropped", file: "server/pve.mjs", from: "          ca,\n", to: "          rejectUnauthorized: false,\n", tests: READ_ONLY_TESTS },
+  { id: "M5", breaks: ".mcp.json turns certificate checks off", file: ".mcp.json", from: '"env": {\n', to: '"env": {\n        "NODE_TLS_REJECT_UNAUTHORIZED": "0",\n', tests: LAUNCH_TESTS },
+  { id: "M6", breaks: "a default host is dropped", file: "server/pve.mjs", from: '"192.0.2.1,192.0.2.1,192.0.2.1"', to: '"192.0.2.1,192.0.2.1"', tests: READ_ONLY_TESTS },
+  { id: "M7", breaks: "the list of hosts stops being split", file: "server/pve.mjs", from: '.split(",")', to: '.split(";")', tests: READ_ONLY_TESTS },
+  { id: "M8", breaks: "the node pattern lets encoded segments through", file: "server/tools.mjs", from: "regex(/^[\\w.-]+$/)", to: "regex(/^[\\w.%-]+$/)", tests: READ_ONLY_TESTS },
+  { id: "T1", breaks: "the call log is off by default", file: ".mcp.json", from: ',\n      "env": {\n        "PVE_LOG_FILE": "${CLAUDE_PLUGIN_DATA}/calls.jsonl"\n      }', to: "", tests: LAUNCH_TESTS },
+  { id: "T2", breaks: "the log grows without limit", file: "server/log.mjs", from: "if (statSync(logFile, { throwIfNoEntry: false })?.size >= MAX_LOG_BYTES) renameSync(logFile, `${logFile}.1`);\n", to: "", tests: LAUNCH_TESTS },
+  { id: "T3", breaks: "the log file is readable by others", file: "server/log.mjs", from: "{ mode: 0o600 }", to: "{ mode: 0o644 }", tests: LAUNCH_TESTS },
+  { id: "T4", breaks: "a token in a path reaches the log", file: "server/log.mjs", from: 'TOKEN_SHAPED.test(path) ? "<redacted>" : path', to: "path", tests: TOKEN_TESTS },
+  { id: "T5", breaks: "the token reaches a tool's error", file: "server/pve.mjs", from: 'detail: `${host}: ${code === "TLS_VERIFY" ? err.code : err.message || err.code}`', to: "detail: `${host}: ${token}`", tests: TOKEN_TESTS },
+  { id: "T6", breaks: "the server prints to stdout", file: "server/log.mjs", from: "process.stderr.write(line)", to: "process.stdout.write(line)", tests: TOKEN_TESTS },
   { id: "G1", breaks: "promote stops waiting for check and the smoke", file: CI, from: "    needs: [check, live-smoke]\n", to: "", tests: GATE_TESTS },
   { id: "G2", breaks: "promote runs before the owner turns the gate on", file: CI, from: "vars.STABLE_GATE_ENABLED == 'true' && ", to: "", tests: GATE_TESTS },
   { id: "G3", breaks: "promote forces stable", file: PROMOTE, from: 'git push origin "$sha', to: 'git push --force origin "$sha', tests: GATE_TESTS },
@@ -105,6 +117,14 @@ function runTests(cwd, files) {
 
 function parses(path) {
   if (path.endsWith(".yml")) return true; // The tests read workflows as text, so any text will do.
+  if (path.endsWith(".json")) {
+    try {
+      JSON.parse(readFileSync(path, "utf8"));
+      return true;
+    } catch {
+      return false;
+    }
+  }
   const [command, ...args] = path.endsWith(".mjs") ? [process.execPath, "--check"] : ["bash", "-n"];
   return spawnSync(command, [...args, path]).status === 0;
 }
