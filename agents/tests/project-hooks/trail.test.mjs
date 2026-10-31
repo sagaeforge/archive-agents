@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { copyRepo, fakeHome, git, hasRealTrail, hookTest as test, restrictedPath, runHook, snapshot, snapshotDiff, tempDir, writeFile } from "./lib/sandbox.mjs";
+import { copyRepo, fakeHome, git, hasRealTrail, hookTest as test, realHome, restrictedPath, runHook, snapshot, snapshotDiff, tempDir, writeFile } from "./lib/sandbox.mjs";
 
 const context = "trail-context.sh";
 const prompt = (text) => ({ session_id: "s", hook_event_name: "UserPromptSubmit", prompt: text });
@@ -124,6 +124,8 @@ test("every Trail call runs with telemetry, fetches, look-back, and its home off
     "GRAFT_NO_IGNORE=1",
     "TRAIL_HOME=/dev/null/trail",
     "DOTENV_PATH=/dev/null",
+    "GRAFT_NO_SEED=1",
+    "GRAFT_NO_GITIGNORE=1",
     "GIT_CONFIG_COUNT=2",
     "GIT_CONFIG_KEY_0=core.fsmonitor",
     "GIT_CONFIG_VALUE_0=false",
@@ -186,6 +188,50 @@ test("a checkout with .trail/ stands the hook down before Trail runs", () => {
   const asked = fire(prompt(question), box);
   assert.deepEqual({ rc: asked.rc, stdout: asked.stdout }, { rc: 0, stdout: "" });
   assert.deepEqual(trailCalls(box.home), []);
+});
+
+// Each stands for a project file that could send Trail somewhere other than here.
+const plantedMaps = {
+  "a workspace file": (project) => writeFile(path.join(project, "graft/workspace.json"), '{"version":1,"children":[]}'),
+  "a workspace file Trail would not parse": (project) => writeFile(path.join(project, "graft/workspace.json"), "not json"),
+  "a link for the workspace file": (project, outside) => fs.symlinkSync(path.join(outside, "w.json"), path.join(project, "graft/workspace.json")),
+  "a dangling link for the workspace file": (project) => fs.symlinkSync("/nowhere/at/all", path.join(project, "graft/workspace.json")),
+  "graft as a link": (project, outside) => (fs.rmSync(path.join(project, "graft"), { recursive: true }), fs.symlinkSync(outside, path.join(project, "graft"))),
+  "graft as a dangling link": (project) => (fs.rmSync(path.join(project, "graft"), { recursive: true }), fs.symlinkSync("/nowhere/at/all", path.join(project, "graft"))),
+  ".graft as a link": (project, outside) => fs.symlinkSync(outside, path.join(project, ".graft")),
+  ".graft as a dangling link": (project) => fs.symlinkSync("/nowhere/at/all", path.join(project, ".graft")),
+  "a link for the map's cache": (project, outside) => fs.symlinkSync(outside, path.join(project, "graft/.cache")),
+  "a link for a folder of cards": (project, outside) => fs.symlinkSync(outside, path.join(project, "graft/plugins")),
+  "a link for the index card": (project, outside) => fs.symlinkSync(path.join(outside, "w.json"), path.join(project, "graft/INDEX.md")),
+  "a link deep in the map": (project, outside) => {
+    fs.mkdirSync(path.join(project, "graft/plugins/proxmox"), { recursive: true });
+    fs.symlinkSync(outside, path.join(project, "graft/plugins/proxmox/server"));
+  },
+  "a link inside .graft": (project, outside) => {
+    fs.mkdirSync(path.join(project, ".graft"));
+    fs.symlinkSync(path.join(outside, "w.json"), path.join(project, ".graft/config.json"));
+  },
+};
+
+for (const [name, plant] of Object.entries(plantedMaps)) {
+  test(`${name} stands the hook down before Trail runs`, () => {
+    const box = setup({ reply: answer({ coverageStrong: 1 }) });
+    const outside = tempDir("outside");
+    writeFile(path.join(outside, "w.json"), '{"version":1,"children":[]}');
+    plant(box.project, outside);
+    const asked = fire(prompt(question), box);
+    assert.deepEqual({ rc: asked.rc, stdout: asked.stdout }, { rc: 0, stdout: "" });
+    assert.deepEqual(trailCalls(box.home), []);
+    assert.deepEqual(fs.readdirSync(outside), ["w.json"]);
+  });
+}
+
+test("a real map, cards and all, does not stand the hook down", () => {
+  const box = setup({ reply: answer({ coverageStrong: 1 }) });
+  writeFile(path.join(box.project, "graft/plugins/proxmox/server/pve.md"), "# card\n");
+  writeFile(path.join(box.project, "graft/.cache/fingerprint.x.json"), "{}");
+  writeFile(path.join(box.project, ".graft/config.json"), "{}");
+  assert.match(fire(prompt(question), box).stdout, /createClient/);
 });
 
 const broken = {
@@ -470,6 +516,127 @@ test("a project .env cannot move Trail's output into a global folder", realOnly,
   // The check can fail: Trail as a person runs it writes into the fake ~/.claude.
   assert.equal(byHand(home, project, "build", project).status, 0);
   assert.ok(fs.existsSync(path.join(home, ".claude/planted")), "the route must work without the hook's environment");
+});
+
+test("a planted workspace file cannot send Trail outside the project", realOnly, () => {
+  const dir = tempDir("trail-workspace");
+  const project = copyRepo(path.join(dir, "repo"));
+  const sibling = copyRepo(path.join(dir, "sibling"));
+  const home = fakeHome({ trail: "real" });
+  const outside = path.join(home, ".claude/planted");
+  fs.mkdirSync(outside, { recursive: true });
+  assert.match(fire(prompt(lookup), { home, project: sibling }).stdout, /createClient/);
+  assert.match(fire(prompt(lookup), { home, project }).stdout, /createClient/);
+  writeFile(path.join(sibling, "plugins/proxmox/server/probe.mjs"), "export function siblingOnlyProbe() { return 1; }\n");
+  writeFile(path.join(project, "graft/workspace.json"), JSON.stringify({ version: 1, children: [path.relative(project, outside), "../sibling"] }));
+
+  const homeBefore = snapshot(home);
+  const siblingMap = path.join(sibling, "graft/.graph/wiring.json");
+  const mapBefore = fs.readFileSync(siblingMap, "utf8");
+  const asked = fire(prompt("where is siblingOnlyProbe defined here"), { home, project });
+  assert.deepEqual({ rc: asked.rc, stdout: asked.stdout }, { rc: 0, stdout: "" });
+  assert.deepEqual(snapshotDiff(homeBefore, snapshot(home)), []);
+  assert.equal(fs.readFileSync(siblingMap, "utf8"), mapBefore, "the sibling's map stays as it was");
+
+  // The check can fail: Trail as a person runs it does both.
+  const raw = byHand(home, project, "ask", "where is siblingOnlyProbe defined here", project, "--json");
+  assert.match(raw.stdout, /\.\.\/sibling\/plugins\/proxmox\/server\/probe\.mjs/);
+  assert.ok(fs.existsSync(path.join(outside, "graft/.cache")), "the route must work without the hook");
+  assert.notEqual(fs.readFileSync(siblingMap, "utf8"), mapBefore);
+});
+
+test("a link named graft cannot send the map, or its cleanup, outside the project", realOnly, () => {
+  const project = copyRepo(path.join(tempDir("trail-link"), "repo"));
+  const home = fakeHome({ trail: "real" });
+  const commands = path.join(home, ".claude/commands");
+  writeFile(path.join(commands, "team/deploy.md"), "# a command someone wrote\n");
+  fs.symlinkSync(commands, path.join(project, "graft"));
+
+  const before = snapshot(home);
+  const asked = fire(prompt(lookup), { home, project });
+  assert.deepEqual({ rc: asked.rc, stdout: asked.stdout }, { rc: 0, stdout: "" });
+  assert.deepEqual(snapshotDiff(before, snapshot(home)), []);
+
+  // The check can fail: Trail as a person runs it writes there and prunes that file.
+  assert.equal(byHand(home, project, "build", project).status, 0);
+  assert.ok(fs.existsSync(path.join(commands, ".graph/wiring.json")));
+  assert.equal(fs.existsSync(path.join(commands, "team/deploy.md")), false);
+});
+
+for (const inner of [".cache", ".graph", "plugins"]) {
+  test(`a link at graft/${inner} cannot send a rebuild outside the project`, realOnly, () => {
+    const project = copyRepo(path.join(tempDir("trail-inner-link"), "repo"));
+    const home = fakeHome({ trail: "real" });
+    const outside = path.join(home, ".claude/planted");
+    fs.mkdirSync(outside, { recursive: true });
+    assert.match(fire(prompt(lookup), { home, project }).stdout, /createClient/);
+    fs.rmSync(path.join(project, "graft", inner), { recursive: true });
+    fs.symlinkSync(outside, path.join(project, "graft", inner));
+    writeFile(path.join(project, "plugins/proxmox/server/probe.mjs"), "export function innerLinkProbe() { return 1; }\n");
+
+    const before = snapshot(home);
+    assert.equal(fire(prompt(lookup), { home, project }).stdout, "");
+    assert.deepEqual(snapshotDiff(before, snapshot(home)), []);
+
+    // The check can fail: Trail as a person runs it writes through the link.
+    assert.equal(byHand(home, project, "build", project).status, 0);
+    assert.notDeepEqual(snapshotDiff(before, snapshot(home)), [], "the route must work without the hook");
+  });
+}
+
+test("a linked .gitignore is not written through, and the hook edits no .gitignore", realOnly, () => {
+  const project = copyRepo(path.join(tempDir("trail-gitignore"), "repo"));
+  const home = fakeHome({ trail: "real" });
+  const target = path.join(home, ".claude/planted.txt");
+  writeFile(target, "original\n");
+  fs.rmSync(path.join(project, ".gitignore"));
+  fs.symlinkSync(target, path.join(project, ".gitignore"));
+
+  assert.match(fire(prompt(lookup), { home, project }).stdout, /createClient/);
+  assert.equal(fs.readFileSync(target, "utf8"), "original\n");
+
+  // The check can fail: Trail as a person runs it appends to the file behind the link.
+  fs.rmSync(path.join(project, "graft"), { recursive: true });
+  assert.equal(byHand(home, project, "build", project).status, 0);
+  assert.match(fs.readFileSync(target, "utf8"), /\/graft\//);
+});
+
+test("a linked worktree builds its own map instead of copying another checkout's", realOnly, () => {
+  const dir = tempDir("trail-seed");
+  const project = copyRepo(path.join(dir, "repo"));
+  // The real Trail, with its stdout kept, because a seed leaves nothing else behind.
+  const real = path.join(realHome, ".local/share/trail-code/0.28.1/node_modules/.bin/trail");
+  const home = fakeHome({ trail: `#!/bin/sh\n"${real}" "$@" | tee -a "$HOME/trail.out"\n` });
+  const said = () => fs.readFileSync(path.join(home, "trail.out"), "utf8");
+  assert.match(fire(prompt(lookup), { home, project }).stdout, /createClient/);
+
+  const fresh = path.join(dir, "fresh");
+  git(project, "worktree", "add", "-q", "-b", "fresh", fresh);
+  assert.match(fire(prompt(lookup), { home, project: fresh }).stdout, /createClient/);
+  assert.doesNotMatch(said(), /seeded: copied a starting graph/);
+
+  // The check can fail: without the hook's setting, the build copies from the main checkout.
+  const control = path.join(dir, "control");
+  git(project, "worktree", "add", "-q", "-b", "control", control);
+  const raw = likeTheHook(home, control, "build", control);
+  assert.match(raw.stdout, /seeded: copied a starting graph/);
+});
+
+// A limit the guide states, not a goal. If this starts failing, update the guide.
+test("a tracked file under a folder turned into a link is read into the map, and nothing is written", realOnly, () => {
+  const dir = tempDir("trail-read-link");
+  const project = copyRepo(path.join(dir, "repo"));
+  const home = fakeHome({ trail: "real" });
+  const outside = path.join(dir, "outside");
+  writeFile(path.join(project, "plugins/moved/probe.mjs"), "export function insideProbe() { return 1; }\n");
+  git(project, "add", "-A");
+  git(project, "commit", "-qm", "a folder that will become a link");
+  writeFile(path.join(outside, "probe.mjs"), "export function throughTheLinkProbe() { return 1; }\n");
+  fs.rmSync(path.join(project, "plugins/moved"), { recursive: true });
+  fs.symlinkSync(outside, path.join(project, "plugins/moved"));
+  const before = snapshot(outside);
+  assert.match(fire(prompt("where is throughTheLinkProbe defined here"), { home, project }).stdout, /throughTheLinkProbe · function plugins\/moved\/probe\.mjs/);
+  assert.deepEqual(snapshotDiff(before, snapshot(outside)), []);
 });
 
 test("real Trail stays quiet on a Korean prompt with no code terms", realOnly, () => {

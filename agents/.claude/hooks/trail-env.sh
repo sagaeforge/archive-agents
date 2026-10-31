@@ -17,6 +17,18 @@ command -v timeout >/dev/null 2>&1 || exit 0
 # down. See docs/project-tools.md.
 [ ! -e "$root/.trail" ] || exit 0
 
+# Project files must not choose where Trail goes, and nothing in this repo needs these,
+# so the hook stands down rather than filter them. workspace.json lists child repos by
+# any path, and `ask` rebuilds each one in place and answers from it. A link at or under
+# the map sends Trail's writes wherever it points, and at graft/ itself its card cleanup
+# too. find fails closed: if it cannot look, Trail does not run.
+[ ! -e "$root/graft/workspace.json" ] || exit 0
+for dir in graft .graft; do
+  [ ! -L "$root/$dir" ] || exit 0
+  [ -e "$root/$dir" ] || continue
+  links=$(find "$root/$dir" -type l 2>/dev/null) && [ -z "$links" ] || exit 0
+done
+
 # Telemetry, update checks, background fetches, session look-back, and the
 # .ignore file that would put graft/ into ripgrep results all stay off.
 export DO_NOT_TRACK=1 TRAIL_NO_FETCH=1 TRAIL_NO_LOOK_BACK=1 GRAFT_NO_IGNORE=1
@@ -35,3 +47,9 @@ export DOTENV_PATH=/dev/null
 export GIT_CONFIG_COUNT=2 \
   GIT_CONFIG_KEY_0=core.fsmonitor GIT_CONFIG_VALUE_0=false \
   GIT_CONFIG_KEY_1=core.hooksPath GIT_CONFIG_VALUE_1=/dev/null
+
+# Two more files Trail follows out of the project. A .git file names any checkout, and
+# `build` copies that checkout's map in. A .gitignore can be a link, and `build` appends
+# to whatever it points at. Hooks never run --deep, so a copied map saves only a parse,
+# and .gitignore already lists the map in every branch that has this hook.
+export GRAFT_NO_SEED=1 GRAFT_NO_GITIGNORE=1

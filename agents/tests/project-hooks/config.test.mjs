@@ -5,7 +5,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
-import { copyRepo, git, hooksDir, repoRoot, sealed, sessionCase, sessionSkipReason } from "./lib/sandbox.mjs";
+import { copyRepo, git, hooksDir, repoRoot, sealed, sessionCase, sessionSkipReason, tempDir } from "./lib/sandbox.mjs";
 
 const read = (file) => fs.readFileSync(path.join(repoRoot, file), "utf8");
 const settings = JSON.parse(read(".claude/settings.json"));
@@ -75,6 +75,16 @@ test(".gitignore keeps the main worktree's lines and covers local state", () => 
   for (const tracked of [".claude/settings.json", ".claude/hooks/rtk-rewrite.sh"]) {
     assert.notEqual(spawnSync("git", ["check-ignore", "-q", "--no-index", tracked], { cwd: repoRoot }).status, 0, tracked);
   }
+});
+
+test(".gitignore also ignores a link named graft or .graft", () => {
+  const repo = tempDir("ignore");
+  git(repo, "init", "-q", "-b", "main");
+  fs.writeFileSync(path.join(repo, ".gitignore"), read(".gitignore"));
+  git(repo, "add", ".gitignore");
+  git(repo, "-c", "user.email=s@example.invalid", "-c", "user.name=s", "commit", "-qm", "init");
+  for (const name of ["graft", ".graft"]) fs.symlinkSync("/nowhere/at/all", path.join(repo, name));
+  assert.equal(git(repo, "status", "--porcelain", "--untracked-files=all"), "");
 });
 
 test("no version is pinned and the hooks are not part of the shipped plugin", () => {

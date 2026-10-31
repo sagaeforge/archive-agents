@@ -5,6 +5,8 @@ token
 
 # graft's local graph cache — regenerable, not committed (run `graft build`).
 /graft/
+# The line above matches a folder only, and a link by this name must not be committed.
+/graft
 
 # Local Claude Code state: agent worktrees and personal settings.
 /.claude/worktrees/
@@ -15,3 +17,4 @@ token
 
 # Trail's local build settings. Without this line a persisted build flag edits this file.
 /.graft/
+/.graft

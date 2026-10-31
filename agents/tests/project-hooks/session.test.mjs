@@ -641,6 +641,28 @@ for (const [route, { cwd: start, steps }] of Object.entries(hookRoutes)) {
   });
 }
 
+test("a Write to graft/workspace.json cannot reach outside the project at the next prompt", options, () => {
+  const attempt = (hardened) => {
+    const box = repoCase("workspace-route");
+    const cwd = worktree(box);
+    if (!hardened) {
+      const file = path.join(cwd, ".claude/hooks/trail-env.sh");
+      const source = fs.readFileSync(file, "utf8");
+      const stripped = source.replace(/^\[ ! -e "\$root\/graft\/workspace\.json" \] \|\| exit 0\n/m, "");
+      assert.notEqual(stripped, source);
+      fs.writeFileSync(file, stripped);
+    }
+    const children = [path.relative(cwd, path.join(box.home, ".claude/planted"))];
+    session(box, { cwd, prompt: question, steps: [write(path.join(cwd, "graft/workspace.json"), JSON.stringify({ version: 1, children }))], args: noBash });
+    const before = snapshot(box.home);
+    const run = session(box, { cwd, prompt: question, steps: [], args: ["--permission-mode", "default"] });
+    assert.equal(run.rc, 0, run.stderr);
+    return snapshotDiff(before, snapshot(box.home)).filter((entry) => entry.includes(".claude/planted"));
+  };
+  assert.notDeepEqual(attempt(false), [], "the route must work without the stand-down");
+  assert.deepEqual(attempt(true), []);
+});
+
 test("a .env already in the checkout does nothing on a bare prompt in default mode", options, () => {
   const attempt = (hardened) => {
     const box = repoCase("env-prompt");
