@@ -1,6 +1,6 @@
 # tower 설계
 
-- 상태: tower는 구현과 검증을 마쳤다(`tools/tower`). 설치, 플러그인 등록, proxmox 이관은 사용자 승인을 기다린다. 이 문서는 구현된 코드에 맞춰 고쳤다. 기준일 2026-11-01.
+- 상태: tower는 구현과 검증을 마쳤다(`tools/tower`). tower는 설치되어 127.0.0.1:4800에서 돌고, proxmox 업스트림은 전용 체크아웃에서 실행된다. 이관 3, 4(자식 하나, 도구 6개 구조 비교)는 main 체크아웃 경로에서 같은 서버 코드로 했고, 전용 체크아웃으로 옮긴 뒤에는 실제 호출 하나와 자식 하나만 다시 확인했다(2026-11-01). 플러그인 등록과 `.mcp.json` 제거는 아직이다. 제거는 플러그인 저장소의 통합이 들어온 뒤 별도 변경으로 하고 그때까지 proxmox 등록이 둘 공존한다(9절). 이 문서는 구현된 코드에 맞춰 고쳤다. 기준일 2026-11-01.
 - 위치: 코드 `tools/tower`, 유닛 `ops/systemd`.
 - 출발점: `docs/research/spikes/s1-aggregation/c5-baseline/gateway.mjs`(207줄, sha256 `f7a061e8…`)와 S2 수명주기 스파이크.
 - 성격: SDK v2 client와 server를 조합한 작은 커스텀 게이트웨이다. 프로토콜 전송은 SDK가 맡는다. 세대 사이 연결은 tower에 남는다: stdio 2025 고정, HTTP `auto`, `input_required`와 progress 중계. 그 밖에 JSON-RPC를 파싱하거나 세대를 가르는 코드는 없다. Docker에 의존하지 않는다.
@@ -45,7 +45,7 @@ tower는 한 사람이 쓰는 로컬 관제 서버다. Claude Code에는 병합 
 | 호출 로그 | stdout JSON 한 줄, journald가 보관 | 비용과 장애를 되짚는 유일한 기록이다 |
 | 업스트림 재시작 | `tower restart <name>` | hung stdio 자식을 살리는 수단이다 |
 
-**v1 완료 기준.** 아래가 전부 참이어야 v1이 끝난다. 2번의 실행은 다른 저장소를 바꾸므로 사용자 승인 뒤다(9절).
+**v1 완료 기준.** 아래가 전부 참이어야 v1이 끝난다. 2번의 업스트림 실행은 끝났다. `.mcp.json` 제거는 플러그인 저장소의 통합 뒤로 미뤘다(9절).
 
 | # | 기준 |
 |---|---|
@@ -115,9 +115,10 @@ tower는 한 사람이 쓰는 로컬 관제 서버다. Claude Code에는 병합 
   "upstreams": {
     "proxmox": {
       "command": "/home/user/.nvm/versions/node/v26.13.0/bin/node",
-      "args": ["/home/user/sagae-claude-plugins/plugins/proxmox/server/index.mjs"],
+      "args": ["/home/user/.local/share/tower/checkouts/sagae-claude-plugins/plugins/proxmox/server/index.mjs"],
+      "env": { "PVE_LOG_FILE": "/home/user/.local/state/proxmox-mcp/calls.jsonl" },
       "autoApprove": ["*"],
-      "note": "예시. 읽기 전용 도구 6개 [코드 읽기]. 사용자 승인 전에는 넣지 않는다 (9절)"
+      "note": "읽기 전용 도구 6개 [코드 읽기]. 전용 체크아웃에서 실행한다 (9절)"
     },
     "notes": {
       "url": "http://127.0.0.1:4821/mcp",
@@ -613,9 +614,23 @@ printf '{"Authorization":"Bearer %s"}' "$(cat "$HOME/.config/tower/token")"
 
 ## 9. 첫 실제 업스트림: proxmox
 
-v1 완료 조건이다(1절 기준 2). 다른 저장소를 바꾸므로 실행은 사용자 승인 뒤이고, v1의 마지막 단계다. tower 구현은 끝났고 이 단계는 승인을 기다린다. 이관은 도구 이름을 한 번 바꾼다 [R]. 이관 전에는 tower에 실제 업스트림이 없고 Claude Code에 등록된 MCP가 둘이다.
+v1 완료 조건이다(1절 기준 2). v1의 마지막 단계다. tower 구현은 끝났고 업스트림 등록과 확인(아래 이관 순서 1~4)은 마쳤다. 3, 4는 전용 체크아웃으로 옮기기 전의 main 체크아웃 경로에서 같은 서버 코드로 했고, 옮긴 뒤에는 실제 호출 하나와 자식 하나만 다시 확인했다(아래 이관 순서). `.mcp.json` 제거(5~7)는 플러그인 저장소의 통합이 들어온 뒤로 미룬다. 이관은 도구 이름을 한 번 바꾼다 [R]. 제거 전에는 같은 proxmox가 두 경로로 등록돼 있고 Claude Code에 등록된 MCP가 둘이다.
 
-**현황.** 코드만 읽었고 실행하지 않았다. `@modelcontextprotocol/sdk` 1.32.2, stdio, 6개 읽기 전용 도구, instructions와 리소스 없음이다. 세션마다 자식 하나가 뜬다(6개 관찰 [R]). 토큰은 `~/.config/proxmox-mcp/token`을 `HOME`으로 찾으므로 `env` 항목이 필요 없다. CA 경로는 서버 파일 기준이다.
+**실행 위치.** 업스트림은 전용 체크아웃 `/home/user/.local/share/tower/checkouts/sagae-claude-plugins`에서 실행한다. `/home/user/sagae-claude-plugins`의 main 체크아웃에서는 실행하지 않는다. 그 체크아웃은 다른 팀이 작업하므로 거기서 도는 코드는 승인 게이트를 건너뛴다. 전용 체크아웃은 독립 클론(worktree 아님)이고 origin/main의 승인된 커밋만 따라간다. detached HEAD이고 추적 파일은 고치지 않는다. 상위 디렉터리 `~/.local/share/tower`와 `checkouts`는 모드 700이다. 설정한 시점의 커밋은 c95eeca다.
+
+**갱신 절차.** 자동이 아니라 의도적으로 손으로 한다.
+
+```sh
+cd /home/user/.local/share/tower/checkouts/sagae-claude-plugins
+git fetch
+git checkout --detach origin/main
+cd plugins/proxmox && npm ci --ignore-scripts --omit=dev
+tower restart proxmox
+```
+
+**호출 로그.** `env.PVE_LOG_FILE`은 `/home/user/.local/state/proxmox-mcp/calls.jsonl`이다. 폴더 `~/.local/state/proxmox-mcp`는 모드 700으로 미리 만들었다. 서버의 로그 코드는 폴더를 만들지 않는다. 현재 서버는 이 변수를 무시하고, 플러그인 저장소의 통합이 들어오면 효력이 생긴다.
+
+**현황.** 코드를 읽었고 병합 경유로 실행해 확인했다(이관 순서 3, 4). `@modelcontextprotocol/sdk` 1.32.2, stdio, 6개 읽기 전용 도구, instructions와 리소스 없음이다. 세션마다 자식 하나가 뜬다(6개 관찰 [R]). 토큰은 `~/.config/proxmox-mcp/token`을 `HOME`으로 찾으므로 `env` 항목이 필요 없다. CA 경로는 서버 파일 기준이다.
 
 **먼저 확인.** `server/discover` 응답을 본다. 서버 프로세스만 띄우며 클러스터 호출은 없다 [소스]. tower는 stdio에 항상 2025 핸드셰이크를 쓰므로 결과와 무관하게 동작하지만, 제품 경로를 다시 검토할 때 이 값이 갈린다. 같은 명령이 TS SDK 1.30.0 스탠드인에서 `-32601`을 돌려줬다 [P]. proxmox에는 실행하지 않았다.
 
@@ -623,7 +638,7 @@ v1 완료 조건이다(1절 기준 2). 다른 저장소를 바꾸므로 실행�
 META='{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientInfo":{"name":"probe","version":"0"},"io.modelcontextprotocol/clientCapabilities":{}}'
 { printf '{"jsonrpc":"2.0","id":1,"method":"server/discover","params":{"_meta":%s}}\n' "$META"; sleep 2; } \
   | timeout 3 /home/user/.nvm/versions/node/v26.13.0/bin/node \
-      /home/user/sagae-claude-plugins/plugins/proxmox/server/index.mjs
+      /home/user/.local/share/tower/checkouts/sagae-claude-plugins/plugins/proxmox/server/index.mjs
 ```
 
 | 응답 | 뜻 | 제품 경로 영향 |
@@ -634,11 +649,12 @@ META='{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextpr
 
 **이관 순서**
 
-1. 플러그인 디렉터리의 `node_modules`를 확인하고 `tower.json`에 2절 항목을 넣는다. 도구 6개가 읽기 전용이면 `autoApprove: ["*"]`다.
+1. 전용 체크아웃의 `plugins/proxmox/node_modules`를 확인하고 `tower.json`에 2절 항목을 넣는다. 도구 6개가 읽기 전용이면 `autoApprove: ["*"]`다.
 2. `tower validate`, `tower status`로 `ready`, 도구 6개를 본다.
-3. 세션을 둘 띄워 자식이 하나인지 확인한다.
-4. 도구 6개의 결과를 기존 플러그인과 비교한다.
-5. sagae-claude-plugins에서 proxmox 플러그인의 `.mcp.json`만 지운다. 스킬은 남기고 이름을 고친다.
+3. 세션을 둘 띄워 자식이 하나인지 확인한다. 끝냈다. 클라이언트 둘에 자식 하나였다 [측정]. 확인은 main 체크아웃 경로에서 했다. 같은 서버 코드이고 실행 위치만 다르다.
+4. 도구 6개의 결과를 기존 플러그인과 비교한다. 끝냈다. 6개 모두 구조로 비교했다. 값이 아니라 응답 구조가 같은지 본 것이다 [측정]. 이것도 main 체크아웃 경로에서 했다.
+   - 전용 체크아웃으로 옮긴 뒤에는 3, 4를 통째로 다시 하지 않았다. 실제 호출 하나(`proxmox_cluster_overview`)와 자식이 하나뿐임만 다시 확인했다 [측정].
+5. sagae-claude-plugins에서 proxmox 플러그인의 `.mcp.json`만 지운다. 스킬은 남기고 이름을 고친다. 이 제거는 플러그인 저장소의 통합이 들어온 뒤에 별도 변경으로 하고, 그 뒤 리베이스한다. 그때까지 proxmox 등록이 둘 공존한다.
 6. `mcp__plugin_proxmox_proxmox__*` → `mcp__plugin_tower_tower__proxmox_*`로 권한 규칙, 서브에이전트 `tools`, 훅 매처를 옮긴다.
 7. 되돌리기는 `.mcp.json` 복원과 `tower.json` 항목 삭제다.
 
@@ -869,7 +885,7 @@ sagae-tools는 KB에 `resource_link`에 기대지 말라고 요청했다(소비�
 
 - 설치한 유닛으로의 실행(`Requires=`, `After=`, `[Install]`, `%C`는 transient 유닛으로는 안 걸린다), 마지막 WSL 세션 종료, 부팅 직후 첫 기동.
 - 진짜 플러그인 적재, 플러그인 루트의 `headersHelper`(`${CLAUDE_PLUGIN_ROOT}`), 대화형 Claude Code, `requiresUserInteraction` 게이트의 대화형 동작. `-p`에서의 거부와 `headersHelper`, 등록 `timeout`, 와일드카드 규칙은 확인했다(10절).
-- 게이트웨이와 진짜 proxmox MCP(사용자 승인 필요), stdin EOF를 무시하는 서버.
+- stdin EOF를 무시하는 서버. 게이트웨이와 진짜 proxmox MCP는 도구 6개 전부를 구조로 비교했고 클라이언트 둘에 자식 하나임을 확인했다(9절 3, 4단계, main 체크아웃 경로). 전용 체크아웃으로 옮긴 뒤에는 읽기 전용 호출 하나(`proxmox_cluster_overview`)와 자식 하나만 다시 확인했다 [측정].
 - 4절의 남은 한계(깨끗이 끝난 SSE 등).
 - `[P]` 프로브는 N=1이고 tower 코드가 아니다. 소스는 `docs/research/spikes/design-probes/`에 있다. 회귀로 옮긴 것은 근거가 되었다. 옮기지 않은 것은 아직 아니다.
 - 다른 Windows 계정과 host network 컨테이너가 `/<route>`에 닿는지, 공개 사이트가 Local Network Access 프롬프트 아래 loopback에 닿는지.
