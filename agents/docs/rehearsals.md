@@ -118,7 +118,7 @@
 
    ```sh
    good=$(gh api repos/sagaeforge/sagae-claude-plugins/commits/stable --jq .sha)
-   gh run list --workflow ci.yml --commit "$good" --status success --json databaseId --jq length
+   gh run list --workflow ci.yml --branch main --commit "$good" --status success --json databaseId --jq length
    ```
 
 2. 연습 커밋을 `main`에 push합니다. 이 문서 끝에 아무 줄이나 추가합니다. 코드는 그대로지만 커밋이 바뀌므로 머신에는 새 버전입니다.
