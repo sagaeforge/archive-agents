@@ -9,7 +9,6 @@ import { fileURLToPath } from "node:url";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { httpsTransport, loadToken } from "../../server/pve.mjs";
-import { registerTools } from "../../server/tools.mjs";
 
 const PLUGIN_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const HOSTS = (process.env.PVE_HOSTS || "192.0.2.1,192.0.2.1,192.0.2.1").split(",");
@@ -46,17 +45,6 @@ const errorKind = (text) =>
 
 const describe = (err) => (err instanceof CheckFailed ? err.message : `unexpected ${err.name} ${err.code ?? ""}`.trim());
 
-// PVE's own filter never matches SDN entries (G-9), so a server that leaves the job to it always finds
-// none. W4 filters them in the server. Asking the code under test which one it is turns the check on
-// with that merge, without anyone having to remember. This can go once W4 is on main.
-async function serverFiltersSdn() {
-  const tools = {};
-  const server = { registerTool: (name, _config, handler) => (tools[name] = handler) };
-  registerTools(server, { get: async (_path, params) => (params?.type ? [] : [{ type: "network" }]) });
-  const { content } = await tools.list_resources({ type: "sdn" });
-  return JSON.parse(content[0].text).length > 0;
-}
-
 // Each one takes the tool caller and returns the facts to print.
 const CHECKS = {
   async cluster_overview(call) {
@@ -77,8 +65,8 @@ const CHECKS = {
     const nodes = resources.filter(({ type }) => type === "node").length;
     expect(nodes >= NODES.length, `only ${nodes} nodes listed`);
 
+    // PVE's own filter never matches SDN entries (G-9), so this is what shows the server's still does.
     const sdn = await call("list_resources", { type: "sdn" });
-    if (!(await serverFiltersSdn())) return `nodes=${nodes} sdn=unchecked, needs W4`;
     expect(sdn.length >= 1, "no SDN entries listed");
     return `nodes=${nodes} sdn=${sdn.length}`;
   },

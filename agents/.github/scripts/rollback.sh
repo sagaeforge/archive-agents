@@ -39,10 +39,12 @@ if ! git merge-base --is-ancestor "$sha" "$main"; then
   exit 1
 fi
 
-# History holds commits that failed CI, and that is no place to send machines back to. Numeric
-# comparison on purpose: empty output counts as zero here, so a confused gh cannot wave one through.
-passed=$(gh run list --workflow ci.yml --commit "$sha" --status success --json databaseId --jq length)
-if [[ $passed -lt 1 ]]; then
+# History holds commits that failed CI, and that is no place to send machines back to. Only a run on
+# main counts: a pull request's run tested a merge preview, not this commit. The match is exact so that
+# a confused gh cannot wave one through. A run counts as a whole, so a commit whose check passed but
+# whose promote failed is refused here, and docs/stable-gate.md has the way out for that.
+passed=$(gh run list --workflow ci.yml --branch main --commit "$sha" --status success --json databaseId --jq length)
+if [[ ! $passed =~ ^[1-9][0-9]*$ ]]; then
   echo "::error::CI never passed on $sha."
   exit 1
 fi

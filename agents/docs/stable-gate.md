@@ -10,11 +10,11 @@ CI를 통과한 커밋만 머신에 나가게 하는 장치입니다. 머신은 
 |---|---|---|
 | `.github/workflows/ci.yml`의 `promote` 잡 | `check`와 [라이브 스모크](live-smoke.md)가 통과하면 `stable`을 그 커밋으로 fast-forward합니다. 강제 push를 하지 않고 브랜치를 만들지도 않습니다 | 건너뜁니다. 쓰기 토큰도 생기지 않습니다 |
 | `.github/workflows/rollback.yml` | 수동 실행으로 `stable`을 CI를 통과했던 이전 커밋으로 되돌립니다 | `stable`이 없으므로 실패합니다 |
-| `.githooks/pre-push` | `stable` 직접 push와 삭제를 거부합니다. `main` push 전에 매니페스트 검증, `npm test`, 비밀값 검사를 실행합니다 | `core.hooksPath`를 설정하기 전에는 실행되지 않습니다 |
+| `.githooks/pre-push` | `stable` 직접 push와 삭제, `--mirror` push를 거부합니다. `main` push 전에 매니페스트 검증, `npm test`, 비밀값 검사를 실행합니다 | `core.hooksPath`를 설정하기 전에는 실행되지 않습니다 |
 
-훅은 `--no-verify`로 건너뛸 수 있고 설정한 clone에서만 동작합니다. 빠른 피드백을 주는 보조 장치이고, 머신을 지키는 것은 `promote`입니다.
+훅은 `--no-verify`로 건너뛸 수 있고 설정한 clone에서만 동작합니다. 빠른 피드백을 주는 보조 장치이고, 머신을 지키는 것은 `promote`입니다. `--mirror` push는 지울 브랜치를 훅에 알려 주지 않습니다. 훅은 이 push가 보내는 `refs/remotes/*`를 보고 거부하므로, 원격 추적 브랜치가 하나도 없는 clone의 `--mirror`는 막지 못합니다.
 
-훅은 작업 트리가 아니라 push하는 커밋을 임시 폴더에 풀어서 검사합니다. 그래서 커밋하지 않은 수정이 결과를 바꾸지 않습니다. `main` push 때마다 `npm ci`와 gitleaks 내려받기를 거치므로 네트워크가 필요하고, `gitleaks.sh`가 Linux x64 전용이므로 훅도 그 환경에서만 통과합니다. PATH에 `claude`가 없어도 push가 멈춥니다.
+훅은 작업 트리가 아니라 push하는 커밋을 임시 폴더에 풀어서 검사합니다. 그래서 커밋하지 않은 수정이 결과를 바꾸지 않습니다. 비밀값 검사도 그 커밋의 스크립트와 규칙으로, 그 커밋에서 닿는 히스토리만 읽습니다. `main` push 때마다 `npm ci`와 gitleaks 내려받기를 거치므로 네트워크가 필요하고, `gitleaks.sh`가 Linux x64 전용이므로 훅도 그 환경에서만 통과합니다. PATH에 `claude`가 없어도 push가 멈춥니다.
 
 `promote`는 `check`와 라이브 스모크를 모두 기다립니다. 스모크가 건너뛰어도 판단할 수 있도록 `if`에 `!cancelled()`가 있고, 이 함수가 "모든 선행 잡 통과" 규칙을 없애므로 `needs.check.result == 'success'`를 따로 적습니다. 이 줄을 지우면 실패한 `check`도 통과합니다. `npm test`와 변이 검사가 이를 막습니다.
 
@@ -52,10 +52,10 @@ CI를 통과한 커밋만 머신에 나가게 하는 장치입니다. 머신은 
    Actions에서 `promote`가 `stable already contains`로 끝나는지 봅니다. 실제 전진은 다음 `main` push 때 처음 일어납니다. 스모크가 켜져 있는데 러너가 멈춰 있으면 `gh workflow run ci.yml -f skip_smoke=true`로 실행합니다.
 
 5. [머신별 재등록](#머신별-재등록)을 진행합니다. 재등록 전의 머신은 계속 `main`을 따라갑니다.
-6. push하는 clone마다 훅을 켭니다. 이 설정은 그 clone의 모든 worktree에 적용됩니다.
+6. push하는 clone의 메인 체크아웃에서 훅을 켭니다. 절대 경로로 지정해야 그 clone의 모든 worktree에 적용됩니다. 상대 경로는 worktree마다 따로 풀리므로, `.githooks`가 없는 커밋을 체크아웃한 worktree에서는 아무 경고 없이 훅이 실행되지 않습니다.
 
    ```sh
-   git config core.hooksPath .githooks
+   git config core.hooksPath "$(git rev-parse --show-toplevel)/.githooks"
    ```
 
 7. `CLAUDE.md`와 `README.md`의 "`main` push가 배포" 문장을 고칩니다. `README.md`의 설치 명령도 `sagaeforge/sagae-claude-plugins#stable`로 바꿉니다. 그대로 두면 새 머신이 게이트를 거치지 않는 `main`을 따라갑니다. doctor는 따로 고칠 것이 없습니다. 원격에 `stable`이 생기면 등록 안내에 `#stable`을 넣고, 따르지 않는 머신을 2번에서 경고합니다.
@@ -129,9 +129,9 @@ workflow를 바꿀 때마다 이 절차가 필요하고 그 번거로움이 크�
    gh workflow run rollback.yml -f sha=<전체 SHA>
    ```
 
-   `rollback.yml`은 `main`에 있고, `stable`보다 이전이며, CI를 통과한 커밋만 받습니다. 그래서 `main`의 다음 커밋은 다시 fast-forward로 전진합니다.
+   `rollback.yml`은 `main`에 있고, `stable`보다 이전이며, `main`에서 CI를 통과한 커밋만 받습니다. 그래서 `main`의 다음 커밋은 다시 fast-forward로 전진합니다. PR 실행은 병합 미리보기를 검사한 것이므로 세지 않습니다. 통과 여부는 실행 전체로 판단하므로, `check`는 통과했지만 `promote`가 실패한 실행도 세지 않습니다.
 
-   workflow 파일이 바뀐 구간이라 거부되면 소유자가 직접 실행합니다. `stable`이 그 사이 움직였다면 이 명령은 실패합니다.
+   그런 커밋이거나 workflow 파일이 바뀐 구간이라 거부되면 소유자가 직접 실행합니다. `stable`이 그 사이 움직였다면 이 명령은 실패합니다.
 
    ```sh
    git push --no-verify --force-with-lease=refs/heads/stable:<지금 stable SHA> origin <전체 SHA>:refs/heads/stable

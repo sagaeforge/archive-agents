@@ -88,6 +88,12 @@ test("the runbooks revert a merge commit with -m 1 and say how the branch merges
   assert.ok(read("docs/stable-gate.md").includes("`git revert -m 1 <sha>`"));
 });
 
+// A relative path resolves inside each checkout, so a worktree on a commit without .githooks would run
+// no hook at all, with no warning from git.
+test("the hook is switched on by absolute path", () => {
+  assert.ok(read("docs/stable-gate.md").includes('git config core.hooksPath "$(git rev-parse --show-toplevel)/.githooks"'));
+});
+
 // Real git, because the runbook's claims are about what git does.
 function repository(t) {
   const cwd = tempDir(t);

@@ -33,6 +33,7 @@ const inDays = (days) => Math.floor(Date.now() / 1000) + days * DAY_S;
 const CLUSTER = { type: "cluster", name: LEAK, nodes: NODES.length, quorate: 1 };
 const NODE_ENTRIES = NODES.map((name) => ({ type: "node", name, node: name, ip: LEAK }));
 const GUEST = { type: "qemu", node: NODES[0], vmid: 100, name: LEAK };
+const SDN_ZONE = { type: "network", id: LEAK };
 const GUEST_CONFIG = `/nodes/${GUEST.node}/qemu/${GUEST.vmid}/config`;
 
 const certificates = (notafter) => [{ notafter, subject: LEAK, pem: LEAK }];
@@ -43,7 +44,7 @@ const HEALTHY = {
   "/version": { version: LEAK, release: LEAK },
   "/cluster/status": [CLUSTER, ...NODE_ENTRIES],
   "/cluster/ha/status/current": [{ id: LEAK }],
-  "/cluster/resources": [...NODE_ENTRIES, GUEST, { type: "network", id: LEAK }],
+  "/cluster/resources": [...NODE_ENTRIES, GUEST, SDN_ZONE],
   "/cluster/resources?type=sdn": [],
   "/cluster/resources?type=vm": [GUEST],
   "/cluster/tasks": [{ upid: LEAK, starttime: 1 }],
@@ -153,7 +154,8 @@ describe("live smoke", { concurrency: true }, () => {
     ["cluster_overview", "too few nodes", { "/cluster/status": [{ ...CLUSTER, nodes: 2 }, ...NODE_ENTRIES] }],
     ["cluster_overview", "a node under another name", { "/cluster/status": [CLUSTER, ...NODE_ENTRIES.slice(1), { type: "node", name: LEAK }] }],
     ["cluster_overview", "no HA status", { "/cluster/ha/status/current": null }],
-    ["list_resources", "too few nodes", { "/cluster/resources": [GUEST, ...NODE_ENTRIES.slice(1)] }],
+    ["list_resources", "too few nodes", { "/cluster/resources": [GUEST, ...NODE_ENTRIES.slice(1), SDN_ZONE] }],
+    ["list_resources", "no SDN entries", { "/cluster/resources": [...NODE_ENTRIES, GUEST] }],
     ["node_status", "a node with no pveversion", { [`/nodes/${NODES[2]}/status`]: { uptime: LEAK } }],
     ["guest_config", "no guests", { "/cluster/resources?type=vm": [] }],
     ["guest_config", "a config with no digest", { [GUEST_CONFIG]: { name: LEAK } }],
@@ -221,6 +223,22 @@ describe("live smoke", { concurrency: true }, () => {
     assertFailed(result, "FAIL INFRA: no host answered");
     assert.match(result.stdout, /^host 127\.0\.0\.2: ECONNREFUSED$/m);
     assert.doesNotMatch(result.stdout, /^(?:PASS|FAIL) /m);
+  });
+
+  // Most of these cannot be had from a real network here, and each one is a real way for a host to be
+  // gone. A wrong hostname or LAN address must not read as a failure of this commit.
+  for (const code of ["ECONNREFUSED", "ECONNRESET", "EHOSTUNREACH", "ENETUNREACH", "ENOTFOUND", "EAI_AGAIN", "ETIMEDOUT"]) {
+    test(`a host that fails with ${code} reads as INFRA`, async (t) => {
+      const result = await runSmoke(t, ANY_PORT, { FAKE_PVE_ERROR: code });
+
+      assertFailed(result, "FAIL INFRA: no host answered");
+      assert.match(result.stdout, new RegExp(`^host 127\\.0\\.0\\.1: ${code}$`, "m"));
+    });
+  }
+
+  test("a failure that is not on that list reads as PLUGIN, because something answered", async (t) => {
+    const result = await runSmoke(t, ANY_PORT, { FAKE_PVE_ERROR: "EPROTO" });
+    assert.match(result.stdout, /^live smoke: FAIL PLUGIN: /m);
   });
 
   test("a host that accepts and then says nothing reads as INFRA", async (t) => {

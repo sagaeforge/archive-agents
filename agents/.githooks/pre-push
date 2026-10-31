@@ -13,6 +13,11 @@ while read -r _ local_sha remote_ref _; do
     refs/heads/main)
       target=$local_sha
       ;;
+    # Only a mirror push sends these, and the branches it deletes never reach this hook.
+    refs/remotes/*)
+      echo "pre-push: a mirror push can delete stable unseen. Push branches by name." >&2
+      exit 1
+      ;;
   esac
 done
 
@@ -38,5 +43,6 @@ cd plugins/proxmox
 npm ci --ignore-scripts --no-audit --no-fund
 npm test
 
-# CI scans too, but only after the secret has reached GitHub.
-"$repo/.github/scripts/gitleaks.sh"
+# CI scans too, but only after the secret has reached GitHub. The script and its rules come from this
+# commit like everything above, and the scan reads only what this commit can reach.
+"$work/.github/scripts/gitleaks.sh" "$repo" "$target"

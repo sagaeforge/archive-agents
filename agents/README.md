@@ -271,7 +271,7 @@ Claude Code 2.1.316에서 `claude mcp list`로 서버를 띄워 변수 확장, �
 | 항목 | 막는 것 | 로컬 실행 |
 |---|---|---|
 | 매니페스트 검증 | `plugin.json`, `marketplace.json` 오류 | `claude plugin validate . && claude plugin validate plugins/proxmox` |
-| 비밀값 검사 | 커밋 히스토리 전체의 토큰과 키 | `.github/scripts/gitleaks.sh` |
+| 비밀값 검사 | merge 커밋을 포함한 모든 커밋, 커밋 메시지, 최신 트리의 토큰과 키 | `.github/scripts/gitleaks.sh` |
 | 단위 테스트 | 동작 회귀, 쓰기 경로 추가, `version` 고정, 액션과 CLI의 버전 미고정, `stable` 게이트 규칙 위반 | `npm test` |
 | 변이 검사 | 테스트 약화. 복사본의 코드를 일부러 망가뜨리고 그 보증을 맡은 테스트 파일이 실패하는지 확인 | `node test/mutation.mjs` |
 | 기동 스모크 | 문법 오류, import 오류, 의존성 누락. 운영 의존성만 설치한 복사본을 `.mcp.json`의 명령으로 실행해 도구 6개를 확인 | `node test/smoke/boot.mjs` |

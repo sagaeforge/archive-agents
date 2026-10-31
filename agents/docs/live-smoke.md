@@ -114,7 +114,7 @@ PVE_TOKEN_FILE=/tmp/fake-token PVE_HOSTS=192.0.2.1,192.0.2.2,192.0.2.3 node test
 | 항목 | 단언 |
 |---|---|
 | `cluster_overview` | 노드 수가 3이고 이름 3개가 모두 있으며 HA 상태가 있습니다. 쿼럼 값은 기록만 합니다 |
-| `list_resources` | 노드가 3건 이상이고 `sdn`이 1건 이상입니다. 서버에 W4의 `sdn` 필터가 없는 커밋에서는 `sdn=unchecked`로 표시합니다 |
+| `list_resources` | 노드가 3건 이상이고 `sdn`이 1건 이상입니다. PVE의 자체 필터는 SDN 항목을 찾지 못하므로 서버의 필터가 사라지면 여기서 실패합니다 |
 | `node_status` | 세 노드 모두 `pveversion`이 있습니다 |
 | `guest_config` | 게스트 1대의 설정에 `digest` 키가 있습니다 |
 | `recent_tasks` | 배열이고 길이가 5 이하입니다 |

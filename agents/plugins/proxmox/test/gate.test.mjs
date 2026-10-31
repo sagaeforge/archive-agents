@@ -171,14 +171,14 @@ test("rollback moves stable back to a commit that passed CI", () => {
   assert.match(stdout, /Revert the cause on main/);
   assert.equal(
     readFileSync(join(bin, "gh.args"), "utf8").trim(),
-    `run list --workflow ci.yml --commit ${good} --status success --json databaseId --jq length`,
+    `run list --workflow ci.yml --branch main --commit ${good} --status success --json databaseId --jq length`,
   );
 });
 
 test("rollback refuses a commit CI never passed", () => {
   const { origin, bad, good, rollback } = deployed();
-  // Empty is what a confused gh would print, and it must not count as a pass.
-  for (const passes of ["0", ""]) {
+  // Only a plain count can pass. Bash would read the last two as an error and carry on.
+  for (const passes of ["0", "", "no runs", "0 0"]) {
     const { status, stdout } = rollback(good, { GATE_CI_PASSES: passes });
     assert.notEqual(status, 0, `passes=${passes}`);
     assert.match(stdout, /CI never passed/);
@@ -257,15 +257,16 @@ const FAKE_TOOL = `#!/bin/sh
 tool=$(basename "$0")
 echo "$tool $*" >>"$GATE_LOG"
 env | grep '^GIT_DIR=' >>"$GATE_LOG"
-test ! -e "fail-$tool"
+test ! -e "fail-$tool" && test ! -e "fail-$(echo "$*" | tr ' /' '--')"
 `;
 const FAKE_SCAN = `#!/bin/sh
-echo gitleaks >>"$GATE_LOG"
+echo "gitleaks $2" >>"$GATE_LOG"
 test -z "$GATE_FAIL_SCAN"
 `;
 
 // A clone that uses the real hook, with main pushed and the checks replaced by the fakes above. A
-// file named fail-claude or fail-npm in the commit being checked makes that tool fail.
+// file in the commit being checked makes a tool fail: fail-npm for all of its calls, or one named after
+// a single call, such as fail-test for npm test.
 function hooked() {
   const repos = repositories();
   const { dir, dev } = repos;
@@ -327,14 +328,16 @@ test("the hook runs every check on a push to main", () => {
     "claude plugin validate plugins/proxmox",
     "npm ci --ignore-scripts --no-audit --no-fund",
     "npm test",
-    "gitleaks",
+    `gitleaks ${pushed}`,
   ]);
 });
 
 test("the hook stops a push to main when any check fails", () => {
   for (const [marker, extra] of [
-    ["fail-claude", {}],
-    ["plugins/proxmox/fail-npm", {}],
+    ["fail-plugin-validate-.", {}],
+    ["fail-plugin-validate-plugins-proxmox", {}],
+    ["plugins/proxmox/fail-ci---ignore-scripts---no-audit---no-fund", {}],
+    ["plugins/proxmox/fail-test", {}],
     ["harmless", { GATE_FAIL_SCAN: "1" }],
   ]) {
     const { origin, dev, push } = hooked();
@@ -354,6 +357,41 @@ test("the hook checks the commit being pushed, not the working tree", () => {
 
   assert.notEqual(push(["main"]).status, 0);
   assert.equal(tip(origin, "main"), before);
+});
+
+test("the hook checks the ref being pushed, not what is checked out", () => {
+  const { origin, dev, push } = hooked();
+  const before = tip(origin, "main");
+  git(dev, "switch", "--quiet", "--create", "broken");
+  commit(dev, "plugins/proxmox/fail-test");
+  git(dev, "switch", "--quiet", "main");
+
+  assert.notEqual(push(["broken:main"]).status, 0);
+  assert.equal(tip(origin, "main"), before);
+});
+
+test("the hook scans with the script and rules of the commit, not the working tree's", () => {
+  const { origin, dev, push } = hooked();
+  const before = tip(origin, "main");
+  const scan = join(dev, ".github/scripts/gitleaks.sh");
+  commit(dev, ".github/scripts/gitleaks.sh", "#!/bin/sh\nexit 1\n");
+  // Stands in for an uncommitted change that would let the push through.
+  writeFileSync(scan, "#!/bin/sh\nexit 0\n");
+
+  assert.notEqual(push(["main"]).status, 0);
+  assert.equal(tip(origin, "main"), before);
+});
+
+test("the hook refuses a mirror push, which can delete stable without the hook seeing it", () => {
+  const { origin, dev, push } = hooked();
+  const main = tip(origin, "main");
+  git(origin, "update-ref", "refs/heads/stable", main);
+  git(dev, "fetch", "--quiet", "origin");
+
+  const { status, stderr } = push(["--mirror"]);
+  assert.notEqual(status, 0);
+  assert.match(stderr, /mirror push/);
+  assert.equal(tip(origin, "stable"), main);
 });
 
 test("the hook ignores breakage that is not part of the commit", () => {
@@ -461,6 +499,30 @@ test("promote waits for both jobs, including one that was skipped", () => {
   assert.match(promoteJob, /^ {4}needs: \[check, live-smoke\]$/m);
   // Without this a skipped smoke skips promote before its `if` is even read.
   assert.match(promoteJob, /^ {6}!cancelled\(\)/m);
+});
+
+test("live-smoke waits for check, and really runs the smoke", () => {
+  const smoke = job(workflow("ci.yml"), "live-smoke");
+  assert.match(smoke, /^ {4}needs: check$/m);
+  assert.match(smoke, /^ {6}- run: node test\/smoke\/live\.mjs$/m);
+});
+
+test("the manual run offers the input that promote's condition reads", () => {
+  assert.match(workflow("ci.yml"), /^ {2}workflow_dispatch:\n {4}inputs:\n {6}skip_smoke:\n/m);
+});
+
+test("no step or job in CI can fail without failing the run", () => {
+  for (const name of ["ci.yml", "rollback.yml"]) {
+    assert.doesNotMatch(workflow(name), /continue-on-error/);
+    assert.doesNotMatch(workflow(name), /\brun: .*(?:\|\||; *true\b)/);
+  }
+});
+
+test("everything that can write stays on GitHub's hosted runners, away from the LXC", () => {
+  const ci = workflow("ci.yml");
+  for (const text of [job(ci, "check"), job(ci, "promote"), job(workflow("rollback.yml"), "rollback")]) {
+    assert.match(text, /^ {4}runs-on: ubuntu-latest$/m);
+  }
 });
 
 test("live-smoke runs on the runner W7 builds, with the token W7 installs", () => {
