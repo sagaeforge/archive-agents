@@ -1,0 +1,12 @@
+{
+  "name": "sagae",
+  "owner": { "name": "sagae", "email": "user@example.com" },
+  "metadata": { "description": "sagae internal Claude Code plugins" },
+  "plugins": [
+    {
+      "name": "proxmox",
+      "source": "./plugins/proxmox",
+      "description": "Read-only MCP server and skill for the sagae internal Proxmox cluster"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+{
+  "name": "proxmox",
+  "description": "Read-only MCP server and skill for the sagae internal Proxmox cluster",
+  "author": { "name": "sagae" }
+}
