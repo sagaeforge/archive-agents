@@ -254,15 +254,52 @@ describe("a reply does not repeat what the caller sent", { concurrency: true }, 
     });
   }
 
-  test("a reason PVE gives that repeats the token is cut before it is relayed", async (t) => {
-    const echo = (req, res) =>
-      lookup(res, 400, {
-        errors: { node: `value '${SECRET}' does not match; got ${encodeURIComponent(TOKEN)} and ${TOKEN}` },
+  // The ways a value can be written down are not a list to complete, so each is a function of the
+  // text, and every one is applied to the whole token and to its secret part alone.
+  const everyCharacter = (text, hex = (byte) => byte.toString(16).toUpperCase().padStart(2, "0")) =>
+    [...Buffer.from(text)].map((byte) => `%${hex(byte)}`).join("");
+  const WRITTEN = {
+    plain: (text) => text,
+    "a dash as %2D": (text) => text.replaceAll("-", "%2D"),
+    "a dash as %2d": (text) => text.replaceAll("-", "%2d"),
+    "every character encoded": (text) => everyCharacter(text),
+    "every character encoded in lower case": (text) => everyCharacter(text, (byte) => byte.toString(16).padStart(2, "0")),
+    "encoded twice": (text) => encodeURIComponent(text.replaceAll("-", "%2D")),
+    "every character encoded twice": (text) => everyCharacter(everyCharacter(text)),
+    "encoded three times, with a broken escape beside it": (text) => `%zz${encodeURIComponent(encodeURIComponent(text.replaceAll("-", "%2D")))}%4`,
+    "in capitals": (text) => text.toUpperCase(),
+  };
+  const WITHHELD = "PVE API 400: PVE's reason was withheld because it repeated the API token.";
+
+  for (const [part, value] of [["token", TOKEN], ["secret", SECRET]]) {
+    for (const [how, write] of Object.entries(WRITTEN)) {
+      test(`a reason PVE gives that repeats the ${part} with ${how} is withheld`, async (t) => {
+        const written = write(value);
+        assert.ok(!written.includes(SECRET) || how === "plain", "the case is meant to hide the secret from a plain search");
+        const echo = (_req, res) => lookup(res, 400, { errors: { node: `value '${written}' does not match` } });
+        const text = await ask(t, echo, "api_get", { path: "/nodes/n1/status", params: { node: SECRET } });
+        assert.equal(text, WITHHELD);
       });
-    const text = await ask(t, echo, "api_get", { path: "/nodes/n1/status", params: { node: SECRET } });
-    assert.match(text, /^PVE API 400: /);
-    assert.match(text, /does not match/);
-    for (const form of [SECRET, TOKEN, encodeURIComponent(TOKEN)]) assert.ok(!text.includes(form), text);
+    }
+  }
+
+  test("a reason PVE gives that repeats the token after the bound is withheld", async (t) => {
+    const late = (_req, res) => lookup(res, 400, { errors: { node: `${"a".repeat(5000)} ${encodeURIComponent(SECRET)}` } });
+    assert.equal(await ask(t, late, "api_get", { path: "/nodes/n1/status" }), WITHHELD);
+  });
+
+  test("a reason PVE gives that is nested past the decoding bound is withheld", async (t) => {
+    let nested = "a b";
+    for (let round = 0; round < 40; round++) nested = encodeURIComponent(nested);
+    const deep = (_req, res) => lookup(res, 400, { errors: { node: nested } });
+    assert.equal(await ask(t, deep, "api_get", { path: "/nodes/n1/status" }), WITHHELD);
+  });
+
+  test("an ordinary reason passes through unchanged, escapes and all", async (t) => {
+    const ordinary = (_req, res) =>
+      lookup(res, 400, { errors: { node: "value 'my%20node-1' does not match /^[a-z]+$/", vmid: "100%zz is not valid" } });
+    const text = await ask(t, ordinary, "api_get", { path: "/nodes/n1/status", params: { node: SECRET } });
+    assert.equal(text, "PVE API 400: x (node: value 'my%20node-1' does not match /^[a-z]+$/; vmid: 100%zz is not valid)");
   });
 
   test("a reason PVE gives has a bound", async (t) => {

@@ -183,17 +183,36 @@ function failureReason({ reason, body }) {
 const REASON_LIMIT = 1000;
 const MIN_SECRET_LENGTH = 8;
 
+const WITHHELD_REASON = "PVE's reason was withheld because it repeated the API token.";
+const MAX_DECODE_ROUNDS = 10;
+
+// Every form the text takes as its percent-escapes are undone, one round at a time, so a token
+// encoded any number of times is still found. Unlike decodeURIComponent this never throws: an escape
+// that is not valid is left as it is and the rest is decoded. A round that changes the text shortens
+// it, so the loop ends by itself, and the bound only decides what to do with a pathological input:
+// text still shrinking after it is not trusted.
+function decodedForms(text) {
+  const forms = [text];
+  for (let round = 0; round < MAX_DECODE_ROUNDS; round++) {
+    const next = forms.at(-1).replace(/%([0-9a-f]{2})/gi, (_escape, hex) => String.fromCharCode(parseInt(hex, 16)));
+    if (next === forms.at(-1)) return { forms, settled: true };
+    forms.push(next);
+  }
+  return { forms, settled: false };
+}
+
 // PVE can repeat what it was asked for in its reason: a path, a parameter's value, a node name. The
-// caller chose those, so they can hold the token, and the reply is kept. The token is taken out
-// wherever it appears, plain or percent-encoded, and the rest is cut to a bound.
+// caller chose those, so they can hold the token, and the reply is kept. Encodings of the token are
+// too many to list, so the reason is compared as it reads once decoded, ignoring case. If any form
+// holds the token or its secret, the whole reason goes: there is no telling where an encoded token
+// ends, so none of it is cut out. What is kept is cut to a bound.
 function safeReason(reason, token) {
   const secret = token.slice(token.lastIndexOf("=") + 1);
-  let text = reason;
-  for (const form of [token, encodeURIComponent(token), secret, encodeURIComponent(secret)]) {
-    // A real secret is a UUID. A stub of a few characters would also match ordinary words.
-    if (form.length >= MIN_SECRET_LENGTH) text = text.split(form).join("<redacted>");
-  }
-  return text.length > REASON_LIMIT ? `${text.slice(0, REASON_LIMIT)}…` : text;
+  // A real secret is a UUID. A stub of a few characters would also match ordinary words.
+  const needles = [token, secret].filter((needle) => needle.length >= MIN_SECRET_LENGTH).map((needle) => needle.toLowerCase());
+  const { forms, settled } = decodedForms(reason);
+  if (!settled || forms.some((form) => needles.some((needle) => form.toLowerCase().includes(needle)))) return WITHHELD_REASON;
+  return reason.length > REASON_LIMIT ? `${reason.slice(0, REASON_LIMIT)}…` : reason;
 }
 
 function allHostsFailed(failures) {
