@@ -14,9 +14,9 @@ CI를 통과한 커밋만 머신에 나가게 하는 장치입니다. 머신은 
 
 훅은 `--no-verify`로 건너뛸 수 있고 설정한 clone에서만 동작합니다. 빠른 피드백을 주는 보조 장치이고, 머신을 지키는 것은 `promote`입니다.
 
-훅은 작업 트리가 아니라 push하는 커밋을 임시 폴더에 풀어서 검사합니다. 그래서 커밋하지 않은 수정이 결과를 바꾸지 않습니다. `main` push 때마다 `npm ci`와 gitleaks 내려받기를 거치므로 네트워크가 필요합니다.
+훅은 작업 트리가 아니라 push하는 커밋을 임시 폴더에 풀어서 검사합니다. 그래서 커밋하지 않은 수정이 결과를 바꾸지 않습니다. `main` push 때마다 `npm ci`와 gitleaks 내려받기를 거치므로 네트워크가 필요하고, `gitleaks.sh`가 Linux x64 전용이므로 훅도 그 환경에서만 통과합니다. PATH에 `claude`가 없어도 push가 멈춥니다.
 
-현재 `promote`는 `check`만 요구합니다. 라이브 스모크(W8)가 들어오면 `needs`에 추가합니다.
+현재 `promote`는 `check`만 요구합니다. 라이브 스모크(W8)가 들어오면 `needs`에 추가합니다. 건너뛴 스모크를 허용하려고 `if`에 `always()`를 넣으면 실패한 `check`도 통과하므로, 그때는 `needs.check.result == 'success'`를 함께 적습니다.
 
 ## 켜기
 
@@ -51,7 +51,7 @@ CI를 통과한 커밋만 머신에 나가게 하는 장치입니다. 머신은 
    git config core.hooksPath .githooks
    ```
 
-7. `CLAUDE.md`와 `README.md`의 "`main` push가 배포" 문장을 고칩니다.
+7. `CLAUDE.md`와 `README.md`의 "`main` push가 배포" 문장을 고칩니다. `README.md`의 설치 명령도 `sagaeforge/sagae-claude-plugins#stable`로 바꿉니다. 그대로 두면 새 머신이 게이트를 거치지 않는 `main`을 따라갑니다.
 
 ## 머신별 재등록
 
