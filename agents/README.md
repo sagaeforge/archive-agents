@@ -250,14 +250,14 @@ export PVE_LOG_FILE="$HOME/.config/proxmox-mcp/calls.jsonl"
 
 ## CI 검증
 
-`main` push와 PR마다 `check` 잡이 GitHub 호스팅 러너에서 Node 20, 22, 26으로 아래 항목을 순서대로 실행합니다. 매니페스트 검증만은 CLI가 요구하는 Node 22 이상에서 실행합니다. 클러스터에는 접속하지 않습니다.
+`main` push와 PR마다 `check` 잡이 GitHub 호스팅 러너에서 Node 20, 22, 26으로 아래 항목을 순서대로 실행합니다. 매니페스트 검증은 CLI가 요구하는 Node 22 이상에서, 변이 검사는 `.nvmrc`의 Node 26에서만 실행합니다. 클러스터에는 접속하지 않습니다.
 
 | 항목 | 막는 것 | 로컬 실행 |
 |---|---|---|
 | 매니페스트 검증 | `plugin.json`, `marketplace.json` 오류 | `claude plugin validate . && claude plugin validate plugins/proxmox` |
 | 비밀값 검사 | 커밋 히스토리 전체의 토큰과 키 | `.github/scripts/gitleaks.sh` |
 | 단위 테스트 | 동작 회귀, 쓰기 경로 추가, `version` 고정, 액션과 CLI의 버전 미고정, `stable` 게이트 규칙 위반 | `npm test` |
-| 변이 검사 | 테스트 약화. 복사본의 코드를 일부러 망가뜨리고 `npm test`가 실패하는지 확인 | `node test/mutation.mjs` |
+| 변이 검사 | 테스트 약화. 복사본의 코드를 일부러 망가뜨리고 그 보증을 맡은 테스트 파일이 실패하는지 확인 | `node test/mutation.mjs` |
 | 기동 스모크 | 문법 오류, import 오류, 의존성 누락. 운영 의존성만 설치한 복사본을 `.mcp.json`의 명령으로 실행해 도구 6개를 확인 | `node test/smoke/boot.mjs` |
 
 `live-smoke` 잡은 Proxmox의 러너 LXC에서 도구 6개를 실제 클러스터에 호출합니다. 러너가 준비될 때까지 꺼져 있어 건너뜁니다. 켜면 `main` push마다, 그리고 매주 월요일 06:00 KST에 실행됩니다. 켜는 절차, 실패 표시 `INFRA`와 `PLUGIN`, `skip_smoke`는 [docs/live-smoke.md](docs/live-smoke.md)에 있습니다.
@@ -266,7 +266,7 @@ export PVE_LOG_FILE="$HOME/.config/proxmox-mcp/calls.jsonl"
 
 gitleaks 기본 규칙은 Proxmox 토큰을 찾지 못합니다. 그래서 `.gitleaks.toml`에 전용 규칙을 두었습니다.
 
-Node 버전을 바꿀 때는 `.github/workflows/ci.yml`의 `matrix.node`, `plugins/proxmox/package.json`의 `engines`, `.nvmrc`를 함께 고칩니다. 서로 어긋나면 `npm test`가 실패합니다.
+Node 버전을 바꿀 때는 `.github/workflows/ci.yml`의 `matrix.node`와 변이 검사 단계의 조건, `plugins/proxmox/package.json`의 `engines`, `.nvmrc`를 함께 고칩니다. 서로 어긋나면 `npm test`가 실패합니다.
 
 ## 문서
 

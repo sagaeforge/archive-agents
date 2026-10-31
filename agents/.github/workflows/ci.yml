@@ -43,8 +43,9 @@ jobs:
         working-directory: plugins/proxmox
       - run: npm test
         working-directory: plugins/proxmox
-      # The slowest step by far, and a weekly run has no new code for it to judge.
-      - if: github.event_name != 'schedule'
+      # The slowest step by far. Every leg already runs the tests themselves, so one leg is enough to
+      # show that they bite, and a weekly run has no new code for it to judge.
+      - if: github.event_name != 'schedule' && matrix.node == 26
         run: node test/mutation.mjs
         working-directory: plugins/proxmox
       - run: node test/smoke/boot.mjs

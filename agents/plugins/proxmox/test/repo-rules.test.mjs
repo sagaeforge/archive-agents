@@ -71,3 +71,8 @@ test("the Node versions in engines, the CI matrix and .nvmrc agree", () => {
   assert.equal(engines.node, `>=${Math.min(...versions)}`);
   assert.ok(versions.includes(Number(read(".nvmrc"))), ".nvmrc is not a version CI tests");
 });
+
+test("the mutation check runs on one leg of CI, the Node version in .nvmrc", () => {
+  const [, condition] = read(".github/workflows/ci.yml").match(/^ +- if: (.+)\n +run: node test\/mutation\.mjs$/m);
+  assert.equal(condition, `github.event_name != 'schedule' && matrix.node == ${Number(read(".nvmrc"))}`);
+});
