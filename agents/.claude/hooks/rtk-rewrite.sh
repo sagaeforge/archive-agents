@@ -73,12 +73,16 @@ set -- "$root"/*'HEAD detached '*
 # drops git's stderr on success, so a tree it cannot fully see would read as clean. Raw
 # git says "use -u", or names what it could not read. Config that hides untracked files
 # is one case. A folder git cannot open or enter is the other, and this listing warns
-# about both shapes. It is not `git status`, which would run the repo's clean filters.
-case "$(timeout -k 1 2 git -C "$root" config --get status.showUntrackedFiles 2>/dev/null)" in
-  '' | normal) ;;
+# about both shapes. It is not `git status`, which would run the repo's clean filters,
+# and it starts no lazy fetch, which would run what a promisor remote in the config names.
+# Exit 1 is the only sign the key is unset: an empty value also prints nothing, and git
+# reads that as false.
+shown=$(timeout -k 1 2 git -C "$root" config --get status.showUntrackedFiles 2>/dev/null)
+case "$?:$shown" in
+  1: | 0:normal) ;;
   *) exit 0 ;;
 esac
-warned=$(timeout -k 1 2 git -C "$root" -c core.fsmonitor=false ls-files \
+warned=$(GIT_NO_LAZY_FETCH=1 timeout -k 1 2 git -C "$root" -c core.fsmonitor=false ls-files \
   --others --deleted --exclude-standard --directory --no-empty-directory 2>&1 >/dev/null) || exit 0
 [ -z "$warned" ] || exit 0
 

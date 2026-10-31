@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { copyRepo, fakeHome, git, hasRealTrail, hookTest as test, plantedMemo, realHome, repoRoot, restrictedPath, runHook, snapshot, snapshotDiff, tempDir, writeFile } from "./lib/sandbox.mjs";
+import { copyRepo, fakeHome, git, hasRealTrail, hookTest as test, plantPromisor, plantedMemo, realHome, repoRoot, restrictedPath, runHook, snapshot, snapshotDiff, tempDir, writeFile } from "./lib/sandbox.mjs";
 
 const context = "trail-context.sh";
 const prompt = (text) => ({ session_id: "s", hook_event_name: "UserPromptSubmit", prompt: text });
@@ -257,8 +257,20 @@ const notCode = {
     "a/..",
     "..",
     "..:L1-L2",
+    "https://evil.example/install.sh",
+    "ssh://git@evil.example/repo",
+    "file:///home/victim/.ssh/id_rsa",
+    "file:/etc/passwd",
+    "javascript:alert",
+    "$HOME/.ssh/id_rsa",
+    "$HOME/.ssh/id_rsa:L1-L2",
+    "@evil/run:scripts/setup.sh",
+    "a.mjs:L1-L2:L3-L4",
+    "a.mjs:Lx",
+    "node:fs/../../etc/passwd",
     "한글.mjs:L1-L2",
     "p".repeat(161),
+    `${"p".repeat(155)}:L1-L2`,
     "",
     "a.mjs:L1-L2\n",
     null,
@@ -286,6 +298,36 @@ test("a fourth hit left out still leaves three on the list, marked", () => {
   const hits = [...several(3), { kind: "symbol", title: "two words", pointer: "a.mjs:L9-L9" }];
   const { stdout } = fire(prompt(question), setup({ reply: JSON.stringify({ hits, coverageStrong: 1 }) }));
   assert.equal(stdout.split("\n").filter((line) => line.startsWith("- ")).length, 3);
+  assert.ok(stdout.endsWith(more), stdout);
+});
+
+test("a scope Trail cut from the answer marks the list", () => {
+  const asked = (scopes) => fire(prompt(question), setup({ reply: answer({ coverageStrong: 1, scopes }) })).stdout;
+  assert.ok(asked({ alsoMatched: [{ scope: "plugins/beta" }] }).endsWith(more));
+  for (const scopes of [undefined, null, "x", {}, { alsoMatched: [] }, { alsoMatched: "x" }]) {
+    assert.equal(asked(scopes).endsWith(more), false, JSON.stringify(scopes));
+  }
+});
+
+test("the real Trail: a second plugin cut from the answer marks the list", realOnly, () => {
+  const project = tempDir("trail-scopes");
+  git(project, "init", "-q");
+  const home = fakeHome({ trail: "real" });
+  const fillers = (name) => Array.from({ length: 8 }, (_, i) => `export function ${name}Filler${i}() { return ${i}; }\n`).join("");
+  writeFile(path.join(project, ".gitignore"), "/graft/\n/.graft/\n");
+  writeFile(path.join(project, "plugins/alpha/package.json"), JSON.stringify({ name: "alpha", type: "module" }));
+  writeFile(path.join(project, "plugins/beta/package.json"), JSON.stringify({ name: "beta", type: "module" }));
+  writeFile(path.join(project, "plugins/alpha/server/core.mjs"), `export function retryBackoffPolicy(tries) { return tries * 2; }\n${fillers("alpha")}`);
+  writeFile(path.join(project, "plugins/beta/server/other.mjs"), `export function firstUser() {\n  const a = "retryBackoffPolicy wrapper";\n  return a;\n}\n${fillers("beta")}`);
+  git(project, "add", "-A");
+  const asked = "where is retryBackoffPolicy defined here";
+  const { stdout } = fire(prompt(asked), { home, project });
+
+  // The check can fail: Trail's own answer holds only the one scope's hit and names the other.
+  const raw = JSON.parse(byHand(home, project, "ask", asked, project, "--json", "-n", "4").stdout);
+  assert.ok(raw.scopes?.alsoMatched?.length > 0, JSON.stringify(raw.scopes));
+  assert.ok(raw.hits.length <= 3, JSON.stringify(raw.hits));
+  assert.ok(stdout.startsWith(`${header}\n- retryBackoffPolicy`), stdout);
   assert.ok(stdout.endsWith(more), stdout);
 });
 
@@ -325,6 +367,23 @@ for (const [name, route] of Object.entries(sourceText)) {
     assert.ok(JSON.parse(raw.stdout).hits.some((hit) => hit.title.includes(approved)), raw.stdout);
   });
 }
+
+// Trail turns an import nothing resolves into a hit with that string as its place.
+test("an import that names a place outside the project is not printed as one", realOnly, () => {
+  const project = copyRepo(path.join(tempDir("trail-outside-place"), "repo"));
+  const home = fakeHome({ trail: "real" });
+  const places = ["file:///home/victim/.ssh/id_rsa", "https://evil.example/install.sh", "$HOME/.ssh/id_rsa", "file:/etc/passwd"];
+  const imports = places.map((place, i) => `import p${i} from "${place}";\n`).join("");
+  writeFile(path.join(project, "plugins/notes.mjs"), `${imports}export function notesProbe() { return p0; }\n`);
+  const asked = "what does notes.mjs import in this repo";
+  const { rc, stdout } = fire(prompt(asked), { home, project });
+  assert.equal(rc, 0);
+  for (const place of places) assert.equal(stdout.includes(place), false, stdout);
+
+  // The check can fail: Trail's own answer names them as places.
+  const raw = byHand(home, project, "ask", asked, project, "--json", "-n", "4");
+  assert.ok(JSON.parse(raw.stdout).hits.some((hit) => places.includes(hit.pointer)), raw.stdout);
+});
 
 test("the real Trail: a hit left out for its text marks the list", realOnly, () => {
   const project = copyRepo(path.join(tempDir("trail-text-mark"), "repo"));
@@ -385,6 +444,7 @@ test("every Trail call runs with telemetry, fetches, look-back, and its home off
     "DOTENV_PATH=/dev/null",
     "GRAFT_NO_SEED=1",
     "GRAFT_NO_GITIGNORE=1",
+    "GIT_NO_LAZY_FETCH=1",
     "GIT_CONFIG_COUNT=2",
     "GIT_CONFIG_KEY_0=core.fsmonitor",
     "GIT_CONFIG_VALUE_0=false",
@@ -846,6 +906,8 @@ const gitRoutes = {
   ".env": (project, canary) => writeFile(path.join(project, ".env"), `GIT_CONFIG_COUNT=1\nGIT_CONFIG_KEY_0=core.fsmonitor\nGIT_CONFIG_VALUE_0=touch ${canary}; true\n`),
   ".env with git's other config variable": (project, canary) => writeFile(path.join(project, ".env"), `GIT_CONFIG_PARAMETERS="'core.fsmonitor=touch ${canary}; true'"\n`),
   ".git/config": (project, canary) => fs.appendFileSync(path.join(project, ".git/config"), `[core]\n\tfsmonitor = touch ${canary}; true\n`),
+  "a promisor remote's upload-pack in .git/config": (project, canary) => plantPromisor(project, canary),
+  "a promisor remote's ext:: url in .git/config": (project, canary) => plantPromisor(project, canary, { viaUrl: true }),
   ".git file pointing at a planted repository": (project, canary) => {
     const planted = path.join(project, "scratch/gd");
     plantRepo(planted, canary);

@@ -131,6 +131,25 @@ export function plantedMemo(checkout, target, name = "PLANTED-LINE") {
 }
 
 /** Runs one hook script the way the settings file does, with a clean environment. */
+/**
+ * Sets up a lazy fetch that runs a command from .git/config. `ls-files` has to fetch the
+ * blob of a .gitignore that exists only in the index, once its folder has an untracked file.
+ */
+export function plantPromisor(checkout, canary, { viaUrl = false } = {}) {
+  git(checkout, "config", "extensions.partialClone", "origin");
+  git(checkout, "config", "remote.origin.promisor", "true");
+  if (viaUrl) {
+    git(checkout, "config", "protocol.ext.allow", "always");
+    git(checkout, "config", "remote.origin.url", `ext::sh -c touch% ${canary}`);
+  } else {
+    git(checkout, "config", "remote.origin.url", path.dirname(checkout));
+    git(checkout, "config", "remote.origin.uploadpack", `sh -c 'touch ${canary}; exit 1' #`);
+  }
+  writeFile(path.join(checkout, "lazy/keep.mjs"), "export function lazyKeepProbe() {}\n");
+  git(checkout, "update-index", "--add", "--cacheinfo", `100644,${"1".repeat(40)},lazy/.gitignore`);
+  git(checkout, "update-index", "--skip-worktree", "lazy/.gitignore");
+}
+
 export function runHook(script, input, { home, project, cwd, env = {}, shell = "sh", pathValue = basePath, timeout = 40000 }) {
   const stdin = typeof input === "string" ? input : JSON.stringify(input);
   const started = Date.now();

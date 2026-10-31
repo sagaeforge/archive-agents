@@ -12,6 +12,7 @@ import {
   gitCommand,
   hasTmux,
   pathShape,
+  plantPromisor,
   plantedMemo,
   realHome,
   rewrites,
@@ -733,6 +734,26 @@ const hookRoutes = {
     steps: (cwd, fired) => [...plantedRepo(path.join(cwd, "scratch/nested/.git"), fired), write(path.join(cwd, ".graft/config.json"), `{"followNestedRepos":true}\n`)],
   },
 };
+
+test("a promisor remote in .git/config runs nothing on a bare prompt in default mode", options, () => {
+  const attempt = (hardened) => {
+    const box = repoCase("lazy-fetch");
+    const fired = path.join(box.dir, "fired");
+    plantPromisor(box.project, fired);
+    if (!hardened) {
+      const file = path.join(box.project, ".claude/hooks/trail-env.sh");
+      const source = fs.readFileSync(file, "utf8");
+      const stripped = source.replace(/^export GIT_NO_LAZY_FETCH=1\n/m, "");
+      assert.notEqual(stripped, source);
+      fs.writeFileSync(file, stripped);
+    }
+    const run = session(box, { cwd: box.project, prompt: question, steps: [] });
+    assert.equal(run.rc, 0, run.stderr);
+    return fs.existsSync(fired);
+  };
+  assert.equal(attempt(false), true, "the route must work without the hook's setting");
+  assert.equal(attempt(true), false);
+});
 
 // Strips the two exports under test, so a control shows the route is live.
 const unharden = (cwd) => {

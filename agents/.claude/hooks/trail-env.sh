@@ -62,6 +62,11 @@ export GIT_CONFIG_COUNT=2 \
   GIT_CONFIG_KEY_0=core.fsmonitor GIT_CONFIG_VALUE_0=false \
   GIT_CONFIG_KEY_1=core.hooksPath GIT_CONFIG_VALUE_1=/dev/null
 
+# The third way that config runs a command. With a promisor remote, reading a .gitignore
+# that exists only in the index fetches its blob, and the fetch runs remote.*.uploadpack
+# or an ext:: url. Trail's `ls-files` does that read. This stops the fetch, from git 2.45.
+export GIT_NO_LAZY_FETCH=1
+
 # Two more files Trail follows out of the project. A .git file names any checkout, and
 # `ask` copies that checkout's map in when there is none here. A .gitignore can be a link,
 # and `build` appends to whatever it points at. Hooks never run --deep, so a copied map

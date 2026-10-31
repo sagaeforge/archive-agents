@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { fakeHome, git, hasRealRtk, hookTest as test, restrictedPath, runHook, tempDir, writeFile } from "./lib/sandbox.mjs";
+import { fakeHome, git, hasRealRtk, hookTest as test, plantPromisor, restrictedPath, runHook, tempDir, writeFile } from "./lib/sandbox.mjs";
 
 const hook = "rtk-rewrite.sh";
 const shells = ["sh", "bash", "dash"].filter((shell) => spawnSync("sh", ["-c", `command -v ${shell}`]).status === 0);
@@ -612,6 +612,23 @@ test("the state check runs nothing the repository configured", () => {
   assert.equal(fs.existsSync(fired), false);
 });
 
+test("the state check starts no lazy fetch, which runs what a promisor remote names", () => {
+  for (const viaUrl of [false, true]) {
+    const home = fakeHome({ rtk: stubRtk });
+    const repo = fixture();
+    const fired = path.join(repo, ".git/fired");
+    plantPromisor(repo, fired, { viaUrl });
+
+    // The check can fail: the same listing without the hook's setting does fire it.
+    spawnSync("git", ["ls-files", "--others", "--deleted", "--exclude-standard", "--directory", "--no-empty-directory"], { cwd: repo });
+    assert.equal(fs.existsSync(fired), true, "the route must work without the hook's setting");
+    fs.rmSync(fired);
+
+    assert.equal(rewrite(home, repo), expected(home));
+    assert.equal(fs.existsSync(fired), false);
+  }
+});
+
 test("the state check reads no file through a filter, which git status would run", () => {
   const home = fakeHome({ rtk: stubRtk });
   const repo = fixture();
@@ -645,6 +662,30 @@ test("status.showUntrackedFiles away from its default stays raw, where rtk would
   }
   git(repo, "config", "status.showUntrackedFiles", "normal");
   assert.equal(rewrite(home, repo), expected(home));
+});
+
+test("an empty status.showUntrackedFiles stays raw, since git reads it as false", realOnly, () => {
+  const home = fakeHome({ rtk: "real" });
+  const repo = fixture();
+  writeFile(path.join(repo, "new.txt"), "untracked\n");
+  git(repo, "config", "status.showUntrackedFiles", "");
+  // The check can fail: this is what the agent would read after a rewrite.
+  assert.match(sh(expected(home), repo, home).stdout, /clean — nothing to commit/);
+  assert.match(sh("git status", repo, home).stdout, /use -u to show untracked files/);
+  assert.equal(answer(home, repo), "");
+});
+
+test("a git config that fails or hangs stays raw, since no answer is not unset", () => {
+  const realGit = spawnSync("sh", ["-c", "command -v git"], { encoding: "utf8" }).stdout.trim();
+  for (const [name, broken] of [["fails", "exit 128"], ["dies", "kill -9 $$"], ["hangs", "exec sleep 30"]]) {
+    const dir = tempDir("git-stub");
+    writeFile(path.join(dir, "git"), `#!/bin/sh\ncase " $* " in *" config --get "*) ${broken} ;; esac\nexec ${realGit} "$@"\n`, 0o755);
+    const home = fakeHome({ rtk: stubRtk });
+    const repo = fixture();
+    const { rc, stdout, ms } = runHook(hook, call("git status", { cwd: repo }), { home, project: repo, pathValue: `${dir}:${process.env.PATH}` });
+    assert.deepEqual({ rc, stdout }, { rc: 0, stdout: "" }, name);
+    assert.ok(ms < 4500, `${name} took ${ms} ms`);
+  }
 });
 
 test("a value from any git config file counts, and the last one wins, as in git", () => {

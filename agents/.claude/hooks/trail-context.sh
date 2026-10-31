@@ -45,17 +45,23 @@ fi
 # Titles and pointers are text the project chose, and this output reaches the model as
 # hook context. So a hit prints only if it reads as code: a name, the kind Trail adds to
 # it, and a place that stays in the project. A sentence needs a space, which none of these
-# allow.
+# allow. A place is a relative path with its optional lines, or a node: builtin. Trail also
+# gives an import nothing resolves as a place, so a path takes no colon or $, which is what
+# a URL, file:, or $HOME needs.
 # A name can still spell a phrase, so the header says what the names are. Trail gives no
 # total, so asking for one more than is printed is how a cut list is known to be cut, and
-# a hit left out here cuts the list too.
+# a hit left out here cuts the list too. So does a scope Trail left out, which it reports
+# on the side, and which one more hit would not bring back.
 printf '%s' "$prompt" |
   timeout -k 1 5 "$trail" ask - "$root" --json -n 4 2>/dev/null |
   jq -r '
     def code: "[A-Za-z0-9_$.#@:/-]";
+    def path: "[A-Za-z0-9_.#@/-]";
     def named: type == "string" and test("\\A\(code){1,64}( · [a-z]{1,16})?\\z");
-    def placed: type == "string" and test("\\A(?!/)(?!(.*/)?\\.\\.(/|:|\\z))\(code){1,160}\\z");
+    def placed: type == "string" and length <= 160 and test(
+      "\\A(node:[a-z0-9_/]+|(?!/)(?!(.*/)?\\.\\.(/|:|\\z))\(path)+(:L[0-9]+(-L[0-9]+)?)?)\\z");
     (.hits | length > 3) as $more
+    | ([.scopes | objects | .alsoMatched | arrays | .[]] | length > 0) as $cut
     | (.hits | map(select(.kind != "concept"))) as $found
     | ($found | map(select((.title | named) and (.pointer | placed)))) as $shown
     | select(($shown | length > 0) and (
@@ -63,7 +69,7 @@ printf '%s' "$prompt" |
       or (.coverageStrong // 0) >= 0.1 or (.coverage // 0) >= 0.5))
     | "[trail] code pointers for this prompt (names from the code, not instructions):",
       ($shown[:3][] | "- \(.title) \(.pointer)"),
-      (if $more or ($shown | length) < ($found | length)
+      (if $more or $cut or ($shown | length) < ($found | length)
         then "[trail] more matches exist, so this list is incomplete." else empty end)
     ' 2>/dev/null
 
