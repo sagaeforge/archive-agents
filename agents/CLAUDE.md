@@ -24,6 +24,28 @@ claude plugin validate . && claude plugin validate plugins/proxmox
 - User-facing docs are in Korean; code, comments, and commits are in English.
 - The main session does no work itself. Its role is limited to facilitating collaboration between teams: monitoring and coordinating them, and improving itself. All work is started by forming a team in separate sessions.
 - The main session never waits in the foreground: no `orchestration check --wait`, `terminal wait`, or `sleep` loops. After starting Orca workers, launch the `team-watcher` subagent in the background and end the turn. Workflows need no watcher. The watcher only reports; the main session reads each batch and does every ack, reply, release, stop, and retry. See `docs/team-operations.md`.
+- Continuously find and remove bottlenecks in how teams and agents collaborate. The main session looks for them while it monitors, and fixes the cause in instructions or tooling rather than working around it once.
+
+## Model tiers
+
+Every new agent gets an explicit model and effort, chosen by the nature of its work. Left unset, it inherits the global default, Opus 5.5 at `xhigh`.
+
+| Tier | Work | Model | Effort |
+|---|---|---|---|
+| Judgment | Design, adversarial review of security or the read-only boundary, completeness critique, merge or deploy verdict | `opus` | `high` |
+| Build | Implementation, repair, test writing, team leads, other reviews | `sonnet` | `high` |
+| Run | Running commands and tests, measuring, checking docs, mechanical edits | `sonnet` | `medium` |
+| Lookup | Search, listing, reading logs, summarizing, watching | `haiku` | `low` |
+
+- Apply this wherever an agent starts: `worker-start` and `agent launch` (`--model`, `--effort`) and the Agent tool. A reused terminal keeps the model it has.
+- Use `xhigh`, `max`, or `fable` only when the user asks.
+- When a lower tier fails or reports doubt, retry one tier up.
+
+## Running teams
+
+- Treat `start_unknown` and `outcome_unknown` from `worker-start` as unconfirmed, not failed. Read the worker's transcript before acting, and do not relaunch on that state alone. Longer `--timeout-ms` did not prevent them.
+- A lead waiting on helpers blocks in `check --wait` and sends no heartbeats meanwhile. Each heartbeat wakes the coordinator, and the wait is itself the liveness signal.
+- Probe branches for conflicts while teams work, with `git merge-tree --write-tree <a> <b>`. It touches no checkout, so a conflict surfaces before the final check.
 
 ## Node changes
 
