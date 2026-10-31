@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Stands in for npm in the doctor tests, which may only ask for its version.
+printf 'npm %s\n' "$*" >>"$FAKE_STATE/commands.log"
+if [[ $* != --version ]]; then
+  echo "fake npm: unexpected arguments: $*" >&2
+  exit 64
+fi
+echo 11.20.0
