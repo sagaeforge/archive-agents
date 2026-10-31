@@ -6,7 +6,8 @@
 # and with the same exit code.
 set -euo pipefail
 
-SCRIPTS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Resolved first, so that a link to this script finds its neighbours.
+SCRIPTS="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 MIN_NODE_MAJOR=20 # engines in package.json, which a test holds this to.
 ACTION="Install Node 22 or newer with npm, on the PATH Claude Code starts with."
 
@@ -15,6 +16,11 @@ major=${version#v}
 major=${major%%.*}
 
 if [[ $major =~ ^[0-9]+$ ]] && ((major >= MIN_NODE_MAJOR)); then
+  # Node's own exit code for a script it cannot load is 1, which would read as a mere warning.
+  if ! node --check "$SCRIPTS/doctor.mjs" 2>/dev/null; then
+    echo "doctor: cannot load $SCRIPTS/doctor.mjs. Reinstall the plugin." >&2
+    exit 2
+  fi
   exec node "$SCRIPTS/doctor.mjs" "$@"
 fi
 

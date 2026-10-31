@@ -41,7 +41,7 @@
   grep -c -- --rotate ~/.claude/plugins/marketplaces/sagae/plugins/proxmox/scripts/bootstrap-token.sh
   ```
 
-- [ ] `claude plugin list`에 `The packages it lists are not installed`가 없는지 봅니다.
+- [ ] `claude plugin list`에 `The packages it lists`로 시작하는 Note가 없는지 봅니다. 문구가 둘입니다. `npm`이 없으면 `were not installed, because it needs npm`, 그 밖에는 `are not installed`가 뒤에 붙습니다.
 - [ ] `bootstrap-token.sh`를 실행합니다. `Token claude-mcp@pve!m-<호스트>-<연월> written to ...`가 나옵니다.
 - [ ] auto-update를 켭니다.
 - [ ] doctor를 실행합니다.
@@ -114,11 +114,11 @@
 
 실제 사고 때는 `main`을 먼저 되돌립니다. 연습에서는 순서를 바꿉니다. revert를 먼저 push하면 `promote`가 곧 `stable`을 전진시켜 뒤로 움직인 상태를 볼 수 없기 때문입니다. 연습 커밋은 문서만 바꾸므로 그동안의 위험은 없습니다. `good`과 `bad`를 쓰므로 명령은 같은 셸에서 이어서 실행합니다.
 
-1. 돌아갈 커밋을 적습니다. CI를 통과한 커밋이어야 합니다.
+1. 돌아갈 커밋을 적습니다. CI를 통과한 커밋이어야 하므로 둘째 명령이 1 이상을 출력해야 합니다.
 
    ```sh
    good=$(gh api repos/sagaeforge/sagae-claude-plugins/commits/stable --jq .sha)
-   gh run list --workflow ci.yml --commit "$good" --status success --json databaseId --jq length   # 1 이상
+   gh run list --workflow ci.yml --commit "$good" --status success --json databaseId --jq length
    ```
 
 2. 연습 커밋을 `main`에 push합니다. 이 문서 끝에 아무 줄이나 추가합니다. 코드는 그대로지만 커밋이 바뀌므로 머신에는 새 버전입니다.
@@ -128,12 +128,12 @@
    bad=$(git rev-parse HEAD)
    ```
 
-3. `promote`가 끝나면 `stable`이 `$bad`인지 보고 머신을 올립니다.
+3. `promote`가 끝나면 `stable`이 `$bad`인지 보고 머신을 올립니다. 마지막 명령은 `$bad`의 앞 12자리를 출력해야 합니다.
 
    ```sh
    gh api repos/sagaeforge/sagae-claude-plugins/commits/stable --jq .sha
    claude plugin marketplace update sagae && claude plugin update proxmox@sagae
-   jq -r '.plugins["proxmox@sagae"][0].version' ~/.claude/plugins/installed_plugins.json   # $bad의 앞 12자리
+   jq -r '.plugins["proxmox@sagae"][0].version' ~/.claude/plugins/installed_plugins.json
    ```
 
 4. **T0.** 되돌리기를 실행합니다. 9번까지 `gh workflow run ci.yml`을 실행하지 마세요. `main`의 끝이 아직 `$bad`이므로 `promote`가 `stable`을 다시 전진시킵니다.

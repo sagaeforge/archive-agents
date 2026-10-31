@@ -38,16 +38,18 @@
 | `event` | `worker_done`, `escalation`, `question`이 도착했습니다 | 배치를 처리하고 ack한 뒤 watcher를 다시 띄웁니다 |
 | `checkpoint`의 `unacked_batch` | 이벤트 없는 미확인 배치가 남아 대기가 바로 끝났습니다. 배치는 오래된 순서로 최대 50개라 이벤트가 그 뒤에 있을 수 있습니다 | `event`와 같습니다 |
 | `checkpoint`의 `time_limit`, `empty`, `cancelled` | 이벤트가 없습니다. 실패가 아닙니다 | watcher를 다시 띄웁니다. 세 번 연속이면 먼저 `worker-list --include-remote --json`으로 워커를 확인합니다 |
-| `error`, 또는 JSON 없이 끝남 | 대기 자체가 실패했습니다. 워커가 멈췄다는 뜻도, 메일이 없다는 뜻도 아닙니다 | `code`와 `message`를 읽고 원인을 해결한 뒤 watcher를 다시 띄웁니다. 대기는 다시 시작해도 안전합니다. 같은 오류가 반복되거나 원인을 찾을 수 없으면 watcher를 그만 띄우고 아래 `check --json`으로 받은편지함을 직접 읽습니다 |
+| `error`, 또는 JSON 없이 끝남 | 대기 자체가 실패했습니다. 워커가 멈췄다는 뜻도, 메일이 없다는 뜻도 아닙니다 | `code`와 `message`를 읽고 원인을 해결한 뒤 watcher를 다시 띄웁니다. 대기는 다시 시작해도 안전합니다. 같은 오류가 반복되거나 원인을 찾을 수 없으면 watcher를 그만 띄우고 아래 `check --run <run_id> --json`으로 받은편지함을 직접 읽습니다 |
 
 배치 처리는 항상 메인 세션이 합니다. watcher 결과는 알림일 뿐이므로 내용은 Orca에서 직접 읽습니다. 아래 명령은 기다리지 않고 바로 끝납니다. `orca-ide` 자리에는 `$ORCA_CLI_COMMAND` 값을 씁니다. 배치가 크면 Bash가 출력을 파일로 저장하고 미리보기만 보여 주므로, 메인 세션은 그 파일을 읽어 전체를 확인합니다.
 
 ```sh
-orca-ide orchestration check --json                      # 미확인 배치를 다시 읽습니다
+orca-ide orchestration check --run <run_id> --json
 orca-ide orchestration reply --id <message_id> --body "<답변>" --json
 orca-ide orchestration worker-release --dispatch <dispatch_id> --json
-orca-ide orchestration check --ack <delivery_id> --json  # ack하고 다음 배치를 받습니다
+orca-ide orchestration check --run <run_id> --ack <delivery_id> --json
 ```
+
+첫 명령은 미확인 배치를 다시 읽고, 마지막 명령은 ack한 뒤 다음 배치를 받습니다. `check`에는 항상 `--run`을 붙입니다. 세션이 Run에서 떨어진 상태에서 `--run` 없이 실행하면 Run 메일함이 아니라 직접 메일함을 읽어, 메일을 읽음 처리하고 다시 전달하지 않습니다. `worker_done`이 Run 메일함에 있는데 `count`가 0으로 나올 수도 있습니다. Orca 소스로 확인한 동작이고 실제로 실행해 보지는 않았습니다.
 
 `--ack` 결과의 `deliveryId`가 `null`이 될 때까지 처리와 ack를 반복한 뒤 watcher를 띄웁니다. ack하지 않은 배치는 설계상 다시 전달되므로, 남겨 두면 다음 watcher가 같은 배치를 바로 돌려줍니다.
 

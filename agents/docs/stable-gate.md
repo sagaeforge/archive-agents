@@ -58,31 +58,32 @@ CI를 통과한 커밋만 머신에 나가게 하는 장치입니다. 머신은 
    git config core.hooksPath .githooks
    ```
 
-7. `CLAUDE.md`와 `README.md`의 "`main` push가 배포" 문장을 고칩니다. `README.md`의 설치 명령도 `sagaeforge/sagae-claude-plugins#stable`로 바꿉니다. 그대로 두면 새 머신이 게이트를 거치지 않는 `main`을 따라갑니다.
+7. `CLAUDE.md`와 `README.md`의 "`main` push가 배포" 문장을 고칩니다. `README.md`의 설치 명령도 `sagaeforge/sagae-claude-plugins#stable`로 바꿉니다. 그대로 두면 새 머신이 게이트를 거치지 않는 `main`을 따라갑니다. doctor는 따로 고칠 것이 없습니다. 원격에 `stable`이 생기면 등록 안내에 `#stable`을 넣고, 따르지 않는 머신을 2번에서 경고합니다.
 
 ## 머신별 재등록
 
 플러그인을 쓰는 모든 머신에서 실행합니다. 머신당 약 5분을 잡습니다. `stable`이 만들어진 뒤에 진행합니다.
 
 ```sh
-claude plugin marketplace remove sagae   # 플러그인도 함께 제거됩니다
+claude plugin marketplace remove sagae
 claude plugin marketplace add sagaeforge/sagae-claude-plugins#stable
 claude plugin install proxmox@sagae
 ```
 
 이어서 세션을 열고 `/plugin` > Marketplaces > `sagae` > Enable auto-update를 선택합니다. **이 단계를 빠뜨리면 그 머신은 조용히 갱신을 멈춥니다.** `remove`가 `autoUpdate` 설정까지 지우고, 기본값은 꺼짐입니다.
 
+- `marketplace remove`는 플러그인도 함께 제거합니다. 플러그인 데이터 폴더의 [호출 로그](../README.md#서버-로그)도 이때 지워집니다.
 - 토큰 파일 `~/.config/proxmox-mcp/token`은 건드리지 않으므로 다시 발급할 필요가 없습니다.
 - `remove` 없이 `add`만 실행하면 `its source doesn't match its extraKnownMarketplaces entry` 오류로 실패합니다.
 - `settings.json`의 `source`만 고치는 방법은 쓰지 마세요. CLI가 `Marketplace 'sagae' not found`를 내고 업데이트가 되지 않습니다.
 - 실행 중인 세션은 이전 버전을 유지합니다. `/reload-plugins`나 다음 실행부터 적용됩니다.
 
-끝나면 확인합니다.
+끝나면 확인합니다. 첫 명령은 `"stable"`, 둘째는 `true`를 출력합니다. 셋째의 값은 넷째 값의 앞 12자리와 같아야 합니다.
 
 ```sh
-claude plugin marketplace list --json | jq '.[] | select(.name == "sagae") | .ref'    # "stable"
-jq '.sagae.autoUpdate' ~/.claude/plugins/known_marketplaces.json                      # true
-jq -r '.plugins["proxmox@sagae"][0].version' ~/.claude/plugins/installed_plugins.json # 아래 값의 앞 12자리
+claude plugin marketplace list --json | jq '.[] | select(.name == "sagae") | .ref'
+jq '.sagae.autoUpdate' ~/.claude/plugins/known_marketplaces.json
+jq -r '.plugins["proxmox@sagae"][0].version' ~/.claude/plugins/installed_plugins.json
 gh api repos/sagaeforge/sagae-claude-plugins/commits/stable --jq .sha
 ```
 
@@ -116,7 +117,7 @@ workflow를 바꿀 때마다 이 절차가 필요하고 그 번거로움이 크�
 
 ## 롤백
 
-먼저 `main`의 원인을 되돌립니다. 그러지 않으면 다음 push가 같은 내용을 다시 올립니다.
+먼저 `main`의 원인을 되돌립니다. 그러지 않으면 다음 push가 같은 내용을 다시 올립니다. 대상이 merge 커밋이면 `git revert <sha>` 대신 `git revert -m 1 <sha>`를 씁니다. 판별 방법과 `--no-ff` 병합은 [런북](../README.md#나쁜-커밋-되돌리기)에 있습니다.
 
 1. CI가 막은 경우: 머신에는 영향이 없습니다. `git revert <sha> && git push`로 끝납니다.
 2. 이미 `stable`로 나간 경우: 같은 revert를 push합니다. CI를 통과하면 `stable`이 전진합니다.

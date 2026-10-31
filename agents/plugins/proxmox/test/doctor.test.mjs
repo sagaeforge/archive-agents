@@ -96,7 +96,7 @@ function servePve(acceptedToken, routes) {
   };
 }
 
-const REAL_TOOLS = ["bash", "dirname"];
+const REAL_TOOLS = ["bash", "dirname", "readlink"];
 const realToolPaths = execFileSync("sh", ["-c", 'for tool; do command -v "$tool" || exit 1; done', "sh", ...REAL_TOOLS], {
   encoding: "utf8",
 })
@@ -425,7 +425,7 @@ test("a healthy run starts exactly these commands, and all of them only read", a
     [
       `gh api --method GET repos/${REPO}/actions/runners`,
       `gh api --method GET repos/${REPO}/actions/workflows/ci.yml/runs?branch=main&per_page=1`,
-      `git ls-remote -- git@github.com:${REPO}.git HEAD`,
+      `git ls-remote -- git@github.com:${REPO}.git HEAD refs/heads/stable`,
       "npm --version",
     ].sort(),
   );
@@ -450,13 +450,16 @@ test("the doctor's sources can only read", () => {
   assert.equal([...checks.matchAll(/\bexecFile\(/g)].length, 1);
 });
 
-test("git and gh run in the modes that cannot prompt or write", () => {
+test("the commands run in the modes that cannot prompt or leave state of their own behind", () => {
   const checks = readFileSync(join(SCRIPTS, "doctor-checks.mjs"), "utf8");
 
   assert.match(checks, /GIT_TERMINAL_PROMPT: "0"/);
   assert.match(checks, /GIT_ALLOW_PROTOCOL: "https:ssh"/);
   assert.match(checks, /-o BatchMode=yes .*-o StrictHostKeyChecking=yes/);
   assert.match(checks, /GH_NO_UPDATE_NOTIFIER: "1"/);
+  assert.match(checks, /GH_TELEMETRY: "false"/);
+  assert.match(checks, /run\("npm", \["--version"\], NPM_ENV\)/);
+  assert.match(checks, /NPM_ENV = \{ NODE_DISABLE_COMPILE_CACHE: "1" \}/);
 });
 
 // Exit codes and output.
@@ -537,6 +540,33 @@ test("a doctor that cannot even load exits 2, not the 1 of a warning", async (t)
   assert.equal(status, 2);
   assert.equal(stdout, "");
   assert.match(stderr, /^doctor: /);
+});
+
+// Node exits 1 for a script it cannot load, and 1 means warnings here.
+for (const [problem, breakIt] of [
+  ["is missing", (script) => rmSync(script)],
+  ["does not parse", (script) => writeFileSync(script, "this is not ( JavaScript\n")],
+]) {
+  test(`a doctor.mjs that ${problem} exits 2, not the 1 of a warning`, async (t) => {
+    const script = copyPlugin(t);
+    breakIt(join(dirname(script), "doctor.mjs"));
+
+    const { status, stdout, stderr } = await runDoctor(t, { script });
+
+    assert.equal(status, 2);
+    assert.equal(stdout, "");
+    assert.match(stderr, /^doctor: cannot load /);
+  });
+}
+
+test("doctor.sh works through a link to it", async (t) => {
+  const link = join(tempDir(t), "doctor");
+  symlinkSync(DOCTOR, link);
+
+  const { status, report } = await runDoctor(t, { script: link });
+
+  assert.equal(status, 0, JSON.stringify(report));
+  assertStatuses(report);
 });
 
 test("with no node on PATH, doctor.sh answers the first check itself", async (t) => {
@@ -665,24 +695,138 @@ scenarios([
   {
     name: "settings.json decides auto-update over known_marketplaces.json when it says yes",
     marketplace: { source: { source: "github", repo: REPO }, autoUpdate: false },
-    settings: { extraKnownMarketplaces: { sagae: { autoUpdate: true } } },
+    settings: { enabledPlugins: { "proxmox@sagae": true }, extraKnownMarketplaces: { sagae: { autoUpdate: true } } },
     statuses: {},
     exitCode: 0,
   },
   {
     name: "settings.json decides auto-update over known_marketplaces.json when it says no",
     marketplace: { source: { source: "github", repo: REPO }, autoUpdate: true },
-    settings: { extraKnownMarketplaces: { sagae: { autoUpdate: false } } },
+    settings: { enabledPlugins: { "proxmox@sagae": true }, extraKnownMarketplaces: { sagae: { autoUpdate: false } } },
     statuses: { 2: "warn" },
     exitCode: 1,
   },
+  ...[
+    ["ssh", `git@github.com:${REPO}.git`],
+    ["an ssh URL", `ssh://git@github.com/${REPO}.git`],
+    ["a URL with no .git", `https://github.com/${REPO}`],
+    ["a URL with credentials", `https://someone:hunter2@github.com/${REPO}.git`],
+  ].map(([form, url]) => ({
+    name: `the marketplace may be registered by ${form}`,
+    marketplace: { source: { source: "git", url }, autoUpdate: true },
+    statuses: {},
+    exitCode: 0,
+  })),
+  ...[
+    ["another host", `https://example.invalid/${REPO}.git`],
+    ["another host over ssh", `git@example.invalid:${REPO}.git`],
+    ["a path that ends the same way", `https://github.com/someone/${REPO}.git`],
+  ].map(([where, url]) => ({
+    name: `the same path on ${where} is another repository`,
+    marketplace: { source: { source: "git", url }, autoUpdate: true },
+    statuses: { 2: "fail", 3: "skip" },
+    exitCode: 2,
+  })),
+]);
+
+// stable on the remote is how a machine can tell that the gate is in use.
+
+const followingStable = { source: { source: "github", repo: REPO, ref: "stable" }, autoUpdate: true };
+const gateInUse = [
+  [SHA, "HEAD"],
+  [SHA, "refs/heads/main"],
+  [SHA, "refs/heads/stable"],
+];
+
+scenarios([
   {
-    name: "no settings.json at all is fine",
-    settings: null,
+    name: "with stable on the remote, a machine on the default branch warns, and is told to move",
+    remoteRefs: gateInUse,
+    statuses: { 2: "warn" },
+    exitCode: 1,
+    expect: (report) => {
+      assert.match(check(report, 2).summary, /ref default branch, .* so this machine skips the gate\.$/);
+      assert.match(check(report, 2).action, /then claude plugin marketplace add sagaeforge\/sagae-claude-plugins#stable and /);
+      assert.match(check(report, 2).action, /enable that again afterwards/);
+    },
+  },
+  {
+    name: "with stable on the remote, a machine on main warns too",
+    marketplace: { source: { source: "github", repo: REPO, ref: "main" }, autoUpdate: true },
+    remoteRefs: gateInUse,
+    statuses: { 2: "warn" },
+    exitCode: 1,
+    expect: wantedAt(2, "summary", /ref main, .* skips the gate\.$/),
+  },
+  {
+    name: "with stable on the remote, the gate outranks auto-update, which registering again turns off anyway",
+    marketplace: { source: { source: "github", repo: REPO }, autoUpdate: false },
+    remoteRefs: gateInUse,
+    statuses: { 2: "warn" },
+    exitCode: 1,
+    expect: wantedAt(2, "action", /#stable/),
+  },
+  {
+    name: "with stable on the remote, a machine following stable passes",
+    marketplace: followingStable,
+    remoteRefs: gateInUse,
     statuses: {},
     exitCode: 0,
   },
+  {
+    name: "with no stable on the remote, a machine on the default branch passes, as it must while the gate is off",
+    statuses: {},
+    exitCode: 0,
+    expect: wantedAt(2, "summary", /ref default branch, auto-update on\.$/),
+  },
+  {
+    name: "with stable on the remote, the registration hint names it",
+    marketplace: null,
+    remoteRefs: gateInUse,
+    statuses: { 2: "fail", 3: "skip" },
+    exitCode: 2,
+    expect: wantedAt(2, "action", /^claude plugin marketplace add sagaeforge\/sagae-claude-plugins#stable$/),
+  },
+  {
+    name: "with stable on the remote, the hint for a wrong repository names it too",
+    marketplace: { source: { source: "github", repo: "someone/else" }, autoUpdate: true },
+    remoteRefs: gateInUse,
+    statuses: { 2: "fail", 3: "skip" },
+    exitCode: 2,
+    expect: wantedAt(2, "action", /marketplace add sagaeforge\/sagae-claude-plugins#stable and /),
+  },
+  {
+    name: "with no stable on the remote, the hint for a wrong repository leaves it out",
+    marketplace: { source: { source: "github", repo: "someone/else" }, autoUpdate: true },
+    statuses: { 2: "fail", 3: "skip" },
+    exitCode: 2,
+    expect: wantedAt(2, "action", /marketplace add sagaeforge\/sagae-claude-plugins and /),
+  },
+  {
+    name: "when stable cannot be looked up, the registration hint covers both ways",
+    marketplace: null,
+    env: { FAKE_GIT_DOWN: "1" },
+    statuses: { 2: "fail", 3: "skip" },
+    exitCode: 2,
+    expect: wantedAt(2, "action", /^claude plugin marketplace add sagaeforge\/sagae-claude-plugins#stable \(without #stable if .*\)$/),
+  },
+  {
+    name: "when the remote cannot be read, a machine is not told it skips the gate",
+    env: { FAKE_GIT_DOWN: "1" },
+    statuses: { 3: "warn" },
+    exitCode: 1,
+  },
 ]);
+
+test("the doctor asks the remote about stable once, in the read it needs anyway", async (t) => {
+  const { commands } = await runDoctor(t, { remoteRefs: gateInUse });
+  assert.equal(commands.filter((command) => command.startsWith("git ")).length, 1);
+});
+
+test("a hint with #stable is copied from a repository that has it, by HTTPS when nothing is registered", async (t) => {
+  const { commands } = await runDoctor(t, { marketplace: null, remoteRefs: gateInUse });
+  assert.ok(commands.includes(`git ls-remote -- https://github.com/${REPO}.git HEAD refs/heads/stable`), commands.join("\n"));
+});
 
 test("the marketplace check reports the ref the machine follows", async (t) => {
   const { report } = await runDoctor(t, {
@@ -725,8 +869,6 @@ test("Claude Code's directory overrides are followed", async (t) => {
 });
 
 // 3: Installed commit
-
-const followingStable = { source: { source: "github", repo: REPO, ref: "stable" }, autoUpdate: true };
 
 scenarios([
   {
@@ -813,6 +955,29 @@ scenarios([
     exitCode: 1,
     expect: wantedAt(3, "action", /^claude plugin enable proxmox@sagae$/),
   },
+  ...[
+    ["a settings.json with no entry for it", {}],
+    ["no settings.json at all", null],
+  ].map(([what, settings]) => ({
+    name: `${what} leaves the plugin unloaded, so it warns like a disabled one`,
+    settings,
+    statuses: { 3: "warn" },
+    exitCode: 1,
+    expect: wantedAt(3, "summary", /but the plugin is disabled\.$/),
+  })),
+  {
+    name: "an entry that lists versions counts as enabled",
+    settings: { enabledPlugins: { "proxmox@sagae": ["1.0.0"] } },
+    statuses: {},
+    exitCode: 0,
+  },
+  {
+    name: "an install outside the user's scope keeps its entry elsewhere, so this file says nothing about it",
+    install: { scope: "project", gitCommitSha: SHA },
+    settings: {},
+    statuses: {},
+    exitCode: 0,
+  },
   {
     name: "a user install is the one compared",
     install: [
@@ -834,7 +999,7 @@ test("with no clone to read, the remote is reached by HTTPS", async (t) => {
   const { commands, report } = await runDoctor(t, { originUrl: null });
 
   assertStatuses(report);
-  assert.ok(commands.includes(`git ls-remote -- https://github.com/${REPO}.git HEAD`), commands.join("\n"));
+  assert.ok(commands.includes(`git ls-remote -- https://github.com/${REPO}.git HEAD refs/heads/stable`), commands.join("\n"));
 });
 
 test("a ref is asked for by its full names, so a branch elsewhere cannot match", async (t) => {

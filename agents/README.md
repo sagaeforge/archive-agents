@@ -52,7 +52,7 @@ claude plugin install proxmox@sagae
 | `marketplace add`가 `SSH authentication failed`나 `HTTPS authentication failed`로 실패 | 프롬프트 없이 인증되어야 합니다. `gh auth setup-git`을 실행한 뒤 `git -c core.askPass= ls-remote https://github.com/sagaeforge/sagae-claude-plugins.git`으로 확인합니다 |
 | `SSH host key is not in your known_hosts file` | `ssh -T git@github.com`을 한 번 실행해 지문을 수락합니다 |
 | `bootstrap-token.sh`의 `Could not issue token` | 위의 SSH 조건을 확인합니다. 기존 토큰과 파일은 바뀌지 않습니다. 메시지에 나오는 명령으로 노드에 남은 ID를 확인합니다 |
-| doctor 4번 실패, `claude plugin list`의 `The packages it lists are not installed` | 의존성 자동 설치가 끝나지 못했습니다. `npm`이 PATH에 없거나 60초 안에 끝나지 않으면 실패합니다. `npm`을 PATH에 두고 `claude plugin update proxmox@sagae`로 다시 시도합니다 |
+| doctor 4번 실패, `claude plugin list`에 `The packages it lists`로 시작하는 Note | 의존성 자동 설치가 끝나지 못했습니다. `npm`이 PATH에 없으면 `The packages it lists were not installed, because it needs npm`이, `npm`은 있는데 60초 안에 끝나지 못했으면 `The packages it lists are not installed`가 나옵니다. `npm`을 PATH에 두고 `claude plugin update proxmox@sagae`로 다시 시도합니다 |
 | `/mcp`에서 서버가 연결되지 않음 | `claude --debug`로 시작해 `~/.claude/debug/<세션 ID>.txt`를 봅니다. `node`를 찾지 못했다면 PATH를 고칩니다 |
 
 ## 배포 방식
@@ -130,7 +130,7 @@ rm ~/.config/proxmox-mcp/token
 | # | 점검 | 실패 | 경고 |
 |---|---|---|---|
 | 1 | `node`, `npm`이 PATH에 있고 Node 22 이상 | `node`나 `npm`이 없음, `package.json`의 최소 버전 미만 | Node 22 미만 |
-| 2 | 마켓플레이스 등록, ref, auto-update | 등록되지 않음, 다른 저장소를 따름 | auto-update 꺼짐 |
+| 2 | 마켓플레이스 등록, ref, auto-update | 등록되지 않음, 다른 저장소를 따름 | auto-update 꺼짐, 원격에 `stable`이 있는데 따르지 않음 |
 | 3 | 설치 커밋과 `git ls-remote` 비교 | 설치되지 않음, 원격과 다름 | 원격을 읽지 못함, 원격에 ref가 없음, 플러그인이 비활성화됨 |
 | 4 | 설치본의 `node_modules` | 패키지가 빠져 있음, 설치본이 없음 | |
 | 5 | 토큰 파일. ID만 표시 | 없음, 토큰 형식이 아님 | 다른 사용자가 읽을 수 있음 |
@@ -142,11 +142,12 @@ rm ~/.config/proxmox-mcp/token
 
 `skip`은 앞선 점검이 실패했거나 `gh`가 없어서 확인하지 못한 항목이며 종료 코드에 영향을 주지 않습니다. 등록된 러너가 없는 것은 문제로 보지 않습니다.
 
-- 3번은 설치 커밋이 원격과 다르면 실패로 봅니다. 방금 push했다면 머신이 갱신할 때까지 이 상태일 수 있습니다.
+- 2번은 원격에 `stable` 브랜치가 있으면 게이트를 쓰는 것으로 봅니다. 그때부터 `stable`을 따르지 않는 머신은 게이트를 거치지 않으므로 경고하고, 등록 안내에 `#stable`을 넣습니다. 브랜치가 없으면 안내에서 뺍니다. 원격을 읽지 못하면 경고하지 않고 안내에 두 경우를 모두 적습니다.
+- 3번은 설치 커밋이 원격과 다르면 실패로 봅니다. 방금 push했다면 머신이 갱신할 때까지 이 상태일 수 있습니다. `settings.json`의 `enabledPlugins`에 항목이 아예 없어도 비활성화로 봅니다. Claude Code가 그 플러그인을 로드하지 않습니다(2.1.316 기준).
 - 6번은 현재 역할로 토큰의 실제 만료일을 읽을 수 없어(403) 토큰 ID의 연월로 계산합니다. 그달 1일에 발급했다고 보고 365일(`ci-runner-`는 180일)을 더한 날이 기한입니다. ID에 연월이 없으면 건너뜁니다.
 - 7번은 토큰을 보내지 않고 `/access/domains`로 확인합니다. 그래서 토큰이 아직 없는 새 머신에서도 네트워크와 CA를 점검할 수 있습니다.
 
-아무것도 바꾸지 않습니다. 파일을 쓰지 않고, Proxmox에는 서버와 같은 클라이언트로 GET만 보내며, 외부 명령은 `node --version`, `npm --version`, `git ls-remote`, `gh api`의 GET뿐입니다. 토큰 값은 출력하지 않습니다. 안내에 나오는 `bootstrap-token.sh`는 클러스터의 토큰을 바꾸므로 사용자가 승인한 뒤에 실행합니다.
+설정, 토큰, 클러스터는 바꾸지 않습니다. doctor 자신은 파일을 쓰지 않고, Proxmox에는 서버와 같은 클라이언트로 GET만 보내며, 외부 명령은 `node --version`, `npm --version`, `git ls-remote`, `gh api`의 GET뿐입니다. 이 명령들이 자기 상태 파일을 남기지 않도록 `gh` 텔레메트리와 Node 컴파일 캐시를 끄고 실행합니다. `gh` 2.103.3과 npm 11.20.0으로 빈 `$HOME`과 `/tmp`에서 실행해 남는 파일이 없음을 확인했고, 다른 버전까지 보장하지는 않습니다. 토큰 값은 출력하지 않습니다. 안내에 나오는 `bootstrap-token.sh`는 클러스터의 토큰을 바꾸므로 사용자가 승인한 뒤에 실행합니다.
 
 ## 런북
 
@@ -161,6 +162,15 @@ rm ~/.config/proxmox-mcp/token
    ```sh
    git revert <sha> && git push
    ```
+
+   대상이 merge 커밋이면 `-m 1`을 붙입니다. `-m` 없는 `git revert`는 merge 커밋에서 실패합니다. 아래 첫 명령이 부모를 둘 출력하면 merge 커밋입니다.
+
+   ```sh
+   git log -1 --format=%p <sha>
+   git revert -m 1 <sha> && git push
+   ```
+
+   통합 브랜치는 `git merge --no-ff`로 병합합니다. 그래야 병합 전체가 `main`의 merge 커밋 하나가 되고, `git revert -m 1` 한 번으로 병합 전 트리로 정확히 돌아갑니다. fast-forward로 넣으면 브랜치의 마지막 merge 커밋이 `main`의 끝이 되어 그 merge 하나만 되돌아갑니다.
 
 2. 기다릴 수 없는 머신에서 바로 반영합니다. auto-update를 켠 머신은 다음 세션에서 따라옵니다.
 
@@ -206,9 +216,10 @@ infra/runner/issue-token.sh --node <노드> --vmid <VMID>
 ```sh
 infra/runner/provision.sh --node pve-node --vmid <빈 VMID>
 infra/runner/issue-token.sh --node pve-node --vmid <같은 VMID>
-gh workflow run ci.yml   # live-smoke 통과 확인
+gh workflow run ci.yml
 ```
 
+- 마지막 명령으로 `live-smoke`가 통과하는지 확인합니다.
 - 두 스크립트는 `--node` 이름으로 SSH에 접속합니다. 그 이름의 별칭이 없으면 둘 다 `--host root@192.0.2.1`을 붙입니다.
 - 원래 노드가 내려가 있으면 그 노드의 설정이 VMID를 계속 차지합니다. `--vmid 101`은 `VMID 101 is not free`로 멈추므로 노드에서 `pvesh get /cluster/nextid`로 빈 번호를 찾습니다.
 - 지난 발급과 같은 달이면 `issue-token.sh`에 `--token-id ci-runner-<연월>-2`처럼 새 ID를 줍니다.

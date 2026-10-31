@@ -17,6 +17,11 @@ const MARKETPLACE = "sagae";
 const PLUGIN = `proxmox@${MARKETPLACE}`;
 const REPO = "sagaeforge/sagae-claude-plugins";
 
+const STABLE = "stable";
+const STABLE_REF = `refs/heads/${STABLE}`;
+// GitHub's own addresses for the repository. The path alone would pass any host that copied it.
+const REPO_URL = new RegExp(`^(?:https://(?:[^/@]+@)?github\\.com/|ssh://git@github\\.com/|git@github\\.com:)${REPO}(?:\\.git)?/?$`);
+
 const NODE_MAJOR = 22;
 const SHARED_TOKEN_ID = "mcp";
 const MACHINE_TOKEN_DAYS = 365;
@@ -27,7 +32,6 @@ const COMMAND_TIMEOUT_MS = 20000;
 
 const INSTALL_NODE = `Install Node ${NODE_MAJOR} or newer with npm, on the PATH Claude Code starts with: the server runs as plain "node".`;
 const REGISTER = `claude plugin marketplace add ${REPO}`;
-const REREGISTER = `claude plugin marketplace remove ${MARKETPLACE}, then ${REGISTER} and claude plugin install ${PLUGIN}. Removing a marketplace removes its plugin too.`;
 const UPDATE = `claude plugin marketplace update ${MARKETPLACE} && claude plugin update ${PLUGIN}, then /reload-plugins in a session.`;
 const REINSTALL = `claude plugin uninstall ${PLUGIN} && claude plugin install ${PLUGIN}`;
 const BOOTSTRAP = "With the user's approval, run scripts/bootstrap-token.sh";
@@ -47,14 +51,28 @@ const GIT_ENV = {
   GIT_ALLOW_PROTOCOL: "https:ssh",
   GIT_SSH_COMMAND: process.env.GIT_SSH_COMMAND ?? "ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=yes",
 };
-// Without this, gh writes down when it last looked for a new version of itself.
-const GH_ENV = { GH_NO_UPDATE_NOTIFIER: "1", GH_PROMPT_DISABLED: "1" };
+// Without these, gh writes down when it last looked for a new version of itself, and its telemetry
+// leaves a device ID on a machine that has none yet.
+const GH_ENV = { GH_NO_UPDATE_NOTIFIER: "1", GH_PROMPT_DISABLED: "1", GH_TELEMETRY: "false" };
+// Without this, npm fills the temp directory with Node's compile cache.
+const NPM_ENV = { NODE_DISABLE_COMPILE_CACHE: "1" };
 
 const result = (status) => (summary, rest) => ({ status, summary, ...rest });
 const pass = result("pass");
 const warn = result("warn");
 const fail = result("fail");
 const skip = result("skip");
+
+// The command that registers this machine. stable exists only once the gate is in use, and until then
+// #stable would name a branch that is not there, so `hasStable` decides. Undefined means the remote
+// could not be read, and then the words have to cover both.
+function register(hasStable) {
+  if (hasStable === undefined) return `${REGISTER}#${STABLE} (without #${STABLE} if the repository has no ${STABLE} branch yet)`;
+  return hasStable ? `${REGISTER}#${STABLE}` : REGISTER;
+}
+
+const reregister = (hasStable) =>
+  `claude plugin marketplace remove ${MARKETPLACE}, then ${register(hasStable)} and claude plugin install ${PLUGIN}. Removing a marketplace removes its plugin too and turns auto-update off, so enable that again afterwards.`;
 
 const day = (ms) => new Date(ms).toISOString().slice(0, 10);
 const shortSha = (sha) => sha.slice(0, 12);
@@ -115,7 +133,7 @@ export function rotationDue(id) {
 }
 
 async function checkToolchain() {
-  const [node, npm] = await Promise.all([run("node", ["--version"]), run("npm", ["--version"])]);
+  const [node, npm] = await Promise.all([run("node", ["--version"]), run("npm", ["--version"], NPM_ENV)]);
   if (!node.ok || !npm.ok) {
     return fail(`${node.ok ? "npm" : "node"} is not on PATH, or does not run.`, { action: INSTALL_NODE });
   }
@@ -123,26 +141,6 @@ async function checkToolchain() {
   const major = Number(node.stdout.match(/\d+/)?.[0]);
   if (major >= NODE_MAJOR) return pass(`${versions}.`);
   return warn(`${versions}: older than Node ${NODE_MAJOR}.`, { action: INSTALL_NODE });
-}
-
-function checkMarketplace(state) {
-  const entry = readJson(join(state.pluginsDir, "known_marketplaces.json"))?.[MARKETPLACE];
-  if (!entry) return fail(`Marketplace "${MARKETPLACE}" is not registered.`, { action: REGISTER });
-
-  const { repo, url = "", ref } = entry.source ?? {};
-  if (repo !== REPO && !new RegExp(`[/:]${REPO}(\\.git)?/?$`).test(url)) {
-    return fail(`Marketplace "${MARKETPLACE}" does not follow ${REPO}.`, { action: REREGISTER });
-  }
-  state.marketplace = entry;
-  state.settings = readJson(join(state.configDir, "settings.json"));
-
-  // In Claude Code's own order: a value declared in settings wins, and a third-party marketplace is off by default.
-  const declared = state.settings?.extraKnownMarketplaces?.[MARKETPLACE]?.autoUpdate;
-  const autoUpdate = declared ?? entry.autoUpdate ?? false;
-
-  const summary = `${REPO}, ref ${ref ?? "default branch"}, auto-update ${autoUpdate ? "on" : "off"}.`;
-  if (autoUpdate) return pass(summary);
-  return warn(summary, { action: `In a session: /plugin > Marketplaces > ${MARKETPLACE} > Enable auto-update.` });
 }
 
 // How this machine reaches the remote, read as a plain file: git is not run inside the clone.
@@ -154,15 +152,46 @@ function cloneOrigin(cloneDir) {
   }
 }
 
-// The commit the remote has for the marketplace's ref, null if it has no such ref, or undefined if the
-// remote could not be read. The URL stays in here because it can carry credentials.
-async function remoteCommit({ source, installLocation }) {
+// `commit` is what the remote has for the marketplace's ref, or null if it has no such ref. `hasStable`
+// says the gate is in use: a pause leaves the branch in place, and turning the gate off deletes it. The
+// result is undefined if the remote could not be read. The URL stays in here because it can carry
+// credentials.
+async function readRemote({ source, installLocation }) {
   const url = cloneOrigin(installLocation) ?? source.url ?? `https://github.com/${source.repo}.git`;
-  const names = source.ref ? [`refs/heads/${source.ref}`, `refs/tags/${source.ref}^{}`, `refs/tags/${source.ref}`] : ["HEAD"];
+  const wanted = source.ref ? [`refs/heads/${source.ref}`, `refs/tags/${source.ref}^{}`, `refs/tags/${source.ref}`] : ["HEAD"];
+  const names = [...new Set([...wanted, STABLE_REF])];
   const { ok, stdout } = await run("git", ["ls-remote", "--", url, ...names], GIT_ENV);
   if (!ok) return undefined;
   const refs = new Map(stdout.split("\n").map((line) => line.split("\t").reverse()));
-  return names.map((name) => refs.get(name)).find(Boolean) ?? null;
+  return { commit: wanted.map((name) => refs.get(name)).find(Boolean) ?? null, hasStable: refs.has(STABLE_REF) };
+}
+
+const repositoryHasStable = async () => (await readRemote({ source: { repo: REPO } }))?.hasStable;
+
+async function checkMarketplace(state) {
+  const entry = readJson(join(state.pluginsDir, "known_marketplaces.json"))?.[MARKETPLACE];
+  if (!entry) return fail(`Marketplace "${MARKETPLACE}" is not registered.`, { action: register(await repositoryHasStable()) });
+
+  const { repo, url = "", ref } = entry.source ?? {};
+  if (repo !== REPO && !REPO_URL.test(url)) {
+    return fail(`Marketplace "${MARKETPLACE}" does not follow ${REPO}.`, { action: reregister(await repositoryHasStable()) });
+  }
+  state.marketplace = entry;
+  state.remote = await readRemote(entry);
+  // Stays null if the file is broken: this check reports that, and the next cannot judge by it.
+  state.settings = null;
+  state.settings = readJson(join(state.configDir, "settings.json"));
+
+  // In Claude Code's own order: a value declared in settings wins, and a third-party marketplace is off by default.
+  const declared = state.settings?.extraKnownMarketplaces?.[MARKETPLACE]?.autoUpdate;
+  const autoUpdate = declared ?? entry.autoUpdate ?? false;
+
+  const summary = `${REPO}, ref ${ref ?? "default branch"}, auto-update ${autoUpdate ? "on" : "off"}.`;
+  if (state.remote?.hasStable && ref !== STABLE) {
+    return warn(`${summary} The repository has ${STABLE}, so this machine skips the gate.`, { action: reregister(true) });
+  }
+  if (autoUpdate) return pass(summary);
+  return warn(summary, { action: `In a session: /plugin > Marketplaces > ${MARKETPLACE} > Enable auto-update.` });
 }
 
 async function checkInstalledCommit(state) {
@@ -176,20 +205,23 @@ async function checkInstalledCommit(state) {
   if (!installed) return warn("The install records no commit, so it cannot be compared.", { action: REINSTALL });
 
   const ref = state.marketplace.source.ref ?? "HEAD";
-  const remote = await remoteCommit(state.marketplace);
-  if (remote === undefined) {
+  if (!state.remote) {
     return warn(`Installed ${shortSha(installed)}, but the remote could not be read.`, {
       action: "Check the network and this machine's GitHub access. Background updates fail silently, so it may be falling behind.",
     });
   }
-  if (remote === null) {
-    return warn(`Installed ${shortSha(installed)}, but the remote has no ref ${ref}.`, { action: REREGISTER });
+  const { commit, hasStable } = state.remote;
+  if (commit === null) {
+    return warn(`Installed ${shortSha(installed)}, but the remote has no ref ${ref}.`, { action: reregister(hasStable) });
   }
-  if (remote !== installed) {
-    return fail(`Installed ${shortSha(installed)} is not ${shortSha(remote)}, the remote's ${ref}.`, { action: UPDATE });
+  if (commit !== installed) {
+    return fail(`Installed ${shortSha(installed)} is not ${shortSha(commit)}, the remote's ${ref}.`, { action: UPDATE });
   }
   const current = `Installed ${shortSha(installed)} is the remote's ${ref}`;
-  if (state.settings?.enabledPlugins?.[PLUGIN] !== false) return pass(`${current}.`);
+  // Claude Code loads a plugin only when this says true or lists versions, so no entry at all means
+  // off. Only a user install keeps its entry in this file.
+  const enabled = state.settings?.enabledPlugins?.[PLUGIN];
+  if (state.settings === null || install.scope !== "user" || enabled === true || Array.isArray(enabled)) return pass(`${current}.`);
   return warn(`${current}, but the plugin is disabled.`, { action: `claude plugin enable ${PLUGIN}` });
 }
 

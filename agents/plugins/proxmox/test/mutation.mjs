@@ -27,9 +27,12 @@ const PROMOTE = "../../.github/scripts/promote.sh";
 const ROLLBACK = "../../.github/scripts/rollback.sh";
 const HOOK = "../../.githooks/pre-push";
 const SMOKE = "test/smoke/live.mjs";
+const DOCTOR = "scripts/doctor-checks.mjs";
 const READ_ONLY_TESTS = ["test/readonly.test.mjs"];
 const LAUNCH_TESTS = ["test/launch.test.mjs"];
 const TOKEN_TESTS = ["test/token-guard.test.mjs"];
+// The doctor's file is slow, and only these scenarios are about the gate.
+const DOCTOR_GATE_TESTS = ["--test-name-pattern=stable", "test/doctor.test.mjs"];
 const GATE_TESTS = ["test/gate.test.mjs"];
 const SMOKE_TESTS = ["test/live-smoke.test.mjs"];
 const REFUSE_STABLE = `    refs/heads/stable)
@@ -53,6 +56,9 @@ const MUTANTS = [
   { id: "T4", breaks: "a token in a path reaches the log", file: "server/log.mjs", from: 'TOKEN_SHAPED.test(path) ? "<redacted>" : path', to: "path", tests: TOKEN_TESTS },
   { id: "T5", breaks: "the token reaches a tool's error", file: "server/pve.mjs", from: 'detail: `${host}: ${code === "TLS_VERIFY" ? err.code : err.message || err.code}`', to: "detail: `${host}: ${token}`", tests: TOKEN_TESTS },
   { id: "T6", breaks: "the server prints to stdout", file: "server/log.mjs", from: "process.stderr.write(line)", to: "process.stdout.write(line)", tests: TOKEN_TESTS },
+  { id: "D1", breaks: "a machine on main passes with the gate in use", file: DOCTOR, from: "if (state.remote?.hasStable && ref !== STABLE) {", to: "if (false) {", tests: DOCTOR_GATE_TESTS },
+  { id: "D2", breaks: "the registration hint loses #stable", file: DOCTOR, from: "return hasStable ? `${REGISTER}#${STABLE}` : REGISTER;", to: "return REGISTER;", tests: DOCTOR_GATE_TESTS },
+  { id: "D3", breaks: "the hint names a stable branch that does not exist", file: DOCTOR, from: "return hasStable ? `${REGISTER}#${STABLE}` : REGISTER;", to: "return `${REGISTER}#${STABLE}`;", tests: DOCTOR_GATE_TESTS },
   { id: "G1", breaks: "promote stops waiting for check and the smoke", file: CI, from: "    needs: [check, live-smoke]\n", to: "", tests: GATE_TESTS },
   { id: "G2", breaks: "promote runs before the owner turns the gate on", file: CI, from: "vars.STABLE_GATE_ENABLED == 'true' && ", to: "", tests: GATE_TESTS },
   { id: "G3", breaks: "promote forces stable", file: PROMOTE, from: 'git push origin "$sha', to: 'git push --force origin "$sha', tests: GATE_TESTS },
