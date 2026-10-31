@@ -84,7 +84,16 @@ test("no version is pinned and the hooks are not part of the shipped plugin", ()
 test("the Korean guide answers every question it must", () => {
   const guide = read("docs/project-tools.md");
   assert.match(guide, /[가-힣]/);
-  for (const needed of ["RTK_DISABLED=1", "TRAIL_NO_HOOKS=1", "disableAllHooks", "trail init", "rtk init"]) {
+  for (const needed of ["RTK_DISABLED=1", "TRAIL_NO_HOOKS=1", "disableAllHooks", "trail init", "rtk init", "trail note", "`.trail/`", "rm -rf graft .trail", "~/.trail", "|| git status"]) {
     assert.ok(guide.includes(needed), needed);
   }
+});
+
+test("the guide and the hook name no retired rewrite", () => {
+  const guide = read("docs/project-tools.md");
+  assert.doesNotMatch(guide, /true \|\|/);
+  assert.doesNotMatch(guide, /`grep`: |`rg`: |약 25줄/);
+  const hook = fs.readFileSync(path.join(hooksDir, "rtk-rewrite.sh"), "utf8");
+  const code = hook.split("\n").filter((line) => !line.trimStart().startsWith("#")).join("\n");
+  assert.doesNotMatch(code, /\bgrep\b|\brg\b/);
 });
