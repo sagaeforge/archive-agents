@@ -1,6 +1,6 @@
 # sagae-claude-plugins
 
-사내 Claude Code 플러그인 마켓플레이스입니다. 현재 플러그인은 `proxmox`(읽기 전용 MCP 서버 + 스킬) 하나입니다.
+사내 Claude Code 플러그인 마켓플레이스입니다. 현재 플러그인은 `proxmox`(읽기 전용 MCP 서버 + 스킬)와 `tower`(관제 서버 MCP 엔드포인트 등록) 둘입니다.
 
 ## 새 PC 설치
 
@@ -12,6 +12,16 @@ claude plugin install proxmox@sagae
 ```
 
 이어서 `/plugin` > Marketplaces > `sagae` 에서 auto-update를 켭니다. 내부망(192.168.x.x/24)에 접근할 수 있어야 합니다.
+
+## tower 플러그인
+
+`tower`는 이 머신에서 도는 관제 서버(127.0.0.1:4800)의 병합 MCP 엔드포인트 하나를 Claude Code에 등록하는 얇은 HTTP 플러그인입니다. 서버 코드는 없습니다. 관제 서버가 설치돼 있고 `~/.config/tower/token`이 있어야 합니다. 토큰은 `scripts/tower-auth.sh`가 연결 때마다 이 파일에서 읽으며 저장소에는 값이 없습니다.
+
+```sh
+claude plugin install tower@sagae
+```
+
+도구 이름은 `mcp__plugin_tower_tower__<업스트림>_<도구>` 형태입니다. 권한 와일드카드 `mcp__plugin_tower_tower__*`는 프로젝트 설정이 아니라 사용자 설정(`~/.claude/settings.json`)에 둡니다.
 
 ## 배포 방식
 

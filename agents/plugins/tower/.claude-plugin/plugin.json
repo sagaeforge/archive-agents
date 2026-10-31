@@ -1,0 +1,5 @@
+{
+  "name": "tower",
+  "description": "Registers the local tower control server (merged MCP endpoint on 127.0.0.1:4800) with Claude Code",
+  "author": { "name": "sagae" }
+}

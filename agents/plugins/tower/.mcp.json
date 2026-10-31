@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "tower": {
+      "type": "http",
+      "url": "http://127.0.0.1:4800/mcp",
+      "headersHelper": "sh ${CLAUDE_PLUGIN_ROOT}/scripts/tower-auth.sh",
+      "timeout": 1860000
+    }
+  }
+}
