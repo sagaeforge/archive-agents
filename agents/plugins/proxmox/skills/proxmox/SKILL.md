@@ -41,7 +41,7 @@ API failures start with a code or with `PVE API <status>`. Act on that, not on a
 | `BAD_RESPONSE` | Every host answered 200, but with something that is not a PVE API response, such as a proxy's login page. | Check `PVE_HOSTS` and what answers on port 8006. |
 | `UNREACHABLE` | The hosts failed in different ways, or the connection was lost. | Read the reason given for each host in the message. |
 | `BAD_REQUEST` | Refused before anything was sent: the path is malformed, or the token file holds invalid characters. | Fix the path (absolute, no `..`, no spaces or control characters) or the token file. Retrying unchanged will fail again. |
-| `CA_FILE` | The CA file cannot be read. | Restore `certs/pve-root-ca.pem` or correct `PVE_CA_FILE`. The next call picks it up without a restart. |
+| `CA_FILE` | The CA file cannot be read. | Restore `certs/pve-root-ca.pem`, and the next call picks it up without a restart. `PVE_CA_FILE` is read when the server starts, so correcting that takes a restart of Claude Code. |
 | `NO_TOKEN` | This machine has no token file. | Ask the user how to provide one. Read the note below before offering to run `scripts/bootstrap-token.sh`. |
 | `PVE API 400` | PVE refused a parameter. The message names it. | Fix that parameter. |
 | `PVE API 401` | The token was rejected: revoked, rotated or expired. | Read the note below, get the user's approval, then run `scripts/bootstrap-token.sh --rotate` from this plugin on this machine. It says so if the token file also needs `--keep-old`. |

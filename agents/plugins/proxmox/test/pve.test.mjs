@@ -36,6 +36,7 @@ const pathsParamsJoin = [
   ["a query with several pairs", "/x?a=1&c=3", "/x?a=1&c=3&b=2"],
   ["an empty query", "/x?", "/x?b=2"], // PVE answers 400 to /x?&b=2.
   ["a query that ends in a separator", "/x?a=1&", "/x?a=1&b=2"],
+  ["an ampersand and no query", "/x&", "/x&?b=2"],
   ["a fragment", "/x#f", "/x?b=2"],
   ["a query and a fragment", "/x?a=1#f", "/x?a=1&b=2"],
   ["a fragment holding a question mark", "/x#f?c=3", "/x?b=2"],

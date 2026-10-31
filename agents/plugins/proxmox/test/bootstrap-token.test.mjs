@@ -170,6 +170,12 @@ function steps(s) {
 const full = (id) => `${USER}!${id}`;
 const held = (id) => `file=${full(id)}`;
 
+function tempDirFor(t) {
+  const dir = mkdtempSync(join(tmpdir(), "bootstrap-token-env-"));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  return dir;
+}
+
 function hasTool(command, versionFlag) {
   return spawnSync(command, [versionFlag], { stdio: "ignore" }).status === 0;
 }
@@ -404,6 +410,8 @@ test("an ID not named after this machine is never deleted", (t) => {
     "m-sagae-windows",
     "m-sagae-windows-2026",
     "m-sagae-windows-202611-x",
+    "m-sagae-windows-202611-202611", // The default ID of a machine named sagae-windows-202611.
+    "m-sagae-windows-202611-0",
   ]) {
     const s = sandbox(t);
     s.seed(other);
@@ -556,7 +564,7 @@ test("--host selects the node, and the default is pve-node", (t) => {
   assert.ok(fallback.calls().includes("ssh pve-node file=none"));
 });
 
-test("every ssh call refuses to prompt and cannot hang", (t) => {
+test("every ssh call refuses to prompt and gives up on a dead connection", (t) => {
   const s = sandbox(t);
   s.seed(OLD_ID);
   assert.equal(s.run(["--rotate"]).status, 0);
@@ -737,7 +745,7 @@ test("an interrupt as the swap completes keeps the new token and names the old o
     for (const signal of ["INT", "TERM", "HUP"]) {
       const s = sandbox(t);
       s.seed(OLD_ID);
-      s.override("mv", `${s.realTool("mv")} "$@"\nkill -${signal} ${targets}`);
+      s.override("mv", `"${s.realTool("mv")}" "$@"\nkill -${signal} ${targets}`);
 
       const result = s.run(["--rotate"]);
 
@@ -790,7 +798,7 @@ test("a second interrupt does not cut the cleanup short", (t) => {
   assert.equal(readFileSync(s.tokenFile, "utf8"), before);
 });
 
-test("a malformed answer from the node never reaches the token file", (t) => {
+test("a malformed answer never reaches the token file, and is no proof that this run made the token", (t) => {
   const s = sandbox(t);
   s.seed(OLD_ID);
   const before = readFileSync(s.tokenFile, "utf8");
@@ -801,8 +809,66 @@ test("a malformed answer from the node never reaches the token file", (t) => {
 
   assert.equal(result.status, 1);
   assert.match(result.stderr, /malformed/);
+  assert.doesNotMatch(result.stderr, /revoked/);
+  assert.ok(result.stderr.includes(`pveum user token remove ${USER} ${ID}`), result.stderr);
   assert.equal(readFileSync(s.tokenFile, "utf8"), before);
-  assert.deepEqual(s.nodeTokens(), [OLD_ID]);
+  assert.deepEqual(s.nodeTokens(), [ID, OLD_ID].sort());
+});
+
+test("a clean exit with no token in it deletes nothing, even under --name", (t) => {
+  const other = "m-other-machine-202611";
+  const s = sandbox(t);
+  s.seed(OLD_ID);
+  s.seed(other, "another-machines-secret", { local: false });
+
+  const result = s.run(["--rotate", "--keep-old", "--name", other], { FAKE_SSH_SWALLOW: "1" });
+
+  assert.equal(result.status, 1);
+  assert.doesNotMatch(result.stderr, /revoked/);
+  assert.deepEqual(s.nodeTokens(), [other, OLD_ID].sort());
+});
+
+// Each command in the exit path gets its own run with a signal landing right before it. Random timing
+// found this window in 6 runs of 60, so the commands are counted instead: BASH_ENV puts a DEBUG trap
+// in the script's own shell.
+const COUNT_COMMANDS = `[[ \${0##*/} == bootstrap-token.sh ]] || return 0
+set -T
+__count=0
+__shell=$$
+trap '
+  if [[ $BASHPID == "$__shell" ]]; then
+    __count=$((__count + 1))
+    printf "%s\\n" "$BASH_COMMAND" >>"$COMMAND_LOG"
+    [[ $__count != "\${SIGNAL_AT:-}" ]] || kill -TERM "$__shell"
+  fi
+' DEBUG
+`;
+
+test("a signal anywhere on the way out still revokes the unused token and removes the temp file", (t) => {
+  const countFile = join(tempDirFor(t), "count-commands.sh");
+  writeFileSync(countFile, COUNT_COMMANDS);
+
+  function failedRotation(env = {}) {
+    const s = sandbox(t);
+    s.seed(OLD_ID);
+    const log = join(s.dir, "commands");
+    const result = s.run(["--rotate"], { FAKE_CURL_REJECT: "1", BASH_ENV: countFile, COMMAND_LOG: log, ...env });
+    return { s, result, log };
+  }
+
+  const { log } = failedRotation();
+  const commands = readFileSync(log, "utf8").trim().split("\n");
+  const failing = commands.findLastIndex((command) => command.startsWith("verify_token"));
+  assert.ok(failing > 0, commands.join("\n"));
+
+  // Inside the EXIT trap bash keeps showing "exit 1" as the command, so the steps there go by number.
+  for (let index = failing + 1; index < commands.length; index++) {
+    const { s, result } = failedRotation({ SIGNAL_AT: String(index + 1) });
+    const at = `a signal before command ${index}: ${commands[index]}`;
+    assert.ok(result.stderr.includes(`revoked unused token ${ID}`), `${at}\n${result.stderr}`);
+    assert.deepEqual(s.nodeTokens(), [OLD_ID], at);
+    assert.deepEqual(s.tokenDirEntries(), ["token"], at);
+  }
 });
 
 test("a failed delete keeps the new token and names the old one to delete", (t) => {
@@ -815,6 +881,20 @@ test("a failed delete keeps the new token and names the old one to delete", (t) 
   assert.match(result.stderr, new RegExp(`pveum user token remove ${USER} ${OLD_ID}`));
   assert.match(readFileSync(s.tokenFile, "utf8"), new RegExp(`^${USER}!${ID}=`));
   assert.deepEqual(s.nodeTokens(), [ID, OLD_ID].sort());
+});
+
+test("an old token that is already gone from the node is the goal reached, not a failure", (t) => {
+  const s = sandbox(t);
+  s.seed(OLD_ID);
+  rmSync(join(s.dir, "state", "tokens", USER, OLD_ID));
+
+  const result = s.run(["--rotate"]);
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, new RegExp(`Old token ${OLD_ID} was already gone from the node\\.`));
+  assert.doesNotMatch(result.stderr, /may still be on the node/);
+  assert.match(readFileSync(s.tokenFile, "utf8"), new RegExp(`^${USER}!${ID}=`));
+  assert.deepEqual(s.nodeTokens(), [ID]);
 });
 
 test("an interrupt during the old token's delete names it", (t) => {

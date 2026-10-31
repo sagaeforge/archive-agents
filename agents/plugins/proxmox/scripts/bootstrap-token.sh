@@ -20,10 +20,14 @@ PVE_USER="claude-mcp@pve"
 SHARED_TOKEN_ID="mcp"
 # PVE's own pattern for token IDs (PVE::AccessControl::token_subid_regex).
 TOKEN_ID_PATTERN='^[A-Za-z][A-Za-z0-9._-]+$'
+# What default_token_id adds to a second ID in a month. It is kept short enough that a
+# machine named box cannot claim m-box-202611-202611, the ID of a machine named box-202611.
+ROTATION_COUNT='[1-9][0-9]{0,3}'
 TOKEN_LIFETIME_DAYS=365
 # Same list as server/pve.mjs: verification must reach the hosts the server uses.
 DEFAULT_PVE_HOSTS="192.0.2.1,192.0.2.1,192.0.2.1"
-# Every call is bounded because an interrupt waits for the ssh in progress.
+# These end a dead connection, because an interrupt waits for the ssh in progress. They do not end a
+# node command that blocks: sshd goes on answering keepalives, and a terminal's Ctrl-C ends that one.
 SSH_OPTIONS=(-o BatchMode=yes -o ConnectTimeout=10 -o ServerAliveInterval=5 -o ServerAliveCountMax=3)
 
 PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -56,7 +60,9 @@ Usage: bootstrap-token.sh [--host <ssh-host>] [--name <token-id>] [--rotate] [--
 EOF
 }
 
+# The hold comes first: a signal between here and the cleanup taking over would end the cleanup early.
 die() {
+  HOLD_SIGNALS=true
   echo "bootstrap-token: $*" >&2
   exit 1
 }
@@ -93,7 +99,7 @@ machine_name() {
 is_own_token_id() {
   local host
   host=$(machine_name)
-  [[ -n $host && $1 =~ ^m-$host-[0-9]{6}(-[0-9]+)?$ ]]
+  [[ -n $host && $1 =~ ^m-$host-[0-9]{6}(-$ROTATION_COUNT)?$ ]]
 }
 
 default_token_id() {
@@ -106,7 +112,7 @@ default_token_id() {
   # verified, so a second rotation within a month needs an ID of its own.
   if [[ $OLD_ID == "$base" ]]; then
     printf '%s-2\n' "$base"
-  elif [[ $OLD_ID =~ ^$base-([0-9]+)$ ]]; then
+  elif [[ $OLD_ID =~ ^$base-($ROTATION_COUNT)$ ]]; then
     printf '%s-%d\n' "$base" "$((10#${BASH_REMATCH[1]} + 1))"
   else
     printf '%s\n' "$base"
@@ -170,19 +176,22 @@ on_signal() {
   if $HOLD_SIGNALS; then
     HELD_STATUS=$1
   else
+    HOLD_SIGNALS=true
     exit "$1"
   fi
 }
 
+# Looks twice, because a signal can land between the first look and the end of the hold.
 release_signals() {
-  HOLD_SIGNALS=false
   ((HELD_STATUS == 0)) || exit "$HELD_STATUS"
+  HOLD_SIGNALS=false
+  ((HELD_STATUS == 0)) || on_signal "$HELD_STATUS"
 }
 
 cleanup() {
   local status=$?
-  trap - EXIT
   HOLD_SIGNALS=true
+  trap - EXIT
   rm -f "$TMP_FILE"
   if [[ -n $ISSUED_ID ]]; then
     if remote_remove "$ISSUED_ID"; then
@@ -265,16 +274,19 @@ TMP_FILE=$(mktemp "$TOKEN_FILE.XXXXXX")
 
 expire_at=$(($(date +%s) + TOKEN_LIFETIME_DAYS * 86400))
 
-# Held so a reply that arrives always gets recorded. Only a reply proves this run made
-# the token: the ID may be older, so without one it is named here and never deleted.
+# Held so a reply that arrives always gets recorded. Only a reply holding a token proves
+# this run made it, not a clean exit: the ID may be older, and may be another machine's,
+# so without one it is named here and never deleted.
 HOLD_SIGNALS=true
 if ! secret=$(remote_issue "$NEW_ID" "$expire_at"); then
   die "Could not issue token $NEW_ID on $SSH_HOST. The existing token and file are unchanged. The ID may exist on the node if it was there already or the connection was lost after the node made it. Check with: ssh $SSH_HOST pveum user token list $PVE_USER. If it is this machine's leftover, delete it with: ssh $SSH_HOST pveum user token remove $PVE_USER $NEW_ID. Otherwise pick another ID with --name."
 fi
+if [[ ! $secret =~ ^[0-9A-Za-z-]+$ ]]; then
+  die "$SSH_HOST returned a malformed token, so nothing shows that this run made $NEW_ID. The existing token and file are unchanged. Check with: ssh $SSH_HOST pveum user token list $PVE_USER. If it is this machine's leftover, delete it with: ssh $SSH_HOST pveum user token remove $PVE_USER $NEW_ID."
+fi
 ISSUED_ID=$NEW_ID
 release_signals
 
-[[ $secret =~ ^[0-9A-Za-z-]+$ ]] || die "$SSH_HOST returned a malformed token. The existing token and file are unchanged."
 printf '%s!%s=%s\n' "$PVE_USER" "$NEW_ID" "$secret" >"$TMP_FILE"
 
 verify_token || die "New token $NEW_ID failed verification. The existing token and file are unchanged."
@@ -289,9 +301,16 @@ echo "Token $PVE_USER!$NEW_ID written to $TOKEN_FILE (valid for $TOKEN_LIFETIME_
 release_signals
 
 if [[ -n $UNDELETED_ID ]]; then
-  remote_remove "$UNDELETED_ID" || exit 1
+  if removal=$(remote_remove "$UNDELETED_ID" 2>&1); then
+    echo "Old token $OLD_ID deleted."
+  elif [[ $removal == *"no such token"* ]]; then
+    # The 401 advice brings people here once a token is revoked, so this is the goal reached.
+    echo "Old token $OLD_ID was already gone from the node."
+  else
+    printf '%s\n' "$removal" >&2
+    exit 1
+  fi
   UNDELETED_ID=""
-  echo "Old token $OLD_ID deleted."
 elif [[ -n $OLD_ID ]]; then
   echo "Old token $OLD_ID left on the node."
 fi

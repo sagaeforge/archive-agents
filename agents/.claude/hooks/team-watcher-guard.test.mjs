@@ -201,10 +201,11 @@ test("the definition leaves every coordinator action to the coordinator", () => 
   assert.match(definition, /Never ack, reply, release, stop, retry, or start anything\./);
 });
 
-test("maxTurns fits the most legs the script accepts, plus the report", () => {
+test("maxTurns fits the most legs the script accepts, one denied call, and the report", () => {
   // Through the Agent tool, maxTurns: N runs N tool calls and then ends with no
-  // report. So this fits 4 waits and the report, and stops a model that ignores
-  // nextLeg after a fifth wait.
+  // report. With only the report to spare, one denied call would leave a fourth
+  // leg's event arriving as an ending with no JSON. So this fits 4 waits, a denial
+  // and the report, and stops a model that ignores nextLeg after a sixth wait.
   const accepts = (legs) => {
     const script = join(here, "team-watcher-wait.mjs");
     const args = [script, "run=run_087dc1f58ad4", `legs=${legs}`, "leg=1"];
@@ -212,5 +213,16 @@ test("maxTurns fits the most legs the script accepts, plus the report", () => {
     return JSON.parse(stdout).code !== "invalid_legs";
   };
   const most = [1, 2, 3, 4, 5, 6, 7, 8, 9].filter(accepts).at(-1);
-  assert.equal(Number(frontmatter.match(/^maxTurns: (\d+)$/m)[1]), most + 1);
+  assert.equal(Number(frontmatter.match(/^maxTurns: (\d+)$/m)[1]), most + 2);
+});
+
+test("the definition asks for the timeout the guard requires, on the cheap effort it was built for", () => {
+  assert.match(definition, /^Call Bash with `timeout: 600000` and exactly this command\./m);
+  assert.match(frontmatter, /^effort: low$/m);
+});
+
+test("the definition shows its failure report as the bare line it asks for", () => {
+  // Haiku copies a template with its fence, and the report then is not one line of JSON.
+  assert.match(definition, /^\{"status":"error","code":"watcher_failed","message":"<text>","legs":0\}$/m);
+  assert.doesNotMatch(definition, /```json/);
 });

@@ -39,8 +39,12 @@ test("no manifest sets a version, which would silently stop updates", () => {
   }
 });
 
+// By what an action reference looks like and not by the key before it, because YAML has several ways
+// to spell that key: `- uses : x`, `- "uses": x`, `- { uses: x }`.
 test("every action is pinned to a full commit SHA", () => {
-  for (const action of inWorkflows(/^[\s-]*uses:\s*["']?([^\s"']+)/gm)) {
+  const references = inWorkflows(/([\w.-]+\/[\w./-]+@[^\s"',}]+)/g).filter((reference) => !reference.startsWith("anthropic-ai/"));
+  assert.notEqual(references.length, 0);
+  for (const action of references) {
     assert.match(action, /^[\w.-]+\/[\w./-]+@[0-9a-f]{40}$/);
   }
 });
@@ -53,7 +57,7 @@ test("CI runs one exact version of the Claude Code CLI", () => {
 
 test("CI installs dependencies without running their scripts", () => {
   for (const install of inWorkflows(/(\bnpm (?:ci|install|i)\b.*)/g)) {
-    assert.match(install, /^npm ci\b.* --ignore-scripts\b/);
+    assert.match(install, /^npm ci\b.* --ignore-scripts(?:\s|$)/);
   }
 });
 
@@ -61,6 +65,22 @@ test("every workflow gives its token read access by default", () => {
   for (const workflow of WORKFLOWS) {
     assert.match(read(workflow), /^permissions:\n {2}contents: read\n(?! )/m, workflow);
   }
+});
+
+test("only the two jobs that write ask for more than the default", () => {
+  for (const workflow of WORKFLOWS) assert.doesNotMatch(read(workflow), /\b(?:write|read)-all\b/, workflow);
+
+  const grants = WORKFLOWS.flatMap((file) =>
+    [...read(file).matchAll(/^ {4}permissions:\n((?: {6}.+\n)+)/gm)].map(([, block]) => block.replace(/ *#.*/g, "").replace(/\s+/g, " ").trim()),
+  );
+  assert.deepEqual(grants.sort(), ["actions: read contents: write", "contents: write"]);
+});
+
+test("the check job keeps no credentials, and uses the Node of its matrix leg", () => {
+  const ci = read(".github/workflows/ci.yml");
+  const check = ci.slice(ci.indexOf("  check:\n"), ci.indexOf("  live-smoke:\n"));
+  assert.match(check, /^ {10}persist-credentials: false\b/m);
+  assert.match(check, /^ {10}node-version: \$\{\{ matrix\.node \}\}$/m);
 });
 
 test("the Node versions in engines, the CI matrix and .nvmrc agree", () => {

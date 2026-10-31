@@ -27,16 +27,20 @@ const PROMOTE = "../../.github/scripts/promote.sh";
 const ROLLBACK = "../../.github/scripts/rollback.sh";
 const HOOK = "../../.githooks/pre-push";
 const SCAN = "../../.github/scripts/gitleaks.sh";
+const BOOTSTRAP = "scripts/bootstrap-token.sh";
 const SMOKE = "test/smoke/live.mjs";
 const DOCTOR = "scripts/doctor-checks.mjs";
 const READ_ONLY_TESTS = ["test/readonly.test.mjs"];
 const LAUNCH_TESTS = ["test/launch.test.mjs"];
 const TOKEN_TESTS = ["test/token-guard.test.mjs"];
+const BOOTSTRAP_PROOF_TESTS = ["--test-name-pattern=no proof|no token in it", "test/bootstrap-token.test.mjs"];
+const BOOTSTRAP_SIGNAL_TESTS = ["--test-name-pattern=on the way out", "test/bootstrap-token.test.mjs"];
 // The doctor's file is slow, and only these scenarios are about the gate.
 const DOCTOR_GATE_TESTS = ["--test-name-pattern=stable", "test/doctor.test.mjs"];
 const GATE_TESTS = ["test/gate.test.mjs"];
 const SMOKE_TESTS = ["test/live-smoke.test.mjs"];
 const SCAN_TESTS = ["test/gitleaks.test.mjs"];
+const RULE_TESTS = ["test/repo-rules.test.mjs"];
 const REFUSE_STABLE = `    refs/heads/stable)
       echo "pre-push: stable moves only through CI. Push to main; see docs/stable-gate.md." >&2
       exit 1
@@ -61,6 +65,11 @@ const MUTANTS = [
   { id: "D1", breaks: "a machine on main passes with the gate in use", file: DOCTOR, from: "if (state.remote?.hasStable && ref !== STABLE) {", to: "if (false) {", tests: DOCTOR_GATE_TESTS },
   { id: "D2", breaks: "the registration hint loses #stable", file: DOCTOR, from: "return hasStable ? `${REGISTER}#${STABLE}` : REGISTER;", to: "return REGISTER;", tests: DOCTOR_GATE_TESTS },
   { id: "D3", breaks: "the hint names a stable branch that does not exist", file: DOCTOR, from: "return hasStable ? `${REGISTER}#${STABLE}` : REGISTER;", to: "return `${REGISTER}#${STABLE}`;", tests: DOCTOR_GATE_TESTS },
+  { id: "B1", breaks: "a reply with no token counts as proof, and another machine's token goes", file: BOOTSTRAP, from: 'if [[ ! $secret =~ ^[0-9A-Za-z-]+$ ]]; then\n  die "$SSH_HOST', to: 'ISSUED_ID=$NEW_ID\nif [[ ! $secret =~ ^[0-9A-Za-z-]+$ ]]; then\n  die "$SSH_HOST', tests: BOOTSTRAP_PROOF_TESTS },
+  { id: "B2", breaks: "a signal can cut the cleanup short", file: BOOTSTRAP, from: 'die() {\n  HOLD_SIGNALS=true\n', to: "die() {\n", tests: BOOTSTRAP_SIGNAL_TESTS },
+  { id: "W1", breaks: "a wait that ignores TERM outlives its limit", file: "../../.claude/hooks/team-watcher-wait.mjs", from: '    "-k",\n    String(KILL_AFTER_SECONDS),\n', to: "", tests: ["../../.claude/hooks/team-watcher-wait.test.mjs"] },
+  { id: "R1", breaks: "CI runs the mutation check on every leg", file: CI, from: "- if: github.event_name != 'schedule' && matrix.node == 26\n", to: "- if: github.event_name != 'schedule'\n", tests: RULE_TESTS },
+  { id: "R2", breaks: "CI installs an action by tag", file: CI, from: "actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0\n        with:\n          node-version: ${{ matrix.node }}", to: "actions/setup-node@v7\n        with:\n          node-version: ${{ matrix.node }}", tests: RULE_TESTS },
   { id: "G1", breaks: "promote stops waiting for check and the smoke", file: CI, from: "    needs: [check, live-smoke]\n", to: "", tests: GATE_TESTS },
   { id: "G2", breaks: "promote runs before the owner turns the gate on", file: CI, from: "vars.STABLE_GATE_ENABLED == 'true' && ", to: "", tests: GATE_TESTS },
   { id: "G3", breaks: "promote forces stable", file: PROMOTE, from: 'git push origin "$sha', to: 'git push --force origin "$sha', tests: GATE_TESTS },

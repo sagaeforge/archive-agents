@@ -3,7 +3,8 @@
 # command the way sshd would, so the real remote script executes against the fake
 # pveum. FAKE_SSH_DOWN=1 refuses the connection. On the call that issues a token,
 # FAKE_SSH_LOSE_REPLY=1 loses the connection once the node has finished, and
-# FAKE_SSH_CLIENT_GONE=1 loses it before the node writes its reply.
+# FAKE_SSH_CLIENT_GONE=1 loses it before the node writes its reply, and FAKE_SSH_SWALLOW=1
+# exits 0 without running it, as a forced command can.
 set -euo pipefail
 
 printf 'ssh %s\n' "$*" >>"$FAKE_PVE_STATE/argv.log"
@@ -26,6 +27,10 @@ record ssh "$host"
 if [[ -n ${FAKE_SSH_DOWN:-} ]]; then
   echo "ssh: connect to host $host port 22: Connection refused" >&2
   exit 255
+fi
+
+if [[ $1 == bash && -n ${FAKE_SSH_SWALLOW:-} ]]; then
+  exit 0
 fi
 
 if [[ $1 == bash && -n ${FAKE_SSH_LOSE_REPLY:-} ]]; then

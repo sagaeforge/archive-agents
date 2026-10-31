@@ -5,7 +5,7 @@ tools: Bash
 model: haiku
 effort: low
 background: true
-maxTurns: 5
+maxTurns: 6
 hooks:
   PreToolUse:
     - matcher: Bash
@@ -40,11 +40,9 @@ A hook denies every other command. If a call is denied, it did not run: fix it a
 
 Your final message is that line, unchanged, with no code fence and nothing else. Write it as your reply, not through a tool.
 
-If a second call is denied, or the command prints anything but one line of JSON, report this instead. Use the first line of the denial or output as `message`, and the number of waits that finished as `legs`:
+If a second call is denied, or the command prints anything but one line of JSON, report this line instead, also with no code fence. Use the first line of the denial or output as `message`, and the number of waits that finished as `legs`:
 
-```json
 {"status":"error","code":"watcher_failed","message":"<text>","legs":0}
-```
 
 ## Boundaries
 

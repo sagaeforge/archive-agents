@@ -18,6 +18,10 @@ const WAIT_MS = 300_000;
 // Closing the Orca pane that hosts the WSL relay can hang the CLI past
 // --timeout-ms, and a hung wait must end before Bash moves it to the background.
 const STALL_SECONDS = 330;
+// A CLI that ignores timeout's TERM gets a KILL this long after it, or it would outlive the limit.
+const KILL_AFTER_SECONDS = 10;
+const TIMED_OUT = 124;
+const KILLED = 137;
 // A stray process can hold the CLI's pipes open after the CLI itself has exited.
 const PIPE_GRACE_MS = 2_000;
 const MESSAGE_LIMIT = 500;
@@ -43,6 +47,8 @@ function refusal({ run, legs, leg }) {
 // direct mailbox path, where check marks mail read and never replays it.
 function wait(run) {
   const args = [
+    "-k",
+    String(KILL_AFTER_SECONDS),
     String(STALL_SECONDS),
     process.env.ORCA_CLI_COMMAND,
     "orchestration",
@@ -80,7 +86,7 @@ function parse(stdout) {
 }
 
 function classify({ exit, stdout, stderr }, leg, legs) {
-  if (exit === 124) return failure("wait_stalled", `No result after ${STALL_SECONDS} seconds.`, leg);
+  if (exit === TIMED_OUT || exit === KILLED) return failure("wait_stalled", `No result after ${STALL_SECONDS} seconds.`, leg);
 
   const reply = parse(stdout);
   if (reply?.error) return failure(String(reply.error.code), String(reply.error.message), leg);

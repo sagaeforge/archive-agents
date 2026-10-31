@@ -186,9 +186,10 @@ test("a wait that ends without mail is a checkpoint, not a failure", async (t) =
     ["empty", JSON.stringify({ ok: true, result: { messages: [], count: 0 } })],
   ]) {
     await t.test(reason, (t) => {
-      const line = watch(fakeCli(t, reply));
+      const line = watch(fakeCli(t, reply), { args: ["run=run_abc123", "legs=3", "leg=2"] });
       assert.equal(line.status, "checkpoint");
       assert.equal(line.reason, reason);
+      assert.equal(line.legs, 2);
     });
   }
 });
@@ -233,17 +234,22 @@ function fakeTimeout(t, body) {
   return { PATH: `${bin}:${process.env.PATH}` };
 }
 
-test("a wait that timeout had to stop is wait_stalled", (t) => {
-  const line = watch(fakeCli(t, ""), { env: fakeTimeout(t, "exit 124") });
-  assert.equal(line.status, "error");
-  assert.equal(line.code, "wait_stalled");
-});
+for (const [how, status] of [
+  ["stop", 124],
+  ["kill, because it ignored the stop", 137],
+]) {
+  test(`a wait that timeout had to ${how} is wait_stalled`, (t) => {
+    const line = watch(fakeCli(t, ""), { env: fakeTimeout(t, `exit ${status}`) });
+    assert.equal(line.status, "error");
+    assert.equal(line.code, "wait_stalled");
+  });
+}
 
 test("it runs the one bounded wait, with no other arguments", (t) => {
   const dir = fakeCli(t, ok({ timedOut: true }));
   const log = join(dir, "limit");
-  watch(dir, { env: fakeTimeout(t, `echo "$1" > "${log}"; shift; exec "$@"`) });
-  assert.equal(readFileSync(log, "utf8").trim(), "330");
+  watch(dir, { env: fakeTimeout(t, `echo "$1 $2 $3" > "${log}"; shift 3; exec "$@"`) });
+  assert.equal(readFileSync(log, "utf8").trim(), "-k 10 330");
   assert.equal(
     readFileSync(join(dir, "calls"), "utf8").trim(),
     "orchestration check --wait --types worker_done,escalation,question --run run_abc123 --timeout-ms 300000 --json",

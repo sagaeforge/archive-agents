@@ -149,7 +149,7 @@ export function buildPath(path, params = {}) {
   const qs = query.toString();
   if (!qs) return target;
   // PVE refuses a query with an empty pair, so one left open takes no further separator.
-  const separator = /[?&]$/.test(target) ? "" : target.includes("?") ? "&" : "?";
+  const separator = !target.includes("?") ? "?" : /[?&]$/.test(target) ? "" : "&";
   return `${target}${separator}${qs}`;
 }
 
