@@ -599,6 +599,34 @@ test("a person's prompt gets Trail context, a message from another agent does no
 
 const teamOptions = { skip: skip ?? (hasTmux() ? false : "tmux is not installed") };
 
+const longestRequest = (run) => JSON.stringify(run.api.reduce((a, b) => (b.messages.length > a.messages.length ? b : a)).messages);
+
+// Answers every question, so only the hook's own gate can keep Trail out of a turn. With
+// the real Trail the words in the tag usually sink the match, after Trail has already run.
+const eagerTrail = `#!/bin/sh
+case "$1" in
+  ask)
+    cat >> "$HOME/trail.asked"
+    echo >> "$HOME/trail.asked"
+    echo '{"hits":[{"kind":"symbol","title":"createClient","pointer":"a.mjs:L1-L2"}],"coverageStrong":1}'
+    ;;
+  build) mkdir -p "$2/graft/.graph" && : > "$2/graft/.graph/wiring.json" ;;
+esac
+`;
+
+test("a message from another session fires the hook, in an interactive session, and never reaches Trail", teamOptions, () => {
+  const box = repoCase("peer-session", { trailStub: eagerTrail });
+  const run = teamSession(box, { cwd: box.project, prompt: question, steps: [], peerMessage: aboutHosts, turnsToEnd: 2 });
+  assert.equal(run.prompts.length, 2, JSON.stringify(run.prompts));
+  const [person, peer] = run.prompts;
+  assert.equal(person, question);
+  assert.match(peer, /^<cross-session-message from="uds:[^"]+" from-name="[^"]+" from-mode="bypass">\n/);
+  assert.ok(peer.includes(aboutHosts));
+  assert.ok(run.apiText.includes(aboutHosts), "the message did reach the model");
+  assert.equal(fs.readFileSync(path.join(box.home, "trail.asked"), "utf8"), `${question}\n`);
+  assert.equal(longestRequest(run).match(/\[trail\] code pointers/g)?.length, 1, "one block of Trail context, from the person's prompt");
+});
+
 for (const teammateMode of ["in-process", "tmux"]) {
   test(`a team with ${teammateMode} teammates: only the person's prompt fires Trail, and rtk works for a teammate`, teamOptions, () => {
     const box = repoCase("team");
@@ -623,8 +651,7 @@ for (const teammateMode of ["in-process", "tmux"]) {
     assert.ok(run.apiText.includes(aboutHosts), "the teammate's message did reach the lead");
     assert.ok(run.apiText.includes("createClient follow up from the lead"), "the lead's message did reach the teammate");
     assert.ok(run.results.some((result) => result.text.startsWith("* main")), "the teammate's git status went through rtk");
-    const lastRequest = JSON.stringify(run.api.reduce((a, b) => (b.messages.length > a.messages.length ? b : a)).messages);
-    assert.equal(lastRequest.match(/\[trail\] code pointers/g)?.length, 1, "one block of Trail context, from the person's prompt");
+    assert.equal(longestRequest(run).match(/\[trail\] code pointers/g)?.length, 1, "one block of Trail context, from the person's prompt");
   });
 }
 

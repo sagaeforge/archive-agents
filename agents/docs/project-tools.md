@@ -95,7 +95,7 @@ TRAIL_NO_HOOKS=1 claude   # Trail 훅만
 RTK_DISABLED=1 git status
 ```
 
-`git status | cat`처럼 파이프를 붙이거나 `git status --long`처럼 옵션을 줘도 원본입니다. merge, rebase처럼 진행 중인 작업이 있으면 자동으로 원본이 나옵니다. rtk의 복구 기록(recall)은 꺼 두었으므로 `rtk recall`은 쓸 수 없습니다.
+`git status | cat`처럼 파이프를 붙이거나 `git status --long`처럼 옵션을 줘도 원본입니다. merge, rebase처럼 진행 중인 작업이 있거나 git이 트리의 일부만 볼 수 있으면 자동으로 원본이 나옵니다. rtk의 복구 기록(recall)은 꺼 두었으므로 `rtk recall`은 쓸 수 없습니다.
 
 ## 도구가 없는 PC
 
@@ -140,4 +140,4 @@ rm ~/.local/bin/trail; rm -rf ~/.local/share/trail-code ~/.graft ~/.trail
 sh tests/project-hooks/run.sh
 ```
 
-실제 Claude Code를 가짜 HOME, 네트워크 차단 상태로 실행해 확인합니다(모델은 스크립트로 대체). 필요한 도구가 없으면 테스트는 실패하지 않고 이유를 남기며 건너뜁니다. `jq`나 `timeout`이 없으면 훅 출력을 확인하는 테스트를, `bwrap`, Claude Code, rtk, Trail-Code가 없으면 세션 테스트를, `tmux`가 없으면 에이전트 팀 테스트를 건너뜁니다. rtk, Trail-Code, Claude Code를 올린 뒤에는 꼭 다시 실행합니다. 특히 `|| git status` 형태와 `TRAIL_HOME`, `DOTENV_PATH`, `GRAFT_NO_SEED`, `.trail/` 처리, 진행 중인 작업을 건너뛰는 규칙, 팀원 턴에 프롬프트 훅이 실행되지 않는 동작은 현재 버전에서 확인한 것에 의존합니다.
+실제 Claude Code를 가짜 HOME, 네트워크 차단 상태로 실행해 확인합니다(모델은 스크립트로 대체). 필요한 도구가 없으면 테스트는 실패하지 않고 이유를 남기며 건너뜁니다. `jq`나 `timeout`이 없으면 훅 출력을 확인하는 테스트를, `bwrap`, Claude Code, rtk, Trail-Code가 없으면 세션 테스트를, `tmux`가 없으면 에이전트 팀 테스트를 건너뜁니다. 다른 Claude Code 버전으로 확인하려면 `PROJECT_HOOKS_CLAUDE=<실행 파일 경로>`를 앞에 붙입니다. rtk, Trail-Code, Claude Code를 올린 뒤에는 꼭 다시 실행합니다. 특히 `|| git status` 형태와 `TRAIL_HOME`, `DOTENV_PATH`, `GRAFT_NO_SEED`, `.trail/` 처리, 진행 중인 작업을 건너뛰는 규칙, 팀원 턴에 프롬프트 훅이 실행되지 않는 동작은 현재 버전에서 확인한 것에 의존합니다.

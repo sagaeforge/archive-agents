@@ -41,9 +41,10 @@ export function hookTest(name, ...rest) {
   test(name, { ...options, skip: options.skip || (hookToolsReason() ?? false) }, body);
 }
 
+// PROJECT_HOOKS_CLAUDE runs the suite on another installed version.
 function claudeBinary() {
   try {
-    return fs.realpathSync(path.join(realHome, ".local/bin/claude"));
+    return fs.realpathSync(process.env.PROJECT_HOOKS_CLAUDE ?? path.join(realHome, ".local/bin/claude"));
   } catch {
     return null;
   }
@@ -346,10 +347,20 @@ cd "$PROJECT"
 for _ in $(seq 1 100); do [ -e "$MOCK_READY" ] && break; sleep 0.05; done
 T="tmux -f /dev/null -L sealed"
 $T new-session -d -s lead -x 170 -y 50 -e ANTHROPIC_API_KEY -e ANTHROPIC_BASE_URL -e CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC -e DISABLE_AUTOUPDATER -e DISABLE_TELEMETRY -e DISABLE_ERROR_REPORTING "'$CLAUDE_BIN' --permission-mode bypassPermissions --setting-sources user,project,local; touch '$RUN_DIR/ended'"
-sleep 3
+for _ in $(seq 1 200); do $T capture-pane -p -t lead 2>/dev/null | grep -q 'bypass permissions' && break; sleep 0.1; done
+sleep 0.5
 $T send-keys -t lead -l "$PROMPT"
 sleep 0.5
 $T send-keys -t lead Enter
+if [ -n "$PEER_MESSAGE" ]; then
+  # A second session, with no hooks and a mock of its own, sends one message to the lead.
+  for _ in $(seq 1 300); do [ "$(grep -c '"text":"DONE"' "$MOCK_LOG" 2>/dev/null)" -ge 1 ] && break; sleep 0.1; done
+  "$NODE_BIN" -e 'require("fs").writeFileSync(process.argv[1], JSON.stringify({ steps: [{ tool: "SendMessage", input: { to: "uds:" + process.argv[2], message: process.argv[3], summary: "report" } }] }))' "$RUN_DIR/peer.json" "$(ls /tmp/cc-socks/*.sock | head -1)" "$PEER_MESSAGE"
+  PEER_PORT=$((MOCK_PORT + 1))
+  MOCK_PORT=$PEER_PORT MOCK_SCRIPT="$RUN_DIR/peer.json" MOCK_LOG="$RUN_DIR/peer.jsonl" MOCK_READY="$RUN_DIR/peer.ready" "$NODE_BIN" "$MOCK_FILE" &
+  for _ in $(seq 1 100); do [ -e "$RUN_DIR/peer.ready" ] && break; sleep 0.05; done
+  ANTHROPIC_BASE_URL="http://127.0.0.1:$PEER_PORT" "$CLAUDE_BIN" -p "send the report" --setting-sources local --model sonnet --permission-mode bypassPermissions > /dev/null 2>&1
+fi
 for _ in $(seq 1 300); do [ "$(grep -c '"text":"DONE"' "$MOCK_LOG" 2>/dev/null)" -ge "$TURNS_TO_END" ] && break; sleep 0.1; done
 sleep 1
 $T send-keys -t lead -l "/exit"
@@ -363,9 +374,10 @@ kill %1 2>/dev/null
 /**
  * An interactive session with agent teams on, through tmux, because a headless session
  * gets no team. The same seal and scripted model as session(). It ends after that many
- * turns have ended, counting the lead's and the teammate's.
+ * turns have ended, counting the lead's and the teammate's. `peerMessage` is sent to the
+ * lead by a second session after its first turn, the way separate sessions talk.
  */
-export function teamSession(box, { cwd, steps, substeps, prompt, teammateMode, turnsToEnd, timeout = 60000 }) {
+export function teamSession(box, { cwd, steps, substeps, prompt, teammateMode, peerMessage = "", turnsToEnd, timeout = 60000 }) {
   const run = path.join(box.logs, `run-${++box.runs}`);
   fs.mkdirSync(run, { recursive: true });
   fs.writeFileSync(path.join(run, "script.json"), JSON.stringify({ steps, substeps }));
@@ -406,6 +418,7 @@ export function teamSession(box, { cwd, steps, substeps, prompt, teammateMode, t
     CLAUDE_BIN: path.join(box.dir, "claude-bin"),
     RUN_DIR: run,
     PROMPT: prompt,
+    PEER_MESSAGE: peerMessage,
     TURNS_TO_END: turnsToEnd,
   };
   sealed(box, cwd, ["/bin/bash", "-c", teamDriver], { env, timeout });

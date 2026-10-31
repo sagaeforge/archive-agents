@@ -14,11 +14,11 @@
 input=$(cat)
 
 # Only what a person typed, and not a short reply. Claude Code sends its own turns
-# through this hook too: a background notice, or in a headless session a message from
-# another agent. The hook input's schema has `source` to name them, but 2.1.316 does
-# not send it. Without it they start with a tag, on the first line or under one lead-in
-# line such as "Another Claude session sent a message:". A person's prompt that looks
-# the same only goes without context.
+# through this hook too: a background notice, a message from another session, or in a
+# headless session one from another agent. The hook input's schema has `source` to name
+# them, but 2.1.316 does not send it. Without it they start with a tag, on the first
+# line or under one lead-in line such as "Another Claude session sent a message:". A
+# person's prompt that looks the same only goes without context.
 prompt=$(printf '%s' "$input" | jq -r '
   select((.source // "user") | . == "user" or . == "sdk")
   | .prompt | strings
