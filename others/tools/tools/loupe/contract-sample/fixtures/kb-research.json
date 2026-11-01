@@ -114,14 +114,14 @@
   "sensitivity": "public, internal, private and secret records exist. private is hidden from default reads, secret is never served."
  },
  "meta": {
-  "schema_version": "0.3.1-sample",
+  "schema_version": "0.3.2-sample",
   "epoch": 1,
   "build_id": "g-000183722-r1ch",
   "data_as_of": "2026-10-31T23:00:00Z",
   "applied_seq": 183722,
   "data": {
    "contract": "v1",
-   "kb_version": "0.3.1-sample-research",
+   "kb_version": "0.3.2-sample-research",
    "limits": {
     "overview_nodes": 50000,
     "overview_edges": 200000,

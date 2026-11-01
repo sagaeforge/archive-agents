@@ -3,7 +3,7 @@
  * Do not edit manually.
  * KB 데이터 인터페이스
  * 기계 판독 원본이다. `docs/contracts/data-interface-v0.md`는 설명 문서이고 둘이 어긋나면 이 파일이 이긴다. 모든 경로는 `GET`이고 `HEAD`도 받는다. 서버 주소는 선언하지 않는다(Unix 소켓이 기본, TCP는 원격 이전 때). 저장소는 데이터만 제공하며 점수와 추천을 내지 않는다. 모르는 필드와 열린 값은 무시한다. `x-provisional`이 붙은 구간은 잠정이다(`/v1/ops/*`).
- * OpenAPI spec version: 0.3.1
+ * OpenAPI spec version: 0.3.2
  */
 import type { AsOfObservedParameter } from './asOfObservedParameter.ts';
 import type { AsOfValidParameter } from './asOfValidParameter.ts';
@@ -13,7 +13,7 @@ import type { FilterParameter } from './filterParameter.ts';
 import type { HitKindsParameter } from './hitKindsParameter.ts';
 import type { IncludeUnverifiedParameter } from './includeUnverifiedParameter.ts';
 import type { OriginParameter } from './originParameter.ts';
-import type { QParameter } from './qParameter.ts';
+import type { QOptionalParameter } from './qOptionalParameter.ts';
 import type { SourceParameter } from './sourceParameter.ts';
 import type { StatusParameter } from './statusParameter.ts';
 import type { TypesParameter } from './typesParameter.ts';
@@ -48,7 +48,9 @@ author?: AuthorParameter;
  */
 include_unverified?: IncludeUnverifiedParameter;
 /**
- * 유효축 시점. RFC 3339 또는 `YYYY-MM-DD`(그날 00:00Z). 줄 때만 유효축을 건다(2.9).
+ * 유효축 시점. RFC 3339 또는 `YYYY-MM-DD`(그날 00:00Z). 줄 때만 유효축을 건다(2.9). 빈 값은 400 `bad_param`.
+ * @minLength 1
+ * @pattern ^\d{4}-\d{2}-\d{2}([Tt]\d{2}:\d{2}:\d{2}(\.\d+)?([Zz]|[+-]\d{2}:\d{2}))?$
  */
 as_of_valid?: AsOfValidParameter;
 /**
@@ -56,10 +58,10 @@ as_of_valid?: AsOfValidParameter;
  */
 as_of_observed?: AsOfObservedParameter;
 /**
- * 검색어. NFC 정규화 후 KB 안에서 토크나이징한다. 토큰이 하나도 없으면 400 `bad_param`.
+ * 검색어(선택). 주면 전체 일치에서 센다(4.9). NFC 정규화 후 KB 안에서 토크나이징한다. 토큰이 하나도 없으면 400 `bad_param`.
  * @minLength 1
  */
-q: QParameter;
+q?: QOptionalParameter;
 /**
  * 결과 종류. 쉼표로 여러 값을 주면 OR다.
  */

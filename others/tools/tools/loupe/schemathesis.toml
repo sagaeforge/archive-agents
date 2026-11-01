@@ -74,9 +74,8 @@ checks.positive_data_acceptance.expected-statuses = ["2xx", "3xx", "400", "401",
 include-name = "GET /v1/snapshots/{id}"
 parameters = { id = "n-3fa9c01b77aa12ef" }
 
-# openapi.yaml 0.3.0 declares as_of_valid as an unconstrained string, so an empty one is schema-valid. The prose (2.9) says RFC 3339 or
-# YYYY-MM-DD, and a KB answers an empty value with 400. Asked of the contract owner; until then 400 is an accepted answer on the
-# time-aware operations below (and on the five id routes above).
+# openapi.yaml 0.3.2 gives as_of_valid minLength 1 and an RFC 3339 / YYYY-MM-DD pattern, so Schemathesis no longer sends an empty one.
+# The 400 allowance below is kept (a schema-valid date such as 2026-02-31 can still be refused) and is not widened by 0.3.2.
 [[operations]]
 include-name = "GET /v1/facets"
 checks.positive_data_acceptance.expected-statuses = ["2xx", "3xx", "400", "401", "403", "404", "409", "410", "429", "5xx"]

@@ -5,14 +5,14 @@
   "timestamps": "assigned by the generator"
  },
  "meta": {
-  "schema_version": "0.3.1-sample",
+  "schema_version": "0.3.2-sample",
   "epoch": 1,
   "build_id": "g-000000930-h0st",
   "data_as_of": "2026-10-31T21:00:00Z",
   "applied_seq": 930,
   "data": {
    "contract": "v1",
-   "kb_version": "0.3.1-sample-hostile",
+   "kb_version": "0.3.2-sample-hostile",
    "limits": {
     "overview_nodes": 50000,
     "overview_edges": 200000,

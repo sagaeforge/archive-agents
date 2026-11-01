@@ -11,6 +11,6 @@ export type TimeBasis = { valid?: string; observed?: string };
 export const asOf = (t: TimeBasis) =>
   ({ as_of_valid: t.valid, as_of_observed: t.observed }) satisfies
     GetNodeParams & ListNodesParams & GetOverviewParams & Partial<SearchParams> & GetNodeNeighborsParams &
-    GetClaimParams & GetEdgeParams & Partial<GetFacetsParams> & GetCountsParams & GetSeriesParams;
-// SearchParams and GetFacetsParams have a required `q`, so they are wrapped in Partial; the excess property check still sees the axis names.
+    GetClaimParams & GetEdgeParams & GetFacetsParams & GetCountsParams & GetSeriesParams;
+// SearchParams has a required `q` (GetFacetsParams stopped needing one in 0.3.2), so it is wrapped in Partial; the excess property check still sees the axis names.
 // undefined means "now": the generated code leaves undefined values out of the query string.
