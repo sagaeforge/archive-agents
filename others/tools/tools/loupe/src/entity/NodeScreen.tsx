@@ -1,6 +1,6 @@
 // /node/<id>. Everything is a node in the KB (KB ADR 7.3): the screen is chosen by what the id turns out to be (design 7.1).
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import { getRouteApi, Navigate, useNavigate } from '@tanstack/react-router';
+import { getRouteApi, Link, Navigate, useNavigate } from '@tanstack/react-router';
 import type { Claim, Evidence, NodeDetail } from '../client/model/index.ts';
 import { useScreenTitle } from '../app/useScreenTitle.ts';
 import { CopyLink } from '../app/CopyLink.tsx';
@@ -165,6 +165,7 @@ function EntityHeader({ node, id }: { node: NodeDetail; id: string }) {
       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
         <code className="id" data-testid="node-id">{id}</code>
         <CopyLink />
+        <Link to="/graph" search={{ focus: id }} className="link text-sm" data-testid="node-graph-link">그래프에서 보기</Link>
         <button type="button" className="text-action" onClick={jumpToRelations} data-testid="to-relations">관계 {relationCount(node.edges)}</button>
       </div>
       <div className="mt-2.5 flex flex-wrap items-center gap-1.5" data-testid="node-chips">

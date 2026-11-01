@@ -59,3 +59,38 @@ export function validateSourceSearch(s: Record<string, unknown>): Pick<SourceSea
   }
   return out;
 }
+
+const LIST = /^[\p{L}\p{N}_-]+(,[\p{L}\p{N}_-]+)*$/u;
+const listParam = (name: string, v: unknown): string | undefined => {
+  if (v === undefined) return undefined;
+  if (typeof v !== 'string' || !LIST.test(v.normalize('NFC'))) throw new SearchParamError(name, v);
+  return v.normalize('NFC');
+};
+export const SUPERSEDED_EDGES = 'active,superseded';
+export type GraphSearch = TimeSearch & {
+  types?: string; rtypes?: string; domain?: string; focus?: string; depth?: 1 | 2; sel?: string; view?: '20k'; edge_status?: typeof SUPERSEDED_EDGES; merged_from?: string;
+};
+export type GraphParams = Omit<GraphSearch, keyof TimeSearch>;
+
+/** Filters, focus and selection are screen state, so they are all here (design 1). Comma lists go to the KB as they are: it owns what a type is. */
+export function validateGraphSearch(s: Record<string, unknown>): GraphParams {
+  const out: GraphParams = {};
+  for (const k of ['types', 'rtypes', 'domain'] as const) { const v = listParam(k, s[k]); if (v) out[k] = v; }
+  const focus = idParam('focus', s.focus), sel = idParam('sel', s.sel), from = idParam('merged_from', s.merged_from);
+  if (focus) out.focus = focus;
+  if (sel) out.sel = sel;
+  if (from) out.merged_from = from;
+  if (s.depth !== undefined) {
+    if (s.depth !== 1 && s.depth !== 2 && s.depth !== '1' && s.depth !== '2') throw new SearchParamError('depth', s.depth);
+    out.depth = Number(s.depth) as 1 | 2;
+  }
+  if (s.view !== undefined) {
+    if (s.view !== '20k') throw new SearchParamError('view', s.view);
+    out.view = '20k';
+  }
+  if (s.edge_status !== undefined) {
+    if (s.edge_status !== SUPERSEDED_EDGES) throw new SearchParamError('edge_status', s.edge_status);
+    out.edge_status = SUPERSEDED_EDGES;
+  }
+  return out;
+}

@@ -518,9 +518,11 @@ test.describe('navigation', () => {
     await page.goto(`${RESEARCH}/`);
     await page.getByTestId('home-entity').first().waitFor();
     await expect(page.getByRole('navigation')).toHaveCount(0);
-    for (const word of ['그래프', '스키마']) await expect(page.locator('header').getByText(word)).toHaveCount(0);
-    await page.goto(`${RESEARCH}/#/graph`);
-    await expect(page.getByTestId('not-found-route')).toBeVisible();
+    for (const word of ['스키마', '변경']) await expect(page.locator('header').getByText(word)).toHaveCount(0);
+    for (const path of ['schema', 'table/Tool', 'changes', 'search']) {
+      await page.goto(`${RESEARCH}/#/${path}`);
+      await expect(page.getByTestId('not-found-route')).toBeVisible();
+    }
     void watch;
   });
   test('scroll comes back on Back', async ({ page, watch }) => {

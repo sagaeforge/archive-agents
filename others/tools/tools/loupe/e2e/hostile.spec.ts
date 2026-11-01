@@ -18,7 +18,7 @@ async function inert(page: Page, name: string) {
     const external = [...main.querySelectorAll<HTMLAnchorElement>('a[href^="http"]:not([download])')];
     return {
       bad: [...bad].map((e) => e.tagName), handlers,
-      unsafe: hrefs.filter((h) => !/^(https?:\/\/|#|\/[^#]*#\/(node|source)\/)/i.test(h)), // the app's own routes, external http(s), in-page anchors
+      unsafe: hrefs.filter((h) => !/^(https?:\/\/|#|\/[^#]*#\/((node|source)\/|graph\?focus=))/i.test(h)), // the app's own routes, external http(s), in-page anchors
       unguarded: external.filter((a) => a.target !== '_blank' || !/noopener/.test(a.rel) || !/noreferrer/.test(a.rel) || a.referrerPolicy !== 'no-referrer').map((a) => a.href),
       polluted: ({} as Record<string, unknown>).polluted !== undefined,
       title: document.title,

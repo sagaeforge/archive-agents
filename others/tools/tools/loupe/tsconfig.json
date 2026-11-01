@@ -12,6 +12,6 @@
     "types": ["node", "vite/client"],
     "paths": { "@/*": ["./src/*"] }
   },
-  "include": ["src", "dev", "scripts", "server", "test", "e2e", "playwright.config.ts", "vite.config.ts", "orval.config.mjs"],
+  "include": ["src", "dev", "scripts", "server", "test", "e2e", "bench", "playwright.config.ts", "vite.config.ts", "orval.config.mjs"],
   "exclude": ["node_modules", "dist", ".cache"]
 }

@@ -76,6 +76,7 @@ function PaletteBody() {
   const nav: Command_[] = [
     { value: 'nav:home', label: '처음', run: run(() => void navigate({ to: '/' })) },
     { value: 'nav:status', label: '연결 상태', run: run(() => void navigate({ to: '/status' })) },
+    { value: 'nav:graph', label: '그래프', run: run(() => void navigate({ to: '/graph' })) },
   ].filter((c) => wanted(c.label));
 
   const date = parseDateQuery(input);

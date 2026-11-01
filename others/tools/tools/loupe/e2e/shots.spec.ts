@@ -85,7 +85,7 @@ test('states', async ({ page, watch }) => {
   await shot(page, '42-bad-id');
   await go(page, RESEARCH, nodePath('e:library:sigma-js', '?as_of_valid=yesterday'), '[data-testid=route-error]');
   await shot(page, '43-bad-time');
-  await go(page, RESEARCH, '/graph', '[data-testid=not-found-route]');
+  await go(page, RESEARCH, '/schema', '[data-testid=not-found-route]');
   await shot(page, '44-no-route');
   await go(page, SAMPLE, '/source/n-removed00000001', '[data-testid=error-card]');
   await shot(page, '45-content-removed');

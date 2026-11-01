@@ -1,5 +1,5 @@
 // The frame around every screen: header, time band, connection band, palette. Screens render into <Outlet/>.
-// There is no left rail yet: every rail destination (graph, table, search, changes, schema) is a later phase, and dead links are worse than none.
+// There is no left rail yet: most rail destinations (table, search, changes, schema) are later phases, and dead links are worse than none.
 import { useEffect, useSyncExternalStore } from 'react';
 import { Link, Outlet } from '@tanstack/react-router';
 import { Search } from 'lucide-react';
@@ -48,6 +48,7 @@ export function AppShell() {
               <span>찾기, 이동, 시간</span>
               <kbd className="ml-auto">Ctrl K</kbd>
             </button>
+            <Link to="/graph" className="link text-sm" data-testid="graph-link">그래프</Link>
             <div className="ml-auto flex min-w-0 items-center gap-3">
               <HeaderStatus />
               <TimeChip />

@@ -111,6 +111,11 @@ export function createKbMock(opts: MockOptions = {}): Hono {
   const edgeVisible = (e: Row) => sensRank(e.sensitivity) <= 1 && !hidden(e.src) && !hidden(e.dst) && (!e.claim_id || !hidden(e.claim_id));
   const edgeHeads = (c: Ctx, status: string): Row[] =>
     [...edgeById.keys()].map((id) => edgeById.get(id)!.find((r) => covers(r, c))).filter((r): r is Row => !!r && edgeVisible(r) && (status === 'all' || r.status === status));
+  // `edge_status` is a comma list and falls back to `status` (C 2.7). It narrows edges only: the node set does not change.
+  const edgeHeadsIn = (c: Ctx, q: URLSearchParams, status: string): Row[] => {
+    const wanted = (q.get('edge_status') ?? status).split(',');
+    return edgeHeads(c, 'all').filter((e) => wanted.includes('all') || wanted.includes(e.status));
+  };
   const edgeRef = (e: Row) => ({ id: e.id, rtype: e.rtype, src: e.src, dst: e.dst, status: e.status, claim_id: e.claim_id ?? null });
 
   // ---- responses
@@ -251,7 +256,7 @@ export function createKbMock(opts: MockOptions = {}): Hono {
       const limit = limitOf(q, 50000), edgeLimit = Number(q.get('edge_limit') ?? 200000);
       const rank = new Map(nodes.map((r, i) => [r.id, i]));
       const rt = list(q.get('rtypes'));
-      const closed = edgeHeads(ctx, f.status).filter((e) => (!rt || rt.has(e.rtype)) && rank.has(e.src) && rank.has(e.dst));
+      const closed = edgeHeadsIn(ctx, q, f.status).filter((e) => (!rt || rt.has(e.rtype)) && rank.has(e.src) && rank.has(e.dst));
       // An edge travels with the later of its two ends, so the union of pages is closed (C 2.12).
       const byLater = new Map<number, Row[]>();
       for (const e of closed) { const k = Math.max(rank.get(e.src)!, rank.get(e.dst)!); (byLater.get(k) ?? byLater.set(k, []).get(k)!).push(e); }
@@ -270,7 +275,7 @@ export function createKbMock(opts: MockOptions = {}): Hono {
         data: {
           meta: { graph: { directed: true, multi: true }, order: 'id_asc', node_total: nodes.length, edge_total: closed.length, truncated: more },
           nodes: { columns: ['id', 'type', 'label', 'origin', 'status'], rows: pageNodes.map((r) => [r.id, r.type, r.label, r.origin, effStatus(r, ctx)]) },
-          edges: { columns: ['id', 'src', 'dst', 'rtype'], rows: pageEdges.sort(byIdAsc).map((e) => [e.id, e.src, e.dst, e.rtype]) },
+          edges: { columns: ['id', 'src', 'dst', 'rtype', 'status'], rows: pageEdges.sort(byIdAsc).map((e) => [e.id, e.src, e.dst, e.rtype, e.status]) },
         },
         page: { next_cursor: more ? encodeCursor(pageNodes.at(-1)!.id, filterHash(q)) : null, total: opts.totalNull ? null : nodes.length, truncated: more },
       });
@@ -361,7 +366,7 @@ export function createKbMock(opts: MockOptions = {}): Hono {
       if (!byId.has(id) || hidden(id)) return problem(c, 404, 'not_found', 'not found');
       const f = filtersOf(q);
       const depth = Number(q.get('depth') ?? 1), dir = q.get('direction') ?? 'both', limit = limitOf(q, 200), rt = list(q.get('rtypes'));
-      const es = edgeHeads(ctx, f.status).filter((e) => !rt || rt.has(e.rtype));
+      const es = edgeHeadsIn(ctx, q, f.status).filter((e) => !rt || rt.has(e.rtype));
       const ok = (nid: string) => { const r = pick(nid, ctx); return !!r && passes(r, f, ctx, { listing: true, defaultTypes: true }); };
       const reached = new Set([id]); let frontier = [id];
       for (let d = 0; d < depth; d++) {
@@ -378,7 +383,7 @@ export function createKbMock(opts: MockOptions = {}): Hono {
       const closed = es.filter((e) => kept.has(e.src) && kept.has(e.dst)).sort(byIdAsc);
       return envelope(op, c, ctx, { data: {
         nodes: { columns: ['id', 'type', 'label', 'origin', 'status'], rows: ns.map((r) => [r.id, r.type, r.label, r.origin, effStatus(r, ctx)]) },
-        edges: { columns: ['id', 'src', 'dst', 'rtype'], rows: closed.map((e) => [e.id, e.src, e.dst, e.rtype]) },
+        edges: { columns: ['id', 'src', 'dst', 'rtype', 'status'], rows: closed.map((e) => [e.id, e.src, e.dst, e.rtype, e.status]) },
         truncated: kept.size < reached.size, node_total: reached.size, edge_total: closedAll.length,
       } });
     },

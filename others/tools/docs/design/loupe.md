@@ -1,8 +1,8 @@
 # loupe 설계
 
-- 상태: Phase 0과 1이 구현되어 헤드리스로 검증됐다(`tools/loupe`, 기준일 2026-11-01). 2026-11-01에 사용자가 Phase 1의 IA를 수락했다(완료 조건 3). 같은 날 실제 KB를 `read.sock`으로 읽어 코드 변경 없이 돌았고 GET 오퍼레이션 26개를 찔렀다. `nodes/{id}/body`는 `first_party_open=false`인 동안 404다. 실제 KB 실행은 `cd tools/loupe && LOUPE_PORT=4813 node bin/loupe.mjs serve`다. 실제 Orca 탭에서 돈 적은 없다(12절). 그래프의 기본 호스트는 RTX 4080 SUPER에서 도는 전용 Chrome 창이다(6.1절). KB 계약 0.3.2 기준이다(8절).
+- 상태: Phase 0과 1이 구현되어 헤드리스로 검증됐다(`tools/loupe`, 기준일 2026-11-01). Phase 2(그래프)는 구현됐고 kb-mock과 실제 KB에서 헤드리스로 돈다. 실제 GPU 측정만 남았다(12.2절). 2026-11-01에 사용자가 Phase 1의 IA를 수락했다(완료 조건 3). 같은 날 실제 KB를 `read.sock`으로 읽어 코드 변경 없이 돌았고 GET 오퍼레이션 26개를 찔렀다. `nodes/{id}/body`는 `first_party_open=false`인 동안 404다. 실제 KB 실행은 `cd tools/loupe && LOUPE_PORT=4813 node bin/loupe.mjs serve`다. 실제 Orca 탭에서 돈 적은 없다(12절). 그래프의 기본 호스트는 RTX 4080 SUPER에서 도는 전용 Chrome 창이다(6.1절). KB 계약 0.3.2 기준이다(8절).
 - 대상: `tools/loupe`, KB 읽기 전용 뷰어. tower와 서로 의존하지 않는다.
-- 스택 버전은 `docs/research/brief.md` 1절을 따른다. 타입 생성기만 Orval 8.46.0으로 바뀌었다(S4). 설치본은 7일 릴리스 대기 규칙이 막은 넷이 한 단계 낮다: orval 8.44.0, hono 4.13.13, @tanstack/react-query 5.104.5, shadcn 4.22.1 [측정: `npm view`, 2026-10-31]. 이 문서에서 다른 판을 적은 곳은 설계 시점 값이다.
+- 스택 버전은 `docs/research/brief.md` 1절을 따른다. 타입 생성기만 Orval 8.46.0으로 바뀌었다(S4). 설치본은 7일 릴리스 대기 규칙이 막은 넷이 한 단계 낮다: orval 8.44.0, hono 4.13.13, @tanstack/react-query 5.104.5, shadcn 4.22.1 [측정: `npm view`, 2026-10-31]. sigma도 같다: 설계와 S3, S5는 4.0.4(10-27 게시)이고 설치본은 4.0.3이다. 4.0.4는 2026-11-03 14:46 UTC에 규칙을 통과한다(12.2절). 이 문서에서 다른 판을 적은 곳은 설계 시점 값이다.
 
 | 표기 | 뜻 |
 |---|---|
@@ -93,8 +93,8 @@ Phase 1은 왼쪽 레일과 오른쪽 패널을 두지 않았다. 그 목적지�
 
 | 화면 | 경로 | KB 호출과 필드 | 상태 | 구현 | 남은 공백 |
 |---|---|---|---|---|---|
-| 그래프 개요 | `/graph?types=&rtypes=&domain=` | `GET /v1/overview`: `data.meta.{node_total,edge_total,truncated,order,graph}`, `nodes`, `edges`(`columns`, `rows`, 엣지 열에 `status`). 기본 타입은 `/v1/schema`의 `overview_types`. 좌표 입력은 `GET /v1/export/graph/manifest`, `GET /v1/export/graph?profile=core` | 충족 | Phase 2 | 없음. 계약 기본 상한은 50,000/200,000이고 loupe는 `limit`, `edge_limit`을 명시해 보낸다(6.1절) |
-| 이웃 확장 | `/graph?focus=<id>&depth=&rtypes=` | `GET /v1/nodes/{id}/neighbors?depth=&rtypes=&direction=&limit=&edge_limit=&edge_status=` | 충족 | Phase 2 | 없음. 열, `truncated` 위치, `edge_limit`은 0.3.0이 적었다 |
+| 그래프 개요 | `/graph?types=&rtypes=&domain=&edge_status=&view=&sel=` | `GET /v1/overview`: `data.meta.{node_total,edge_total,truncated,order,graph}`, `nodes`, `edges`(`columns`, `rows`, 엣지 열에 `status`). 기본 타입은 `/v1/schema`의 `overview_types`. 좌표 입력은 `GET /v1/export/graph/manifest`, `GET /v1/export/graph?profile=core` | 충족 | Phase 2 (구현) | 없음. 계약 기본 상한은 50,000/200,000이고 loupe는 `limit`, `edge_limit`을 명시해 보낸다(6.1절) |
+| 이웃 확장 | `/graph?focus=<id>&depth=&rtypes=` | `GET /v1/nodes/{id}/neighbors?depth=&rtypes=&direction=&limit=&edge_limit=&edge_status=` | 충족 | Phase 2 (구현) | 없음. 열, `truncated` 위치, `edge_limit`은 0.3.0이 적었다 |
 | 노드 상세 | `/node/<id>` | `GET /v1/nodes/{id}?include=claims,edges,backlinks,body&claim_limit=`: Node 필드, `claims[]`, `edges.{out,in}`(항목에 `peer`), `merged_into`. 주장 전체는 `GET /v1/nodes/{id}/claims`의 커서로 읽는다 | 충족 | Phase 1 | 없음 |
 | 주장 | `/node/c-…` | `GET /v1/claims/{id}`: `evidence[]`, `versions[]` | 충족 | Phase 1 (빌드 추가) | 없음 |
 | 시작 | `/` | 최근 항목 라벨, 최근 기록된 엔티티 | 충족 | Phase 1 (빌드 추가) | 없음 |
@@ -269,7 +269,7 @@ S3 권장 조합을 그대로 쓴다. 전체 규모 측정값은 RTX 4080 SUPER,
 
 | 항목 | 값 | 이유 |
 |---|---|---|
-| 구동 | sigma 4.0.4, graphology 0.26.0. React 19 effect에서 직접 생성 | 이 경로만 쟀다. `@react-sigma/core` + 오버레이는 미검증 |
+| 구동 | sigma 4.0.4(설치본 4.0.3, 12.2절), graphology 0.26.0. React 19 effect에서 직접 생성 | 이 경로만 쟀다. `@react-sigma/core` + 오버레이는 미검증 |
 | sigma 설정 | `renderLabels:false`, `renderEdgeLabels:false`, `enableCameraRotation:false` | sigma 4 라벨은 첫 아틀라스 페이지 뒤의 한글을 틀린 글자로 그린다 [측정] |
 | 라벨 속성 | graphology `label`에 넣지 않는다. 문자열은 `l` 속성 | 첫 프레임 1.9 s → 0.5 s, heap 165 → 63 MB [측정] |
 | 라벨 예산 | `K = min(400, round(w × h / 15000))`, CSS px | 2279x1281에서 약 200. K=200 0.6/0.9 ms, K=400 0.9/1.4 ms [측정] |
@@ -320,6 +320,7 @@ S3 권장 조합을 그대로 쓴다. 전체 규모 측정값은 RTX 4080 SUPER,
 
 - **기본 호스트는 전용 Chrome 창이다.** RTX 4080 SUPER를 쓰는 별도 Chrome 창이다. Orca 탭은 계속 쓸 수 있지만 예산 호스트가 아니다. 같은 어댑터에서 Orca 탭(Chrome 150, 포커스 없음)의 WebGL `clear`가 p50 60.6 ms였고 Chrome 창(156)은 6.06 ms였다. 같은 시험에서 GPU 사용률 중앙값은 3%였다. 이전의 60~85 ms는 GPU 경합이 아니라 Orca 탭이었다. 포커스를 준 Orca 탭은 재지 않았다. S3는 Orca 탭에서 6.1 ms를 냈으므로 Orca 탭의 어떤 상태가 원인인지는 가르지 못했다.
 - **어댑터는 Chrome 프로세스당 하나다.** `powerPreference`는 무시된다(Chrome 156: 셋 다 같은 렌더러). 한 페이지가 두 어댑터를 쓸 수 없다. 그래서 런타임 단계(probe tier)는 두지 않고, OffscreenCanvas도 쓰지 않는다(sigma 포크가 필요하다).
+- **창 단축.** `tools/loupe/scripts/chrome-graph.ps1`이 Windows에서 그래프 창을 연다. 기본은 RTX 4080 SUPER이고 `-Radeon`은 `--force_low_power_gpu`로 Radeon 창을 연다. 어댑터가 프로세스마다 고정되므로 창마다 전용 `--user-data-dir`을 쓴다. 기본 주소는 `http://127.0.0.1:4812/#/graph`이고 `-Url`로 바꾼다. WSL에서는 `powershell.exe -ExecutionPolicy Bypass -File "$(wslpath -w tools/loupe/scripts/chrome-graph.ps1)" -Radeon`이다. 스크립트는 파서로만 확인했고 실행한 적은 없다.
 - **Radeon.** Phase 2는 `--force_low_power_gpu`로 Radeon 창을 띄우는 단축을 낸다. Radeon 값(AMD Radeon Graphics, 20k/80k): CPU+GPU p95 131~158 ms, 8.1~8.6 fps. 15.5k/42.9k에서 73 ms, 15.3 fps. 50k/200k에서 320~373 ms다. Phase 2는 WebGL 렌더러 문자열로 정적 프로필을 고른다. Radeon에서는 `hideEdgesOnMove`, `antialiasEdges:false`, 라벨 K 최대 100을 쓰고 2만 보기를 막는다. 이 설정의 효과는 재지 않았다.
 - **Phase 2 확인.** Radeon에서 이 프로필로 10k/50k를 재고 움직임 p95가 33 ms를 넘으면 그려지는 엣지를 약 1.8만 개로 제한한다. 근거는 CPU+GPU p50이 엣지 1,000개당 약 1.5 ms로 늘었다는 외삽이다 [가정].
 - Phase 2의 GPU 전제(GPU가 조용할 때 S5 렌더를 다시 잰다)는 Chrome 창에서 채워졌다. gc 켠 heap은 재지 않았다.
@@ -398,12 +399,12 @@ v1은 적중, 소프트 미스, 콜드 셋이다. 소프트 미스는 웜 스타
 | 항목 | 상태 |
 |---|---|
 | 자체 worker 시간과 메인 스레드 rAF 영향 | 측정함 [측정: S5]. 실행마다 한 번 188~970 ms 끊김이 있다. 50k에서는 3회 모두 약 9.3 s 지점이고 원인은 미확인이다 |
-| 좌표 교체 1회의 메인 스레드 비용 | graphology 적용 3~9 ms [측정: S5]. sigma 재인덱싱과 재렌더는 미측정이다. dim-all 281 ms 규모로 본다 [가정] |
-| 렌더 재측정 | 2026-11-01 Chrome 창에서 재측정했다(6.1절). gc 켠 heap은 아직 안 쟀다 |
-| 멀티그래프 렌더 | 평행 엣지와 방향을 넣은 예산. 미측정 |
+| 좌표 교체 1회의 메인 스레드 비용 | graphology 적용 3~9 ms [측정: S5]. sigma 재인덱싱과 재렌더는 미측정이다. dim-all 281 ms 규모로 본다 [가정]. 벤치의 `init.swapMs`가 잰다(12.2절) |
+| 렌더 재측정 | 2026-11-01 Chrome 창에서 재측정했다(6.1절). gc 켠 heap은 아직 안 쟀다. 벤치를 `-ExposeGc`로 돌린다(12.2절) |
+| 멀티그래프 렌더 | 평행 엣지와 방향을 넣은 예산. 미측정. 코드와 벤치는 준비됐다(12.2절) |
 | 소프트 미스 임계값 | 실제 게시의 위상 변화율. 미측정 |
-| sigma 4 state-based style의 dim-all | 미검증 |
-| `@react-sigma/core` 6.0.0 + 오버레이 | 미검증. 쓰지 않아도 된다 |
+| sigma 4 state-based style의 dim-all | 미검증. 쓰지 않았다. dim-all은 S3처럼 reducer다 |
+| `@react-sigma/core` 6.0.0 + 오버레이 | 쓰지 않았다. sigma를 직접 구동한다 |
 
 ## 7. 데이터 층
 
@@ -721,6 +722,8 @@ WSL에는 Playwright 브라우저와 한글 글꼴이 없다. 브라우저는 �
 
 **시험 결과(Phase 1 수정 뒤).** `tsc -p .`와 `eslint src` 오류 0(일부러 심은 파일이 ESLint 규칙 둘을 모두 건드린다), Vitest 310개, Playwright 171개(재시도 없이 통과), `contract:flow` 통과, `contract:guard`와 `check-dist` 통과. Phase 0의 `test:headless`는 25/25였다. 수정 전 값은 Vitest 267, Playwright 141이었다. 11절 Playwright 표의 열 행 전부와 완료 조건 1, 2를 덮고 악성 fixture를 모든 화면에 돌린다. 일부러 심은 결함 셋(한 읽기에서 축 누락, `javascript:` 링크 유지, 원시 오프셋으로 강조)을 시험이 각각 잡았다 [빌드]. 병합 순환, 묘비, 위치 보정은 fixture 검사기가 그런 행을 거절하므로 브라우저에서 KB 응답을 고쳐 쓰는 방식으로 시험한다.
 
+**Phase 2 시험 결과.** `tsc -p .`, `eslint src` 오류 0, Vitest 439개, Playwright 216개 통과와 1개 건너뜀(재시도 없음, 전체를 두 번 돌렸다), `contract:flow` 통과, `contract:guard`와 `check-dist` 통과. 건너뛴 1개는 실제 KB 시험이고 `LOUPE_LIVE_URL=http://127.0.0.1:4813`으로 따로 돌려 통과했다. 그때 실제 `core`는 노드 1,630개, 엣지 686개였다. `graph-vendor` 107.1 KB gz(예산 130 KB gz)이고 그래프 경로에서만 읽는다. `check-dist`가 이것을 막는다. 레이아웃 worker는 22.1 KB gz, 화면 코드는 11.4 KB gz다. 초기 JS는 666 KB(gzip 215 KB)로 Phase 1의 635 KB(204 KB)에서 늘었다. 그래프 읽기 래퍼와 청크 분리 때문이다. SwiftShader 프레임 값은 무효라 적지 않는다.
+
 **미측정으로 남는 것**
 
 - **처음 여는 페이지 로드.** S3 값은 셰이더 캐시가 데워진 뒤의 것이다. 빈 프로필의 첫 로드는 재지 않았다. Phase 2에서 새 프로필로 잰다.
@@ -736,7 +739,7 @@ WSL에는 Playwright 브라우저와 한글 글꼴이 없다. 브라우저는 �
 | 사전 | 부록 B를 KB 세션에 보낸다. `openapi.yaml` 전이 가장 싸다 | 회신 수신 | 세션 | 끝. 2차, 3차 회신을 받아 0.3.0, 0.3.1로 처리됐다(부록 B) |
 | 0 뼈대 | `tools/loupe` 워크스페이스, Vite, Router(hash), Query, shadcn. 계약 모양의 스펙, fixture, kb-mock, Orval, `kbFetch`, `asOf`와 시간 제외 목록, 계약 형식 ID, 계약 흐름 이식. 최소 `loupe serve` `/kb/*`(Phase 5에서 당겼다) | S4 흐름 통과, 빈 앱이 Unix 소켓 kb-mock을 `loupe serve` 너머로 읽는다 | 없음 | 구현, 헤드리스로 검증. 표본 스펙은 T1에서 지웠다 |
 | 1 탐색 | 팔레트, 엔티티 페이지, 관계 패널(나가는 링크, 들어오는 링크), 주장 카드, 출처 화면, 인용 확인(일치, 위치 보정), 시간 띠, 병합 리디렉션, 조건부 GET 확인, `/v1/meta` 폴링과 오류 상태, `/v1/schema` 라벨 | 아래 참조 | 없음 | 구현, 헤드리스로 검증. 조건 3(IA)은 2026-11-01에 사용자가 수락했다 |
-| 2 그래프 | 6.2절 확인 항목, 개요, 오버레이, worker, IndexedDB, 소프트 미스, 이웃 확장 | 합성 10k/51k 멀티그래프에서 11절 예산 통과, 첫 로드 측정. GPU 전제는 Chrome 창에서 채워졌다(6.1절). Radeon 10k/50k를 정적 프로필로 재고, 움직임 p95가 33 ms를 넘으면 그려지는 엣지를 약 1.8만 개로 제한한다 | 없음 | 미착수 |
+| 2 그래프 | 6.2절 확인 항목, 개요, 오버레이, worker, IndexedDB, 소프트 미스, 이웃 확장 | 합성 10k/51k 멀티그래프에서 11절 예산 통과, 첫 로드 측정. GPU 전제는 Chrome 창에서 채워졌다(6.1절). Radeon 10k/50k를 정적 프로필로 재고, 움직임 p95가 33 ms를 넘으면 그려지는 엣지를 약 1.8만 개로 제한한다 | 없음 | 구현, 헤드리스로 검증. 실제 GPU 측정이 남았다(12.2절). 예산 판정은 아직 없다 |
 | 3 표와 검색 | 스키마 구동 표, 패싯, URL 저장 뷰, 전문검색 화면, 스키마 화면 | 표본 카탈로그로 타입 추가가 코드 변경 없이 된다. `filter` 문법은 0.3.0이 적었다 | 없음 | 미착수 |
 | 4 시간 깊이 | 이력(ECharts), 변경 피드 | 11절 Playwright 전체 통과. 꼬리 읽기는 `changes_cursor`로 가능하다 | 없음 | 미착수 |
 | 5 설치 | 유닛, CLI(`open`), 딥링크, tower 마운트 확인 | 소켓 기동으로 브라우저가 열림(그래프는 전용 Chrome 창), tower 없이 동작 | 없음 | 미착수 |
@@ -795,6 +798,61 @@ Phase 1 완료 조건은 다음과 같다.
 | 스크린샷 | 시험 머신에 이모지 글꼴이 없어 스크린샷에서 이모지가 네모로 나온다 |
 
 
+
+### 12.2 Phase 2 구현 결과
+
+**만든 것.** `/graph` 화면(`src/graph/`, 읽기는 `src/data/graph.ts`). 타입, 도메인, 관계 타입 필터는 URL에 쓰고 KB가 거른다. 선택 패널(요약, 관계 목록, 엔티티 페이지 링크), 이웃 확장(`focus`, `depth`), 대체 엣지 점선(`edge_status`), 잘림 띠, 경고 뒤 2만 보기, 새 데이터 단추, 좌하단 시간 표식이 있다. 레이아웃은 worker 하나에서 돌고 IndexedDB `loupe-layout`에 ID, 좌표, community만 남긴다. 적중, 소프트 미스, 콜드와 개요 입력 대체를 모두 시험한다. 헤더와 팔레트에 그래프 항목, 엔티티 머리에 '그래프에서 보기'가 생겼다.
+
+**설계에서 달라진 것.**
+
+| 영역 | 내용 |
+|---|---|
+| sigma 판 | 4.0.3이다. 4.0.4는 7일 규칙이 막고(`npm install`이 ETARGET), 규칙을 우회하지 않았다. 4.0.4에서 달라지는 것 중 그래프에 닿는 것은 둘이다. 엣지 라벨 프로그램의 지연 생성(`renderEdgeLabels:false`면 만들지 않는다)과 평행 엣지 묶음 키의 최적화다. 둘 다 첫 프레임을 바꿀 수 있으므로 S3, S5 값은 4.0.3에 그대로 옮겨지지 않는다 [소스: 두 판 diff]. 쓰는 API는 같아 판 하나만 바꾸면 된다 |
+| 잠금 파일 | `graphology-types` 0.24.8을 타입용 개발 의존성으로 더했다 |
+| 평행 엣지 | 엣지는 모두 키를 갖고 그래프에 들어가며, 쌍(방향 무시)마다 하나만 그린다. 쌍의 모든 엣지가 대체일 때만 점선이다. 패널에는 평행 엣지가 전부 나온다 |
+| 방향 | 캔버스에 화살표가 없다. 재지 않은 비용이고 방향은 패널이 보인다 |
+| 레이아웃 입력 | 엣지를 정렬한다. FA2가 엣지 순서에 따라 달라져서 `rows` 순서가 바뀌면 그림이 바뀌었다 [빌드: 단위 시험이 잡았다] |
+| 진행 막대 | worker가 끝에서만 알리므로(6.2절) 노드당 약 0.95 ms 추정을 시계로 따라가고 95%에서 멈춘다 |
+| 호버 | S3는 호버 중 호버 노드와 이웃의 라벨만 그렸다. 이들을 먼저 놓고 남은 자리를 나머지가 채운다 |
+| hysteresis | 지난 프레임의 라벨은 크기가 1.25배인 것처럼 겨룬다. 값은 판단이다 [가정] |
+| 2만 보기 | `view=20k` 딥링크도 경고를 먼저 띄운다. 경고 확인은 URL에 없다 |
+| 색 | community 색상표 12개를 돌려 쓴다. 게시 간 색 유지는 12절 나중 항목이다 |
+| 접근성 | 캔버스 안의 노드는 키보드로 고를 수 없다. 패널의 관계 목록과 팔레트가 길이다 |
+| kb-mock | 개요, 이웃 엣지에 `status` 열을 넣고 `edge_status`를 받는다. 계약과 어긋나 있었다 |
+| 시험 환경 | Playwright가 SwiftShader 인자로 뜬다. WebGL2가 있어야 그래프가 돈다. `navigator.webdriver`일 때만 `window.__loupeGraph`가 생긴다. 캔버스에는 조준할 DOM이 없다 |
+| 캐시 기록 | 읽을 때 형식을 검사한다(`isValidLayout`). ID 목록, 좌표 길이, 유한값이 어긋난 기록은 미스이고 다시 계산해 덮어쓰며, 다음 쓰기에서 지운다 |
+| 레이아웃 실패 | 기본 레이아웃 읽기는 필터나 이웃 도착이 끊지 않는다. 실패하면 '다시 시도' 단추가 있다 |
+| 대체된 읽기 | '다시 읽기'가 새 읽기를 시작하면 이전 읽기는 멈춘다. 대기가 끝날 때마다 신호를 확인해 콜백도 캐시 쓰기도 남기지 않고, 계산 중이면 worker를 바꾼다 |
+| 적중 판정 | 해시가 같아도 ID가 같아야 적중이다. `sha`가 같아도 표시할 노드를 기록이 다 갖고 있어야 내려받기를 건너뛴다. 그래서 개요에만 있는 노드가 있으면 그 화면을 열 때마다 `core`를 읽는다 |
+| fixture | `kb-research.json`을 다시 빌드했다. 4d989e9가 `spike-results.md`를 고친 뒤 스냅샷이 원문과 달라 `fixtures.test.ts`가 깨끗한 HEAD에서도 실패했다 |
+| 기존 시험 | `/graph`가 없다고 단언하던 세 곳은 아직 없는 경로(`/schema` 등)로 옮겼다. 악성 원문 시험의 허용 링크에 `#/graph?focus=`를 더했다. `round1.spec.ts`의 백링크 시험은 `goto` 직후 DOM을 읽어 깨끗한 HEAD에서도 단독 실행 시 실패했다. 기다림을 더했고 단언은 그대로다 |
+
+**남은 측정.** 실제 GPU가 필요해 아무것도 판정하지 않았다. 벤치는 제품 코드(`GraphView`, 오버레이, 정적 프로필)를 그대로 돈다. 합성 그래프는 방향 멀티그래프이고 평행 엣지 약 6%, 대체 엣지 약 3%이며 좌표는 제품 레이아웃으로 만든다. `chrome-graph.ps1`은 한 번도 실행한 적이 없다. 첫 실행이 스크립트의 첫 시험이다.
+
+**절차.** 다음 세션은 이 순서로 한다. 창이 반복해서 열리고 GPU 앱을 닫아야 하며 총 약 10분이 드니, 시작 전에 소유자에게 알린다.
+
+1. sigma를 4.0.4로 올린다. 7일 규칙 때문에 2026-11-03 14:46 UTC 이후에만 `npm install sigma@4.0.4`가 된다(규칙을 우회하지 않는다). `package.json`과 잠금 파일 한 줄씩이 바뀐다. 올린 뒤 `npx tsc -p . && npx vitest run && npx playwright test && node scripts/check-dist.mjs`를 돌린다. 4.0.3에서 잰 S3, S5 값은 4.0.4에 그대로 옮겨지지 않는다.
+2. `cd tools/loupe && npm run bench:graph`를 켜 둔다(포트 4836, 데이터는 `.cache/bench`에 캐시).
+3. zsh의 `tools/loupe`에서 한 번 정의한다. 함수여야 한다. zsh는 따옴표 없는 `$PS`를 낱말로 나누지 않는다.
+
+   `loupe_chrome() { powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$(wslpath -w "$PWD/scripts/chrome-graph.ps1")" "$@"; }`
+
+4. 아래 다섯 번을 순서대로 돌린다. 인자는 `-File`로 넘기므로 `&` 포함 URL과 `-Radeon`, `-ProfileName`, `-ExposeGc`가 그대로 도착한다(zsh에서 확인). `powershell.exe -Command`는 인자를 다시 해석하므로 쓰지 않는다.
+5. 결과는 `.cache/bench/results.jsonl`에 쌓이고 터미널에도 한 줄씩 나온다.
+
+| # | 명령 | 시간 | 판정 |
+|---|---|---|---|
+| 1 | `loupe_chrome -Url 'http://127.0.0.1:4836/?size=10k&label=rtx'` (RTX 10k/51k, 3회) | 약 30초 | 11절 예산 전 행. 멀티그래프 비용 |
+| 2 | `loupe_chrome -ProfileName loupe-fresh-1 -Url 'http://127.0.0.1:4836/?size=10k&label=rtx-first'` (빈 프로필, 1회) | 약 30초 | 첫 프레임 800 ms |
+| 3 | `loupe_chrome -ExposeGc -ProfileName loupe-gc -Url 'http://127.0.0.1:4836/?size=10k&label=rtx-gc'` (gc 켠 heap, 1회) | 약 30초 | heap 100 MB |
+| 4 | `loupe_chrome -Radeon -Url 'http://127.0.0.1:4836/?size=10k50k&label=radeon'` (Radeon 10k/50k, 3회) | 약 1분 | `sync.cpuGpu.p95`가 33 ms를 넘으면 그려지는 엣지를 약 1.8만 개로 제한한다 |
+| 5 | `loupe_chrome -Url 'http://127.0.0.1:4836/?size=20k&label=rtx-20k'` (RTX 20k/100k, 1회) | 약 30초 | 첫 프레임 1.6 s 경고가 맞는지 |
+
+**포커스 규칙.** 창이 포커스를 지켜야 한다. 실행 중에는 건드리지 않는다. 한 번이 끝나도 창은 열린 채이니 다음 실행 전에 닫는다. GPU를 쓰는 다른 앱은 닫는다.
+
+**만들지 않은 것.** 캔버스 화살표(비용 미측정, 방향은 패널이 보인다), 캔버스 노드의 키보드 선택(패널의 관계 목록과 팔레트가 길이다), 1.8만 엣지 상한(4번 Radeon 결과에 달렸다). 소프트 미스 임계값은 실제 게시가 쌓여야 정한다.
+
+벤치 경로는 `camera.setState`만으로는 움직임으로 치지 않아 `hideEdgesOnMove`가 듣지 않는다. 벤치는 실제 드래그가 켜는 `mouseCaptor.isMoving`을 켠 채 돈다. 좌표 교체 비용은 `init.swapMs`다.
 
 ## 부록 A. 브리프 충돌의 처리
 

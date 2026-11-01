@@ -9,6 +9,8 @@ process.env.PLAYWRIGHT_BROWSERS_PATH ??= path.join(root, '.cache/ms-playwright')
 // WSL has no libnss3 or libasound: scripts/setup-browser-libs.sh unpacks them without root.
 const libs = path.join(root, '.cache/libs-x/usr/lib/x86_64-linux-gnu');
 const env = existsSync(libs) ? { ...process.env, LD_LIBRARY_PATH: [libs, process.env.LD_LIBRARY_PATH].filter(Boolean).join(':') } as Record<string, string> : undefined;
+// The graph needs WebGL2, which a headless browser only has in software here. SwiftShader proves the screen works and says nothing about frame time (design 11).
+const args = ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'];
 
 export default defineConfig({
   testDir: 'e2e',
@@ -29,6 +31,6 @@ export default defineConfig({
     timezoneId: 'Asia/Seoul',
     trace: 'off',
     screenshot: 'off',
-    launchOptions: env ? { env } : {},
+    launchOptions: { args, ...(env ? { env } : {}) },
   },
 });

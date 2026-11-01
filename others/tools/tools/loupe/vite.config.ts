@@ -35,5 +35,9 @@ export default defineConfig({
   preview: { host: '127.0.0.1', port: 4812, strictPort: true },
   // ES workers can split: Shiki languages load only when a document uses them (design 9).
   worker: { format: 'es' },
-  build: { target: 'es2023', sourcemap: false, chunkSizeWarningLimit: 800 },
+  build: {
+    target: 'es2023', sourcemap: false, chunkSizeWarningLimit: 800,
+    // Its own chunk so the budget in design 11 reads one file. Only the graph route imports it.
+    rolldownOptions: { output: { codeSplitting: { groups: [{ name: 'graph-vendor', test: /node_modules\/(sigma|graphology|graphology-utils|graphology-types|events)\// }] } } },
+  },
 });

@@ -326,6 +326,7 @@ test.describe('the entity page', () => {
 
   test('notes that link here are listed once (defect: the same note three times in one panel)', async ({ page, watch }) => {
     await page.goto(node(SIGMA));
+    await page.locator('[data-testid=backlink] a').first().waitFor();
     const ids = await page.locator('[data-testid=backlink] a').evaluateAll((els) => els.map((e) => e.getAttribute('href')));
     expect(ids.length).toBeGreaterThan(0);
     for (const href of ids) await expect(page.locator(`[data-testid=edges-in] a[href="${href}"]`)).toHaveCount(0);

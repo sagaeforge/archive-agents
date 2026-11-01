@@ -22,16 +22,19 @@ const pinnedBothAxes = (q: Query) => {
   return !!p && typeof p === 'object' && p.as_of_valid !== undefined && p.as_of_observed !== undefined;
 };
 
+/** The graph is replaced only when the reader asks: the "new data" control on the screen does it (design 7.3). */
+const manualRefresh = (q: Query) => q.meta?.manualRefresh === true;
+
 /** Live view: refetch what is on screen. Past view: mark it stale and leave the screen alone (design 4). */
 export function invalidateMoving(qc: QueryClient, past: boolean) {
-  return qc.invalidateQueries({ predicate: (q) => !isMeta(q) && !isImmutable(q) && !pinnedBothAxes(q), refetchType: past ? 'none' : 'active' });
+  return qc.invalidateQueries({ predicate: (q) => !isMeta(q) && !isImmutable(q) && !pinnedBothAxes(q) && !manualRefresh(q), refetchType: past ? 'none' : 'active' });
 }
 
 /** After an outage. A live view refetches what is on screen. A past view refetches only what failed and marks the rest stale,
  *  so the screen does not change by itself while an axis is free (design 4). */
 export function recoverQueries(qc: QueryClient, past: boolean) {
   const failed = (q: Query) => q.state.status === 'error';
-  if (!past) return qc.invalidateQueries({ predicate: (q) => !isMeta(q) && (failed(q) || !isImmutable(q)) });
+  if (!past) return qc.invalidateQueries({ predicate: (q) => !isMeta(q) && (failed(q) || (!isImmutable(q) && !manualRefresh(q))) });
   void qc.invalidateQueries({ predicate: (q) => !isMeta(q) && failed(q) });
   return qc.invalidateQueries({ predicate: (q) => !isMeta(q) && !failed(q) && !isImmutable(q) && !pinnedBothAxes(q), refetchType: 'none' });
 }
