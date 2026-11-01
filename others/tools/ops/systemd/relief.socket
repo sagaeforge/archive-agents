@@ -1,0 +1,9 @@
+[Unit]
+Description=relief network map socket
+
+[Socket]
+ListenStream=127.0.0.1:4815
+NoDelay=true
+
+[Install]
+WantedBy=sockets.target

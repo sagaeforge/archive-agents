@@ -708,8 +708,8 @@ tools/relief/
 | 설치본 | `relief.socket`, `relief.service` | `http://127.0.0.1:4815/` |
 | tower 마운트(선택) | tower route → 4815 | `http://127.0.0.1:4800/relief/` |
 
-- **유닛**은 loupe와 같은 모양이다. `ListenStream=127.0.0.1:4815`, `StartLimitIntervalSec=0`, `Restart=always`, `ExecStart`와 `WorkingDirectory`는 절대 경로다. 맨 PATH에 node가 없다 [출처: `CLAUDE.md`]. 유닛 연결은 전역 변경이라 사용자가 한다. tower 유닛에 `Requires=`나 `After=`를 걸지 않는다. `tower.socket`이 포트를 쥐고 있어 relief의 첫 호출이 tower를 깨운다 [출처: `ops/systemd/tower.socket:5`]. 그래서 점검 때 tower를 세우려면 소켓도 함께 세워야 한다.
-- **기본 호스트는 전용 Chrome 창이다** [출처: `loupe.md` 6.1.1]. SVG는 WebGL을 쓰지 않으므로 Orca 탭의 `clear` 지연은 해당하지 않을 수 있다 [가정]. 판정은 Chrome 창에서 한다. 창을 여는 스크립트는 loupe 것을 import하지 않고 relief 안에 둔다.
+- **유닛**은 `ops/systemd/relief.socket`, `relief.service`다. loupe에는 설치된 유닛이 없어 tower 유닛과 같은 모양으로 만들었다. 서버는 소켓 활성화로 받은 fd 3을 쓰고 환경 변수가 없으면 직접 127.0.0.1에 묶는다. `ListenStream=127.0.0.1:4815`, `StartLimitIntervalSec=0`, `Restart=always`, `ExecStart`와 `WorkingDirectory`는 절대 경로다. 맨 PATH에 node가 없다 [출처: `CLAUDE.md`]. 유닛 연결은 전역 변경이라 사용자가 한다. tower 유닛에 `Requires=`나 `After=`를 걸지 않는다. `tower.socket`이 포트를 쥐고 있어 relief의 첫 호출이 tower를 깨운다 [출처: `ops/systemd/tower.socket:5`]. 그래서 점검 때 tower를 세우려면 소켓도 함께 세워야 한다.
+- **기본 호스트는 전용 Chrome 창이다** [출처: `loupe.md` 6.1.1]. SVG는 WebGL을 쓰지 않으므로 Orca 탭의 `clear` 지연은 해당하지 않을 수 있다 [가정]. 판정은 Chrome 창에서 한다. 창을 여는 스크립트는 loupe 것을 import하지 않고 relief 안에 둔다(`scripts/chrome.ps1`, 전용 프로필 `relief-chrome`). `relief open`은 WSL에서 이 스크립트에 로컬 URL만 넘긴다. 다른 URL은 받지 않는다.
 - **tower 마운트.** 데이터 경로와 별개인 선택 항목이다. `base: './'`와 해시 상태로 경로 무관하게 빌드한다 [출처: `loupe.md` 10절]. 프록시는 GET, HEAD뿐이고 relief API도 그렇다 [출처: `tower.md` 1절]. relief → tower(데이터)와 tower → relief(화면)가 함께 있어도 어느 쪽도 상대가 있어야 뜨는 것은 아니다. 대상이 없으면 그 라우트만 502다.
 
 | CLI | 동작 |
@@ -717,7 +717,7 @@ tools/relief/
 | `relief serve` | 포그라운드 서버. 유닛의 `ExecStart` |
 | `relief status` | 출처별 상태, 마지막 성공, 원인, 호출 수, `seq`. 토큰 값은 없다 |
 | `relief check` | 설정과 `edge.json` 검사. `--live`는 tower 연결, 도구 4개, 허용 경로를 한 번씩 읽는다 |
-| `relief open` | 전용 Chrome 창을 연다 |
+| `relief open` | 전용 Chrome 창을 연다. `--print`는 명령만 보여 준다 |
 
 **HTTP 안전.** 127.0.0.1 바인딩, Host, Origin, `sec-fetch-*` 검사를 loupe처럼 둔다 [출처: `loupe.md` 10절]. `/api/*`는 무인증 읽기다. 스냅샷에는 내부 주소와 재고, `edge.json`의 공인 주소와 포트 포워드가 들어 있고 Windows 같은 사용자는 경계 밖이다 [출처: `tower.md` 5절]. tower 마운트도 무인증 라우트다 [출처: `tower.md:413`]. 그래서 마운트는 선택이고 기본은 끈다(16절 R3). tower bearer와 파일 경로는 스냅샷에 넣지 않는다. PVE, guest agent에서 온 문자열은 신뢰하지 않는 입력이다(6.4절). React로 이스케이프하고 길이를 자르고 CSP는 `default-src 'self'`다.
 
@@ -769,11 +769,19 @@ fixture의 이름과 주소는 합성이고 주소는 RFC 5737 범위만 쓴다.
 | 0 승인 | 이 문서와 D8 | 사용자의 결정 | 사용자 |
 | 1 정적 지도 | 워크스페이스, 스냅샷 타입, fixture, mcp-mock, 레이아웃, 3D/2D, 패널, 오버레이 넷, 키보드, 목록 | 12절 단위·화면·가짜 금지 통과. 전용 Chrome 창에서 500객체 팬 측정. 사용자가 모양을 수락 | 없음 |
 | 2 실제 PVE | MCP 클라이언트, 허용 목록, 수집 루프, 변경 판정, 기동 표시, 낡음 | 실제 VM을 시작해 20 s 안에 '기동 중'이 뜬다. 태스크 표를 실제 값으로 고친다. tower를 세우면 낡음으로 바뀌고 다시 켜면 회복한다. Q6 한도의 주인을 확인한다 | 없음. 기존 tower bearer를 읽는다 |
-| 2 남은 확인 | **대기.** 코드는 끝났고 두 항목은 mcp-mock으로만 증명했다. 실제 VM을 시작해 20 s 안에 '기동 중'이 뜨는지, 실제 tower를 세워 낡음으로 바뀌고 다시 켜면 회복하는지 | 사용자가 실제 시스템에서 확인한다 | 사용자 |
 | 3 외부 | `edge.json`, 공인 IP 관측, 어긋남 검사, 규칙, 근거 오버레이, 구멍 목록 | 사용자의 파일로 미확인 칸이 선언으로 바뀐다. 파일을 지우면 되돌아간다. A 레코드를 일부러 틀리게 적으면 경고가 뜬다. guest agent를 설치하면 VM 100의 IP가 관측이 된다(Phase 2에서 이미 관측). 앞의 셋은 임시 설정과 mock으로 증명했다. 실제 공인 IP와 사용자의 파일로 한 비교도 헤드리스 화면에서 확인했다(2026-11-01). 틀린 값의 경고는 mock으로만 봤다 | 내용(R2), 공인 IP 출처(D9), 설치(D4) |
 | 4 Docker | **보류.** 호스트 하나, 대응 선언, Docker 평면 | Docker 호스트가 생긴 뒤 정한다. 7.2절의 후보를 다시 본다 | 호스트(R5) |
-| 5 설치 | 유닛, CLI, Chrome 창, tower 마운트 확인 | 소켓 기동으로 지도가 열린다. tower를 세워도 프로세스와 지도가 남고 Proxmox는 낡음이다. Docker 없이 돈다 | 유닛 연결(R4) |
+| 5 설치 | 유닛, CLI, Chrome 창. tower 마운트는 끈 채 둔다(R3) | 소켓 기동으로 지도가 열린다. tower를 세워도 프로세스와 지도가 남고 Proxmox는 낡음이다. Docker 없이 돈다. 파일과 소켓 활성화는 사용자 관리자 없이 확인했고(`systemd-analyze --user verify`, `systemd-socket-activate`, 소켓을 쥔 대역) 실제 유닛 연결과 창은 사용자가 한다 | 유닛 연결(R4) |
 | 나중 | 변경 타임라인, 두 줄 배치 | 요구가 생기면 | |
+
+**상태(2026-11-01).** Phase 1, 2, 3, 5의 구현은 끝났고 Phase 4는 보류다. 남은 것은 사용자가 실제 시스템에서 하는 확인 넷이다.
+
+| 남은 확인 | 내용 | 지금까지의 근거 |
+|---|---|---|
+| 실제 유닛 연결 | `systemctl --user link`와 `enable --now relief.socket`으로 소켓 기동을 확인한다 | `systemd-analyze --user verify`, `systemd-socket-activate`, 소켓을 쥔 대역 |
+| 실제 Chrome 창 | `relief open`으로 전용 창이 열리는지 본다 | 명령 구성만 시험했다 |
+| 실제 tower 정지 | tower를 세워 낡음으로 바뀌고 다시 켜면 회복하는지 본다. `tower.socket`도 함께 세워야 한다 | mcp-mock |
+| 실제 VM 시작 | 20 s 안에 '기동 중'이 뜨는지 보고 수명 태스크 이름을 확인한다 | mcp-mock |
 
 ## 15. 위험
 
@@ -874,7 +882,7 @@ VM 100 설치의 실행 시점은 Phase 3 전이면 된다. 플러그인 저장�
 | 출처 | Cloudcraft 동작, 렌더러 번들 크기, Tecnativa `haproxy.cfg`, wollomatic README, Docker API v1.47, tower 소스와 설계, proxmox 플러그인 소스(코드 읽기, 실행하지 않음) |
 | 가정 | 수명 태스크 이름(`qmstart` 등. 실제 VM을 시작해야 보인다), `WARNINGS` 처리, 멈춘 태스크 1시간과 `uptime` 40 s, 모든 예산, 팬·줌 성능, SSH 강제 명령 동작, Orca 탭의 SVG 비용, 500객체의 실제 PVE 응답 크기, 사실을 담은 스냅샷 크기, vmid·컨테이너 이름의 안정성, 호출 기한과 응답 상한, 공인 IP 관측 방식 |
 | 미검증 | 19절의 라우터와 BMC 읽기 경로. 검색 요약이 근거이고 장비에서 확인하지 않았다 |
-| 재지 않음 | 실제 값에서 어긋남 경고가 뜨는 모습(실제 비교 결과는 일치였다), 실제 VM 시작이 20 s 안에 '기동 중'으로 뜨는지, 실제 tower를 세웠을 때의 낡음과 회복(둘 다 mcp-mock으로만 증명했고 사용자가 실제로 확인한다), PVE가 진행 중 태스크를 `/cluster/tasks`에 올리는 지연, 실제 tower의 401 처리, 실제 GPU에서의 SVG 팬과 줌. 이 문서의 어떤 그림도 실제 데이터가 아니다 |
+| 재지 않음 | 사용자 관리자에 연결한 실제 유닛과 실제 Chrome 창(소켓 활성화는 대역으로 확인했다), 실제 값에서 어긋남 경고가 뜨는 모습(실제 비교 결과는 일치였다), 실제 VM 시작이 20 s 안에 '기동 중'으로 뜨는지, 실제 tower를 세웠을 때의 낡음과 회복(둘 다 mcp-mock으로만 증명했고 사용자가 실제로 확인한다), PVE가 진행 중 태스크를 `/cluster/tasks`에 올리는 지연, 실제 tower의 401 처리, 실제 GPU에서의 SVG 팬과 줌. 이 문서의 어떤 그림도 실제 데이터가 아니다 |
 
 ## 19. 성장 경로: 내부 하드웨어 관리 도구
 
