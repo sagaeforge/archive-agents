@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# The command the tests' hostile inputs try to run. It does nothing but leave a mark
+# in the sandbox, so a validation regression fails a test and harms nothing.
+: >"$FAKE_PVE_STATE/injected"

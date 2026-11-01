@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Stands in for hostname so the tests can choose the machine name.
+printf '%s\n' "$FAKE_HOSTNAME"

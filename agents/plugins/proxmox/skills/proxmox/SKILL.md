@@ -28,4 +28,35 @@ Prefer these, in order:
 - For changes (start, stop, migrate, delete), do not fall back to `ssh root@...` on your own. Show the exact command and get the user's approval for that specific action. SSH reaches these nodes as root, so nothing else stands between a mistake and the cluster.
 - Quorum needs two of three nodes. Before suggesting a reboot or maintenance, check `cluster_overview` and confirm the other two nodes are online.
 
-If tools report a missing token, run `scripts/bootstrap-token.sh` from this plugin.
+## When a tool reports an error
+
+API failures start with a code or with `PVE API <status>`. Act on that, not on a general sense that the cluster is down.
+
+| Error | Meaning | What to do |
+|---|---|---|
+| `NODE_NOT_FOUND` | The cluster has no node by that name. The message lists the ones it has. | Use a listed name. |
+| `TLS_VERIFY` | The hosts answered, but no certificate verified against the pinned CA. The cluster is not down. | Compare `certs/pve-root-ca.pem` (or `PVE_CA_FILE`) with the cluster CA, and check the node certificates for expiry. Never turn verification off. |
+| `TIMEOUT` | No host answered, after 8 s each. | Check that this machine can reach 192.168.x.x/24. With `api_get`, also check any node name in the path: only `node_status` and `guest_config` detect a wrong one. |
+| `REFUSED` | The hosts are up but refuse port 8006. | Check `PVE_HOSTS`, then whether `pveproxy` is running on the nodes. |
+| `BAD_RESPONSE` | Every host answered 200, but with something that is not a PVE API response, such as a proxy's login page. | Check `PVE_HOSTS` and what answers on port 8006. |
+| `UNREACHABLE` | The hosts failed in different ways, or the connection was lost. | Read the reason given for each host in the message. |
+| `BAD_REQUEST` | Refused before anything was sent: the path is malformed, or the token file holds invalid characters. | Fix the path (absolute, no `..`, no spaces or control characters) or the token file. Retrying unchanged will fail again. |
+| `CA_FILE` | The CA file cannot be read. | Restore `certs/pve-root-ca.pem`, and the next call picks it up without a restart. `PVE_CA_FILE` is read when the server starts, so correcting that takes a restart of Claude Code. |
+| `NO_TOKEN` | This machine has no token file. | Ask the user how to provide one. Read the note below before offering to run `scripts/bootstrap-token.sh`. |
+| `PVE API 400` | PVE refused a parameter. The message names it. | Fix that parameter. |
+| `PVE API 401` | The token was rejected: revoked, rotated or expired. | Read the note below, get the user's approval, then run `scripts/bootstrap-token.sh --rotate` from this plugin on this machine. It says so if the token file also needs `--keep-old`. |
+| `PVE API 403` | The role lacks that permission. | Do not retry. Tell the user which permission the message names. |
+
+`scripts/bootstrap-token.sh` changes tokens on the cluster, so it runs only with the user's approval. Check first which version this plugin has, with `grep -c -- --rotate scripts/bootstrap-token.sh` from the plugin directory. A count of 0 means the old version, which issues the one token all machines share. Do not run that version. On a machine with no token file it reissues the shared token, so every other machine gets 401, and `--rotate` reports nothing to do and changes nothing. Ask the user to copy a working token file from another machine instead, to `~/.config/proxmox-mcp/token` or the path in the error, with mode 600.
+
+## Checking this machine
+
+`scripts/doctor.sh` from the plugin directory checks this machine end to end: Node and npm, the marketplace, the installed commit, dependencies, the token file and its rotation date, each host over TLS, the token's permissions, certificate expiry, and the runner and last CI. Run it when an error above does not explain itself, or to confirm a machine after an install or a token change. It only reads and never prints a token value, so it needs no approval. The actions it suggests are another matter: `scripts/bootstrap-token.sh` still needs the user's approval.
+
+Each check reports `pass`, `warn`, `fail` or `skip`, with what to do. A `skip` means it could not be tested, not that it is fine. The exit code is 0 when healthy, 1 with warnings and 2 with failures, and `--json` prints the same report as JSON.
+
+## Server log
+
+Each API call writes one JSON line to the server's stderr: time, tool, host, path, duration, status and whether it failed over. Tokens, response bodies and query values never go in it, and a path that looks like it holds a token, even percent-encoded, or that runs past 1,024 characters, is written as `<redacted>`. This is how to see which node answered and how long it took.
+
+As of Claude Code 2.1.316, Claude Code stops reading a server's stderr once it has connected, so in a session the place to read is the file `.mcp.json` sends the same lines to: `${CLAUDE_PLUGIN_DATA}/calls.jsonl`, normally `~/.claude/plugins/data/proxmox-sagae/calls.jsonl`. At 5 MiB it moves to `calls.jsonl.1`, replacing the one before, so there is at most about 10 MiB of history. Uninstalling the plugin deletes both.

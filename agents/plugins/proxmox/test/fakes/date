@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Stands in for date so token IDs and expiry do not depend on when the tests run.
+case "$1" in
+  +%Y%m) printf '%s\n' "$FAKE_YYYYMM" ;;
+  +%s) printf '%s\n' "$FAKE_EPOCH" ;;
+  *)
+    echo "fake date: unexpected arguments: $*" >&2
+    exit 64
+    ;;
+esac

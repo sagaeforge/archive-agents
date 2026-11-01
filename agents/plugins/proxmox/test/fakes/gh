@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Stands in for gh in the doctor tests. It serves GET requests from files in $FAKE_STATE
+# and refuses anything else. A missing file answers as gh does for a refused request.
+# FAKE_GH_DOWN=1 fails every call, as gh does when logged out.
+set -euo pipefail
+
+printf 'gh %s\n' "$*" >>"$FAKE_STATE/commands.log"
+
+if [[ ${1:-} != api || ${2:-} != --method || ${3:-} != GET || $# -ne 4 ]]; then
+  echo "fake gh: unexpected arguments: $*" >&2
+  exit 64
+fi
+
+if [[ -n ${FAKE_GH_DOWN:-} ]]; then
+  echo "To get started with GitHub CLI, please run: gh auth login" >&2
+  exit 4
+fi
+
+case "$4" in
+  repos/sagaeforge/sagae-claude-plugins/actions/runners) file=gh-runners.json ;;
+  repos/sagaeforge/sagae-claude-plugins/actions/workflows/ci.yml/runs\?branch=main\&per_page=1) file=gh-runs.json ;;
+  *)
+    echo "fake gh: unexpected path: $4" >&2
+    exit 64
+    ;;
+esac
+
+if [[ ! -e $FAKE_STATE/$file ]]; then
+  echo "gh: Must have admin rights to Repository. (HTTP 403)" >&2
+  exit 1
+fi
+printf '%s\n' "$(<"$FAKE_STATE/$file")"
