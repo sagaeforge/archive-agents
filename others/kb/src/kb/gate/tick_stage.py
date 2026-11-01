@@ -1,5 +1,5 @@
 """tick 4.5 gate_l1. 4단계 parse가 새로 쓴 결정적 주장(parser_derived)에 9단계 생존 입장만 적용한다.
-G 단위 주어의 liveness가 없으면 claim.review로 needs_review에 묶고 queue(kind=live)에 넣는다.
+G 단위 주어의 liveness가 없으면(kind=event 주장은 제외) claim.review로 needs_review에 묶고 queue(kind=live)에 넣는다.
 커서(tick_state gate_l1:seq)는 원장 seq이다. 파서가 새 스냅샷에서 같은 주장을 다시 내면 parser_derived 새 버전이 되므로
 assert마다 다시 묶는다(_hold_key). 같은 assert를 두 번 보면(커서 저장 전 중단) 키가 같아 이벤트가 늘지 않는다."""
 from __future__ import annotations
@@ -37,6 +37,8 @@ def run(ctx=None) -> StageResult:
         last = max(last, e["seq"])
         p = e.get("payload")
         if e["kind"] != "claim.assert" or not p or p.get("method") != "deterministic" or p.get("verification") != "parser_derived":
+            continue
+        if p.get("kind") == "event":         # event는 생존 보류에서 뺀다(ADR 9.2). 이미 묶인 것은 kb live release-events가 푼다
             continue
         scanned += 1
         subjects.setdefault(p["subject"], {})[p["id"]] = e["seq"]     # 같은 주장은 마지막 assert 하나만 묶는다

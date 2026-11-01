@@ -73,7 +73,7 @@ def check_claim(claim: dict, text: str, paras, ctx: GateCtx, window=None) -> Gat
     if bad:
         codes.append("R_ALIAS_MISMATCH")
         details.append("문장의 다른 엔티티 별칭이 근거에 없다: " + ", ".join(bad[:3]))
-    if ctx.liveness is not None and ctx.subject:                                       # 9
+    if ctx.liveness is not None and ctx.subject and kind != "event":                    # 9. event는 시점이 붙은 역사적 사실이라 생존 보류에서 뺀다(ADR 9.2, 2026-11-01 사용자 결정)
         if ctx.liveness(ctx.subject) == LIVE_CODE:
             codes.append(LIVE_CODE)
             details.append("G 단위 주어의 생존 상태가 없다")

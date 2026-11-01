@@ -193,6 +193,9 @@ Document 2,410, Snapshot 1,539, Claim 1,186, Tool 744, Series 282, Model 250, Fe
 - 옛 게이트 재생 보정 오차는 1점 미만이다. 재생 0.908은 재현되지 않았다(미확인). 가장 가까운 값은 0.822이고, 재생을 실제 운영 상태로 되돌리면 0.451로 내려간다.
 - 측정 자료가 없는 층이 큐 항목의 91.2%다. `--scope public`의 "A-F 우선"은 약 11.3k 항목이고 그중 95%가 pypi-meta(패키지 메타데이터 JSON)다.
 - G 활성 주장 346에서 131로 준 것은 seq 20646의 1회성 정정이다. 346이 부풀려진 값이었다. 보류 692건 중 잘못 보류된 것은 0건이다.
-- 이벤트 주장 343건은 사용자 결정 대기다.
+- 이벤트 주장 보류 제외: 사용자가 2026-11-01에 "event는 보류 제외"로 결정했다. 9단계(`gate_l1`, 인용 게이트)가 `kind=event`를 보류하지 않는다. `state`, `howto`(Repo, Feature, Package 349건 등)는 계속 보류한다.
+- 이미 보류된 event 주장 복구: `kb live release-events`는 개수만 센다. `--apply`가 쓴다(운영 KB_HOME은 `KB_LIVE=1` 필요). 대상은 kind=event이고 현재 needs_review이며 마지막 verification 이벤트가 `gate_l1`의 `R_LIVENESS_UNKNOWN` 보류인 주장뿐이다. 그 뒤에 의존 대상 사망 suspect나 별칭 불일치 같은 다른 검토가 있으면 건드리지 않는다. 키는 `live:release-event:<주장>:<보류 seq>`라 다시 보류된 뒤 두 번째 복구도 실제로 쓴다.
 - `low_yield` 잔여: 빈 창과 유효 창이 번갈아 나오면 작동하지 않는다. 일일 밸브가 상한이다.
 - 이전 "재개 결과"의 `llm:off` 해제는 사용자 결정이 아니었다. 기록을 `by=agent`, `approval=relayed_unverified`로 정정한다.
+- Sol 재개: 사용자의 직접 승인으로 `kb llm reenable`을 돌렸다. 첫 실행은 29창에서 `gate_pass_drop`으로 멈췄다. 수락 48, needs_review 16, rejected 9, 통과 48/73 = 0.658, 비용 $0.2636, 잔액 $144.35.
+- 0.70 미만이라 일일 밸브는 $30으로 두었고 `kb-agent.timer`는 켜지 않았다. 고정 심판은 Claude 7일 활용률이 풀릴 때까지 대기한다. rejected 항목의 코드는 저장되지 않는다.

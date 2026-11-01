@@ -530,7 +530,7 @@ AND coalesce(valid_from, -9e18) <= :v AND (valid_to IS NULL OR valid_to > :v)  -
 | 별칭 | `label`과 `aliases` 중 그 문단에 실제로 나오는 값만 등록한다 |
 | 상태 | `status=active`, `liveness=null`, `props.provisional=true` |
 | 5단계 대조 | 위 별칭으로 대조한다. 실패하면 `R_SUBJECT_CONTEXT` |
-| 생존 | G 단위 타입(repo, package, feature, model, doc)이면 9단계가 `R_LIVENESS_UNKNOWN`으로 보류하고 `queue(kind=live)`에 넣는다. A~F 타입은 보류하지 않는다 |
+| 생존 | G 단위 타입(repo, package, feature, model, doc)이면 9단계가 `R_LIVENESS_UNKNOWN`으로 보류하고 `queue(kind=live)`에 넣는다. A~F 타입은 보류하지 않는다. `kind=event` 주장은 G 단위여도 보류하지 않는다(사용자 결정 2026-11-01, 9.2). `state`, `howto`는 그대로 보류한다 |
 | 병합 | 기존 엔티티와 같다고 확인되면 `entity.merge`다. 주장 ID는 그대로이고 읽기가 최종 대상으로 묶는다(7.5) |
 
 ### 7.7 출처와 표시 본문
@@ -719,7 +719,7 @@ JSON Lines. 첫 줄은 머리다. 이후 줄은 `item`으로 구분한다. MCP�
 
 `liveness.state`: `active renamed scheduled_removal deprecated partial superseded removed stale_suspect revived`.
 
-**죽은 데이터 규칙.** `removed`, `superseded` 대상의 `state`, `howto` 주장은 활성으로 나가지 않는다(`eff_status`). `event` 주장은 시점을 붙여 활성으로 남는다. 현재 유효성을 1차 출처로 확인하지 않은 G 단위는 `liveness` 없이 거부된다.
+**죽은 데이터 규칙.** `removed`, `superseded` 대상의 `state`, `howto` 주장은 활성으로 나가지 않는다(`eff_status`). `event` 주장은 시점을 붙여 활성으로 남는다. 9단계 생존 보류도 `kind=event`에는 걸지 않는다(tick `gate_l1`과 인용 게이트 모두, 2026-11-01). 이미 보류된 것은 `kb live release-events`(기본 dry-run, `--apply`)가 푼다. 현재 유효성을 1차 출처로 확인하지 않은 G 단위는 `liveness` 없이 거부된다.
 
 ### 9.3 검증 명령
 
@@ -953,7 +953,7 @@ env -i HOME="$HOME" PATH="<고정>" LANG=C.UTF-8 DISABLE_AUTOUPDATER=1 RTK_DISAB
 | 6 | 엔티티, 술어 해석: 닫힌 후보. 새 값은 후보 큐 | 주장은 유지 |
 | 7 | 판단어(R6): `해야 한다`, `추천`, `권장`, `should`, `must`, `recommend`, `best practice`, 명령형 문장 | `attributed` + `speaker`가 없으면 소스 발행처로 화자를 확정해 `attributed`로 바꾼다. 확정할 수 없으면 `E_JUDGEMENT` |
 | 8 | 주입 패턴, 제어 문자 | `E_INJECTION`, 격리 |
-| 9 | 생존 입장: 주어 상태 조회. G 단위 주어의 `liveness`가 없으면 보류하고 `queue(kind=live)`에 넣는다. TTL이 지났으면 같은 큐에만 넣는다. 값은 저장하지 않고 `eff_status`로 반영 | `R_LIVENESS_UNKNOWN`, `needs_review` |
+| 9 | 생존 입장: 주어 상태 조회. G 단위 주어의 `liveness`가 없으면 보류하고 `queue(kind=live)`에 넣는다. 단 `kind=event` 주장은 보류하지 않는다(사용자 결정 2026-11-01, `state`, `howto`는 보류). TTL이 지났으면 같은 큐에만 넣는다. 값은 저장하지 않고 `eff_status`로 반영 | `R_LIVENESS_UNKNOWN`, `needs_review` |
 
 통과하면 `quote_found`다. `needs_review`는 저장하되 기본 검색에서 뺀다. 0003 2장의 함의 판정 경로가 `support_check`를 기록하고, 뒷받침되면 `claim.review`로 `quote_found`가 된다. 경로는 OpenRouter `anthropic/claude-sonnet-5.5`(141건 보정 통과 뒤, 일 1,000건 [설정값])이고 대체는 `claude -p --model haiku` 일일 100건이다. 대상은 공개 범위 주장의 `R_VALUE_MISMATCH`, `R_SUBJECT_CONTEXT`, `R_ALIAS_MISMATCH`뿐이고 민감 범위 주장은 `needs_review`로 남는다. 판단어 문장은 이 경로에 오지 않는다. 함의 판정은 인용구가 문장을 뒷받침하는지만 보므로 귀속 없는 판단을 올릴 수 있기 때문이다(RULE-17). `R_LIVENESS_UNKNOWN`은 생존 판정이 끝나면 `claim.review`로 풀린다. 표본 감사도 같은 함수를 쓴다. 결과는 지표로만 쓴다.
 

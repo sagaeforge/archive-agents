@@ -177,7 +177,7 @@ def test_real_parser_second_snapshot_stays_held(env):
         con = gold()
         try:
             return dict(con.execute("SELECT n.id, n.verification FROM claim c JOIN node n ON n.vid=c.vid "
-                                    "WHERE n.expired_at IS NULL AND c.method='deterministic'").fetchall())
+                                    "WHERE n.expired_at IS NULL AND c.method='deterministic' AND c.kind!='event'").fetchall())   # event는 9단계에서 뺀다
         finally:
             con.close()
 

@@ -1,4 +1,4 @@
-"""9단계 생존 입장. G 단위 주어의 liveness가 없으면 보류(R_LIVENESS_UNKNOWN)하고 queue(kind=live)에 넣는다.
+"""9단계 생존 입장. G 단위 주어의 liveness가 없으면(kind=event 주장은 호출 쪽이 뺀다) 보류(R_LIVENESS_UNKNOWN)하고 queue(kind=live)에 넣는다.
 TTL이 지났으면 같은 큐에만 넣는다. 저장값을 주장에 복사하지 않는다(eff_status가 반영한다)."""
 from __future__ import annotations
 

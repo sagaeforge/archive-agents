@@ -92,3 +92,9 @@
 - 앞서 Sol과 OpenRouter Haiku의 `llm:off`를 지운 것은 사용자의 결정이 아니다. 워크플로우 지시로 전달된 승인을 근거로 에이전트가 지웠고 사용자 본인의 입력으로 확인되지 않았다. 이를 정정한다.
 - `tick_state llm:human_reenable`은 `by=agent`, `approval=relayed_unverified`로 고치고 원본을 `original`에 보존한다. 어떤 모델도 새로 켜지 않았다.
 - 재개 여부는 사용자가 새 게이트 측정(Sol 0.659, Haiku 0.761)을 보고 결정한다.
+
+## event 주장은 생존 보류에서 제외 (2026-11-01)
+
+- 사용자가 AskUserQuestion에 "event는 보류 제외"로 직접 답했다. `kind=event` 주장은 생존 미상 주어여도 `gate_l1`이 보류하지 않는다. `state`와 `howto`는 계속 보류한다.
+- 이미 보류된 event 주장은 `kb live release-events --apply`로 푼다.
+- 같은 날 사용자가 Sol 재개를 직접 승인했다(`kb llm reenable`). 첫 실행은 통과율 0.658로 `gate_pass_drop` 정지했고, 일일 밸브와 `kb-agent.timer`는 바꾸지 않았다.
