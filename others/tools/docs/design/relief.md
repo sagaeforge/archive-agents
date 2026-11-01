@@ -25,7 +25,7 @@
 
 **미리 보기.** 합성 fixture를 헤드리스 Chromium으로 그린 그림이다. 실제 이름과 주소는 없다. 위 표시줄과 오른쪽 패널은 고정 HTML이고 아직 동작하지 않는다.
 
-오늘 클러스터 모양(객체 16개). 점선은 추정이고 빈 상자는 미확인이다. Docker 평면은 출처가 없어 내용을 그리지 않았다.
+오늘 클러스터 모양(객체 16개). 점선은 추정이고 빈 상자는 미확인이다. Docker 평면은 출처가 없어 내용을 그리지 않았다(구현에서는 평면 자체를 그리지 않는다, 9.1절).
 
 ![오늘 모양](../research/spikes/s6-isomap/today.png)
 
@@ -96,7 +96,7 @@ sagae 네트워크에서 **무엇이 어디서 돌고, 무엇이 올라오는 �
 | /24 세그먼트 | 브리지 주소에서 묶었다 [측정: Q2] | 옅은 색, 점선(추정) |
 | WAN | 읽을 출처가 없다 [측정: Q4] | 빈 와이어프레임 상자, "WAN 미확인" |
 | VM 100의 IP, OS | guest agent가 돌지 않아 500이다 [측정: Q2] | 패널에 "미확인 · guest agent 응답 없음" |
-| Docker | 출처가 없다 [측정: Q3] | 내용 없는 점선 평면, "Docker 계층 · 출처 없음" |
+| Docker | 출처가 없다 [측정: Q3] | 지도에는 그리지 않는다(빈 평면이 지도를 덮는다, 2026-11-01 사용자 결정). 옆 패널의 계층 줄 "Docker 출처 없음"과 구멍 목록에만 남는다 |
 
 ## 3. 엔티티와 관계 모델
 
@@ -108,6 +108,7 @@ type Snapshot = {
   nodes: Entity[]; edges: Relation[]; sources: SourceStatus[];
   layout: Record<string, { x: number; y: number; w: number; h: number; z: number; zh: number }>;
 };
+// 구현 편차(Phase 1): Snapshot에 `routes: Record<string, [number, number][]>`를 더했다. ELK가 돌려주는 바닥 선 경로이고 브라우저에는 ELK가 없다.
 type Entity = { id: string; kind: Kind; title: string; parent?: string; state: State; basis: Basis; facts: Record<string, Fact<unknown>> };
 type Relation = { id: string; source: string; target: string; kind: RelKind; basis: Basis; facts: Record<string, Fact<unknown>> };
 ```
@@ -330,7 +331,7 @@ type Fact<T> = {
 - **tower 코드:** `/mcp`, bearer, proxmox 업스트림이 이미 있다. 도구 필터나 토큰별 범위를 넣지 않는다. 코어가 400줄 상한에 닿아 다른 줄을 지워야 하고 [출처: `tower.md:819,834`], 같은 UID에는 경계가 되지 않는다.
 - **`tower.json`:** 추가 항목이 없다. 화면 마운트만 선택이다(11절).
 - **플러그인:** 6.3절의 읽기는 전부 기존 도구로 된다. 경로의 응답을 확인했다 [측정: Q1, Q2, Q6]. 없는 읽기가 없으므로 플러그인 변경 제안도 없다.
-- **미확인 하나:** guest agent 두 경로는 agent가 없어 500까지만 봤다 [측정: Q2]. 설치 뒤 403이 나오면 코드가 아니라 기존 토큰의 역할 문제이고 사용자 승인이 필요하다.
+- **guest agent 두 경로는 동작한다** [측정: 2026-11-01, 기존 proxmox MCP `api_get`으로 `agent/network-get-interfaces`와 `agent/get-osinfo`를 읽었다]. 인벤토리 Q2의 500은 그 전 상태였다. relief 코드가 이 경로를 부르는 것은 Phase 3에서 처음 확인한다. 403이 나오면 코드가 아니라 기존 토큰의 역할 문제이고 사용자 승인이 필요하다.
 - **문서:** `tower.md:599`의 토큰 독자에 relief가 더해진다. relief를 구현할 때 고친다.
 
 ## 7. 외부 경계와 Docker
@@ -545,7 +546,7 @@ PVE에는 이벤트나 웹훅 피드가 없어 읽어서 비교한다 [측정: Q
 | 외부 | 바닥 | 도메인, WAN, 모뎀, 게이트웨이, 터널, 프록시, 스위치, Wi-Fi, 클라이언트, 세그먼트, 선 | 왼쪽 뒤에서 오른쪽 앞으로 흐른다 |
 | 노드 | 슬래브 | 노드 슬래브, 위에 브리지, 저장소, BMC. 작업 머신은 게스트 없는 낮은 슬래브 | 솟은 그룹 블록 |
 | 게스트 | 슬래브 위 | VM, LXC | VM이 LXC보다 크고 높다. 색도 다르다 |
-| Docker | 게스트 위 | 낮은 패드 위의 컨테이너 | 출처가 없으면 점선 평면 |
+| Docker | 게스트 위 | 낮은 패드 위의 컨테이너 | 출처가 없고 객체도 없으면 지도에 그리지 않는다(패널에만 표시). 호스트가 생기면 패드와 컨테이너가 나타난다 |
 
 **평면은 층층이 띄우지 않고 포갠다.** 각 계층을 높이 z로 띄워 쌓으면 위 평면이 아래를 가린다. 소속이 곧 높이가 되도록 게스트를 노드 위에, 컨테이너를 게스트 위에 올리면 가림 없이 계층이 보이고 "어디서 도는가"가 그림으로 읽힌다. 스파이크가 이 방식이다. 조사 문서의 띄운 평면 제안 [출처: landscape 5절]을 이렇게 바꿨다.
 
@@ -571,6 +572,7 @@ PVE에는 이벤트나 웹훅 피드가 없어 읽어서 비교한다 [측정: Q
 ### 9.4 옆 패널, 그룹, 검색
 
 - 호버는 이름과 상태, 클릭은 오른쪽 패널이다 [출처: landscape 1절]. 패널은 값마다 근거와 나이를 적는다(`today.png` 오른쪽). 비어 있는 값은 이유와 가장 작은 조치를 적는다.
+- **구현 편차:** Phase 1은 묶음 전환(세그먼트, 태그)을 만들지 않았다. 노드 슬래브가 유일한 묶음이다.
 - 기본 그룹은 노드다. 세그먼트별 묶음을 둘째로 둔다. 태그 묶음은 태그가 하나도 없으므로 [측정: Q1] 태그가 생길 때까지 비활성이고 그 이유를 적는다.
 - 검색은 스냅샷 안의 이름, 주소, 태그를 거르고 맞지 않는 객체를 흐리게 한다 [출처: landscape 1절]. 입력은 NFC로 맞추고 IME 조합 중 발화를 150 ms 디바운스한다 [출처: `loupe.md` 2절].
 - 상태는 URL 해시에 둔다: `#/?mode=iso&overlay=load&sel=pve:qemu:100`. 복사한 링크가 같은 화면을 연다.
@@ -594,6 +596,8 @@ PVE에는 이벤트나 웹훅 피드가 없어 읽어서 비교한다 [측정: Q
 | `1`~`4` | 오버레이 선택 |
 | `+` `-` `0` | 줌, 맞춤 |
 | `/`, `Ctrl+K` | 검색 |
+
+**구현 편차(Phase 1, 2026-11-01):** 표는 `2`를 투영 전환에도, 오버레이 2에도 준다. `2`는 투영 전환에 두고 오버레이는 `1`(상태), `3`(부하), `4`(근거), `5`(신선도)로 옮겼다.
 
 같은 스냅샷을 `role="tree"` 목록으로도 낸다. 스크린 리더용이면서 500개를 훑는 표 대신이다. 객체마다 `aria-label`에 이름, 상태, 근거를 넣는다. 움직임은 `prefers-reduced-motion`을 따른다. 게스트가 솟는 전환은 300 ms다 [가정].
 
@@ -654,7 +658,6 @@ Cloudcraft는 1만 객체를 넘으면 먼저 거르게 한다 [출처: landscap
 ## 11. 패키지와 전달
 
 ```text
-```text
 tools/relief/
   bin/relief.mjs
   server/
@@ -673,6 +676,7 @@ tools/relief/
 | 서버 | hono 4.13.13, @hono/node-server 2.1.5, elkjs 0.12.0 | loupe 설치본과 같은 판 [측정: `tools/loupe/package.json`] |
 | MCP, 검증 | @modelcontextprotocol/client 2.4.0, undici 8.12.2, zod 4.6.7 | tower 설치본과 같은 판 [측정: `tools/tower/package.json:15-23`]. 프로토콜과 `edge.json` 검증을 직접 짜지 않는다 |
 | 화면 | Vite 8.3.5, React 19.3.1, 라우터 없음, 상태는 해시 | 저장소가 이미 아는 스택. 공유 패키지는 만들지 않는다 |
+| 구현 편차(Phase 1) | `@modelcontextprotocol/client`, `undici`, `zod`, `dev/mcp-mock/`는 Phase 2로 미뤘다. Phase 1은 합성 fixture만 읽으므로 쓸 곳이 없다. 가짜 금지 시험은 mcp-mock 대신 생성기로 돌린다. fixture에 생성형 `scale`(547객체, 파일 없음)을 더했다 | 500객체 측정용 |
 | 쓰지 않음 | `@modelcontextprotocol/server`(시험용 mock 제외), Docker SDK, three.js, 상태 관리 라이브러리 | 필요가 없다 |
 | 포트 | 설치본 4815, dev 4816, mcp-mock 4817 | 4800, 4810~4813, 4836이 쓰이는 중이고 4815~4817은 문서와 설정에 없다 [측정: grep] |
 
@@ -840,11 +844,11 @@ VM 100 설치의 실행 시점은 Phase 3 전이면 된다. 플러그인 저장�
 
 | 구분 | 내용 |
 |---|---|
-| 측정 | 클러스터 모양, 빈 SDN과 방화벽, 응답 크기와 지연, guest agent 500, 403 범위(2026-11-01, 인벤토리). S6의 SVG 요소 수, 크기, 안정성, 라벨 검사, ELK 시간 |
+| 측정 | 클러스터 모양, 빈 SDN과 방화벽, 응답 크기와 지연, 403 범위(2026-11-01, 인벤토리). guest agent 읽기: 같은 날 기존 proxmox MCP `api_get`으로 `agent/network-get-interfaces`와 `agent/get-osinfo`가 동작했다. 인벤토리의 "agent가 없어 500"은 그 전 상태다. S6의 SVG 요소 수, 크기, 안정성, 라벨 검사, ELK 시간 |
 | 출처 | Cloudcraft 동작, 렌더러 번들 크기, Tecnativa `haproxy.cfg`, wollomatic README, Docker API v1.47, tower 소스와 설계, proxmox 플러그인 소스(코드 읽기, 실행하지 않음) |
 | 가정 | 태스크 이름과 '진행 중' 판정, 모든 지연과 메모리 예산, 팬·줌 성능, SSH 강제 명령 동작, Orca 탭의 SVG 비용, 500객체의 실제 PVE 응답 크기, 사실을 담은 스냅샷 크기, vmid·컨테이너 이름의 안정성, Q6 결과 한도가 Claude Code 쪽이라는 판단, 호출 기한과 응답 상한, 호출 로그 줄 수, 공인 IP 관측 방식 |
 | 미검증 | 19절의 라우터와 BMC 읽기 경로. 검색 요약이 근거이고 장비에서 확인하지 않았다 |
-| 재지 않음 | relief에서 tower를 지나는 실제 왕복, 실제 bearer로 띄운 MCP 클라이언트의 401 처리, 실행 중인 guest agent의 응답, 실제 GPU에서의 SVG 팬과 줌, 실제 클러스터 데이터로 그린 지도. 이 문서의 어떤 그림도 실제 데이터가 아니다 |
+| 재지 않음 | relief에서 tower를 지나는 실제 왕복, 실제 bearer로 띄운 MCP 클라이언트의 401 처리, relief 코드가 부르는 guest agent 읽기(수동 `api_get` 읽기만 확인했다), 실제 GPU에서의 SVG 팬과 줌, 실제 클러스터 데이터로 그린 지도. 이 문서의 어떤 그림도 실제 데이터가 아니다 |
 
 ## 19. 성장 경로: 내부 하드웨어 관리 도구
 

@@ -1,0 +1,593 @@
+{
+ "schema": 1,
+ "seq": 1,
+ "takenAt": "2026-11-01T09:00:00.000Z",
+ "nodes": [
+  {
+   "id": "decl:wan:none",
+   "kind": "wan",
+   "title": "WAN 미확인",
+   "basis": "unknown",
+   "state": "unknown",
+   "facts": {
+    "state": {
+     "value": null,
+     "basis": "unknown",
+     "source": "edge.json",
+     "at": null,
+     "ttlS": null,
+     "why": "WAN을 읽을 출처가 없다"
+    }
+   }
+  },
+  {
+   "id": "net:gw:192.0.2.1",
+   "kind": "gateway",
+   "title": "게이트웨이 192.0.2.1",
+   "basis": "derived",
+   "state": "unknown",
+   "facts": {
+    "state": {
+     "value": null,
+     "basis": "unknown",
+     "source": "rule:same-default-gateway",
+     "at": null,
+     "ttlS": null,
+     "why": "장비 종류를 모른다"
+    },
+    "address": {
+     "value": "192.0.2.1",
+     "basis": "derived",
+     "source": "rule:same-default-gateway",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": null
+    }
+   }
+  },
+  {
+   "id": "net:seg:192.0.2.0/24",
+   "kind": "segment",
+   "title": "192.0.2.0/24",
+   "basis": "derived",
+   "state": "ok",
+   "facts": {
+    "cidr": {
+     "value": "192.0.2.0/24",
+     "basis": "derived",
+     "source": "rule:same-subnet",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": null
+    }
+   }
+  },
+  {
+   "id": "pve:node:node-1",
+   "kind": "node",
+   "title": "노드 1",
+   "basis": "observed",
+   "state": "ok",
+   "facts": {
+    "state": {
+     "value": "online",
+     "basis": "observed",
+     "source": "pve:/cluster/status",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "address": {
+     "value": "192.0.2.11",
+     "basis": "observed",
+     "source": "pve:/nodes/network",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "cpu": {
+     "value": 0.11,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "mem": {
+     "value": 0.23,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "disk": {
+     "value": 0.49,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    }
+   }
+  },
+  {
+   "id": "pve:br:node-1:vmbr0",
+   "kind": "bridge",
+   "title": "vmbr0",
+   "basis": "observed",
+   "state": "ok",
+   "facts": {
+    "state": {
+     "value": "up",
+     "basis": "observed",
+     "source": "pve:/nodes/network",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "vlan": {
+     "value": null,
+     "basis": "observed",
+     "source": "pve:/nodes/network",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    }
+   },
+   "parent": "pve:node:node-1"
+  },
+  {
+   "id": "pve:st:node-1:local",
+   "kind": "storage",
+   "title": "local",
+   "basis": "observed",
+   "state": "ok",
+   "facts": {
+    "state": {
+     "value": "active",
+     "basis": "observed",
+     "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "disk": {
+     "value": 0.66,
+     "basis": "observed",
+     "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    }
+   },
+   "parent": "pve:node:node-1"
+  },
+  {
+   "id": "pve:st:node-1:local-lvm",
+   "kind": "storage",
+   "title": "local-lvm",
+   "basis": "observed",
+   "state": "ok",
+   "facts": {
+    "state": {
+     "value": "active",
+     "basis": "observed",
+     "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "disk": {
+     "value": 0.52,
+     "basis": "observed",
+     "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    }
+   },
+   "parent": "pve:node:node-1"
+  },
+  {
+   "id": "pve:qemu:100",
+   "kind": "vm",
+   "title": "VM 100",
+   "basis": "observed",
+   "state": "running",
+   "facts": {
+    "state": {
+     "value": "running",
+     "basis": "observed",
+     "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "cpu": {
+     "value": 0.18,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "mem": {
+     "value": 0.25,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "disk": {
+     "value": 0.1,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "nic": {
+     "value": "net0 → vmbr0, VLAN 없음",
+     "basis": "observed",
+     "source": "pve:/nodes/qemu/config",
+     "at": "2026-11-01T08:56:00.000Z",
+     "ttlS": 900
+    },
+    "ip": {
+     "value": null,
+     "basis": "unknown",
+     "source": "pve:/nodes/qemu/agent/network-get-interfaces",
+     "at": null,
+     "ttlS": null,
+     "why": "guest agent 응답 없음"
+    },
+    "os": {
+     "value": null,
+     "basis": "unknown",
+     "source": "pve:/nodes/qemu/agent/get-osinfo",
+     "at": null,
+     "ttlS": null,
+     "why": "guest agent 응답 없음"
+    },
+    "docker": {
+     "value": null,
+     "basis": "unknown",
+     "source": "docker:",
+     "at": null,
+     "ttlS": null,
+     "why": "출처 없음"
+    },
+    "fw": {
+     "value": 0,
+     "basis": "observed",
+     "source": "pve:/nodes/firewall/rules",
+     "at": "2026-11-01T08:56:00.000Z",
+     "ttlS": 900
+    },
+    "tags": {
+     "value": [],
+     "basis": "observed",
+     "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    }
+   },
+   "parent": "pve:node:node-1"
+  },
+  {
+   "id": "pve:node:node-2",
+   "kind": "node",
+   "title": "노드 2",
+   "basis": "observed",
+   "state": "ok",
+   "facts": {
+    "state": {
+     "value": "online",
+     "basis": "observed",
+     "source": "pve:/cluster/status",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "address": {
+     "value": "192.0.2.12",
+     "basis": "observed",
+     "source": "pve:/nodes/network",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "cpu": {
+     "value": 0.43,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "mem": {
+     "value": 0.56,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "disk": {
+     "value": 0.2,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    }
+   }
+  },
+  {
+   "id": "pve:br:node-2:vmbr0",
+   "kind": "bridge",
+   "title": "vmbr0",
+   "basis": "observed",
+   "state": "ok",
+   "facts": {
+    "state": {
+     "value": "up",
+     "basis": "observed",
+     "source": "pve:/nodes/network",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "vlan": {
+     "value": null,
+     "basis": "observed",
+     "source": "pve:/nodes/network",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    }
+   },
+   "parent": "pve:node:node-2"
+  },
+  {
+   "id": "pve:st:node-2:local",
+   "kind": "storage",
+   "title": "local",
+   "basis": "observed",
+   "state": "ok",
+   "facts": {
+    "state": {
+     "value": "active",
+     "basis": "observed",
+     "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "disk": {
+     "value": 0.22,
+     "basis": "observed",
+     "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    }
+   },
+   "parent": "pve:node:node-2"
+  },
+  {
+   "id": "pve:st:node-2:local-lvm",
+   "kind": "storage",
+   "title": "local-lvm",
+   "basis": "observed",
+   "state": "ok",
+   "facts": {
+    "state": {
+     "value": "active",
+     "basis": "observed",
+     "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "disk": {
+     "value": 0.71,
+     "basis": "observed",
+     "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    }
+   },
+   "parent": "pve:node:node-2"
+  },
+  {
+   "id": "pve:node:node-3",
+   "kind": "node",
+   "title": "노드 3",
+   "basis": "observed",
+   "state": "ok",
+   "facts": {
+    "state": {
+     "value": "online",
+     "basis": "observed",
+     "source": "pve:/cluster/status",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "address": {
+     "value": "192.0.2.13",
+     "basis": "observed",
+     "source": "pve:/nodes/network",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "cpu": {
+     "value": 0.41,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "mem": {
+     "value": 0.3,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "disk": {
+     "value": 0.25,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    }
+   }
+  },
+  {
+   "id": "pve:br:node-3:vmbr0",
+   "kind": "bridge",
+   "title": "vmbr0",
+   "basis": "observed",
+   "state": "ok",
+   "facts": {
+    "state": {
+     "value": "up",
+     "basis": "observed",
+     "source": "pve:/nodes/network",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "vlan": {
+     "value": null,
+     "basis": "observed",
+     "source": "pve:/nodes/network",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    }
+   },
+   "parent": "pve:node:node-3"
+  },
+  {
+   "id": "pve:st:node-3:local",
+   "kind": "storage",
+   "title": "local",
+   "basis": "observed",
+   "state": "ok",
+   "facts": {
+    "state": {
+     "value": "active",
+     "basis": "observed",
+     "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "disk": {
+     "value": 0.33,
+     "basis": "observed",
+     "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    }
+   },
+   "parent": "pve:node:node-3"
+  },
+  {
+   "id": "pve:st:node-3:local-lvm",
+   "kind": "storage",
+   "title": "local-lvm",
+   "basis": "observed",
+   "state": "ok",
+   "facts": {
+    "state": {
+     "value": "active",
+     "basis": "observed",
+     "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "disk": {
+     "value": 0.53,
+     "basis": "observed",
+     "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    }
+   },
+   "parent": "pve:node:node-3"
+  }
+ ],
+ "edges": [
+  {
+   "id": "e-wan-gw",
+   "source": "decl:wan:none",
+   "target": "net:gw:192.0.2.1",
+   "kind": "wan",
+   "basis": "unknown",
+   "facts": {}
+  },
+  {
+   "id": "e-gw-seg1",
+   "source": "net:gw:192.0.2.1",
+   "target": "net:seg:192.0.2.0/24",
+   "kind": "route",
+   "basis": "derived",
+   "facts": {}
+  },
+  {
+   "id": "e-up-node-1-0",
+   "source": "net:seg:192.0.2.0/24",
+   "target": "pve:node:node-1",
+   "kind": "uplink",
+   "basis": "observed",
+   "facts": {
+    "via": {
+     "value": "pve:br:node-1:vmbr0",
+     "basis": "observed",
+     "source": "pve:/nodes/network",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    }
+   }
+  },
+  {
+   "id": "e-attach-100",
+   "source": "pve:br:node-1:vmbr0",
+   "target": "pve:qemu:100",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-up-node-2-0",
+   "source": "net:seg:192.0.2.0/24",
+   "target": "pve:node:node-2",
+   "kind": "uplink",
+   "basis": "observed",
+   "facts": {
+    "via": {
+     "value": "pve:br:node-2:vmbr0",
+     "basis": "observed",
+     "source": "pve:/nodes/network",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    }
+   }
+  },
+  {
+   "id": "e-up-node-3-0",
+   "source": "net:seg:192.0.2.0/24",
+   "target": "pve:node:node-3",
+   "kind": "uplink",
+   "basis": "observed",
+   "facts": {
+    "via": {
+     "value": "pve:br:node-3:vmbr0",
+     "basis": "observed",
+     "source": "pve:/nodes/network",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    }
+   }
+  }
+ ],
+ "sources": [
+  {
+   "id": "pve",
+   "state": "ok",
+   "count": 4,
+   "at": "2026-11-01T08:59:48.000Z"
+  },
+  {
+   "id": "edge",
+   "state": "none",
+   "count": null,
+   "at": null,
+   "why": "출처 없음"
+  },
+  {
+   "id": "docker",
+   "state": "none",
+   "count": null,
+   "at": null,
+   "why": "출처 없음"
+  }
+ ],
+ "layout": {},
+ "routes": {}
+}

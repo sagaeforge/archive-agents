@@ -1,0 +1,11 @@
+{
+ "objects": 547,
+ "svgElements": 2911,
+ "labels": 15,
+ "loadMs": 127,
+ "panFrameMs": {
+  "p50": 17,
+  "p95": 17
+ },
+ "note": "headless Chromium, software raster, N=1"
+}

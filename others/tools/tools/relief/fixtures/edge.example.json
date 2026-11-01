@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "declaredAt": "2026-11-01",
+  "reviewBy": "2027-02-01",
+  "natLayers": 1,
+  "lines": [{ "key": "line-a", "title": "회선 A", "isp": "예시 통신", "medium": "fiber", "downMbps": 1000, "upMbps": 1000, "addressing": "unknown" }],
+  "modem": { "key": "modem", "title": "통신사 모뎀", "line": "line-a", "mode": "bridge", "allPortsTo": "edge", "model": "예시 모뎀" },
+  "router": { "key": "edge", "title": "거실 공유기", "vendor": "예시 제조사", "model": "예시 모델", "firmware": "1.0.0", "uplink": "modem",
+              "address": "192.0.2.1", "lanCidr": "192.0.2.0/24", "dhcpRange": ["192.0.2.100", "192.0.2.199"] },
+  "dnsRecords": [{ "key": "site", "provider": "example-registrar", "hostname": "home.example.com", "type": "A", "value": "203.0.113.10", "managedBy": "hand", "target": "edge" }],
+  "ddns": [],
+  "portForwards": [],
+  "addressPlan": [
+    { "key": "servers", "title": "서버", "from": "192.0.2.10", "to": "192.0.2.19" },
+    { "key": "mgmt", "title": "BMC", "from": "192.0.2.30", "to": "192.0.2.39" }
+  ],
+  "hosts": [
+    { "key": "node-1", "title": "노드 1", "kind": "pve-node", "pveNode": "node-1", "plan": "servers",
+      "lease": { "address": "192.0.2.11", "seenAt": "2026-11-01" },
+      "bmc": { "interface": "dedicated", "plan": "mgmt", "lease": { "address": "192.0.2.31", "seenAt": "2026-11-01" } } },
+    { "key": "node-2", "title": "노드 2", "kind": "pve-node", "pveNode": "node-2", "plan": "servers",
+      "lease": { "address": "192.0.2.12", "seenAt": "2026-11-01" },
+      "bmc": { "interface": "dedicated", "plan": "mgmt", "lease": { "address": "192.0.2.32", "seenAt": "2026-11-01" } } },
+    { "key": "node-3", "title": "노드 3", "kind": "pve-node", "pveNode": "node-3", "plan": "servers",
+      "lease": { "address": "192.0.2.140", "seenAt": "2026-11-01" },
+      "bmc": { "interface": "unknown" } },
+    { "key": "workstation", "title": "작업 머신", "kind": "workstation",
+      "lease": { "address": "192.0.2.150", "seenAt": "2026-11-01" }, "bmc": "none" }
+  ],
+  "vpn": [],
+  "wifi": [{ "key": "main", "title": "기본 Wi-Fi", "bands": ["2.4", "5"], "enabled": true }],
+  "clients": [{ "key": "mobile", "title": "휴대 기기", "via": "main", "presence": "intermittent",
+                "devices": [{ "key": "phone-a", "title": "전화기 A", "kind": "phone" }, { "key": "tablet-a", "title": "태블릿 A", "kind": "tablet" }] }],
+  "switches": [{ "key": "rack", "title": "랙 스위치", "model": "예시 스위치", "ports": 8, "uplink": "edge",
+                 "hosts": ["node-1", "node-2", "node-3", "workstation"] }],
+  "proxies": []
+}
