@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createApi } from '../server/app.ts';
-import { guard } from '../server/guard.ts';
+import { APP_CSP, guard, META_CSP } from '../server/guard.ts';
 import { loadFixture, rebase } from '../server/snapshot.ts';
 import { freshness, staleIds, type Snapshot } from '../server/model/fact.ts';
 
@@ -26,6 +26,13 @@ describe('Host, Origin and Fetch Metadata', () => {
   it('a cross-site navigation is allowed, a cross-site fetch is not', () => {
     expect(guard(h({ host: '127.0.0.1', 'sec-fetch-site': 'cross-site', 'sec-fetch-mode': 'navigate' }))).toBeNull();
     expect(guard(h({ host: '127.0.0.1', 'sec-fetch-site': 'same-site', 'sec-fetch-mode': 'cors' }))?.code).toBe('cross_site_rejected');
+  });
+});
+
+describe('content security policy', () => {
+  it('no page may frame relief, and the <meta> copy leaves out what a meta tag cannot carry', () => {
+    expect(APP_CSP).toContain("frame-ancestors 'none'");
+    expect(META_CSP).not.toContain('frame-ancestors');
   });
 });
 

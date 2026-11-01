@@ -2,7 +2,7 @@ import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { getRequestListener } from '@hono/node-server';
 import { createApi } from './server/app.ts';
-import { APP_CSP, guard } from './server/guard.ts';
+import { guard, META_CSP } from './server/guard.ts';
 
 // Dev: Vite plays the part of `relief serve`. The same guard runs before everything, Vite's own files included.
 const reliefApi = (): Plugin => ({
@@ -21,7 +21,7 @@ const reliefApi = (): Plugin => ({
 // Build only: the dev server needs Vite's inline scripts. `server/main.ts` also sends the policy as a header.
 const cspMeta = (): Plugin => ({
   name: 'relief-csp-meta', apply: 'build',
-  transformIndexHtml: () => [{ tag: 'meta', attrs: { 'http-equiv': 'Content-Security-Policy', content: APP_CSP }, injectTo: 'head-prepend' }],
+  transformIndexHtml: () => [{ tag: 'meta', attrs: { 'http-equiv': 'Content-Security-Policy', content: META_CSP }, injectTo: 'head-prepend' }],
 });
 
 export default defineConfig({

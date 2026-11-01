@@ -53,7 +53,8 @@ export function floorRect(s: Snapshot): Rect {
 }
 
 export function stateSuffix(n: Entity, stale: boolean): string {
-  const st = n.state === 'starting' || n.state === 'error' || n.state === 'stopped' || n.state === 'stopping' || n.state === 'migrating' ? ` · ${STATE_LABEL[n.state]}` : '';
+  if (n.gone) return ' · 사라짐';
+  const st = n.state === 'creating' || n.state === 'starting' || n.state === 'error' || n.state === 'stopped' || n.state === 'stopping' || n.state === 'migrating' ? ` · ${STATE_LABEL[n.state]}` : '';
   return st + (stale ? ' · 낡음' : '');
 }
 
@@ -70,7 +71,7 @@ export function buildScene(s: Snapshot, o: SceneOpts): Scene {
 
   const fillFor = (n: Entity, kindKey: Kind | 'dockerhost'): string => {
     const base = KIND_COLOR[kindKey];
-    if (n.basis === 'unknown') return '#ffffff';
+    if (n.basis === 'unknown' || n.gone) return '#ffffff';
     switch (o.overlay) {
       case 'basis': return BASIS_COLOR[n.basis];
       case 'fresh': return n.basis === 'observed' ? freshColor(n, o.nowMs) : NEUTRAL;
@@ -82,7 +83,7 @@ export function buildScene(s: Snapshot, o: SceneOpts): Scene {
   const box = (n: Entity, kindKey: Kind | 'dockerhost') => {
     const b = s.layout[n.id]; if (!b) return;
     const { x, y, w, h, z, zh } = b;
-    const hollow = n.basis === 'unknown';
+    const hollow = n.basis === 'unknown' || !!n.gone;
     const base = fillFor(n, kindKey);
     const fill = n.basis === 'derived' ? tint(base, 0.55) : base;
     const top = [P(x, y, z + zh), P(x + w, y, z + zh), P(x + w, y + h, z + zh), P(x, y + h, z + zh)];

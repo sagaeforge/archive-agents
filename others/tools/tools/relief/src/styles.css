@@ -8,6 +8,7 @@ header b{font-size:15px}
 .seg button.on{background:#1d2530;color:#fff}
 .seg button:focus-visible,.tabs button:focus-visible,.holes button:focus-visible,.tree li:focus-visible{outline:2px solid #0b3fbf;outline-offset:-2px}
 .seg.chip{margin-left:auto;padding-left:10px;color:#55617a;gap:2px}
+.seg.chip.live{flex:none;padding:3px 12px;white-space:nowrap;overflow:visible}
 .search{width:170px;padding:4px 8px;border:1px solid #c3ccd8;border-radius:5px;font:inherit}
 main{position:relative;display:grid;grid-template-rows:1fr auto;min-width:0;min-height:0}
 .map{position:relative;overflow:hidden;cursor:grab;outline:none;min-height:0;touch-action:none}

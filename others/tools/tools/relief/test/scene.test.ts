@@ -113,3 +113,20 @@ describe.each([['today', today], ['large', large]] as const)('labels on %s', (_n
     expect(placed.map((p) => p.id)).toEqual(['high']); expect(hidden).toEqual(['low']);
   });
 });
+
+describe('a gone object (design 4)', () => {
+  it('is an outline with its own label, whatever its state was', async () => {
+    const s = await laid(today());
+    const id = 'pve:qemu:100';
+    const marked = { ...s, nodes: s.nodes.map((n) => (n.id === id ? { ...n, gone: true } : n)) };
+    const o = buildScene(marked, opts(1));
+    const prim = o.prims.find((p) => p.t === 'obj' && p.id === id);
+    expect(prim?.t === 'obj' && prim.faces.every((f) => f.fill === '#ffffff' && f.dash)).toBe(true);
+    expect(o.labels.find((l) => l.id === id)?.text).toBe('VM 100 · 사라짐');
+  });
+  it('a guest being created is labelled', async () => {
+    const s = await laid(today());
+    const marked = { ...s, nodes: s.nodes.map((n) => (n.id === 'pve:qemu:100' ? { ...n, state: 'creating' as const } : n)) };
+    expect(buildScene(marked, opts(1)).labels.find((l) => l.id === 'pve:qemu:100')?.text).toBe('VM 100 · 생성 중');
+  });
+});

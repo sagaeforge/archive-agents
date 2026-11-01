@@ -20,7 +20,10 @@ export function guard(header: (name: string) => string | undefined): Rejection |
 }
 
 /** The browser reads nothing but this origin. */
-export const APP_CSP = [
+const POLICY = [
   "default-src 'none'", "script-src 'self'", "style-src 'self' 'unsafe-inline'", "img-src 'self' data:", "font-src 'self'",
   "connect-src 'self'", "base-uri 'none'", "form-action 'none'",
-].join('; ');
+];
+/** For the <meta> tag, where a browser ignores frame-ancestors and logs an error for it. */
+export const META_CSP = POLICY.join('; ');
+export const APP_CSP = [...POLICY, "frame-ancestors 'none'"].join('; ');

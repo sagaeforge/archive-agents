@@ -1,7 +1,7 @@
-// relief, Phase 1: a static map of a fixture. Header, map, side panel; state in the URL hash.
+// relief: the live map, or a fixture on the fixture server. Header, map, side panel; state in the URL hash.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Snapshot } from '../server/model/fact.ts';
-import { neighbour, searchMatches, type Dir } from './model.ts';
+import { applyMetrics, neighbour, searchMatches, type Dir, type Metrics } from './model.ts';
 import { canvasMeasure, placeLabels } from './scene/labels.ts';
 import { buildScene, sceneBounds } from './scene/paint.ts';
 import { SceneSvg } from './scene/SceneSvg.tsx';
@@ -35,7 +35,8 @@ function useHashView(): [View, (f: (v: View) => View) => void] {
 
 export function App() {
   const [view, setView] = useHashView();
-  const [snap, setSnap] = useState<Snapshot | null>(null);
+  const [read, setRead] = useState<Snapshot | null>(null);
+  const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [nowMs, setNow] = useState(() => Date.now());
   const [size, setSize] = useState({ w: 900, h: 700 });
@@ -46,22 +47,45 @@ export function App() {
   const mapRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // One read per 5 s while the tab is visible (design 8). Phase 2 makes it conditional on seq.
+  // One conditional read per 5 s while the tab is visible (design 8). `today` asks for no fixture: the live server has none, the fixture server defaults to it.
   useEffect(() => {
     let alive = true;
+    let etag: string | null = null;
+    const path = view.fx === 'today' ? 'api/snapshot' : `api/snapshot?fixture=${view.fx}`;
     const load = async () => {
       if (document.hidden) return;
       try {
-        const r = await fetch(new URL(`api/snapshot?fixture=${view.fx}`, document.baseURI), { cache: 'no-store' });
+        const r = await fetch(new URL(path, document.baseURI), { cache: 'no-store', headers: etag ? { 'if-none-match': etag } : {} });
+        // Age is computed here, so an unchanged answer still has to move the clock: that is how a dead source goes stale on screen.
+        if (r.status === 304) { if (alive) { setNow(Date.now()); setError(null); } return; }
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const s = (await r.json()) as Snapshot;
-        if (alive) { setSnap(s); setNow(Date.now()); setError(null); }
+        etag = r.headers.get('etag');
+        if (alive) { setRead(s); setNow(Date.now()); setError(null); }
       } catch (e) { if (alive) setError(String(e instanceof Error ? e.message : e).slice(0, 200)); }
     };
     void load();
     const t = setInterval(load, 5000);
     return () => { alive = false; clearInterval(t); };
   }, [view.fx]);
+
+  const liveMap = read?.origin === 'live';
+
+  // The load overlay reads metrics on its own, and only while it is on: the server calls PVE for them only then (design 8).
+  useEffect(() => {
+    if (!liveMap || view.overlay !== 'load') { setMetrics(null); return; }
+    let alive = true;
+    const load = async () => {
+      if (document.hidden) return;
+      try { const r = await fetch(new URL('api/metrics', document.baseURI), { cache: 'no-store' }); if (r.ok && alive) setMetrics((await r.json()) as Metrics); } catch { /* the snapshot's last values stay */ }
+    };
+    void load();
+    const t = setInterval(load, 15_000);
+    return () => { alive = false; clearInterval(t); };
+  }, [liveMap, view.overlay]);
+
+  const snap = useMemo(() => (read ? applyMetrics(read, metrics) : null), [read, metrics]);
+  const failing = liveMap ? read?.sources.find((x) => x.state === 'failing') : undefined;
 
   useEffect(() => {
     const el = mapRef.current; if (!el) return;
@@ -188,17 +212,18 @@ export function App() {
           <button type="button" aria-label="맞춤" onClick={resetCamera}>맞춤</button>
           <button type="button" aria-label="확대" onClick={() => setZoomAt((z) => z * 1.25)}>+</button>
         </div>
-        <div className="seg chip" role="group" aria-label="fixture">
+        {liveMap ? <div className="seg chip live" data-testid="live">실제 클러스터</div> : <div className="seg chip" role="group" aria-label="fixture">
           합성 fixture
           <button type="button" className={view.fx === 'today' ? 'on' : ''} onClick={() => setView((v) => ({ ...DEFAULT_VIEW, ...v, fx: 'today', sel: null, open: false }))} data-testid="fx-today">오늘 모양</button>
           <button type="button" className={view.fx === 'large' ? 'on' : ''} onClick={() => setView((v) => ({ ...v, fx: 'large', sel: null, open: false }))} data-testid="fx-large">299개</button>
-        </div>
+        </div>}
       </header>
       <main>
         <div className="map" ref={mapRef} tabIndex={0} role="application" aria-label="지도. 화살표로 객체 이동, 2는 3D와 2D 전환" data-testid="map"
           onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp}>
           {scene && labels ? <SceneSvg prims={scene.prims} labels={labels.placed} hiddenLod={labels.lodHidden.length} hiddenCollision={labels.hidden.length} view={[rect.x, rect.y, rect.w, rect.h]} /> : <p className="loading">{error ? `읽지 못했다: ${error}` : '불러오는 중'}</p>}
           {error && snap ? <p className="stalebar">갱신 실패 · 마지막 값 · {error}</p> : null}
+          {!error && failing ? <p className="stalebar" data-testid="source-failing">수집 실패 · {failing.why ?? '이유 없음'} · 마지막 값</p> : null}
         </div>
         <div className="legend" data-testid="legend">
           <h4>근거</h4>

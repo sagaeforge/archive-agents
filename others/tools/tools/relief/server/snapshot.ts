@@ -20,7 +20,7 @@ async function build(name: FixtureName): Promise<Snapshot> {
   const bad = validateSnapshot(raw);
   if (bad.length) throw new Error(`fixture ${name}: ${bad.slice(0, 3).join('; ')}`);
   const { layout, routes } = await layoutSnapshot(raw);
-  return { ...raw, layout, routes };
+  return { ...raw, origin: 'fixture', layout, routes };
 }
 
 const isTime = (v: string | null | undefined): v is string => typeof v === 'string' && v.includes('T');

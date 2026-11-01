@@ -596,7 +596,7 @@ printf '{"Authorization":"Bearer %s"}' "$(cat "$HOME/.config/tower/token")"
 ```
 
 - **허용 규칙의 위치.** 와일드카드 `mcp__plugin_tower_tower__*`는 사용자 설정(`~/.claude/settings.json`)에 둔다. 프로젝트 `.claude/settings.json`의 `permissions.allow`는 신뢰하지 않는 작업 공간에서 버려진다. `-p`에서 `Dropped 1 project-scoped permissions.allow entry — workspace not yet trusted`가 찍히고 허용된 도구까지 4건 모두 거부됐다 [측정, Claude Code 2.1.316, N=1]. tower의 문제가 아니라 Claude Code의 동작이다. `--settings`로 주는 규칙은 먹는다.
-- **토큰 파일.** 플러그인의 helper는 자격 이름이 들어간 환경변수를 받지 못하므로 파일에서 읽어야 한다 [문서]. `~/.config/tower/token`은 tower와 helper가 같이 읽는 단일 원본이다. 저장소에도 Claude Code 설정에도 값이 없다.
+- **토큰 파일.** 플러그인의 helper는 자격 이름이 들어간 환경변수를 받지 못하므로 파일에서 읽어야 한다 [문서]. `~/.config/tower/token`은 tower, helper, relief가 같이 읽는 단일 원본이다. relief는 값을 복사하지 않고 실행 중에 읽는다. 저장소에도 Claude Code 설정에도 값이 없다.
 - **교체.** 파일을 덮어쓰면 tower가 새 값을 쓴다. 다음 호출이 401을 받으면 Claude Code가 helper를 다시 돌려 재연결하고 한 번 재시도한다 [문서]. `headersHelper`로 연결하는 것은 실제 Claude Code에서 확인했다. 디버그 로그에 `Executing headersHelper`와 `Successfully retrieved 1 headers`가 찍히고 토큰 값은 찍히지 않았다. 다만 이 확인은 `--mcp-config` 파일 등록이었고 `${CLAUDE_PLUGIN_ROOT}` 확장은 시험하지 않았다 [측정, N=1].
 - **15분 skip.** 플러그인 연결 실패 캐시는 stdio 서버에만 해당한다 [문서]. HTTP 플러그인은 걸리지 않는다.
 - **`timeout`이 필요한 이유.** S1의 70 s 통과는 raw SDK 클라이언트 결과다. Claude Code는 HTTP 서버에만 있는 요청별 첫 응답 바이트 타이머가 있다 [문서]. tower의 기본 응답은 결과가 나올 때 한 번에 나가므로 [소스], progress 없는 도구는 60 s에 끊긴다. 실제 Claude Code로 재현했다. `timeout: 1860000`이 있으면 말 없는 70 s 도구가 74.7 s 만에 `held 70002 ms`로 돌아왔고, 없으면 약 60 s에 `The operation timed out.`으로 실패했다(tower 로그는 `canceled`, `CONNECTION_CLOSED`, 60,000 ms) [측정, `-p`, N=1]. stdio를 직접 등록할 때는 없던 제한이 tower 뒤로 옮기면 생긴다.

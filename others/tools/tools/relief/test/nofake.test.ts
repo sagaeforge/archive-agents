@@ -41,6 +41,10 @@ describe('the checker itself', () => {
 });
 
 describe('0 and unknown are different (design 4)', () => {
+  it('a failing source that never read says it has no value', () => {
+    const s = today(); const p = s.sources.find((x) => x.id === 'pve')!; p.state = 'failing'; p.why = 'tower 응답 없음'; p.at = null;
+    expect(find(s, '노드')).toBe('수집 실패 · tower 응답 없음 · 값 없음');
+  });
   const find = (s: ReturnType<typeof today>, tier: string) => tierCards(s, NOW).find((c) => c.tier === tier)!.text;
   it('today: Docker has no source, guests were read and there are none beyond the VM', () => {
     const s = today();
@@ -55,6 +59,6 @@ describe('0 and unknown are different (design 4)', () => {
   });
   it('a failing source says failure and keeps its last value', () => {
     const s = today(); const p = s.sources.find((x) => x.id === 'pve')!; p.state = 'failing'; p.why = 'tower 응답 없음';
-    expect(find(s, '노드')).toBe('수집 실패 · tower 응답 없음');
+    expect(find(s, '노드')).toBe('수집 실패 · tower 응답 없음 · 12초 전');
   });
 });

@@ -1,5 +1,5 @@
 // What the panel, the tree and the keyboard read from a snapshot. Pure functions; the components only draw them.
-import { staleIds, type Entity, type Fact, type Kind, type Snapshot, type SourceStatus } from '../server/model/fact.ts';
+import { ageS, ageText, staleIds, type Entity, type Fact, type Kind, type Snapshot, type SourceStatus } from '../server/model/fact.ts';
 import { project, type Mode } from './scene/project.ts';
 
 export const KIND_LABEL: Record<Kind, string> = {
@@ -9,6 +9,7 @@ export const KIND_LABEL: Record<Kind, string> = {
 export const FACT_LABEL: Record<string, string> = {
   state: '상태', address: '주소', cidr: '대역', cpu: 'CPU', mem: '메모리', disk: '디스크', nic: 'NIC', ip: 'IP 주소', os: 'OS', docker: 'Docker',
   fw: '방화벽 규칙', tags: '태그', vlan: 'VLAN', image: '이미지', isp: '통신사', protocol: '프로토콜',
+  dns: 'DNS', method: '주소 방식', gateway: '게이트웨이', network: '네트워크', ipDropped: '버린 주소', task: '진행 중 태스크', cores: '코어', ostype: 'OS 종류',
 };
 /** The smallest step that fills a blank (design 9.4). Keyed by fact name; an unknown name gets no suggestion. */
 export const HOLE_ACTION: Record<string, string> = {
@@ -25,24 +26,47 @@ export function factText(key: string, f: Fact<unknown>): string {
   return String(v);
 }
 
+export type Metrics = { at: string | null; values: Record<string, { cpu?: number; mem?: number; disk?: number }> };
+
+/** The load overlay's values, read apart from the snapshot (design 8): the snapshot stays the same object until something really changes. */
+export function applyMetrics(s: Snapshot, m: Metrics | null): Snapshot {
+  if (!m?.at) return s;
+  const source = 'pve:/cluster/metrics/export';
+  return {
+    ...s,
+    nodes: s.nodes.map((e) => {
+      const v = m.values[e.id];
+      if (!v) return e;
+      const facts = { ...e.facts };
+      for (const k of ['cpu', 'mem', 'disk'] as const) { const x = v[k]; if (x !== undefined) facts[k] = { value: x, basis: 'observed', source, at: m.at, ttlS: 45 }; }
+      return { ...e, facts };
+    }),
+  };
+}
+
 export type TierCard = { tier: string; text: string };
 
-const srcText = (x: SourceStatus | undefined, ok: string): string => (!x || x.state === 'none' ? '출처 없음' : x.state === 'failing' ? `수집 실패${x.why ? ` · ${x.why}` : ''}` : ok);
+const failText = (x: SourceStatus, nowMs: number): string => {
+  const a = ageS(x.at, nowMs);
+  return `수집 실패${x.why ? ` · ${x.why}` : ''}${a == null ? ' · 값 없음' : ` · ${ageText(a)}`}`;
+};
+const srcText = (x: SourceStatus | undefined, ok: string, nowMs: number): string => (!x || x.state === 'none' ? '출처 없음' : x.state === 'failing' ? failText(x, nowMs) : ok);
 
 /** Design 4: "none" says no source, "ok" with an empty list says 0 observed, "failing" says the last value is old. Never one for the other. */
 export function tierCards(s: Snapshot, nowMs: number): TierCard[] {
   const src = (id: string) => s.sources.find((x) => x.id === id);
-  const n = (k: Kind) => s.nodes.filter((e) => e.kind === k).length;
+  const n = (k: Kind) => s.nodes.filter((e) => e.kind === k && !e.gone).length;
   const pve = src('pve'); const edge = src('edge'); const docker = src('docker');
   const stale = staleIds(s, nowMs);
   const staleNodes = s.nodes.filter((e) => e.kind === 'node' && stale.has(e.id)).length;
   const gw = n('gateway');
   const declared = s.nodes.filter((e) => e.basis === 'declared').length;
-  const outside = [edge?.state === 'ok' ? `선언 ${declared}` : srcText(edge, ''), gw ? `GW ${gw} 추정` : ''].filter(Boolean).join(' · ');
-  const nodes = pve?.state === 'ok' ? `${n('node')} 관측${staleNodes ? ` · 낡음 ${staleNodes}` : ''}${n('node') ? ` · 브리지 ${n('bridge')} · 저장소 ${n('storage')}` : ''}` : srcText(pve, '');
-  const guests = pve?.state === 'ok' ? (n('vm') + n('lxc') === 0 ? `QEMU ${n('vm')} · LXC ${n('lxc')} · 0개 관측` : `QEMU ${n('vm')} · LXC ${n('lxc')}`) : srcText(pve, '');
+  const outside = [edge?.state === 'ok' ? `선언 ${declared}` : srcText(edge, '', nowMs), gw ? `GW ${gw} 추정` : ''].filter(Boolean).join(' · ');
+  const counted = Object.entries(pve?.counts ?? {}).map(([k, v]) => ` · ${k} ${v}`).join('');
+  const nodes = pve?.state === 'ok' ? `${n('node')} 관측${staleNodes ? ` · 낡음 ${staleNodes}` : ''}${n('node') ? ` · 브리지 ${n('bridge')} · 저장소 ${n('storage')}` : ''}${counted}` : srcText(pve, '', nowMs);
+  const guests = pve?.state === 'ok' ? (n('vm') + n('lxc') === 0 ? `QEMU ${n('vm')} · LXC ${n('lxc')} · 0개 관측` : `QEMU ${n('vm')} · LXC ${n('lxc')}`) : srcText(pve, '', nowMs);
   const hosts = new Set(s.nodes.filter((e) => e.kind === 'container').map((e) => e.parent)).size;
-  const dock = docker?.state === 'ok' ? (n('container') === 0 ? '0개 관측' : `호스트 ${hosts} · 컨테이너 ${n('container')}`) : srcText(docker, '');
+  const dock = docker?.state === 'ok' ? (n('container') === 0 ? '0개 관측' : `호스트 ${hosts} · 컨테이너 ${n('container')}`) : srcText(docker, '', nowMs);
   return [{ tier: '외부', text: outside }, { tier: '노드', text: nodes }, { tier: '게스트', text: guests }, { tier: 'Docker', text: dock }];
 }
 

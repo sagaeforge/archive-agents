@@ -1,7 +1,7 @@
 // Snapshot and Fact types (design 3, 4) plus the read-time rules: freshness is computed, never stored.
 
 export type Basis = 'observed' | 'derived' | 'declared' | 'unknown';
-export type State = 'running' | 'stopped' | 'starting' | 'stopping' | 'migrating' | 'error' | 'ok' | 'unknown';
+export type State = 'running' | 'stopped' | 'creating' | 'starting' | 'stopping' | 'migrating' | 'error' | 'ok' | 'unknown';
 export type Kind =
   | 'wan' | 'modem' | 'domain' | 'gateway' | 'tunnel' | 'proxy' | 'switch' | 'wifi' | 'clients' | 'segment'
   | 'node' | 'workstation' | 'bmc' | 'bridge' | 'storage' | 'vm' | 'lxc' | 'container';
@@ -30,6 +30,8 @@ export type Entity = {
   state: State;
   basis: Basis;
   facts: Record<string, Fact<unknown>>;
+  /** Read as absent by a healthy source: kept one cycle as an outline, then removed (design 4). */
+  gone?: boolean;
 };
 
 export type Relation = {
@@ -43,7 +45,7 @@ export type Relation = {
 
 /** none: no configuration. ok: read (an empty list is "0 observed"). failing: configured and failing. */
 export type SourceState = 'none' | 'ok' | 'failing';
-export type SourceStatus = { id: string; state: SourceState; count: number | null; at: string | null; why?: string };
+export type SourceStatus = { id: string; state: SourceState; count: number | null; at: string | null; why?: string; counts?: Record<string, number> };
 
 export type Box = { x: number; y: number; w: number; h: number; z: number; zh: number };
 
@@ -51,6 +53,8 @@ export type Snapshot = {
   schema: 1;
   seq: number;
   takenAt: string;
+  /** Absent on stored fixtures. The screen labels synthetic data as such. */
+  origin?: 'live' | 'fixture';
   nodes: Entity[];
   edges: Relation[];
   sources: SourceStatus[];
