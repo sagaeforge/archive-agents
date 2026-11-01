@@ -146,7 +146,7 @@ export function App() {
         return;
       }
       switch (ev.key) {
-        case 'Enter': setView((v) => (v.sel ? { ...v, open: true } : v)); break;
+        case 'Enter': if (t?.tagName === 'BUTTON') return; /* a focused button keeps its own Enter */ setView((v) => (v.sel ? { ...v, open: true } : v)); break;
         case '2': setView((v) => ({ ...v, mode: v.mode === 'iso' ? '2d' : 'iso' })); break;
         // The design gives `2` to both the projection (9.2, 9.6) and overlay 2. The projection keeps it; the overlays take 1, 3, 4, 5.
         case '1': case '3': case '4': case '5': setView((v) => ({ ...v, overlay: OVERLAY_KEYS[ev.key]! })); break;

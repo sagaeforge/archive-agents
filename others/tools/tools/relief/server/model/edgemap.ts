@@ -1,10 +1,11 @@
 // `edge.json` and the public address on the map (design 7.1). Observed wins on the map; what disagrees with it is a warning, never a failure of the source.
 import { reviewByOf, type EdgeFile } from '../collect/edge.ts';
+import type { LocalRead } from '../collect/local.ts';
 import type { Basis, Entity, Fact, Relation } from './fact.ts';
 import { inRange, networkOf, inNetwork } from './rules.ts';
 
 export type WanRead = { address: string; at: string; ttlS: number };
-export type External = { edge: EdgeFile | null; wan: WanRead | null; wanOff: boolean; localIps: string[] };
+export type External = { edge: EdgeFile | null; wan: WanRead | null; wanOff: boolean; local: LocalRead | null };
 
 const BLANK = 'decl:wan:none';
 const WARN = { record: 'A 레코드 낡음 가능', plan: '계획 밖 주소', nat: 'NAT 선언 모순' } as const;
@@ -117,12 +118,21 @@ export function overlayEdge(out: { nodes: Entity[]; edges: Relation[] }, x: Exte
       e = byId.get(`pve:node:${h.pveNode ?? h.key}`);
       if (!e) { unmatched.push(h.title); return; }
     } else if (h.kind === 'workstation') {
-      const lan = f.router?.lanCidr ? networkOf(f.router.lanCidr) : null;
-      // Only an interface inside the declared LAN says anything: the first one may be a bridge of some container runtime.
-      const local = lan ? x.localIps.find((a) => inNetwork(a, lan)) : undefined;
-      e = decl(`host:${h.key}`, 'workstation', h.title, ptr, local ? { address: { value: local, basis: 'observed', source: 'local:interfaces', at: new Date(nowMs).toISOString(), ttlS: null } } : {});
+      // This machine, read by the `local` adapter: its own timestamp, observed. No safe interface means no address, never a guess.
+      const l = x.local;
+      const ob = (value: unknown): Fact<unknown> => ({ value, basis: 'observed', source: 'local:os', at: l!.at, ttlS: null });
+      const facts: Entity['facts'] = {};
+      if (l) {
+        if (l.hostname) facts.hostname = ob(l.hostname);
+        facts.address = l.address ? ob(l.address) : unk('local:os', '안전한 LAN 인터페이스를 찾지 못했다');
+        if (l.cores) facts.cores = ob(l.cores);
+        if (l.memTotal) facts.memTotal = ob(`${(l.memTotal / 2 ** 30).toFixed(1)} GiB`);
+        if (l.memTotal && l.memFree !== null) facts.mem = ob(Math.min(1, Math.max(0, 1 - l.memFree / l.memTotal)));
+      }
+      e = decl(`host:${h.key}`, 'workstation', h.title, ptr, facts);
     } else { unmatched.push(h.title); return; }
     hostEntity.set(h.key, e);
+    if (h.os) e.facts.os = d(h.os, `${ptr}/os`);
     if (h.lease) e.facts.lease = { value: h.lease.address, basis: 'declared', source: `edge.json#${ptr}/lease`, at: h.lease.seenAt, ttlS: null, reviewBy };
     checkPlan(e, f, h.plan, currentOf(e, h.lease), ptr);
     if (h.bmc === undefined) e.facts.bmc = unk(`edge.json#${ptr}/bmc`, 'BMC 유무를 적지 않았다');
@@ -136,6 +146,11 @@ export function overlayEdge(out: { nodes: Entity[]; edges: Relation[] }, x: Exte
       }, e.id);
       checkPlan(me, f, b.plan, b.lease?.address, bp);
     }
+  });
+  // The login name of a guest, for the copy-only SSH button. It sits on the observed guest; a guest nobody sees gets nothing.
+  f.guests?.forEach((g, i) => {
+    const e = nodes.find((n) => (n.kind === 'vm' || n.kind === 'lxc') && n.basis === 'observed' && n.id.split(':')[2] === String(g.vmid));
+    if (e) e.facts.sshUser = d(g.sshUser, `/guests/${i}`);
   });
   if (gw && unmatched.length) gw.facts.unmatchedHosts = d(unmatched, '/hosts');
 

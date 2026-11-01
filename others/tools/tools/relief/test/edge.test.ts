@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { startMock } from '../dev/mcp-mock/mock.ts';
 import { startWanMock } from '../dev/mcp-mock/wan.ts';
 import { check } from '../server/check.ts';
+import type { LocalRead } from '../server/collect/local.ts';
 import { MAX_FILE_BYTES, parseEdge, readEdge, reviewByOf, type EdgeFile } from '../server/collect/edge.ts';
 import { isPublicV4, readPublicIp } from '../server/collect/wanip.ts';
 import { loadConfig, publicIpUrl, resolvePaths } from '../server/config.ts';
@@ -29,7 +30,7 @@ const NOW = Date.parse('2026-11-02T00:00:00.000Z');
 
 function map(f: EdgeFile | null, o: Partial<External> = {}, nodes: Entity[] = []) {
   const out = { nodes: [{ id: 'decl:wan:none', kind: 'wan', title: 'WAN 미확인', basis: 'unknown', state: 'unknown', facts: {} } as Entity, ...nodes], edges: [] as Relation[] };
-  overlayEdge(out, { edge: f, wan: null, wanOff: true, localIps: [], ...o }, NOW);
+  overlayEdge(out, { edge: f, wan: null, wanOff: true, local: null, ...o }, NOW);
   return { ...out, get: (id: string) => out.nodes.find((n) => n.id === id) };
 }
 const node = (name: string, address: string): Entity => ({ id: `pve:node:${name}`, kind: 'node', title: name, basis: 'observed', state: 'ok', facts: { address: { value: address, basis: 'observed', source: 'pve:/cluster/status', at: new Date(NOW).toISOString(), ttlS: 45 } } });
@@ -215,18 +216,30 @@ describe('the map', () => {
     expect(g.facts.forwardsLost!.value).toEqual(['C']);
     expect(m.nodes.find((n) => n.kind === 'domain')!.facts.path!.value).toBe('도메인 → 라우터 · 포트 포워드 2개 선언');
   });
-  it('the workstation takes its observed address from this machine', () => {
-    const m = map(ok(example()), { localIps: ['198.51.100.7', '192.0.2.150'] });
-    expect(m.get('host:workstation')!.facts.address).toMatchObject({ basis: 'observed', value: '192.0.2.150', source: 'local:interfaces' });
-    expect(m.get('host:workstation')!.facts.lease).toMatchObject({ basis: 'declared', at: '2026-11-01' });
+  const here = (o: Partial<LocalRead> = {}): LocalRead => ({ hostname: 'pc-1', address: '192.0.2.150', cores: 8, memTotal: 16 * 2 ** 30, memFree: 4 * 2 ** 30, at: '2026-11-02T00:00:00.000Z', ...o });
+  it('the workstation takes its observed facts from this machine, at the adapter\'s own time', () => {
+    const m = map(ok(example()), { local: here() });
+    const w = m.get('host:workstation')!;
+    expect(w.facts.address).toMatchObject({ basis: 'observed', value: '192.0.2.150', source: 'local:os', at: '2026-11-02T00:00:00.000Z' });
+    expect(w.facts.hostname).toMatchObject({ basis: 'observed', value: 'pc-1' });
+    expect(w.facts.cores).toMatchObject({ basis: 'observed', value: 8 });
+    expect(w.facts.mem).toMatchObject({ basis: 'observed', value: 0.75 });
+    expect(w.facts.memTotal!.value).toBe('16.0 GiB');
+    expect(w.facts.lease).toMatchObject({ basis: 'declared', at: '2026-11-01' });
+    expect(w.basis).toBe('declared');
   });
-  it('an interface outside the LAN says nothing, and no LAN means no guess', () => {
-    const e = example(); e.hosts![3]!.plan = 'servers';
-    const out = map(ok(e), { localIps: ['198.51.100.7'] }).get('host:workstation')!;
-    expect(out.facts.address).toBeUndefined();
-    expect(out.facts.plan!.source).toBe('rule:address-plan'); // decided by the lease, 192.0.2.150, not by the stray interface
-    const f = example(); delete f.router!.lanCidr; delete f.router!.dhcpRange;
-    expect(map(ok(f), { localIps: ['198.51.100.7'] }).get('host:workstation')!.facts.address).toBeUndefined();
+  it('no safe interface leaves the address unknown, and no adapter leaves it out', () => {
+    expect(map(ok(example()), { local: here({ address: null }) }).get('host:workstation')!.facts.address).toMatchObject({ basis: 'unknown' });
+    expect(map(ok(example()), { local: null }).get('host:workstation')!.facts.address).toBeUndefined();
+  });
+  it('the adapter alone invents no PC: no edge file, or no workstation host, gives none', () => {
+    expect(map(null, { local: here() }).nodes.some((n) => n.kind === 'workstation')).toBe(false);
+    const e = example(); e.hosts = e.hosts!.filter((h) => h.kind !== 'workstation'); e.switches = [];
+    expect(map(ok(e), { local: here() }).nodes.some((n) => n.kind === 'workstation')).toBe(false);
+  });
+  it('a declared os lands on the PC as a declared fact', () => {
+    const e = example(); (e.hosts as unknown as Record<string, unknown>[])[3]!.os = 'Windows';
+    expect(map(ok(e), { local: here() }).get('host:workstation')!.facts.os).toMatchObject({ basis: 'declared', value: 'Windows' });
   });
   it('a workstation on no switch hangs off the router, as a declared link', () => {
     const e = example(); e.switches = [];
@@ -355,7 +368,7 @@ async function wired(o: { edge?: unknown; wanUrl?: string } = {}, now?: () => nu
   const r = await rig(now ? { now } : {});
   const edgePath = join(r.dir, 'edge.json');
   if (o.edge !== undefined) writeFileSync(edgePath, typeof o.edge === 'string' ? o.edge : JSON.stringify(o.edge));
-  r.reopen({ edgePath, ...(o.wanUrl ? { wanUrl: o.wanUrl } : {}), localIps: () => [] });
+  r.reopen({ edgePath, ...(o.wanUrl ? { wanUrl: o.wanUrl } : {}), local: () => null });
   return { r, edgePath };
 }
 const src = (r: Rig, id: string) => r.snap().sources.find((s) => s.id === id)!;
@@ -703,7 +716,7 @@ describe('a restart', () => {
     const r = await rig();
     const edgePath = join(r.dir, 'edge.json');
     writeFileSync(edgePath, JSON.stringify(example()));
-    const o = { edgePath, localIps: () => [] };
+    const o = { edgePath, local: () => null };
     await cycle(r, o);
     const log = r.file('changes.jsonl'); const seq = r.snap().seq;
     expect(seq).toBeGreaterThan(0);
@@ -717,7 +730,7 @@ describe('a restart', () => {
     const r = await rig();
     const edgePath = join(r.dir, 'edge.json');
     writeFileSync(edgePath, JSON.stringify(example()));
-    const o = { edgePath, wanUrl: w.url, localIps: () => [] };
+    const o = { edgePath, wanUrl: w.url, local: () => null };
     await cycle(r, o);
     const log = r.file('changes.jsonl'); const seq = r.snap().seq;
     expect(nodeOf(r, 'domain')!.warnings).toBeDefined();
@@ -731,7 +744,7 @@ describe('a restart', () => {
     const edgePath = join(r.dir, 'edge.json');
     writeFileSync(edgePath, JSON.stringify(example()));
     await r.mock.close();
-    const l = r.reopen({ edgePath, localIps: () => [] });
+    const l = r.reopen({ edgePath, local: () => null });
     await l.start();
     expect(nodeOf(r, 'wan')!.basis).toBe('declared');
   });
@@ -748,7 +761,9 @@ describe('relief serve wires the sources in', () => {
     expect(snap.sources.find((x) => x.id === 'edge')!.state).toBe('ok');
     expect(snap.nodes.find((n) => n.kind === 'wan')!.basis).toBe('declared');
     await s.close();
-    if (lan) expect(snap.nodes.find((n) => n.kind === 'workstation')!.facts.address).toMatchObject({ basis: 'observed', value: lan });
+    const a = snap.nodes.find((n) => n.kind === 'workstation')!.facts.address;
+    expect(a?.basis === 'observed' ? a.source : 'local:os').toBe('local:os');
+    expect(snap.nodes.find((n) => n.kind === 'workstation')!.facts.hostname?.basis ?? 'observed').toBe('observed');
     rmSync(dir, { recursive: true, force: true });
   });
 });

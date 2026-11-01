@@ -2,6 +2,7 @@
 import { BASIS_LABEL, basisNote, freshness, staleIds, type Entity, type Snapshot } from '../../server/model/fact.ts';
 import { FACT_LABEL, factText, HOLE_ACTION, holes, KIND_LABEL, tierCards } from '../model.ts';
 import { STATE_LABEL } from '../scene/style.ts';
+import { SshCopy } from './ssh.tsx';
 
 const clip = (s: string, n = 200) => (s.length > n ? `${s.slice(0, n)}…` : s);
 
@@ -44,6 +45,7 @@ function ObjectPanel({ snap, nowMs, e }: { snap: Snapshot; nowMs: number; e: Ent
       <p className="sub">{KIND_LABEL[e.kind]}{parent ? ` · ${parent.title}` : ''} · 존재 근거 {BASIS_LABEL[e.basis]}</p>
       {stale ? <p className="warn">낡음 · 값이 마지막으로 읽힌 뒤 오래됐다{st ? ` (마지막 표시 ${st})` : ''}</p> : null}
       {e.warnings?.length ? <p className="warn" data-testid="warnings">어긋남 · {e.warnings.join(', ')}</p> : null}
+      <SshCopy e={e} />
       {Object.entries(e.facts).map(([k, f]) => (
         <div className="row" key={k} data-fact={k} data-basis={f.basis}>
           <div className="k">{FACT_LABEL[k] ?? k}</div>

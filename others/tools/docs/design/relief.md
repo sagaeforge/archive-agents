@@ -71,7 +71,7 @@ sagae 네트워크에서 **무엇이 어디서 돌고, 무엇이 올라오는 �
 | 다이어그램 편집 | 지도는 데이터에서 나온다. Isoflow류 편집기를 쓰지 않는 이유다 [출처: landscape 3절] |
 | 메트릭 수집기, 장기 이력, 경보 | PVE 내장 통계로 충분하다 [측정: Q5]. tower도 Prometheus를 뺐다 [출처: `tower.md:76`] |
 | 능동 네트워크 탐색(SNMP 스캔, ARP 스캔, 포트 스캔) | 네트워크에 새 트래픽과 권한을 요구한다. Scanopy를 기각한 이유와 같다 [출처: landscape 3절]. 이미 있는 이웃 표를 읽는 수동 관찰은 다르다(19절) |
-| 원격 노출, 다중 사용자, 웹 터미널 | 127.0.0.1 바인딩이 관례다 [출처: `CLAUDE.md`] |
+| 원격 노출, 다중 사용자, 웹 터미널 | 127.0.0.1 바인딩이 관례다 [출처: `CLAUDE.md`]. 터미널로 가는 길은 "SSH 명령 복사" 버튼뿐이다. 클립보드에 한 줄을 넣을 뿐 연결, 실행, 자격이 없고 쓰기 경로를 만들지 않는다(7.1절) |
 | 비용, 보안 오버레이 | 이 네트워크에 해당 데이터가 없다. 방화벽 규칙은 0건이다 [측정: Q2] |
 | KB 읽기나 쓰기, MCP 서버 제공 | 소비자가 없다. relief는 MCP 클라이언트일 뿐이고 `kb_*` 도구를 부르지 않는다. 필요해지면 tower 뒤에 HTTP 업스트림으로 더한다 |
 | 레이아웃 수동 편집 | 좌표는 계산값이다. 자리표만 저장한다(10절) |
@@ -203,6 +203,7 @@ type Fact<T> = {
 | 2 | guest agent | 게스트 IP, OS | 없음. VM 안에 설치만(사용자 결정) | VM 100에서 500 [측정: Q2] |
 | 3 | `edge.json` | 회선, 모뎀, 라우터, DNS 레코드, 포트 포워드, 주소 임대와 계획, BMC 유무, VPN, Wi-Fi, 클라이언트, 스위치 | 없음. 파일 작성 | 구현됨. 로컬 파일 있음. 주소와 펌웨어는 비어 있다(R2) |
 | 3 | 공인 IP 관측 | A 레코드 비교 | 없음 | 구현됨. 이 머신에서 켜져 있다(D10) |
+| 3 | `local` | 이 머신(PC)의 호스트 이름, LAN 주소, 코어 수, 메모리 총량과 사용률 | 없음. `node:os`만 읽는다 | 구현됨. 외부 호출 0건, 프로세스 실행 0건 |
 | 보류 | Docker | 컨테이너 | 호스트별(7.2절) | Docker 호스트가 없다 [측정: Q3]. 호스트가 생길 때까지 시작하지 않는다 |
 
 라우터 자동 수집은 단계에 없다. ipTIME은 API로 읽지 못한다(사용자 확인). 뒤의 일은 19절이다.
@@ -374,7 +375,7 @@ type EdgeFile = {
   portForwards?: { key: string; title: string; protocol: 'tcp' | 'udp' | 'tcp+udp'; externalPort: Range; internalPort: Range;
                    host: string; enabled: boolean }[];
   addressPlan?: { key: string; title: string; from: string; to: string }[];
-  hosts?: { key: string; title: string; kind: 'pve-node' | 'workstation' | 'other'; pveNode?: string;
+  hosts?: { key: string; title: string; kind: 'pve-node' | 'workstation' | 'other'; os?: string; pveNode?: string;
             lease?: Lease; plan?: string; bmc?: 'none' | Bmc }[];
   vpn?: { key: string; title: string; protocol: 'wireguard' | 'openvpn' | 'l2tp' | 'pptp' | 'ipsec' | 'other';
           role: 'server' | 'client'; port?: number; subnet?: string; enabled: boolean }[];
@@ -383,6 +384,7 @@ type EdgeFile = {
               devices?: { key: string; title: string; kind: 'phone' | 'tablet' | 'other' }[] }[];
   switches?: { key: string; title: string; model?: string; ports?: number; uplink: string; hosts?: string[] }[];
   proxies?: { key: string; title: string; address?: string }[];
+  guests?: { key: string; vmid: number; sshUser: string }[];   // 로그인 이름만. 복사 전용 SSH 버튼용
 };
 ```
 
@@ -446,7 +448,7 @@ type EdgeFile = {
 |---|---|---|
 | PVE 노드 | `/nodes/{n}/network`의 브리지 주소, `hosts[].pveNode`로 묶는다 | 관측 |
 | 게스트 | guest agent | 관측 |
-| 작업 머신 | relief가 보는 로컬 인터페이스 | 관측 |
+| PC | `local` 어댑터(`node:os`) | 관측 |
 | BMC, 휴대 기기 | `lease`뿐이다. 수동 LAN 관찰이 생기면 다시 본다(19절) | 선언 |
 
 인벤토리는 노드 `vmbr0`를 정적 IPv4로 적었다 [측정: Q2]. 사용자의 설명과 다르므로 relief는 어느 쪽으로도 맞추지 않고 PVE가 준 `method`를 패널에 그대로 적는다(16절 D7). 포트 포워드는 주소가 바뀌어도 대상을 잃지 않도록 주소가 아니라 `host` 키를 가리킨다. 게스트처럼 `hosts`에 없는 대상은 `forward` 관계를 잇지 못하고 패널에 "대상 미확인"으로 남는다.
@@ -477,6 +479,7 @@ type EdgeFile = {
 | `vpn` | `tunnel` | `edge.json#/vpn/0` |
 | `wifi`, `clients`, `switches` | `wifi`, `clients`, `switch`, `lan` 관계. `pveNode`나 `hosts`가 가리키는 대상이 없으면 잇지 않고 패널에 적는다 | `edge.json#/clients/0` |
 | `proxies` | `proxy` | `edge.json#/proxies/0` |
+| `guests` | 관측된 VM·LXC의 `sshUser` 사실. 그 `vmid`를 관측하지 못하면 아무것도 만들지 않는다 | `edge.json#/guests/0` |
 
 - **실제 파일은 저장소와 KB 밖에 둔다.** 위치는 `~/.config/relief/edge.json`, mode 600이다. 도메인, 공인 주소, 내부 주소, 장비 모델이 들어가므로 커밋하지 않고 KB에도 넣지 않는다. relief는 읽기만 하고 tower나 KB로 보내지 않는다. 값은 스냅샷을 거쳐 127.0.0.1의 화면에만 나간다(11절).
 - **비밀 칸이 없다.** zod `strictObject`라 모르는 키는 오류다. `password`, `psk`, `secret`, `key`, `token` 값 칸은 스키마에 없다. Wi-Fi 암호, VPN 키, 관리자 계정, BMC 계정은 적지 않는다. `title`은 자유 문자열이므로 거기에 적지 않는 것은 쓰는 사람 몫이다.
@@ -485,12 +488,16 @@ type EdgeFile = {
 - 이 작업 머신에 Tailscale, WireGuard, 프록시가 없다는 기록이 있다 [출처: `understand-ecosystem.md:11,92`]. 머신 하나의 기록이고 라우터는 덮지 않으므로 relief가 "없음"으로 옮기지 않는다. `vpn: []`은 사람이 적을 때만 생긴다.
 - 스키마 오류는 그 파일만 거절하고 직전 값을 유지한다. `relief check`가 저장 전에 검사한다. 파일은 10 s 간격으로 다시 본다. 파일이 없으면 출처는 `none`이고 WAN은 미확인이다.
 
+- **`guests`는 SSH 로그인 이름만 선언한다(복사 전용, 2026-11-01 사용자 결정).** 칸은 `vmid`와 `sshUser`뿐이고 `strictObject`라 키, 비밀번호, 포트는 쓸 수 없다. `sshUser`는 `^[a-z_][a-z0-9_-]{0,31}$`여야 한다. 이 값은 패널의 "SSH 명령 복사" 버튼이 쓴다. relief는 줄 하나를 만들어 클립보드에 넣을 뿐이고 연결을 열지도, 명령을 실행하지도, 자격을 갖지도 않는다. 새 쓰기 경로가 없다(1절, 19절). 노드는 `ssh <관측한 이름>`, 게스트는 `ssh <관측한 IPv4>`이고 사용자가 선언돼 있으면 `ssh <사용자>@<관측한 IPv4>`다. 대상은 `^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$`이거나 정규형 IPv4(숫자와 점만 있으면 IPv4여야 한다)여야 하고 맨 앞이 `-`일 수 없다. 게스트 에이전트의 값은 공격자가 바꿀 수 있어 사용자가 이 줄을 셸에 붙여넣으므로, 어느 한 칸이라도 규칙에 맞지 않으면 명령을 만들지 않고 패널이 이유를 적는다. 구현은 `server/model/ssh.ts`의 순수 함수 하나다.
+
+- **PC는 `local` 어댑터가 관측한다(2026-11-02 사용자 요청).** `hosts`의 `kind: "workstation"`은 지도에서 `PC` 슬래브다. PVE 노드가 아니므로 계층 줄의 노드 수에 들지 않고 `PC n`으로 따로 센다. `edge.json`이 PC를 선언해야 슬래브가 생긴다. 어댑터만으로는 객체를 만들지 않는다. `server/collect/local.ts`는 `node:os`만 쓴다. 호스트 이름, 코어 수, 메모리 총량과 사용률, 주소를 읽어 자체 시각의 관측으로 둔다. 값은 게스트 값과 같은 문이다. 길이를 자르고 보이지 않는 문자를 지우며 형식에 안 맞으면 버린다. 주소는 이름이 `eth*`, `en[ops x]*`, `wlan*`, `wl*`인 인터페이스에서만 고른다(`eth0`이 먼저). `docker0`, `veth*`, `br-*`, `virbr*`, `lo`, VPN 인터페이스는 목록에 없어 거절이고, 루프백, 링크 로컬, 멀티캐스트도 거절이다. 안전한 인터페이스가 없으면 주소는 미확인이다. 호스트의 선택 칸 `os`(자유 문자열, 32자)는 선언 사실로 PC 패널에 나온다. PC에는 SSH 서버가 확인되지 않아 복사 버튼이 없고 패널이 그 이유를 적는다.
+
 **구현 기록(Phase 3).**
 
 - `wan-ip`에는 코드 기본 URL이 없다. `relief.json`의 `publicIpUrl`이 없으면 상태는 `none`이고 머신 밖 호출이 0건이다. D10의 값을 이 머신의 `relief.json`에 넣어 켰다. URL은 https만 받고 http는 loopback(시험의 mock)만 받는다. 리다이렉트를 따르지 않고 본문은 64바이트까지만 읽으며 IPv4로 파싱되지 않으면 실패다. 주기는 10 min, `ttlS`는 30 min이다.
 - 응답은 공인 주소여야 한다. 사설, loopback, 링크 로컬, CGNAT, 멀티캐스트, RFC 5737 범위는 실패이고 이유를 출처 상태에 적는다. RFC 5737만 loopback URL(시험의 mock)에서 받는다. `publicIpUrl`이 잘못되면 `wan-ip`만 실패하고 Proxmox 읽기는 계속된다.
 - 마지막 공인 IP는 `state.json`에 시각과 함께 남는다. 재시작이 비교 결과를 바꾸지 않게 하려는 것이다. 파일에서 온 값이 아니라 관측값이다. 파일은 첫 빌드 전에 읽어 재시작이 변경으로 기록되지 않는다.
-- 프록시를 가리키는 A 레코드는 이 회선의 공인 IP와 비교할 수 없어 "비교 불가"다. 게이트웨이가 없으면 NAT 모순은 모뎀에 붙는다. 어긋남 검사의 주소는 관측을 쓰되 관측보다 새로운 `lease`가 있으면 `lease`를 쓴다. 작업 머신의 관측 주소는 `lanCidr` 안의 인터페이스만 쓴다.
+- 프록시를 가리키는 A 레코드는 이 회선의 공인 IP와 비교할 수 없어 "비교 불가"다. 게이트웨이가 없으면 NAT 모순은 모뎀에 붙는다. 어긋남 검사의 주소는 관측을 쓰되 관측보다 새로운 `lease`가 있으면 `lease`를 쓴다. PC의 관측 주소는 `local` 어댑터가 고른 인터페이스 하나다(7.1절).
 - 낡은 공인 IP는 일치로 치지 않는다. tower가 내려가 다른 커밋이 없어도 10 s 파일 틱이 낡음 전환을 잡아 "비교 불가"로 바꾼다.
 - 어긋남은 객체의 `warnings`와 추정 사실(`rule:a-record`, `rule:address-plan`, `rule:nat-layers`)로 남고 출처 상태는 `ok`다. 비교 불가는 값 없는 미확인 사실이라 구멍 목록에 오른다.
 - 값은 `edge.json`에서 온 사람의 글이어도 데이터다. 자유 문자열은 스키마에서 제어 문자와 서식 문자를 지우고 길이를 자른다. 파일은 일반 파일만 받고 256 KiB에서 읽기를 멈춘다. 심볼릭 링크는 거절한다. 이 설계에 링크가 필요한 경로가 없고, 링크는 읽는 대상을 다른 곳으로 돌릴 수 있기 때문이다. 오류 문구는 위치와 종류만 적고 값과 모르는 칸의 이름을 적지 않는다. 칸 이름은 잘못 붙여 넣은 비밀일 수 있어 개수만 적는다.
@@ -886,7 +893,7 @@ VM 100 설치의 실행 시점은 Phase 3 전이면 된다. 플러그인 저장�
 
 ## 19. 성장 경로: 내부 하드웨어 관리 도구
 
-**미래 작업이다. 이번 범위의 구현이나 승인 대상이 아니다.** 사용자는 relief가 내부 하드웨어 관리 도구로 자라기를 기대한다. 순서는 읽기 전용이 먼저다. 쓰기, 전원 제어, 콘솔은 설계하지 않았다. 그런 동작은 별도 설계와 사용자 승인이 필요하고 1절의 "쓰기" 비목표는 그때까지 유지된다.
+**미래 작업이다. 이번 범위의 구현이나 승인 대상이 아니다.** 사용자는 relief가 내부 하드웨어 관리 도구로 자라기를 기대한다. 순서는 읽기 전용이 먼저다. 쓰기, 전원 제어, 콘솔은 설계하지 않았다. 그런 동작은 별도 설계와 사용자 승인이 필요하고 1절의 "쓰기" 비목표는 그때까지 유지된다. 패널의 "SSH 명령 복사"는 이 목록에 들지 않는다. 문자열을 클립보드에 넣을 뿐 쓰기 경로가 없다(7.1절).
 
 **출처는 끼워 넣는 읽기 어댑터다.** `collect/`의 각 출처가 같은 모양을 갖는다. 수집 루프, 근거, 신선도, 낡음 처리는 어댑터 밖에 있다. 인터페이스에 쓰기 메서드가 없다.
 
@@ -899,11 +906,12 @@ type ReadAdapter = { id: string; periodS: number; read(signal: AbortSignal): Pro
 | `pve` | Phase 2 | proxmox MCP | 기존 tower bearer | 이미 tower 뒤다 |
 | `edge` | Phase 3 | 손으로 쓴 `edge.json` | 없음 | relief 안. 파일이다 |
 | `wan-ip` | Phase 3 | 공인 IP 관측(7.1절) | 없음 | relief 안 |
+| `local` | 구현됨 | 이 머신의 `node:os` 값(호스트 이름, 인터페이스, 코어, 메모리) | 없음. 외부 호출과 프로세스가 없다 | relief 안. 읽는 곳이 프로세스 안이라 MCP로 감싸지 않는다 |
 | `lan-passive` | 나중 | 이 머신의 ARP·이웃 표 읽기, mDNS 수신. 질의를 보내지 않는다 | 없음. 쓸 수 없다 | relief 안. 1절의 능동 탐색 금지에 들지 않는다. LAN 호스트만 나오고 WAN IP, 포트 포워드, DHCP 임대 출처, 무선 클라이언트 목록은 나오지 않는다 |
 | `router` | 만들지 않음 | 공식 API를 찾지 못했고 SNMP, syslog 지원은 미확인이다 | 로그인 어댑터는 쓰기 가능한 관리자 계정이 필요해 지금은 근거가 없다 | 라우터 MCP 서버를 두지 않는다. `edge.json`이 유지된다 |
 | `bmc` | 나중 | 노드 3대. 1순위 Redfish GET, ReadOnly 계정. 대안 IPMI, USER 계정, cipher 0 비활성 | 새 자격. 사용자 승인 대상이다 | MCP 서버로 만들면 tower 뒤. GET 전용의 얇은 어댑터면 충분하다 |
 
-작업 머신에는 BMC가 없으므로 `bmc` 어댑터는 `edge.json`의 `bmc: "none"`을 "대상 아님"으로 보고 부르지 않는다. `bmc` 값이 없는 노드는 미확인으로 남는다.
+PC에는 BMC가 없으므로 `bmc` 어댑터는 `edge.json`의 `bmc: "none"`을 "대상 아님"으로 보고 부르지 않는다. `bmc` 값이 없는 노드는 미확인으로 남는다.
 
 **어디에 놓는가.** 구조 원칙을 따른다 [출처: `CLAUDE.md`].
 

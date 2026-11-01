@@ -9,6 +9,7 @@ import { readPublicIp } from './collect/wanip.ts';
 import { layoutSnapshot } from './layout/elk.ts';
 import { diff, hashesOf, isEmpty, type Hashes, type StateMap } from './model/diff.ts';
 import type { Entity, Relation, Snapshot, SourceStatus } from './model/fact.ts';
+import type { LocalRead } from './collect/local.ts';
 import type { WanRead } from './model/edgemap.ts';
 import { activeTask, emptyRaw, guestKey, isGuest, normalize, type Part, type Raw } from './model/normalize.ts';
 
@@ -29,7 +30,7 @@ export type LiveOptions = {
   wanUrl?: string | undefined;
   /** A `publicIpUrl` that failed its check. It fails this one source and nothing else. */
   wanFault?: string | undefined;
-  localIps?: () => string[];
+  local?: (nowMs: number) => LocalRead | null;
   now?: () => number;
 };
 
@@ -153,7 +154,7 @@ export class Live {
 
   /** @param inventory this commit follows a good inventory read: the only thing that ends a gone object's cycle. */
   private async build(inventory: boolean) {
-    const next = normalize(this.raw, this.now(), { edge: this.edge.file, wan: this.wan.read, wanOff: !this.o.wanUrl, localIps: this.o.localIps?.() ?? [] });
+    const next = normalize(this.raw, this.now(), { edge: this.edge.file, wan: this.wan.read, wanOff: !this.o.wanUrl, local: this.o.local?.(this.now()) ?? null });
     const nextIds = new Set(next.nodes.map((n) => n.id));
     // Gone: last time here, this time absent from a good read. One cycle as an outline, then out. A failed read cannot get here with a shorter list.
     // Observed objects only: taking a declaration out of the file is the person's own act, and it reverts at once, tower or no tower.

@@ -3,9 +3,9 @@ import { createAdaptorServer } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import type { Server } from 'node:http';
-import { networkInterfaces } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { createApi } from './app.ts';
+import { readLocal } from './collect/local.ts';
 import { createReader } from './collect/mcp.ts';
 import { DEFAULT_PORT, loadConfig, readToken, resolvePaths } from './config.ts';
 import { APP_CSP } from './guard.ts';
@@ -13,8 +13,6 @@ import { Live, type LiveOptions } from './live.ts';
 
 const DIST = fileURLToPath(new URL('../dist', import.meta.url));
 
-/** This machine's own addresses: how the workstation gets an observed one (design 7.1). */
-const localIps = () => Object.values(networkInterfaces()).flat().flatMap((i) => (i && i.family === 'IPv4' && !i.internal ? [i.address] : []));
 
 /** The socket unit holds the port and hands it over as fd 3. Spent here, so nothing this process starts takes it for its own. */
 export function activated(env: NodeJS.ProcessEnv): boolean {
@@ -30,7 +28,7 @@ export async function startLive(o: ServeOptions = {}) {
   const paths = resolvePaths(env);
   const cfg = loadConfig(paths);
   const reader = createReader({ url: cfg.towerUrl, token: () => readToken(paths.tokenFile) });
-  const live = new Live({ reader, stateDir: paths.stateDir, period: o.period, fault: cfg.error, edgePath: paths.edgeJson, wanUrl: cfg.publicIpUrl, wanFault: cfg.publicIpError, localIps });
+  const live = new Live({ reader, stateDir: paths.stateDir, period: o.period, fault: cfg.error, edgePath: paths.edgeJson, wanUrl: cfg.publicIpUrl, wanFault: cfg.publicIpError, local: readLocal });
   await live.start();
   const app = new Hono();
   app.use('*', async (c, next) => { await next(); c.header('Content-Security-Policy', APP_CSP); c.header('X-Content-Type-Options', 'nosniff'); });

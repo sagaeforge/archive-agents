@@ -3,6 +3,7 @@ import { closeSync, constants, fstatSync, openSync, readSync } from 'node:fs';
 import { isIP } from 'node:net';
 import { z } from 'zod';
 import { clean } from '../model/guest.ts';
+import { SSH_USER } from '../model/ssh.ts';
 import { inNetwork, networkOf, v4 } from '../model/rules.ts';
 
 export const MAX_FILE_BYTES = 256 * 1024;
@@ -33,12 +34,14 @@ const Shape = z.strictObject({
   ddns: z.array(z.strictObject({ key, provider: text(), hostname, line: key })).max(16).optional(),
   portForwards: z.array(z.strictObject({ key, title, protocol: z.enum(['tcp', 'udp', 'tcp+udp']), externalPort: range, internalPort: range, host: key, enabled: z.boolean() })).max(128).optional(),
   addressPlan: z.array(z.strictObject({ key, title, from: ipv4, to: ipv4 })).max(32).optional(),
-  hosts: z.array(z.strictObject({ key, title, kind: z.enum(['pve-node', 'workstation', 'other']), pveNode: key.optional(), lease: lease.optional(), plan: key.optional(), bmc: z.union([z.literal('none'), bmc]).optional() })).max(128).optional(),
+  hosts: z.array(z.strictObject({ key, title, kind: z.enum(['pve-node', 'workstation', 'other']), os: text(32).optional(), pveNode: key.optional(), lease: lease.optional(), plan: key.optional(), bmc: z.union([z.literal('none'), bmc]).optional() })).max(128).optional(),
   vpn: z.array(z.strictObject({ key, title, protocol: z.enum(['wireguard', 'openvpn', 'l2tp', 'pptp', 'ipsec', 'other']), role: z.enum(['server', 'client']), port: port.optional(), subnet: cidr.optional(), enabled: z.boolean() })).max(16).optional(),
   wifi: z.array(z.strictObject({ key, title, bands: z.array(z.enum(['2.4', '5', '6'])).max(3), guest: z.boolean().optional(), enabled: z.boolean() })).max(16).optional(),
   clients: z.array(z.strictObject({ key, title, via: key.optional(), presence: z.enum(['intermittent', 'steady']), devices: z.array(z.strictObject({ key, title, kind: z.enum(['phone', 'tablet', 'other']) })).max(64).optional() })).max(16).optional(),
   switches: z.array(z.strictObject({ key, title, model: text().optional(), ports: z.number().int().min(1).max(256).optional(), uplink: key, hosts: z.array(key).max(128).optional() })).max(32).optional(),
   proxies: z.array(z.strictObject({ key, title, address: ipv4.optional() })).max(16).optional(),
+  // Only the login name for the copy-only SSH button (design 7.1). No key, no password, no port: the strict object refuses them.
+  guests: z.array(z.strictObject({ key, vmid: z.number().int().min(1).max(999999999), sshUser: z.string().regex(SSH_USER) })).max(256).optional(),
 });
 export type EdgeFile = z.infer<typeof Shape>;
 
@@ -46,7 +49,7 @@ export type EdgeFile = z.infer<typeof Shape>;
 function references(f: EdgeFile, ctx: z.RefinementCtx) {
   const bad = (path: (string | number)[], message: string) => ctx.addIssue({ code: 'custom', path, message });
   const keys = (l?: { key: string }[]) => new Set((l ?? []).map((x) => x.key));
-  const lists = { lines: f.lines, dnsRecords: f.dnsRecords, ddns: f.ddns, portForwards: f.portForwards, addressPlan: f.addressPlan, hosts: f.hosts, vpn: f.vpn, wifi: f.wifi, clients: f.clients, switches: f.switches, proxies: f.proxies };
+  const lists = { lines: f.lines, dnsRecords: f.dnsRecords, ddns: f.ddns, portForwards: f.portForwards, addressPlan: f.addressPlan, hosts: f.hosts, vpn: f.vpn, wifi: f.wifi, clients: f.clients, switches: f.switches, proxies: f.proxies, guests: f.guests };
   for (const [name, l] of Object.entries(lists)) {
     const seen = new Set<string>();
     (l ?? []).forEach((x, i) => { if (seen.has(x.key)) bad([name, i, 'key'], 'duplicate key'); seen.add(x.key); });

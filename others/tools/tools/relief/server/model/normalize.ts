@@ -85,7 +85,7 @@ const tagsOf = (s: string | undefined) => (s ? s.split(/[;, ]+/).filter(Boolean)
 
 const nicText = (n: GuestConfig['nics'][number]) => `${n.key} → ${n.bridge ? clean(n.bridge, 32) : '브리지 없음'}, ${n.tag === null ? 'VLAN 없음' : `VLAN ${n.tag}`}`;
 
-const NO_EXTERNAL: External = { edge: null, wan: null, wanOff: true, localIps: [] };
+const NO_EXTERNAL: External = { edge: null, wan: null, wanOff: true, local: null };
 
 export function normalize(raw: Raw, nowMs: number, ext: External = NO_EXTERNAL): { nodes: Entity[]; edges: Relation[] } {
   const out = fromPve(raw, nowMs);

@@ -4,7 +4,7 @@ import { project, type Mode } from './scene/project.ts';
 
 export const KIND_LABEL: Record<Kind, string> = {
   wan: '회선', modem: '모뎀', domain: '도메인', gateway: '게이트웨이', tunnel: '터널', proxy: '프록시', switch: '스위치', wifi: 'Wi-Fi', clients: '무선 클라이언트', segment: '세그먼트',
-  node: '노드', workstation: '작업 머신', bmc: 'BMC', bridge: '브리지', storage: '저장소', vm: 'QEMU VM', lxc: 'LXC', container: '컨테이너',
+  node: '노드', workstation: 'PC', bmc: 'BMC', bridge: '브리지', storage: '저장소', vm: 'QEMU VM', lxc: 'LXC', container: '컨테이너',
 };
 export const FACT_LABEL: Record<string, string> = {
   state: '상태', address: '주소', cidr: '대역', cpu: 'CPU', mem: '메모리', disk: '디스크', nic: 'NIC', ip: 'IP 주소', os: 'OS', docker: 'Docker',
@@ -12,7 +12,7 @@ export const FACT_LABEL: Record<string, string> = {
   dns: 'DNS', method: '주소 방식', gateway: '게이트웨이', network: '네트워크', publicIp: '공인 IP', record: 'A 레코드 값', aRecord: 'A 레코드 비교', path: '경로', natLayers: 'NAT 겹', natCheck: 'NAT 검사', lease: '본 주소', plan: '주소 계획', bmc: 'BMC',
   portForwards: '포트 포워드', forwardsOff: '꺼진 포워드', forwardsLost: '대상 미확인 포워드', lanCidr: 'LAN 대역', dhcpRange: 'DHCP 범위', addressPlan: '주소 계획표', declaredAddress: '선언 주소',
   unmatchedHosts: '관측과 안 맞는 호스트', vendor: '제조사', model: '모델', firmware: '펌웨어', mode: '모드', provider: '등록 기관', presence: '접속', devices: '기기', bands: '대역폭', ddns: 'DDNS', interface: '인터페이스',
-  link: '연결', ipDropped: '버린 주소', task: '진행 중 태스크', cores: '코어', ostype: 'OS 종류',
+  link: '연결', ipDropped: '버린 주소', task: '진행 중 태스크', cores: '코어', ostype: 'OS 종류', sshUser: 'SSH 사용자', hostname: '호스트 이름', memTotal: '메모리 총량',
 };
 /** The smallest step that fills a blank (design 9.4). Keyed by fact name; an unknown name gets no suggestion. */
 export const HOLE_ACTION: Record<string, string> = {
@@ -74,10 +74,11 @@ export function tierCards(s: Snapshot, nowMs: number): TierCard[] {
   ].filter(Boolean).join(' · ');
   const counted = Object.entries(pve?.counts ?? {}).map(([k, v]) => ` · ${k} ${v}`).join('');
   const nodes = pve?.state === 'ok' ? `${n('node')} 관측${staleNodes ? ` · 낡음 ${staleNodes}` : ''}${n('node') ? ` · 브리지 ${n('bridge')} · 저장소 ${n('storage')}` : ''}${counted}` : srcText(pve, '', nowMs);
+  const pcs = n('workstation');
   const guests = pve?.state === 'ok' ? (n('vm') + n('lxc') === 0 ? `QEMU ${n('vm')} · LXC ${n('lxc')} · 0개 관측` : `QEMU ${n('vm')} · LXC ${n('lxc')}`) : srcText(pve, '', nowMs);
   const hosts = new Set(s.nodes.filter((e) => e.kind === 'container').map((e) => e.parent)).size;
   const dock = docker?.state === 'ok' ? (n('container') === 0 ? '0개 관측' : `호스트 ${hosts} · 컨테이너 ${n('container')}`) : srcText(docker, '', nowMs);
-  return [{ tier: '외부', text: outside }, { tier: '노드', text: nodes }, { tier: '게스트', text: guests }, { tier: 'Docker', text: dock }];
+  return [{ tier: '외부', text: outside }, { tier: '노드', text: pcs ? `${nodes} · PC ${pcs}` : nodes }, { tier: '게스트', text: guests }, { tier: 'Docker', text: dock }];
 }
 
 export type Hole = { key: string; label: string; why: string; action: string; ids: string[]; count: number };
