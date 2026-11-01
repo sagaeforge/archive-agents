@@ -14,3 +14,18 @@ __pycache__/
 tools/tower/test/regression/.gen/
 tools/tower/test/regression/.run/
 tools/tower/test/regression/results/
+
+# Trail-Code's local graph cache (regenerable). The bare /graft also covers a link by that name.
+/graft/
+/graft
+
+# Local Claude Code state: agent worktrees and personal settings.
+/.claude/worktrees/
+/.claude/settings.local.json
+
+# Never commit what `trail init` or `trail note` would leave here. See docs/project-tools.md.
+/.trail/
+
+# Trail's local build settings.
+/.graft/
+/.graft
