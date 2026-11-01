@@ -1,0 +1,540 @@
+# WP-07 소스 레지스트리(abcdef-docs.yaml). 원본: ADR-0001 10.4, docs/research/sources-inventory*.md, ADR-0002.
+# policy.reason: 비활성 사유 또는 주의. parse: 어댑터 설정. 비활성 소스는 enabled=false이고 수집 코드가 호출하지 않는다.
+sources:
+- id: src:datareportal
+  inventory_id: D01
+  name: DataReportal 리포트 목록
+  domain:
+  - B
+  - C
+  class: semiannual
+  fetch:
+    kind: https
+    url: https://datareportal.com/reports
+    conditional: true
+  parser: page_md@1
+  expect:
+    content_type: &id001
+    - text/plain
+    - text/markdown
+    - text/html
+    - application/xhtml+xml
+  policy:
+    enabled: true
+    tos: unverified
+    tos_ref: https://datareportal.com/legal
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:wiseapp
+  inventory_id: D02
+  name: 와이즈앱
+  domain:
+  - B
+  class: annual
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: 'AWS WAF 챌린지로 접근 차단. 켜는 조건: 경로 확인'
+- id: src:mobileindex-blog
+  inventory_id: D03
+  name: 모바일인덱스 블로그
+  domain:
+  - B
+  class: monthly
+  fetch:
+    kind: https
+    url: https://www.igaworks.com/blog/mobileindex
+    conditional: true
+  parser: page_md@1
+  expect:
+    content_type: *id001
+  policy:
+    enabled: true
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:nielsen-gauge
+  inventory_id: D04
+  name: Nielsen The Gauge 보도 자료
+  domain:
+  - B
+  - C
+  class: monthly
+  fetch:
+    kind: https
+    url: https://www.nielsen.com/news-center/2026/tv-viewing-cools-off-in-nielsens-august-gauge-reports-as-sports-take-a-breather-and-school-resumes/
+    conditional: true
+  parser: page_md@1
+  expect:
+    content_type: *id001
+  policy:
+    enabled: true
+    tos: unverified
+    tos_ref: https://www.nielsen.com/robots.txt
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:pew-social-media
+  inventory_id: D05
+  name: Pew Research 소셜 미디어 팩트시트
+  domain:
+  - B
+  - C
+  class: annual
+  fetch:
+    kind: https
+    url: https://www.pewresearch.org/internet/fact-sheet/social-media/
+    conditional: true
+  policy:
+    enabled: false
+    tos: signals_conflict
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: '금지보다 불명확: llms.txt와 Content-Signal이 허용 신호. 켜는 조건: 결정 9의 소스별 확인'
+- id: src:ofcom
+  inventory_id: D06
+  name: Ofcom Media Nations
+  domain:
+  - B
+  - C
+  class: annual
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: 'Cloudflare 403, PDF도 403. 켜는 조건: 경로 확인'
+- id: src:emarketer
+  inventory_id: D07
+  name: eMarketer
+  domain:
+  - B
+  - E
+  class: annual
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: 구독제, 주제 페이지 403
+- id: src:alphabet-earnings
+  inventory_id: D08
+  name: Alphabet 실적(EDGAR)
+  domain:
+  - B
+  class: quarter
+  fetch:
+    kind: https
+    url: https://www.sec.gov/Archives/edgar/data/1652044/000165204426000080/googexhibit991q32026.htm
+    conditional: true
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: EDGAR 연락처 요구(사용자 결정 5, 지정 안 함). sec.gov는 거부 호스트
+- id: src:kmcc-media-survey
+  inventory_id: D09
+  name: 방송매체 이용행태조사 보도자료(PDF)
+  domain:
+  - B
+  class: annual
+  fetch:
+    kind: https
+    url: https://www.kmcc.go.kr/download.do?fileSeq=62354
+    conditional: true
+  parser: pdf_doc@1
+  expect:
+    needs_pdf: true
+    content_type:
+    - application/pdf
+    - application/octet-stream
+  policy:
+    enabled: true
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:kisdi-stat
+  inventory_id: D10
+  name: KISDI 미디어통계포털, 방송통계포털
+  domain:
+  - B
+  class: annual
+  fetch:
+    kind: https
+    urls:
+    - https://stat.kisdi.re.kr/
+    - https://www.mediastat.or.kr/
+    conditional: true
+  parser: page_md@1
+  expect:
+    content_type: *id001
+  policy:
+    enabled: true
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: 첫 페이지는 JS 이동 껍데기일 수 있다(본문 부족이면 needs_browser). 하위 경로는 확인되는 대로 urls에 더한다
+- id: src:kobaco-ad-survey
+  inventory_id: D11
+  name: KOBACO 방송통신광고비조사
+  domain:
+  - B
+  - E
+  class: annual
+  fetch:
+    kind: https
+    url: https://www.kobaco.co.kr/
+    conditional: true
+  policy:
+    enabled: false
+    tos: forbidden
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: robots가 전체를 막는다. D09 보도자료로 대체
+- id: src:opensurvey-trend
+  inventory_id: D12
+  name: 오픈서베이 트렌드 리포트
+  domain:
+  - B
+  class: annual
+  fetch:
+    kind: https
+    url: https://blog.opensurvey.co.kr/category/trendreport/
+    conditional: true
+  parser: page_md@1
+  expect:
+    content_type: *id001
+  policy:
+    enabled: true
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:youtube-official-blog
+  inventory_id: D13
+  name: YouTube 공식 블로그 RSS
+  domain:
+  - C
+  - D
+  - E
+  class: feed
+  fetch:
+    kind: https
+    url: https://blog.youtube/rss/
+    conditional: true
+  parser: rss_atom@1
+  expect:
+    content_type: &id002
+    - application/rss+xml
+    - application/atom+xml
+    - application/xml
+    - text/xml
+    - text/plain
+  policy:
+    enabled: true
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:creator-insider
+  inventory_id: D14
+  name: Creator Insider
+  domain:
+  - C
+  - D
+  class: annual
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: forbidden
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: YouTube 경로(yt-dlp 계열)라 쓰지 않는다(결정 1 답)
+- id: src:yt-ypp-help
+  inventory_id: D15
+  name: YouTube 고객센터(YPP 자격, 변경, 조회수 정의)
+  domain:
+  - C
+  - D
+  - E
+  class: docs
+  fetch:
+    kind: https
+    urls:
+    - https://support.google.com/youtube/answer/72851
+    - https://support.google.com/youtube/answer/12843009
+    - https://support.google.com/youtube/answer/2991785
+    conditional: true
+  parser: page_md@1
+  expect:
+    content_type: *id001
+  policy:
+    enabled: true
+    tos: no_clause
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:arxiv-audit
+  inventory_id: D16
+  name: arXiv 감사 연구
+  domain:
+  - C
+  class: paper
+  fetch:
+    kind: https
+    url: https://export.arxiv.org/api/query?search_query=all:YouTube+AND+all:audit&sortBy=submittedDate&sortOrder=descending&max_results=50
+    conditional: true
+  parser: arxiv@1
+  expect:
+    content_type: *id002
+  policy:
+    enabled: true
+    tos: allowed
+    tos_ref: https://info.arxiv.org/help/api/tou.html
+    robots: official_api
+    requires_decision: 8
+    trust: secondary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:nasmedia-npr
+  inventory_id: D17
+  name: KT나스미디어 NPR 요약 PDF
+  domain:
+  - B
+  - E
+  class: annual
+  fetch:
+    kind: https
+    url: https://www.nasmedia.co.kr/wp-content/uploads/2026/03/2026_NPR_%EC%9A%94%EC%95%BD%EB%B3%B4%EA%B3%A0%EC%84%9C_%EC%A3%BC%EC%9A%94%EB%B0%9C%EA%B2%AC%EC%A0%90_f.pdf
+    conditional: true
+  parser: pdf_doc@1
+  expect:
+    needs_pdf: true
+    content_type:
+    - application/pdf
+    - application/octet-stream
+  policy:
+    enabled: true
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: 이미지 위주라 needs_ocr로 갈 수 있다(OCR은 하지 않는다)
+- id: src:yt-culture-trends
+  inventory_id: D18
+  name: YouTube Culture & Trends
+  domain:
+  - B
+  - D
+  class: feed
+  fetch:
+    kind: https
+    url: https://www.youtube.com/trends/
+    conditional: true
+  policy:
+    enabled: false
+    tos: forbidden
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: www.youtube.com은 거부 호스트(결정 1). 사람 입력으로 둔다
+- id: src:yt-how-recommendations
+  inventory_id: D19
+  name: How YouTube recommendations work
+  domain:
+  - C
+  - D
+  class: docs
+  fetch:
+    kind: https
+    url: https://support.google.com/youtube/answer/16089387
+    conditional: true
+  parser: page_md@1
+  expect:
+    content_type: *id001
+  policy:
+    enabled: true
+    tos: no_clause
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:ahrefs-ai-citations
+  inventory_id: D20
+  name: Ahrefs AI 인용 분석
+  domain:
+  - C
+  class: monthly
+  fetch:
+    kind: https
+    url: https://ahrefs.com/blog/most-cited-domains-ai-overviews/
+    conditional: true
+  policy:
+    enabled: false
+    tos: forbidden
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: Ahrefs 약관 4.4가 API 밖 자동 수집을 금지한다
+- id: src:so-octoverse
+  inventory_id: D21
+  name: Stack Overflow 설문, Octoverse
+  domain:
+  - F
+  class: annual
+  fetch:
+    kind: https
+    urls:
+    - https://stackoverflow.blog/2026/10/06/the-results-of-the-2026-developer-survey-are-here/
+    - https://octoverse.github.com/
+    conditional: true
+  parser: page_md@1
+  expect:
+    content_type: *id001
+  policy:
+    enabled: true
+    tos: signals_conflict
+    tos_ref: null
+    robots: enforce
+    requires_decision: 9
+    trust: secondary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:google-ads-help
+  inventory_id: D22
+  name: Google Ads 고객센터(YouTube 광고 형식)
+  domain:
+  - E
+  class: docs
+  fetch:
+    kind: https
+    url: https://support.google.com/google-ads/answer/2375464
+    conditional: true
+  parser: page_md@1
+  expect:
+    content_type: *id001
+  policy:
+    enabled: true
+    tos: no_clause
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:kocca-usage
+  inventory_id: D23
+  name: KOCCA 콘텐츠 이용행태 조사
+  domain:
+  - B
+  class: annual
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: '등록할 URL 미확정(연 1회, 2차 기록). 켜는 조건: 경로 확인'

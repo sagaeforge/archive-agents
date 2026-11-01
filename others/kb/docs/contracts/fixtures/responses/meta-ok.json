@@ -1,0 +1,39 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "changes_cursor": "eyJlIjoyLCJzIjo5Mn0",
+      "contract": "v1",
+      "counts": {
+        "claims": 15,
+        "edges": 17,
+        "nodes": 26
+      },
+      "first_party_open": true,
+      "kb_version": "0.1.0",
+      "limits": {
+        "concurrent": 16,
+        "overview_edges": 400000,
+        "overview_nodes": 100000,
+        "page": 500
+      }
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "schema_version": "0.3.1"
+  },
+  "case": "meta-ok",
+  "headers": {
+    "cache-control": "no-cache",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f-4f53cda1\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

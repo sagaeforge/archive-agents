@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/events/snapshot.text.schema.json",
+  "title": "snapshot.text",
+  "description": "NFC로 고정한 표시 본문과 문단 목록(CAS).",
+  "type": "object",
+  "properties": {
+    "snapshot": {
+      "type": "string",
+      "minLength": 1
+    },
+    "text_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "text_format": {
+      "enum": [
+        "markdown",
+        "text",
+        "json",
+        "pdf_text"
+      ]
+    },
+    "extractor": {
+      "type": "string",
+      "minLength": 1
+    },
+    "paras_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  },
+  "required": [
+    "snapshot",
+    "text_sha",
+    "text_format",
+    "extractor",
+    "paras_sha"
+  ]
+}

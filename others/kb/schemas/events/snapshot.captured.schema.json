@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/events/snapshot.captured.schema.json",
+  "title": "snapshot.captured",
+  "description": "원본 바이트 수집. 바이트는 raw/에 있다.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "document_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "url": {
+      "type": "string",
+      "minLength": 1
+    },
+    "raw_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "content_type": {
+      "type": "string"
+    },
+    "bytes": {
+      "type": "integer"
+    },
+    "fetched_at": {
+      "type": "integer"
+    },
+    "http_status": {
+      "type": "integer"
+    },
+    "etag": {
+      "type": "string"
+    },
+    "last_modified": {
+      "type": "string"
+    },
+    "domain": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "A",
+          "B",
+          "C",
+          "D",
+          "E",
+          "F",
+          "G"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "tier": {
+      "enum": [
+        "objects",
+        "ttl"
+      ]
+    }
+  },
+  "required": [
+    "id",
+    "document_id",
+    "source",
+    "url",
+    "raw_sha",
+    "fetched_at"
+  ]
+}

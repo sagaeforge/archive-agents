@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ANSWERS",
+  "x-kb-kind": "edge",
+  "x-kb-group": "request",
+  "x-kb-version": 1,
+  "type": "object",
+  "additionalProperties": true
+}

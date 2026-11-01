@@ -1,0 +1,9 @@
+[Unit]
+Description=sagae-kb due jobs (L2, stored workflows, retrospectives)
+
+[Timer]
+OnStartupSec=10min
+OnUnitInactiveSec=1h
+
+[Install]
+WantedBy=timers.target

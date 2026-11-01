@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/events/objects/series_points.schema.json",
+  "title": "series_points",
+  "type": "array",
+  "items": {
+    "$ref": "series_point.schema.json"
+  }
+}

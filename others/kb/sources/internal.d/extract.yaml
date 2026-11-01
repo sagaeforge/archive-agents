@@ -1,0 +1,84 @@
+# WP-19 L2 추출 설정과 작업 등록. 모든 [설정값]은 여기서 바꾼다(ADR-0003 서두).
+# kind=agent 작업은 `kb agent run`이 돈다. run 키가 없으므로 tick(LLM 없음)은 건너뛴다.
+# 5단계 confirm(재확인, 문단 큐 적재)은 kb.extract.tick_stage가 돈다. LLM을 부르지 않는다.
+jobs:
+  - id: extract.l2
+    kind: agent
+    every_s: 3600
+    cmd: "kb agent run --scope public"
+  - id: extract.l2_sensitive
+    kind: agent
+    every_s: 21600
+    cmd: "kb agent run --scope sensitive"
+settings:
+  prompt_version: "extract-1"
+  extract_schema: "extract-schema-1"
+  window_chars: 6000
+  take_batch: 24
+  max_attempts: 3                 # 첫 시도 + 재시도 2회. 넘으면 DLQ
+  halt_on_external_send: true
+  claude:
+    model: haiku
+    budget_usd: 0.02              # Haiku 전용. 측정 최대 $0.00606
+    cross_budget_usd: 0.05        # claude -p --model sonnet 교차 확인
+    max_turns: 3
+    daily_windows: 400
+    concurrency: 4
+    support_daily: 100
+    start_max_five_hour: 0.5
+    stop_five_hour: 0.7
+    stop_seven_day: 0.80
+    timeout_s: 300
+    canary_ttl_s: 86400
+    rate_recheck_s: 3600          # 저장 활용률이 이보다 낡으면 카나리아로 다시 잰다
+  openrouter:
+    enabled: true
+    base_url: "https://openrouter.ai/api/v1"
+    key_file: "openrouter.key"
+    extract_model: "openai/gpt-6.1-sol"
+    extract_fallback_model: "anthropic/claude-haiku-5.5"
+    support_model: "anthropic/claude-sonnet-5.5"
+    cross_models: {"openai/gpt-6.1-sol": "anthropic/claude-sonnet-5.5", "default": "openai/gpt-6.1-sol"}
+    support_calibrated: false     # 141건 보정(오승인 <=0.05, 재현율 >=0.80) 통과 뒤 true
+    support_daily: 1000
+    max_tokens: 4000
+    reserve_usd: 0.054
+    daily_valve_usd: 30.0
+    min_balance_usd: 0.10
+    timeout_s: 300
+    key_expires_at: "2026-11-30T19:41:00+09:00"
+    schema_profiles: {"openai/gpt-6.1-sol": "full", "anthropic/claude-haiku-5.5": "strict-min+anyof", "anthropic/claude-sonnet-5.5": "strict-min+anyof"}
+    providers: {"openai/gpt-6.1-sol": ["OpenAI"], "anthropic/claude-haiku-5.5": ["Azure"]}
+    price_per_m: {"openai/gpt-6.1-sol": [2.5, 15.0], "anthropic/claude-haiku-5.5": [1.0, 5.0], "anthropic/claude-sonnet-5.5": [3.0, 15.0]}
+    first_100_gate_pass_min: 0.70
+  codex:
+    enabled: false                # 실측 통과 전까지 끈다(ADR-0003 7장)
+    bin: "codex"
+    model: "gpt-6.1-sol"
+    effort: "low"
+    max_used_percent: 50
+    timeout_s: 300
+  sllm:
+    enabled: true
+    server_bin: ""                # 비면 $KB_TOOLCHAIN/llama/llama-server
+    model_file: ""                # 비면 $KB_MODELS/nemotron/NVIDIA-Nemotron-3.5-Bolt-E4B-UD-Q4_K_XL.gguf
+    model: "nemotron-3.5-bolt-e4b"
+    port: 18080
+    vram_min_mib: 6144
+    slots: 2
+    timeout_s: 300
+    term_wait_s: 20
+  switch:
+    error_window: 50
+    error_rate: 0.20
+    error_consecutive: 5
+    off_s: 3600
+    gate_window: 20
+    gate_ratio: 0.85
+    baselines: {"openai/gpt-6.1-sol": 0.823, "claude:haiku": 0.742, "anthropic/claude-haiku-5.5": 0.745}
+  reconfirm:
+    vanish_ratio: 0.30
+    moving_classes: ["feed", "short"]
+  cross_check:
+    weekly_total: 80
+    per_language: 40

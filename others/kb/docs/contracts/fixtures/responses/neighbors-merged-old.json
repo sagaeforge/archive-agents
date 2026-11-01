@@ -1,0 +1,70 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "edge_total": 1,
+      "edges": {
+        "columns": [
+          "id",
+          "src",
+          "dst",
+          "rtype",
+          "status"
+        ],
+        "rows": [
+          [
+            "r-ma-x",
+            "e:tool:mc",
+            "e:tool:x",
+            "USES",
+            "active"
+          ]
+        ]
+      },
+      "node_total": 2,
+      "nodes": {
+        "columns": [
+          "id",
+          "type",
+          "label",
+          "origin",
+          "status"
+        ],
+        "rows": [
+          [
+            "e:tool:mc",
+            "Tool",
+            "병합 C",
+            "external",
+            "active"
+          ],
+          [
+            "e:tool:x",
+            "Tool",
+            "도구 X",
+            "external",
+            "active"
+          ]
+        ]
+      },
+      "truncated": false
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "schema_version": "0.3.1"
+  },
+  "case": "neighbors-merged-old",
+  "headers": {
+    "cache-control": "no-cache",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

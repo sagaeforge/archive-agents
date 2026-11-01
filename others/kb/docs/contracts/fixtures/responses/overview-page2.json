@@ -1,0 +1,81 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "edges": {
+        "columns": [
+          "id",
+          "src",
+          "dst",
+          "rtype",
+          "status"
+        ],
+        "rows": []
+      },
+      "meta": {
+        "edge_total": 6,
+        "graph": {
+          "directed": true,
+          "multi": true
+        },
+        "node_total": 18,
+        "order": "id_asc",
+        "truncated": true
+      },
+      "nodes": {
+        "columns": [
+          "id",
+          "type",
+          "label",
+          "origin",
+          "status"
+        ],
+        "rows": [
+          [
+            "e:policy:retro",
+            "Policy",
+            "합성 정책 소급",
+            "external",
+            "active"
+          ],
+          [
+            "e:policy:upload",
+            "Policy",
+            "합성 업로드 규칙",
+            "external",
+            "active"
+          ],
+          [
+            "e:policy:ypp",
+            "Policy",
+            "합성 정책 YPP",
+            "external",
+            "active"
+          ]
+        ]
+      }
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "page": {
+      "next_cursor": "eyJlIjoyLCJmIjoiOGNmMDllOWUiLCJrIjoiZTpwb2xpY3k6eXBwIn0",
+      "total": 18,
+      "truncated": true
+    },
+    "schema_version": "0.3.1"
+  },
+  "case": "overview-page2",
+  "headers": {
+    "cache-control": "no-cache",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

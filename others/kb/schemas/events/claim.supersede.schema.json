@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/events/claim.supersede.schema.json",
+  "title": "claim.supersede",
+  "description": "다른 주장으로 대체한다.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "by": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reason": {
+      "type": "string"
+    },
+    "valid_to": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "by"
+  ]
+}

@@ -1,0 +1,6 @@
+# WP-06 내부 작업. tick이 stage 순번 뒤에 만기인 작업을 돈다. LLM을 부르지 않는다.
+jobs:
+  - id: collect.prune_fetch_log
+    every_s: 86400
+    stage: 3
+    run: "kb.collect.maintenance:prune_fetch_log"

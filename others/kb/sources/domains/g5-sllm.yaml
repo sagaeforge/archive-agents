@@ -1,0 +1,178 @@
+# WP-07 소스 레지스트리(g5-sllm.yaml). 원본: ADR-0001 10.4, docs/research/sources-inventory*.md, ADR-0002.
+# policy.reason: 비활성 사유 또는 주의. parse: 어댑터 설정. 비활성 소스는 enabled=false이고 수집 코드가 호출하지 않는다.
+sources:
+- id: src:hf-models
+  inventory_id: L01
+  name: Hugging Face Hub 조직별 모델
+  domain:
+  - G
+  class: feed
+  fetch:
+    kind: https
+    urls:
+    - https://huggingface.co/api/models?author=unsloth&sort=lastModified&limit=50
+    - https://huggingface.co/api/models?author=Qwen&sort=lastModified&limit=50
+    - https://huggingface.co/api/models?author=google&sort=lastModified&limit=50
+    - https://huggingface.co/api/models?author=LGAI-EXAONE&sort=lastModified&limit=50
+    - https://huggingface.co/api/models?author=LiquidAI&sort=lastModified&limit=50
+    conditional: true
+  parser: hf_models@1
+  expect:
+    content_type: &id001
+    - application/json
+  policy:
+    enabled: true
+    tos: no_clause
+    tos_ref: https://huggingface.co/terms-of-service
+    robots: enforce
+    requires_decision: null
+    trust: secondary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:llama-cpp-releases
+  inventory_id: L02
+  name: llama.cpp 릴리스
+  domain:
+  - G
+  class: rel
+  fetch:
+    kind: https
+    url: https://api.github.com/repos/ggml-org/llama.cpp/releases/latest
+    conditional: true
+  parser: github_release@1
+  parse:
+    entity:
+      slug: llama-cpp
+      label: llama.cpp
+      type: Tool
+  expect:
+    content_type: *id001
+  policy:
+    enabled: true
+    tos: allowed
+    tos_ref: https://docs.github.com/en/site-policy/acceptable-use-policies/github-acceptable-use-policies
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:ollama-releases
+  inventory_id: L03
+  name: Ollama 릴리스
+  domain:
+  - G
+  class: feed
+  fetch:
+    kind: https
+    url: https://api.github.com/repos/ollama/ollama/releases/latest
+    conditional: true
+  parser: github_release@1
+  parse:
+    entity:
+      slug: ollama
+      label: Ollama
+      type: Tool
+  expect:
+    content_type: *id001
+  policy:
+    enabled: true
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:lmstudio-docs
+  inventory_id: L04
+  name: LM Studio Anthropic 호환 문서
+  domain:
+  - G
+  class: weekly
+  fetch:
+    kind: https
+    url: https://lmstudio.ai/docs/developer/anthropic-compat/messages
+    conditional: true
+  parser: page_md@1
+  expect:
+    content_type: &id002
+    - text/plain
+    - text/markdown
+    - text/html
+    - application/xhtml+xml
+  policy:
+    enabled: true
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:korea-sovereign-ai
+  inventory_id: L05
+  name: 독자 AI 파운데이션 모델 프로젝트 평가 브리핑
+  domain:
+  - G
+  class: event
+  fetch:
+    kind: https
+    urls:
+    - https://www.korea.kr/briefing/policyBriefingView.do?newsId=156774781
+    - https://www.korea.kr/briefing/policyBriefingView.do?newsId=156740468
+    conditional: true
+  parser: page_md@1
+  expect:
+    content_type: *id002
+  policy:
+    enabled: true
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:reddit-localllama
+  inventory_id: L06
+  name: Reddit r/LocalLLaMA RSS
+  domain:
+  - G
+  class: short
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: community
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: 429 관측, 약관 미확인
+- id: src:vendor-rank-posts
+  inventory_id: L07
+  name: 벤더 블로그 순위 글
+  domain:
+  - G
+  class: weekly
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: secondary
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: 2차 순위 글이고 서로 상충한다. 1차 근거로 쓰지 않는다

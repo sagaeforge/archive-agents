@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/events/schema.predicate_defined.schema.json",
+  "title": "schema.predicate_defined",
+  "description": "술어 정의.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "functional": {
+      "type": "boolean"
+    },
+    "value_kind": {
+      "type": "string",
+      "minLength": 1
+    },
+    "label_ko": {
+      "type": "string"
+    },
+    "label_en": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "functional",
+    "value_kind"
+  ]
+}

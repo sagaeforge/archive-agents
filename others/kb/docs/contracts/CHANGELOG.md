@@ -1,0 +1,27 @@
+# 계약 변경 기록
+
+`docs/contracts/openapi.yaml`의 변경 기록이다. 파괴 변경은 major(0.x 동안은 minor)를 올리고 여기에 적은 뒤 sagae-tools 세션에 알린다(계약 8장). 기준선은 `docs/contracts/baseline/openapi.yaml`이고 올리는 것은 소비자 통지 뒤의 명시 절차다.
+
+## 0.3.1 (2026-11-01) 3차 회신 처리, 호환 변경만
+
+입력은 `docs/contracts/consumers/sagae-tools-reply-3.md`이고 항목별 처리는 `sagae-tools-reply-3-response.md`다. 파괴 변경은 없다. `docs/contracts/baseline/openapi.yaml`은 sagae-tools 수용 회신(2026-11-01) 뒤 0.3.1로 올렸다. 호환 변경이라 기준선을 올리는 것은 소비자 통지 뒤의 명시 절차다. `test_baseline_in_sync`가 같은 판이면 바이트 일치, 더 높은 판이면 경로, 파라미터, 속성, `required`, 닫힌 enum을 줄이지 않았는지 본다.
+
+- 추가(쿼리 파라미터): `/v1/overview`, `/v1/nodes/{id}/neighbors`의 `edge_status`. 엣지에만 걸리고 쉼표로 여러 값을 받으며 생략하면 `status`와 같다.
+- 추가(필드): `Claim`과 `ChainItem`의 `own_status`, `status_basis`. `NodeType.in_overview`. 모두 선택 필드다.
+- 추가(값): 필터 `domain=none`과 `/v1/facets` `domain` 축의 `none`. 도메인 없는 노드의 `domain`은 `[]`다.
+- 확정(문서): `domain` 복수 값은 any-of. `overview_types` 갱신 절차(사용자 타입 자동 포함). `ChainItem.status`와 `ClaimDetail.versions[].status`는 `eff_status`. 4.7 정정 판정의 비교 대상은 뒤 항목의 `recorded_at`에 살아 있던 행과 같은 `id`의 직전 버전. 경로별 기본 `types` 표(2.7). `status`는 단일 값 유지.
+- 정정(문서): `core`의 미검증 엣지 제외는 `needs_review`와 `unverified` 둘 다이고 개요, 이웃, `/edges`와 같다(0.3.0 변경 내역의 `unverified`도 두 값). 5장 표의 `Series`는 `fact` 그룹의 타입이다. passage `id`는 노드 조회에 쓰지 않는다(404).
+- 버전: `info.version`과 예시의 `schema_version`을 0.3.1로 올렸다.
+
+## 0.3.0 (2026-11-01) 기계 판독 원본 초안
+
+- `docs/contracts/data-interface-v0.md` 0.3.0을 OpenAPI 3.1.1 + JSON Schema 2020-12로 옮겼다. 3장 YAML은 `components/schemas`에 그대로 쓰고 `PublicId`(계약 2.10 패턴)만 더했다.
+- 4장 표의 26개 경로를 `operationId`, 응답, 허용 파라미터까지 표대로 옮겼다. 봉투 경로의 200은 `<이름>Envelope`이고 `Envelope`에 `data`를 선언하지 않는다.
+- 공통 파라미터는 `components/parameters`, 오류 응답은 `components/responses`의 `Problem`이다. 429, 503에 `Retry-After`를 선언했다.
+- 문서에 값이 없는 선택은 이 초안이 정했고 다음과 같다. 문서와 어긋나면 이 파일이 이긴다.
+  - `GET /v1/export/graph`의 `profile`은 선택이고 기본 `core`다.
+  - `GET /v1/counts`의 `bucket`, `field`는 선택이고 기본값을 선언하지 않는다.
+  - 서버 주소(`servers`)를 선언하지 않는다. 생성 클라이언트가 주소를 박지 않게 한다.
+  - `If-None-Match`, `Range` 헤더는 파라미터가 아니라 설명에만 둔다.
+- `/v1/ops/*`와 `Ops*` 스키마에 `x-provisional`을 달았다.
+- 기준선을 `docs/contracts/baseline/openapi.yaml`에 고정했다.

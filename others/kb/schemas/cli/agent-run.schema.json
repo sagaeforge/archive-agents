@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/cli/agent-run.schema.json",
+  "title": "kb agent run --json",
+  "type": "object",
+  "required": ["windows", "claims", "rejected", "queue_left", "is_error", "scope", "by_backend"],
+  "properties": {
+    "windows": {"type": "integer", "minimum": 0},
+    "claims": {"type": "integer", "minimum": 0},
+    "rejected": {"type": "integer", "minimum": 0},
+    "queue_left": {"type": "integer", "minimum": 0},
+    "is_error": {"type": "boolean"},
+    "scope": {"enum": ["public", "sensitive"]},
+    "by_backend": {"type": "object", "propertyNames": {"enum": ["claude", "codex", "openrouter", "sllm"]},
+                   "additionalProperties": {"type": "integer", "minimum": 0}},
+    "reason": {"type": ["string", "null"]},
+    "needs_review": {"type": "integer"},
+    "cache_hits": {"type": "integer"},
+    "guarded": {"type": "integer"},
+    "failed": {"type": "integer"},
+    "spent_usd": {"type": "number"},
+    "support": {"type": "object"},
+    "cross": {"type": "object"},
+    "retracted": {"type": "integer"},
+    "requeued": {"type": "integer"}
+  },
+  "additionalProperties": true
+}

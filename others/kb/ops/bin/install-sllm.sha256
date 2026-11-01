@@ -1,0 +1,5 @@
+# sha256  size  이름  주소   (llama.cpp b12020 CUDA 13.4 + Nemotron GGUF). 해시가 다르면 설치하지 않는다.
+# llama.cpp 해시: ~/.cache/sagae-kb/llm-eval/bin/dl-b12020/sha.txt, GGUF 해시: models/manifest.json(HF LFS 해시와 일치, 2026-11-01)
+a9323978129be5948665e8cff614548b602d3c05cc2ea0ad2c7b905eb065ce77 164195754 llama-b12020-bin-ubuntu-cuda-13.4-x64.tar.gz https://github.com/ggml-org/llama.cpp/releases/download/b12020/llama-b12020-bin-ubuntu-cuda-13.4-x64.tar.gz
+22ebd98c96c5156f00731d1327f1fe40f0d1cce4ff6d51ac4c82845b1424b0e1 440232630 cudart-llama-b12020-bin-ubuntu-cuda-13.4-x64.tar.gz https://github.com/ggml-org/llama.cpp/releases/download/b12020/cudart-llama-b12020-bin-ubuntu-cuda-13.4-x64.tar.gz
+84ff34f5834b929043f5ae74799e8d562d4056998f6a5923ceb44831e8ad84d6 5060482240 NVIDIA-Nemotron-3.5-Bolt-E4B-UD-Q4_K_XL.gguf https://huggingface.co/unsloth/NVIDIA-Nemotron-3.5-Bolt-E4B-GGUF/resolve/b738967d6da3441a7d1c71fcec15e49e32e16ecd/NVIDIA-Nemotron-3.5-Bolt-E4B-UD-Q4_K_XL.gguf

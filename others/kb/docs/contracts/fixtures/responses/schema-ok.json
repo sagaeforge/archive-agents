@@ -1,0 +1,459 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "edge_types": [
+        {
+          "count": 1,
+          "group": "structure",
+          "name": "DEPENDS_ON"
+        },
+        {
+          "count": 1,
+          "group": "user",
+          "name": "LINKS_TO"
+        },
+        {
+          "count": 1,
+          "group": "structure",
+          "name": "MEASURES"
+        },
+        {
+          "count": 2,
+          "group": "change",
+          "name": "MERGED_INTO"
+        },
+        {
+          "count": 1,
+          "group": "structure",
+          "name": "PART_OF"
+        },
+        {
+          "count": 5,
+          "group": "source",
+          "name": "SNAPSHOT_OF"
+        },
+        {
+          "count": 1,
+          "group": "change",
+          "name": "SUCCESSOR_OF"
+        },
+        {
+          "count": 2,
+          "group": "change",
+          "name": "SUPERSEDES"
+        },
+        {
+          "count": 3,
+          "group": "structure",
+          "name": "USES"
+        }
+      ],
+      "enums": {
+        "claim_kind": [
+          "event",
+          "state",
+          "howto"
+        ],
+        "evidence_state": [
+          "live",
+          "archived_only"
+        ],
+        "hit_kind": [
+          "claim",
+          "record",
+          "entity",
+          "passage"
+        ],
+        "method": [
+          "deterministic",
+          "llm",
+          "human"
+        ],
+        "origin": [
+          "external",
+          "first_party"
+        ],
+        "precision": [
+          "instant",
+          "day",
+          "month",
+          "quarter",
+          "year"
+        ],
+        "selector_kind": [
+          "text_quote",
+          "jsonpointer"
+        ],
+        "sensitivity": [
+          "public",
+          "internal",
+          "private",
+          "secret"
+        ],
+        "stance": [
+          "stated",
+          "attributed"
+        ],
+        "status": [
+          "active",
+          "superseded",
+          "dead"
+        ]
+      },
+      "filter_keys": [
+        "types",
+        "origin",
+        "status",
+        "domain",
+        "source",
+        "author"
+      ],
+      "node_types": [
+        {
+          "count": 15,
+          "group": "fact",
+          "in_overview": false,
+          "name": "Claim",
+          "properties": [],
+          "status": "provisional"
+        },
+        {
+          "count": 1,
+          "group": "user",
+          "in_overview": true,
+          "name": "Decision",
+          "properties": [],
+          "status": "provisional"
+        },
+        {
+          "count": 5,
+          "group": "evidence",
+          "in_overview": false,
+          "name": "Document",
+          "properties": [],
+          "status": "provisional"
+        },
+        {
+          "count": 1,
+          "group": "world",
+          "in_overview": true,
+          "name": "Feature",
+          "properties": [],
+          "status": "provisional"
+        },
+        {
+          "count": 2,
+          "group": "user",
+          "in_overview": true,
+          "name": "Note",
+          "properties": [],
+          "status": "provisional"
+        },
+        {
+          "count": 5,
+          "group": "world",
+          "in_overview": true,
+          "name": "Policy",
+          "properties": [],
+          "status": "provisional"
+        },
+        {
+          "count": 1,
+          "group": "world",
+          "in_overview": true,
+          "name": "Product",
+          "properties": [],
+          "status": "provisional"
+        },
+        {
+          "count": 7,
+          "group": "world",
+          "in_overview": false,
+          "json_schema": {
+            "properties": {
+              "created": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "flag": {
+                "type": "boolean"
+              },
+              "hidden": {
+                "type": "string",
+                "x-kb-filterable": false
+              },
+              "lang": {
+                "type": "string"
+              },
+              "ratio": {
+                "type": "number",
+                "x-kb-sortable": true
+              },
+              "stars": {
+                "type": "integer",
+                "x-kb-sortable": true
+              },
+              "tags": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "type": "object"
+          },
+          "name": "Repo",
+          "properties": [
+            {
+              "filterable": true,
+              "name": "created",
+              "sortable": false,
+              "type": "date-time"
+            },
+            {
+              "filterable": true,
+              "name": "flag",
+              "sortable": false,
+              "type": "boolean"
+            },
+            {
+              "filterable": false,
+              "name": "hidden",
+              "sortable": false,
+              "type": "string"
+            },
+            {
+              "filterable": true,
+              "name": "lang",
+              "sortable": false,
+              "type": "string"
+            },
+            {
+              "filterable": true,
+              "name": "ratio",
+              "sortable": true,
+              "type": "decimal"
+            },
+            {
+              "filterable": true,
+              "name": "stars",
+              "sortable": true,
+              "type": "integer"
+            },
+            {
+              "filterable": true,
+              "name": "tags",
+              "sortable": false,
+              "type": "string"
+            }
+          ],
+          "status": "active"
+        },
+        {
+          "count": 1,
+          "group": "fact",
+          "in_overview": true,
+          "name": "Series",
+          "properties": [],
+          "status": "provisional"
+        },
+        {
+          "count": 5,
+          "group": "evidence",
+          "in_overview": false,
+          "name": "Snapshot",
+          "properties": [],
+          "status": "provisional"
+        },
+        {
+          "count": 2,
+          "group": "evidence",
+          "in_overview": false,
+          "name": "Source",
+          "properties": [],
+          "status": "provisional"
+        },
+        {
+          "count": 2,
+          "group": "ops",
+          "in_overview": false,
+          "name": "Ticket",
+          "properties": [],
+          "status": "provisional"
+        },
+        {
+          "count": 7,
+          "group": "world",
+          "in_overview": true,
+          "name": "Tool",
+          "properties": [],
+          "status": "provisional"
+        },
+        {
+          "count": 1,
+          "group": "world",
+          "in_overview": false,
+          "name": "Video",
+          "properties": [],
+          "status": "provisional"
+        }
+      ],
+      "overview_types": [
+        "Decision",
+        "Feature",
+        "Note",
+        "Policy",
+        "Product",
+        "Series",
+        "Tool"
+      ],
+      "predicates": [
+        {
+          "functional": false,
+          "id": "cadence",
+          "labels": {},
+          "value_kind": null
+        },
+        {
+          "functional": false,
+          "id": "caption",
+          "labels": {},
+          "value_kind": null
+        },
+        {
+          "functional": false,
+          "id": "chain_hours",
+          "labels": {},
+          "value_kind": null
+        },
+        {
+          "functional": false,
+          "id": "entry_hours",
+          "labels": {},
+          "value_kind": null
+        },
+        {
+          "functional": false,
+          "id": "future_hours",
+          "labels": {},
+          "value_kind": null
+        },
+        {
+          "functional": false,
+          "id": "moon_feature",
+          "labels": {},
+          "value_kind": null
+        },
+        {
+          "functional": false,
+          "id": "supports",
+          "labels": {},
+          "value_kind": null
+        },
+        {
+          "functional": false,
+          "id": "threshold_hours",
+          "labels": {},
+          "value_kind": null
+        }
+      ],
+      "sort_keys": {
+        "*": [
+          "id",
+          "label",
+          "recorded_at"
+        ],
+        "Claim": [
+          "id",
+          "label",
+          "recorded_at"
+        ],
+        "Decision": [
+          "id",
+          "label",
+          "recorded_at"
+        ],
+        "Document": [
+          "id",
+          "label",
+          "recorded_at"
+        ],
+        "Feature": [
+          "id",
+          "label",
+          "recorded_at"
+        ],
+        "Note": [
+          "id",
+          "label",
+          "recorded_at"
+        ],
+        "Policy": [
+          "id",
+          "label",
+          "recorded_at"
+        ],
+        "Product": [
+          "id",
+          "label",
+          "recorded_at"
+        ],
+        "Repo": [
+          "id",
+          "label",
+          "recorded_at",
+          "ratio",
+          "stars"
+        ],
+        "Series": [
+          "id",
+          "label",
+          "recorded_at"
+        ],
+        "Snapshot": [
+          "id",
+          "label",
+          "recorded_at"
+        ],
+        "Source": [
+          "id",
+          "label",
+          "recorded_at"
+        ],
+        "Ticket": [
+          "id",
+          "label",
+          "recorded_at"
+        ],
+        "Tool": [
+          "id",
+          "label",
+          "recorded_at"
+        ],
+        "Video": [
+          "id",
+          "label",
+          "recorded_at"
+        ]
+      }
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "schema_version": "0.3.1"
+  },
+  "case": "schema-ok",
+  "headers": {
+    "cache-control": "no-cache",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

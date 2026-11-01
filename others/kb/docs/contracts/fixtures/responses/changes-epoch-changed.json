@@ -1,0 +1,17 @@
+{
+  "body": {
+    "code": "epoch_changed",
+    "detail": "epoch이 바뀌었거나 커서가 현재 applied_seq보다 앞선다",
+    "instance": "/v1/changes",
+    "status": 410,
+    "title": "epoch changed",
+    "type": "https://kb.local/problems/epoch-changed"
+  },
+  "case": "changes-epoch-changed",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/problem+json",
+    "vary": "Authorization"
+  },
+  "status": 410
+}

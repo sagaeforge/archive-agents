@@ -1,0 +1,86 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "chains": [
+        {
+          "items": [
+            {
+              "expired_at": "2027-01-16T14:00:00Z",
+              "id": "c-retro",
+              "own_status": "active",
+              "recorded_at": "2027-01-15T18:00:00Z",
+              "status": "active",
+              "status_basis": "own",
+              "superseded_by": null,
+              "unit": "hour",
+              "valid": {
+                "from": "2024-06-01",
+                "label": null,
+                "precision": "day",
+                "to": null
+              },
+              "value": "4000",
+              "version": 1
+            },
+            {
+              "expired_at": null,
+              "id": "c-retro",
+              "own_status": "active",
+              "recorded_at": "2027-01-16T14:00:00Z",
+              "status": "active",
+              "status_basis": "own",
+              "superseded_by": null,
+              "unit": "hour",
+              "valid": {
+                "from": "2024-06-01",
+                "label": null,
+                "precision": "day",
+                "to": null
+              },
+              "value": "3000",
+              "version": 2
+            }
+          ],
+          "predicate": "entry_hours",
+          "slot": null
+        }
+      ],
+      "edges": [],
+      "id": "c-retro",
+      "versions": [
+        {
+          "expired_at": "2027-01-16T14:00:00Z",
+          "label": "기준은 4000시간이다.",
+          "recorded_at": "2027-01-15T18:00:00Z",
+          "status": "active",
+          "version": 1
+        },
+        {
+          "expired_at": null,
+          "label": "기준은 3000시간이다.",
+          "recorded_at": "2027-01-16T14:00:00Z",
+          "status": "active",
+          "version": 2
+        }
+      ]
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "schema_version": "0.3.1"
+  },
+  "case": "history-retro",
+  "headers": {
+    "cache-control": "no-cache",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

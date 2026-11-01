@@ -1,0 +1,63 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "claim": null,
+      "claim_id": null,
+      "dst": "e:tool:alpha",
+      "expired_at": null,
+      "id": "r-par-1",
+      "props": {},
+      "recorded_at": "2027-01-15T08:00:28Z",
+      "rtype": "USES",
+      "sensitivity": "public",
+      "src": "e:tool:x",
+      "status": "active",
+      "valid": {
+        "from": null,
+        "label": null,
+        "precision": null,
+        "to": null
+      },
+      "version": 1,
+      "versions": [
+        {
+          "claim_id": null,
+          "dst": "e:tool:alpha",
+          "expired_at": null,
+          "id": "r-par-1",
+          "props": {},
+          "recorded_at": "2027-01-15T08:00:28Z",
+          "rtype": "USES",
+          "sensitivity": "public",
+          "src": "e:tool:x",
+          "status": "active",
+          "valid": {
+            "from": null,
+            "label": null,
+            "precision": null,
+            "to": null
+          },
+          "version": 1
+        }
+      ]
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "schema_version": "0.3.1"
+  },
+  "case": "edge-parallel-1",
+  "headers": {
+    "cache-control": "no-cache",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

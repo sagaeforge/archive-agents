@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/events/claim.confirm.schema.json",
+  "title": "claim.confirm",
+  "description": "새 스냅샷에서 인용구를 다시 찾았다.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "snapshot": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "snapshot"
+  ]
+}

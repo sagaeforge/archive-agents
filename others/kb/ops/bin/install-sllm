@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# install-sllm [--dry-run] [--pins FILE]: llama.cpp b12020 바이너리와 Nemotron GGUF를 $KB_TOOLCHAIN, $KB_MODELS에만 설치한다.
+# 고정 해시는 install-sllm.sha256이다. 내려받은 파일이 다르면 설치하지 않고 exit 1, 부분 파일을 남기지 않는다.
+# --dry-run: 받을 파일, 크기, 해시, 대상 경로만 출력한다. 네트워크 요청과 파일 쓰기가 0이다.
+set -euo pipefail
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+dry=0; pins="$here/install-sllm.sha256"
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --dry-run) dry=1 ;;
+    --pins) pins="$2"; shift ;;
+    *) echo "usage: install-sllm [--dry-run] [--pins FILE]" >&2; exit 2 ;;
+  esac
+  shift
+done
+if [ -z "${KB_TOOLCHAIN:-}" ] || [ -z "${KB_MODELS:-}" ]; then
+  # env.sh는 변수만 내보낸다. 파일을 쓰지 않는다.
+  . "$here/env.sh"
+fi
+llama_dir="$KB_TOOLCHAIN/llama"
+model_dir="$KB_MODELS/nemotron"
+dest_of() { case "$1" in *.gguf) echo "$model_dir/$1" ;; *) echo "$llama_dir/.dl/$1" ;; esac; }
+[ -f "$pins" ] || { echo "install-sllm: 해시 파일이 없다: $pins" >&2; exit 1; }
+while read -r sha size name url; do
+  case "$sha" in ''|'#'*) continue ;; esac
+  d="$(dest_of "$name")"
+  if [ "$dry" = 1 ]; then
+    echo "받기: $name"; echo "  크기: $size"; echo "  sha256: $sha"; echo "  주소: $url"; echo "  대상: $d"
+    case "$name" in *.tar.gz) echo "  풀기: $llama_dir" ;; esac
+  fi
+done < "$pins"
+if [ "$dry" = 1 ]; then echo "dry-run: 네트워크 요청 0, 파일 쓰기 0"; exit 0; fi
+mkdir -p "$llama_dir/.dl" "$model_dir"
+fail=0; parts=()
+cleanup() { for f in "${parts[@]:-}"; do [ -n "$f" ] && rm -f "$f"; done; }
+trap cleanup EXIT
+while read -r sha size name url; do
+  case "$sha" in ''|'#'*) continue ;; esac
+  d="$(dest_of "$name")"
+  if [ -f "$d" ] && [ "$(sha256sum "$d" | cut -d' ' -f1)" = "$sha" ]; then echo "이미 있음: $name"; continue; fi
+  part="$d.part"; parts+=("$part")
+  curl -fL --retry 3 -sS -o "$part" "$url" || { echo "install-sllm: 내려받기 실패: $name" >&2; fail=1; break; }
+  got="$(sha256sum "$part" | cut -d' ' -f1)"
+  if [ "$got" != "$sha" ]; then
+    echo "install-sllm: 해시 불일치로 설치하지 않는다: $name (기대 $sha, 실제 $got)" >&2
+    rm -f "$part"; fail=1; break
+  fi
+  mv "$part" "$d"
+done < "$pins"
+[ "$fail" = 0 ] || exit 1
+for t in "$llama_dir"/.dl/*.tar.gz; do
+  [ -f "$t" ] || continue
+  tmp="$(mktemp -d "$llama_dir/.x.XXXXXX")"
+  tar -xzf "$t" -C "$tmp"
+  # 압축 최상위 폴더 아래 파일을 llama_dir로 평탄화한다.
+  find "$tmp" -type f -exec cp -n {} "$llama_dir/" \;
+  rm -rf "$tmp"
+done
+chmod +x "$llama_dir/llama-server" 2>/dev/null || true
+echo "설치 완료: $llama_dir, $model_dir"

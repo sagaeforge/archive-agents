@@ -1,0 +1,319 @@
+# WP-07 소스 레지스트리(g2-codex.yaml). 원본: ADR-0001 10.4, docs/research/sources-inventory*.md, ADR-0002.
+# policy.reason: 비활성 사유 또는 주의. parse: 어댑터 설정. 비활성 소스는 enabled=false이고 수집 코드가 호출하지 않는다.
+sources:
+- id: src:codex-releases
+  inventory_id: O01
+  name: openai/codex 릴리스
+  domain:
+  - G
+  class: rel
+  fetch:
+    kind: https
+    url: https://api.github.com/repos/openai/codex/releases/latest
+    conditional: true
+  parser: github_release@1
+  parse:
+    entity:
+      slug: codex-cli
+      label: Codex CLI
+      type: Tool
+  expect:
+    content_type: &id002
+    - application/json
+  policy:
+    enabled: true
+    tos: allowed
+    tos_ref: https://docs.github.com/en/site-policy/acceptable-use-policies/github-acceptable-use-policies
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:codex-docs
+  inventory_id: O02
+  name: Codex 공식 문서
+  domain:
+  - G
+  class: docs
+  fetch:
+    kind: https
+    url: https://learn.chatgpt.com/docs/llms.txt
+    discover:
+      kind: llms_txt
+      max_pages: 220
+      max_depth: 2
+      include:
+      - ^https://learn\.chatgpt\.com/docs/
+    conditional: true
+  parser: llms_txt@1
+  expect:
+    content_type: &id001
+    - text/plain
+    - text/markdown
+    - text/html
+    - application/xhtml+xml
+  policy:
+    enabled: true
+    tos: signals_conflict
+    tos_ref: https://openai.com/policies/terms-of-use/
+    robots: enforce
+    requires_decision: 9
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:codex-changelog
+  inventory_id: O03
+  name: Codex 변경 이력 RSS
+  domain:
+  - G
+  class: rel
+  fetch:
+    kind: https
+    url: https://learn.chatgpt.com/docs/changelog/rss.xml
+    conditional: true
+  parser: rss_atom@1
+  expect:
+    content_type: &id003
+    - application/rss+xml
+    - application/atom+xml
+    - application/xml
+    - text/xml
+    - text/plain
+  policy:
+    enabled: true
+    tos: signals_conflict
+    tos_ref: https://openai.com/policies/terms-of-use/
+    robots: enforce
+    requires_decision: 9
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:codex-feature-maturity
+  inventory_id: O04
+  name: Codex Feature Maturity
+  domain:
+  - G
+  class: docs
+  fetch:
+    kind: https
+    url: https://learn.chatgpt.com/docs/feature-maturity
+    conditional: true
+  parser: page_md@1
+  expect:
+    content_type: *id001
+  policy:
+    enabled: true
+    tos: signals_conflict
+    tos_ref: https://openai.com/policies/terms-of-use/
+    robots: enforce
+    requires_decision: 9
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:codex-models
+  inventory_id: O05
+  name: Codex Models
+  domain:
+  - G
+  class: docs
+  fetch:
+    kind: https
+    url: https://learn.chatgpt.com/docs/models.md
+    conditional: true
+  parser: page_md@1
+  expect:
+    content_type: *id001
+  policy:
+    enabled: true
+    tos: signals_conflict
+    tos_ref: https://openai.com/policies/terms-of-use/
+    robots: enforce
+    requires_decision: 9
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:codex-whats-new
+  inventory_id: O06
+  name: Codex What's new
+  domain:
+  - G
+  class: weekly
+  fetch:
+    kind: https
+    url: https://learn.chatgpt.com/docs/whats-new.md
+    conditional: true
+  parser: page_md@1
+  expect:
+    content_type: *id001
+  policy:
+    enabled: true
+    tos: signals_conflict
+    tos_ref: https://openai.com/policies/terms-of-use/
+    robots: enforce
+    requires_decision: 9
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:codex-features
+  inventory_id: O07
+  name: codex features list(로컬 실행)
+  domain:
+  - G
+  class: rel
+  fetch:
+    kind: local_exec
+  parser: codex_features@1
+  policy:
+    enabled: false
+    tos: allowed
+    tos_ref: https://docs.github.com/en/site-policy/acceptable-use-policies/github-acceptable-use-policies
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: 'local_exec: 네트워크 소스가 아니다. 내부 작업 parse.codex_features가 codex 실행 파일이 있을 때 가짜 CODEX_HOME에서 돌려 수집한다'
+- id: src:codex-features-lib
+  inventory_id: O08
+  name: codex-rs/features/src/lib.rs
+  domain:
+  - G
+  class: rel
+  fetch:
+    kind: https
+    url: https://raw.githubusercontent.com/openai/codex/main/codex-rs/features/src/lib.rs
+    conditional: true
+  parser: raw_file@1
+  expect:
+    content_type:
+    - text/plain
+  policy:
+    enabled: true
+    tos: allowed
+    tos_ref: https://docs.github.com/en/site-policy/acceptable-use-policies/github-acceptable-use-policies
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:openai-api-deprecations
+  inventory_id: O09
+  name: OpenAI API deprecations
+  domain:
+  - G
+  class: docs
+  fetch:
+    kind: https
+    url: https://developers.openai.com/api/docs/deprecations
+    conditional: true
+  parser: page_md@1
+  expect:
+    content_type: *id001
+  policy:
+    enabled: true
+    tos: signals_conflict
+    tos_ref: https://openai.com/policies/terms-of-use/
+    robots: enforce
+    requires_decision: 9
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:codex-npm
+  inventory_id: O10
+  name: npm @openai/codex
+  domain:
+  - G
+  class: rel
+  fetch:
+    kind: https
+    url: https://registry.npmjs.org/@openai/codex/latest
+    conditional: true
+  parser: npm_meta@1
+  expect:
+    content_type: *id002
+  policy:
+    enabled: true
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:agents-md
+  inventory_id: O11
+  name: AGENTS.md 사이트
+  domain:
+  - G
+  class: docs
+  fetch:
+    kind: https
+    url: https://agents.md/
+    conditional: true
+  parser: page_md@1
+  expect:
+    content_type: *id001
+  policy:
+    enabled: true
+    tos: allowed
+    tos_ref: https://github.com/agentsmd/agents.md/blob/main/LICENSE
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:openai-status
+  inventory_id: O12
+  name: OpenAI 상태 페이지 이력
+  domain:
+  - G
+  class: feed
+  fetch:
+    kind: https
+    url: https://status.openai.com/history.rss
+    conditional: true
+  parser: rss_atom@1
+  expect:
+    content_type: *id003
+  policy:
+    enabled: true
+    tos: signals_conflict
+    tos_ref: https://openai.com/policies/terms-of-use/
+    robots: enforce
+    requires_decision: 9
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:openai-dev-rss
+  inventory_id: O13
+  name: developers.openai.com 사이트 RSS
+  domain:
+  - G
+  class: feed
+  fetch:
+    kind: https
+    url: https://developers.openai.com/rss.xml
+    conditional: true
+  policy:
+    enabled: false
+    tos: signals_conflict
+    tos_ref: https://openai.com/policies/terms-of-use/
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: '갱신 정체: 최신 항목 2026-05-05. O03이 대체한다. 켜는 조건: 갱신 재개 확인 + 결정 9'

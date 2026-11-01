@@ -1,0 +1,57 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "author": "collector:fixture",
+      "body_format": null,
+      "claims": [],
+      "claims_truncated": false,
+      "domain": [],
+      "edges": {
+        "in": [],
+        "out": [],
+        "truncated": false
+      },
+      "expired_at": null,
+      "generated_by": null,
+      "id": "src:a",
+      "label": "합성 출처 A",
+      "link_status": null,
+      "liveness": null,
+      "merged_into": null,
+      "merged_into_final": null,
+      "on_behalf_of": null,
+      "origin": "external",
+      "props": {},
+      "recorded_at": "2027-01-15T08:00:01Z",
+      "sensitivity": "public",
+      "status": "active",
+      "type": "Source",
+      "valid": {
+        "from": null,
+        "label": null,
+        "precision": null,
+        "to": null
+      },
+      "verification": null,
+      "version": 1
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "schema_version": "0.3.1"
+  },
+  "case": "node-kind-src-exists",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

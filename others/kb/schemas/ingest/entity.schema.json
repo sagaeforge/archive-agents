@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/ingest/entity.schema.json",
+  "title": "kb-ingest/1 entity",
+  "description": "G 도메인 단위(repo, package, feature, model, doc)는 liveness 필수.",
+  "type": "object",
+  "properties": {
+    "item": {
+      "const": "entity"
+    },
+    "ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "key": {
+      "type": "string",
+      "minLength": 1
+    },
+    "type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1
+    },
+    "aliases": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "domain": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "A",
+          "B",
+          "C",
+          "D",
+          "E",
+          "F",
+          "G"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "props": {
+      "type": "object"
+    },
+    "lang": {
+      "type": "string"
+    },
+    "liveness": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "enum": [
+            "active",
+            "renamed",
+            "scheduled_removal",
+            "deprecated",
+            "partial",
+            "superseded",
+            "removed",
+            "stale_suspect",
+            "revived"
+          ]
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "signals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "snapshot": {
+                "type": "string",
+                "minLength": 1
+              },
+              "quote": {
+                "type": "string"
+              },
+              "prefix": {
+                "type": "string"
+              },
+              "suffix": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "snapshot"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "decided_by": {
+          "type": "string",
+          "minLength": 1
+        },
+        "successor": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "state",
+        "signals",
+        "decided_by"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "item",
+    "key",
+    "type",
+    "label"
+  ],
+  "additionalProperties": false
+}

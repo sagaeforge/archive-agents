@@ -1,0 +1,192 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "author": "collector:fixture",
+      "body_format": null,
+      "claims": [
+        {
+          "author": "collector:fixture",
+          "body_format": null,
+          "conflict_group": null,
+          "domain": [
+            "F"
+          ],
+          "evidence": [
+            {
+              "end": null,
+              "evidence_state": "live",
+              "exact": "ma는 위젯을 지원한다",
+              "id": "ev-xqnblujn5oot",
+              "json_pointer": null,
+              "last_confirmed_at": "2027-01-15T08:00:50Z",
+              "prefix": null,
+              "selector_kind": "text_quote",
+              "snapshot_id": "n-1",
+              "start": null,
+              "suffix": null,
+              "support_check": null
+            }
+          ],
+          "expired_at": null,
+          "generated_by": null,
+          "id": "c-ma",
+          "kind": "state",
+          "label": "ma는 위젯을 지원한다",
+          "link_status": null,
+          "liveness": null,
+          "merged_into": null,
+          "merged_into_final": null,
+          "method": "llm",
+          "object": null,
+          "on_behalf_of": null,
+          "origin": "external",
+          "own_status": "active",
+          "predicate": "supports",
+          "props": {},
+          "qualifiers": {},
+          "recorded_at": "2027-01-15T08:00:50Z",
+          "sensitivity": "public",
+          "speaker": null,
+          "stance": "stated",
+          "statement": "ma는 위젯을 지원한다",
+          "status": "active",
+          "status_basis": "own",
+          "subject": "e:tool:ma",
+          "type": "Claim",
+          "unit": null,
+          "valid": {
+            "from": null,
+            "label": null,
+            "precision": null,
+            "to": null
+          },
+          "value": "위젯",
+          "verification": "quote_found",
+          "version": 1
+        },
+        {
+          "author": "collector:fixture",
+          "body_format": null,
+          "conflict_group": null,
+          "domain": [
+            "F"
+          ],
+          "evidence": [
+            {
+              "end": null,
+              "evidence_state": "live",
+              "exact": "mb는 달을 지원한다",
+              "id": "ev-tewo2scydvlo",
+              "json_pointer": null,
+              "last_confirmed_at": "2027-01-15T08:00:51Z",
+              "prefix": null,
+              "selector_kind": "text_quote",
+              "snapshot_id": "n-1",
+              "start": null,
+              "suffix": null,
+              "support_check": null
+            }
+          ],
+          "expired_at": null,
+          "generated_by": null,
+          "id": "c-mb",
+          "kind": "state",
+          "label": "mb는 달을 지원한다",
+          "link_status": null,
+          "liveness": null,
+          "merged_into": null,
+          "merged_into_final": null,
+          "method": "llm",
+          "object": null,
+          "on_behalf_of": null,
+          "origin": "external",
+          "own_status": "active",
+          "predicate": "supports",
+          "props": {},
+          "qualifiers": {},
+          "recorded_at": "2027-01-15T08:00:51Z",
+          "sensitivity": "public",
+          "speaker": null,
+          "stance": "stated",
+          "statement": "mb는 달을 지원한다",
+          "status": "active",
+          "status_basis": "own",
+          "subject": "e:tool:mb",
+          "type": "Claim",
+          "unit": null,
+          "valid": {
+            "from": null,
+            "label": null,
+            "precision": null,
+            "to": null
+          },
+          "value": "달",
+          "verification": "quote_found",
+          "version": 1
+        }
+      ],
+      "claims_truncated": false,
+      "domain": [],
+      "edges": {
+        "in": [],
+        "out": [
+          {
+            "claim_id": null,
+            "dst": "e:tool:x",
+            "id": "r-ma-x",
+            "peer": {
+              "id": "e:tool:x",
+              "label": "도구 X",
+              "type": "Tool"
+            },
+            "rtype": "USES",
+            "src": "e:tool:ma",
+            "status": "active"
+          }
+        ],
+        "truncated": false
+      },
+      "expired_at": null,
+      "generated_by": null,
+      "id": "e:tool:mc",
+      "label": "병합 C",
+      "link_status": null,
+      "liveness": null,
+      "merged_into": null,
+      "merged_into_final": null,
+      "on_behalf_of": null,
+      "origin": "external",
+      "props": {},
+      "recorded_at": "2027-01-15T08:00:49Z",
+      "sensitivity": "public",
+      "status": "active",
+      "type": "Tool",
+      "valid": {
+        "from": null,
+        "label": null,
+        "precision": null,
+        "to": null
+      },
+      "verification": null,
+      "version": 1
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "schema_version": "0.3.1"
+  },
+  "case": "node-merged-final",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

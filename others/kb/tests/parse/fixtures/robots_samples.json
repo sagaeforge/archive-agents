@@ -1,0 +1,181 @@
+{
+ "note": "2026-11-01 실측 robots.txt에서 User-agent * 와 kb-* 그룹만 남긴 고정 표본. 호스트 규칙이 바뀌면 이 표본을 새로 뜬다.",
+ "hosts": {
+  "agents.md": {
+   "status": 404,
+   "body": ""
+  },
+  "api.github.com": {
+   "status": 404,
+   "body": ""
+  },
+  "blog.opensurvey.co.kr": {
+   "status": 200,
+   "body": "User-agent: *\nAllow: /\n"
+  },
+  "blog.youtube": {
+   "status": 200,
+   "body": "User-agent: *\nDisallow: /search/?\nDisallow: /intl/*/search/?\nDisallow: /search?\nDisallow: /intl/*/search?\n"
+  },
+  "claude.com": {
+   "status": 200,
+   "body": "User-agent: *\nAllow: /\n"
+  },
+  "code.claude.com": {
+   "status": 200,
+   "body": "User-agent: *\nDisallow: /cdn-cgi/\nAllow: /_next/image\nDisallow: /_next/\n"
+  },
+  "d2.naver.com": {
+   "status": 200,
+   "body": "\n"
+  },
+  "datareportal.com": {
+   "status": 200,
+   "body": "User-agent: AI2Bot\nUser-agent: Ai2Bot-Dolma\nUser-agent: aiHitBot\nUser-agent: Amazonbot\nUser-agent: anthropic-ai\nUser-agent: Applebot-Extended\nUser-agent: Bytespider\nUser-agent: CCBot\nUser-agent: ClaudeBot\nUser-agent: cohere-ai\nUser-agent: cohere-training-data-crawler\nUser-agent: DuckAssistBot\nUser-agent: FacebookBot\nUser-agent: Google-Extended\nUser-agent: GoogleOther\nUser-agent: GoogleOther-Image\nUser-agent: GoogleOther-Video\nUser-agent: GPTBot\nUser-agent: img2dataset\nUser-agent: Meta-ExternalAgent\nUser-agent: MyCentralAIScraperBot\nUser-agent: omgili\nUser-agent: omgilibot\nUser-agent: Quora-Bot\nUser-agent: TikTokSpider\nUser-agent: YouBot\nUser-agent: AdsBot-Google\nUser-agent: AdsBot-Google-Mobile\nUser-agent: AdsBot-Google-Mobile-Apps\nUser-agent: *\nDisallow: /config\nDisallow: /search\nDisallow: /account$\nDisallow: /account/\nDisallow: /commerce/digital-download/\nDisallow: /api/\nAllow: /api/ui-extensions/\nDisallow: /static/\nDisallow: /*?author=*\nDisallow: /*&author=*\nDisallow: /*?tag=*\nDisallow: /*&tag=*\nDisallow: /*?month=*\nDisallow: /*&month=*\nDisallow: /*?view=*\nDisallow: /*&view=*\nDisallow: /*?format=json\nDisallow: /*&format=json\nDisallow: /*?format=page-context\nDisallow: /*&format=page-context\nDisallow: /*?format=main-content\nDisallow: /*&format=main-content\nDisallow: /*?format=json-pretty\nDisallow: /*&format=json-pretty\nDisallow: /*?format=ical\nDisallow: /*&format=ical\nDisallow: /*?reversePaginate=*\nDisallow: /*&reversePaginate=*\n"
+  },
+  "developers.google.com": {
+   "status": 200,
+   "body": "User-agent: *\nDisallow: /*?*authuser=\nDisallow: /youtube/partner/\n"
+  },
+  "developers.openai.com": {
+   "status": 200,
+   "body": "User-agent: *\nAllow: /\n"
+  },
+  "discuss.pytorch.kr": {
+   "status": 200,
+   "body": "User-agent: *\nDisallow: /admin/\nDisallow: /auth/\nDisallow: /assets/js/browser-update*.js\nDisallow: /email/\nDisallow: /session\nDisallow: /user-api-key\nDisallow: /*?api_key*\nDisallow: /*?*api_key*\nDisallow: /badges\nDisallow: /my\nDisallow: /search\nDisallow: /tag/*/l\nDisallow: /g\nDisallow: /t/*/*.rss\nDisallow: /c/*.rss\n"
+  },
+  "export.arxiv.org": {
+   "status": 200,
+   "body": "User-agent: *\nDisallow: /\n"
+  },
+  "github.com": {
+   "status": 200,
+   "body": "User-agent: baidu\nUser-agent: *\nAllow: /*?tab=achievements&achievement=*\nAllow: /marketplace/*?tab=readme$\nAllow: /marketplace/*?tab=transparency$\nDisallow: /account-login\nDisallow: /copilot/\nDisallow: /copilot/c/\nDisallow: /ekansa/Open-Context-Data\nDisallow: /ekansa/opencontext-*\nDisallow: /Explodingstuff/\nDisallow: /gist/\nDisallow: /search/advanced\nDisallow: /search$\nDisallow: /*/*/pulse_committer_data.json$\nDisallow: /*/*/pulse_committer_data.json?*\nDisallow: /*/archive/\nDisallow: /*/blame/\nDisallow: /*/cache/\nDisallow: /*/raw/\nDisallow: /*/tree/\nDisallow: */tarball/\nDisallow: */zipball/\nDisallow: /.git/\nDisallow: */.git/\nDisallow: /*.git$\nDisallow: /*.atom$\nDisallow: /*report-abuse?report=*\nDisallow: /*/*/commits/\nDisallow: /marketplace/*/*?tab=readme$\nDisallow: /marketplace/*/*?tab=transparency$\nDisallow: /marketplace/*?*?tab=readme$\nDisallow: /marketplace/*?*?tab=transparency$\nDisallow: /marketplace/actions?tab=readme$\nDisallow: /marketplace/actions?tab=transparency$\nDisallow: /marketplace/free-trials?tab=readme$\nDisallow: /marketplace/free-trials?tab=transparency$\nDisallow: /marketplace/manage?tab=readme$\nDisallow: /marketplace/manage?tab=transparency$\nDisallow: /marketplace/models?tab=readme$\nDisallow: /marketplace/models?tab=transparency$\nDisallow: /marketplace/new?tab=readme$\nDisallow: /marketplace/new?tab=transparency$\nDisallow: /marketplace/publishers?tab=readme$\nDisallow: /marketplace/publishers?tab=transparency$\nDisallow: /marketplace/recently-added?tab=readme$\nDisallow: /marketplace/recently-added?tab=transparency$\nDisallow: /biztools$\nDisallow: /biztools?*\nDisallow: /biztools/*\nDisallow: /businesses$\nDisallow: /businesses?*\nDisallow: /businesses/*\nDisallow: /enterprises$\nDisallow: /enterprises?*\nDisallow: /enterprises/*\nDisallow: /organizations$\nDisallow: /organizations?*\nDisallow: /organizations/*\nDisallow: /settings$\nDisallow: /settings?*\nDisallow: /settings/*\n"
+  },
+  "hn.algolia.com": {
+   "status": 404,
+   "body": ""
+  },
+  "huggingface.co": {
+   "status": 200,
+   "body": "User-agent: *\nAllow: /\n"
+  },
+  "kworb.net": {
+   "status": 200,
+   "body": "User-agent: *\nAllow: /\n"
+  },
+  "learn.chatgpt.com": {
+   "status": 200,
+   "body": "User-agent: *\nAllow: /\n"
+  },
+  "lmstudio.ai": {
+   "status": 200,
+   "body": "User-agent: *\nAllow: /\n"
+  },
+  "news.hada.io": {
+   "status": 200,
+   "body": "User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /auth/\nDisallow: /comments/comment\nDisallow: /comments/topic\nDisallow: /forgot\nDisallow: /login\nDisallow: /password-reset\nDisallow: /settings/\nDisallow: /rss/favorites/\nDisallow: /signup\nDisallow: /users/*/badges\nDisallow: /users/*/email\nDisallow: /write\n"
+  },
+  "octoverse.github.com": {
+   "status": 200,
+   "body": "\n"
+  },
+  "ollama.com": {
+   "status": 200,
+   "body": "User-agent: *\nAllow: /\nDisallow: /auth/\nDisallow: /dashboard\nDisallow: /settings\nDisallow: /signin\nDisallow: /signup\nDisallow: /teams/\nDisallow: /api/\nDisallow: /v1/\nDisallow: /v2/\nDisallow: /health\nDisallow: /ready\nDisallow: /signout\nDisallow: /get-started\nDisallow: /manage-subscription\nDisallow: /extra-usage\nDisallow: /stripe/webhook\nDisallow: /workos/webhook\n"
+  },
+  "platform.claude.com": {
+   "status": 200,
+   "body": "User-agent: *\nDisallow: /api/\n"
+  },
+  "pypi.org": {
+   "status": 200,
+   "body": "User-agent: *\nDisallow: /simple/\nDisallow: /packages/\nDisallow: /_includes/authed/\nDisallow: /project/*/submit-malware-report/\nDisallow: /pypi/*/json\nDisallow: /pypi/*/*/json\nDisallow: /pypi*?\nDisallow: /search*\nDisallow: /_/\nDisallow: /integrity/\nDisallow: /account/\nDisallow: /admin/\n"
+  },
+  "raw.githubusercontent.com": {
+   "status": 404,
+   "body": ""
+  },
+  "registry.modelcontextprotocol.io": {
+   "status": 404,
+   "body": ""
+  },
+  "registry.npmjs.org": {
+   "status": 200,
+   "body": "\n"
+  },
+  "simonwillison.net": {
+   "status": 200,
+   "body": "User-agent: *\nDisallow: /admin/\nDisallow: /search/\n"
+  },
+  "stackoverflow.blog": {
+   "status": 200,
+   "body": "\n"
+  },
+  "stat.kisdi.re.kr": {
+   "status": 200,
+   "body": "\n"
+  },
+  "status.claude.com": {
+   "status": 200,
+   "body": "User-agent: *\nDisallow: /api/\nDisallow: /embed/\n"
+  },
+  "status.openai.com": {
+   "status": 404,
+   "body": ""
+  },
+  "support.claude.com": {
+   "status": 200,
+   "body": "User-agent: *\nDisallow: /not-authorized\nDisallow: /not-found\nDisallow: /[helpCenterIdentifier]/\n"
+  },
+  "support.google.com": {
+   "status": 200,
+   "body": "User-agent: *\nDisallow: /*/search\nDisallow: /*/apis\nDisallow: /*/api\nDisallow: /*/bin/search.py\nDisallow: /bin/search.py\nDisallow: /bin/search.go\nDisallow: /*/forum-attachment\n"
+  },
+  "tech.kakao.com": {
+   "status": 200,
+   "body": "User-agent: *\nDisallow: \n"
+  },
+  "techblog.woowahan.com": {
+   "status": 200,
+   "body": "User-agent: *\nDisallow: /wp-admin/\nAllow: /wp-admin/admin-ajax.php\n"
+  },
+  "toss.tech": {
+   "status": 404,
+   "body": ""
+  },
+  "www.anthropic.com": {
+   "status": 200,
+   "body": "User-agent: *\nAllow: /\n"
+  },
+  "www.igaworks.com": {
+   "status": 200,
+   "body": "User-agent: *\nAllow: /\n"
+  },
+  "www.kmcc.go.kr": {
+   "status": 200,
+   "body": "\n"
+  },
+  "www.korea.kr": {
+   "status": 200,
+   "body": "User-agent: *\nAllow: /\nDisallow: \n"
+  },
+  "www.mediastat.or.kr": {
+   "status": 200,
+   "body": "User-agent: *\nAllow: /\n"
+  },
+  "www.nasmedia.co.kr": {
+   "status": 200,
+   "body": "\n"
+  },
+  "www.nielsen.com": {
+   "status": 200,
+   "body": "User-agent: *\nDisallow: /*.pdf$\n\nUser-agent: *\nDisallow: \n"
+  },
+  "yozm.wishket.com": {
+   "status": 200,
+   "body": "User-agent: *\nAllow: /magazine/\nAllow: /media/news/\nDisallow: /api/\nDisallow: /magazine/manage/\nDisallow: /media/\nDisallow: /media/project_files/\nDisallow: /media/project_attachment/\nDisallow: /media/contract/\nDisallow: /media/agreement/\nDisallow: /media/seal/\nDisallow: /media/contract_files/\nDisallow: /w/\n"
+  }
+ }
+}

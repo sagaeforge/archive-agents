@@ -1,0 +1,120 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "author": "collector:fixture",
+      "body_format": null,
+      "claims": [
+        {
+          "author": "collector:fixture",
+          "body_format": null,
+          "conflict_group": null,
+          "domain": [
+            "F"
+          ],
+          "evidence": [
+            {
+              "end": null,
+              "evidence_state": "live",
+              "exact": "dead는 2026년에 출시됐다",
+              "id": "ev-gnjdnbjhztcu",
+              "json_pointer": null,
+              "last_confirmed_at": "2027-01-15T18:00:00Z",
+              "prefix": null,
+              "selector_kind": "text_quote",
+              "snapshot_id": "n-1",
+              "start": null,
+              "suffix": null,
+              "support_check": null
+            }
+          ],
+          "expired_at": null,
+          "generated_by": null,
+          "id": "c-dead-event",
+          "kind": "event",
+          "label": "dead는 2026년에 출시됐다",
+          "link_status": null,
+          "liveness": null,
+          "merged_into": null,
+          "merged_into_final": null,
+          "method": "llm",
+          "object": null,
+          "on_behalf_of": null,
+          "origin": "external",
+          "own_status": "active",
+          "predicate": null,
+          "props": {},
+          "qualifiers": {},
+          "recorded_at": "2027-01-15T18:00:00Z",
+          "sensitivity": "public",
+          "speaker": null,
+          "stance": "stated",
+          "statement": "dead는 2026년에 출시됐다",
+          "status": "active",
+          "status_basis": "own",
+          "subject": "e:tool:dead",
+          "type": "Claim",
+          "unit": null,
+          "valid": {
+            "from": "2026-01-01",
+            "label": null,
+            "precision": "day",
+            "to": null
+          },
+          "value": null,
+          "verification": "quote_found",
+          "version": 1
+        }
+      ],
+      "claims_truncated": false,
+      "domain": [
+        "F"
+      ],
+      "edges": {
+        "in": [],
+        "out": [],
+        "truncated": false
+      },
+      "expired_at": null,
+      "generated_by": null,
+      "id": "e:tool:dead",
+      "label": "죽은 도구",
+      "link_status": null,
+      "liveness": "removed",
+      "merged_into": null,
+      "merged_into_final": null,
+      "on_behalf_of": null,
+      "origin": "external",
+      "props": {},
+      "recorded_at": "2027-01-16T14:00:00Z",
+      "sensitivity": "public",
+      "status": "dead",
+      "type": "Tool",
+      "valid": {
+        "from": null,
+        "label": null,
+        "precision": null,
+        "to": null
+      },
+      "verification": null,
+      "version": 2
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "schema_version": "0.3.1"
+  },
+  "case": "node-dead-default",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

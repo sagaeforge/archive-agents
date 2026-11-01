@@ -1,0 +1,6 @@
+# venv-rank 최상위 의존성. 전체 고정본은 requirements.txt(uv pip compile --python-version 3.14, 2026-11-01).
+# 모두 공개 2주 이상 된 판을 고정한다(torch 2.14.1 2026-09-30, transformers 5.14.1, numpy 2.5.4 2026-10-10).
+torch==2.14.1
+transformers==5.14.1
+numpy==2.5.4
+# huggingface-hub는 transformers 요구(>=1.5,<2.0)로 풀린다

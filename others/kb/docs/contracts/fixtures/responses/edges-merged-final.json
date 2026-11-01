@@ -1,0 +1,44 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "items": [
+        {
+          "claim_id": null,
+          "dst": "e:tool:x",
+          "id": "r-ma-x",
+          "peer": {
+            "id": "e:tool:x",
+            "label": "도구 X",
+            "type": "Tool"
+          },
+          "rtype": "USES",
+          "src": "e:tool:ma",
+          "status": "active"
+        }
+      ]
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "page": {
+      "next_cursor": null,
+      "total": 1,
+      "truncated": false
+    },
+    "schema_version": "0.3.1"
+  },
+  "case": "edges-merged-final",
+  "headers": {
+    "cache-control": "no-cache",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

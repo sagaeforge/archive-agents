@@ -1,0 +1,210 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "chains": [
+        {
+          "items": [
+            {
+              "expired_at": "2027-01-16T04:00:00Z",
+              "id": "c-chain-1",
+              "own_status": "active",
+              "recorded_at": "2027-01-15T18:00:00Z",
+              "status": "active",
+              "status_basis": "own",
+              "superseded_by": null,
+              "unit": "hour",
+              "valid": {
+                "from": "2022-01-01",
+                "label": null,
+                "precision": "day",
+                "to": null
+              },
+              "value": "4000",
+              "version": 1
+            },
+            {
+              "expired_at": "2027-01-16T04:00:00Z",
+              "id": "c-chain-1",
+              "own_status": "active",
+              "recorded_at": "2027-01-16T04:00:00Z",
+              "status": "active",
+              "status_basis": "own",
+              "superseded_by": null,
+              "unit": "hour",
+              "valid": {
+                "from": "2022-01-01",
+                "label": null,
+                "precision": "day",
+                "to": "2024-01-01"
+              },
+              "value": "4000",
+              "version": 2
+            },
+            {
+              "expired_at": null,
+              "id": "c-chain-1",
+              "own_status": "superseded",
+              "recorded_at": "2027-01-16T04:00:00Z",
+              "status": "superseded",
+              "status_basis": "own",
+              "superseded_by": "c-chain-2",
+              "unit": "hour",
+              "valid": {
+                "from": "2022-01-01",
+                "label": null,
+                "precision": "day",
+                "to": "2024-01-01"
+              },
+              "value": "4000",
+              "version": 3
+            },
+            {
+              "expired_at": "2027-01-16T14:00:00Z",
+              "id": "c-chain-2",
+              "own_status": "active",
+              "recorded_at": "2027-01-16T04:00:00Z",
+              "status": "active",
+              "status_basis": "own",
+              "superseded_by": null,
+              "unit": "hour",
+              "valid": {
+                "from": "2024-01-01",
+                "label": null,
+                "precision": "day",
+                "to": null
+              },
+              "value": "3000",
+              "version": 1
+            },
+            {
+              "expired_at": "2027-01-16T14:00:00Z",
+              "id": "c-chain-2",
+              "own_status": "active",
+              "recorded_at": "2027-01-16T14:00:00Z",
+              "status": "active",
+              "status_basis": "own",
+              "superseded_by": null,
+              "unit": "hour",
+              "valid": {
+                "from": "2024-01-01",
+                "label": null,
+                "precision": "day",
+                "to": "2026-01-01"
+              },
+              "value": "3000",
+              "version": 2
+            },
+            {
+              "expired_at": null,
+              "id": "c-chain-2",
+              "own_status": "superseded",
+              "recorded_at": "2027-01-16T14:00:00Z",
+              "status": "superseded",
+              "status_basis": "own",
+              "superseded_by": "c-chain-3",
+              "unit": "hour",
+              "valid": {
+                "from": "2024-01-01",
+                "label": null,
+                "precision": "day",
+                "to": "2026-01-01"
+              },
+              "value": "3000",
+              "version": 3
+            },
+            {
+              "expired_at": null,
+              "id": "c-chain-3",
+              "own_status": "active",
+              "recorded_at": "2027-01-16T14:00:00Z",
+              "status": "active",
+              "status_basis": "own",
+              "superseded_by": null,
+              "unit": "hour",
+              "valid": {
+                "from": "2026-01-01",
+                "label": null,
+                "precision": "day",
+                "to": null
+              },
+              "value": "2000",
+              "version": 1
+            }
+          ],
+          "predicate": "chain_hours",
+          "slot": "chain"
+        },
+        {
+          "items": [
+            {
+              "expired_at": null,
+              "id": "c-ko-3",
+              "own_status": "active",
+              "recorded_at": "2027-01-15T08:00:25Z",
+              "status": "active",
+              "status_basis": "own",
+              "superseded_by": null,
+              "unit": "hour",
+              "valid": {
+                "from": null,
+                "label": null,
+                "precision": null,
+                "to": null
+              },
+              "value": "4000",
+              "version": 1
+            }
+          ],
+          "predicate": "threshold_hours",
+          "slot": null
+        }
+      ],
+      "edges": [
+        {
+          "claim_id": null,
+          "dst": "c-chain-1",
+          "id": "r-pdsp3blbzkpk",
+          "rtype": "SUPERSEDES",
+          "src": "c-chain-2",
+          "status": "active"
+        },
+        {
+          "claim_id": null,
+          "dst": "c-chain-2",
+          "id": "r-3226eygp3et3",
+          "rtype": "SUPERSEDES",
+          "src": "c-chain-3",
+          "status": "active"
+        }
+      ],
+      "id": "e:policy:ypp",
+      "versions": [
+        {
+          "expired_at": null,
+          "label": "합성 정책 YPP",
+          "recorded_at": "2027-01-15T08:00:18Z",
+          "status": "active",
+          "version": 1
+        }
+      ]
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "schema_version": "0.3.1"
+  },
+  "case": "history-ok",
+  "headers": {
+    "cache-control": "no-cache",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

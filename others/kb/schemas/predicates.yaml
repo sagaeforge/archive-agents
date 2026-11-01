@@ -1,0 +1,39 @@
+# 초기 술어 어휘. functional=true: 한 주어·한정자·출처에서 값이 하나뿐인 술어(값이 바뀌면 자동 대체 후보).
+# value_kind: string, number, count, money, percent, duration, date, version, bool, entity
+# 새 술어는 schema.predicate_defined 이벤트와 schemas/predicates.d/ 로 더한다.
+version: 1
+predicates:
+  - {id: latest_version,     functional: true,  value_kind: version,  labels: {ko: 최신 버전,        en: latest version}}
+  - {id: released_on,        functional: false, value_kind: date,     labels: {ko: 출시일,           en: released on}}
+  - {id: introduced_in,      functional: false, value_kind: version,  labels: {ko: 도입 버전,        en: introduced in}}
+  - {id: deprecated_in,      functional: false, value_kind: version,  labels: {ko: 지원 중단 버전,   en: deprecated in}}
+  - {id: removed_in,         functional: false, value_kind: version,  labels: {ko: 제거 버전,        en: removed in}}
+  - {id: renamed_to,         functional: true,  value_kind: entity,   labels: {ko: 바뀐 이름,        en: renamed to}}
+  - {id: successor,          functional: true,  value_kind: entity,   labels: {ko: 후속,             en: successor}}
+  - {id: end_of_support_on,  functional: true,  value_kind: date,     labels: {ko: 지원 종료일,      en: end of support on}}
+  - {id: price,              functional: true,  value_kind: money,    labels: {ko: 가격,             en: price}}
+  - {id: rate_limit,         functional: true,  value_kind: count,    labels: {ko: 호출 제한,        en: rate limit}}
+  - {id: quota,              functional: true,  value_kind: count,    labels: {ko: 쿼터,             en: quota}}
+  - {id: context_window,     functional: true,  value_kind: count,    labels: {ko: 컨텍스트 윈도,    en: context window}}
+  - {id: default_value,      functional: true,  value_kind: string,   labels: {ko: 기본값,           en: default value}}
+  - {id: license,            functional: true,  value_kind: string,   labels: {ko: 라이선스,         en: license}}
+  - {id: supports,           functional: false, value_kind: entity,   labels: {ko: 지원함,           en: supports}}
+  - {id: requires,           functional: false, value_kind: entity,   labels: {ko: 요구함,           en: requires}}
+  - {id: depends_on,         functional: false, value_kind: entity,   labels: {ko: 의존함,           en: depends on}}
+  - {id: part_of,            functional: false, value_kind: entity,   labels: {ko: 소속,             en: part of}}
+  - {id: owned_by,           functional: true,  value_kind: entity,   labels: {ko: 소유자,           en: owned by}}
+  - {id: maintained_status,  functional: true,  value_kind: string,   labels: {ko: 유지보수 상태,    en: maintenance status}}
+  - {id: last_commit_on,     functional: true,  value_kind: date,     labels: {ko: 마지막 커밋일,    en: last commit on}}
+  - {id: stars,              functional: true,  value_kind: count,    labels: {ko: 스타 수,          en: stars}}
+  - {id: subscriber_count,   functional: true,  value_kind: count,    labels: {ko: 구독자 수,        en: subscriber count}}
+  - {id: view_count,         functional: true,  value_kind: count,    labels: {ko: 조회수,           en: view count}}
+  - {id: monthly_active_users, functional: true, value_kind: count,   labels: {ko: 월간 활성 사용자, en: monthly active users}}
+  - {id: revenue,            functional: true,  value_kind: money,    labels: {ko: 매출,             en: revenue}}
+  - {id: market_share,       functional: true,  value_kind: percent,  labels: {ko: 점유율,           en: market share}}
+  - {id: payout_rate,        functional: true,  value_kind: percent,  labels: {ko: 수익 배분율,      en: payout rate}}
+  - {id: eligibility_threshold, functional: true, value_kind: count,  labels: {ko: 자격 기준,         en: eligibility threshold}}
+  - {id: chart_rank,         functional: true,  value_kind: count,    labels: {ko: 차트 순위,        en: chart rank}}
+  - {id: search_volume,      functional: true,  value_kind: count,    labels: {ko: 검색량,           en: search volume}}
+  - {id: command_syntax,     functional: true,  value_kind: string,   labels: {ko: 명령 형식,        en: command syntax}}
+  - {id: recommends,         functional: false, value_kind: entity,   labels: {ko: 권고함,           en: recommends}}
+  - {id: entry_watch_hours,  functional: true,  value_kind: duration, labels: {ko: 진입 시청 시간,   en: entry watch hours}}

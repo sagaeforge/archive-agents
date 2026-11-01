@@ -1,0 +1,10 @@
+[Unit]
+Description=sagae-kb tick heartbeat
+
+[Timer]
+OnStartupSec=90s
+OnUnitInactiveSec=15min
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target

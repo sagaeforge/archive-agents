@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/events/record.put.schema.json",
+  "title": "record.put",
+  "description": "사용자 기록 한 버전. 64 KB 초과 본문은 body_sha(raw/fp)로 둔다.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "body": {
+      "type": "string"
+    },
+    "body_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "body_format": {
+      "enum": [
+        "markdown",
+        "text"
+      ]
+    },
+    "sensitivity": {
+      "enum": [
+        "public",
+        "internal",
+        "private",
+        "secret"
+      ]
+    },
+    "retention": {
+      "enum": [
+        "permanent",
+        "ttl30",
+        "purgeable"
+      ]
+    },
+    "props": {
+      "type": "object"
+    },
+    "links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "rtype": {
+            "type": "string",
+            "minLength": 1
+          },
+          "dst": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "rtype",
+          "dst"
+        ]
+      }
+    },
+    "authored_at": {
+      "type": "integer"
+    }
+  },
+  "required": [
+    "id",
+    "type",
+    "title",
+    "sensitivity"
+  ],
+  "anyOf": [
+    {
+      "required": [
+        "body"
+      ]
+    },
+    {
+      "required": [
+        "body_sha"
+      ]
+    }
+  ]
+}

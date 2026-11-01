@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# report-incident <wp> <kind> <detail> : $KB_BUILD_ROOT/incidents.ndjson에 JSON 한 줄을 추가한다.
+set -eu
+[ $# -ge 3 ] || { echo "usage: report-incident <wp> <kind> <detail>" >&2; exit 2; }
+root="${KB_BUILD_ROOT:-$HOME/.cache/sagae-kb/build}"
+mkdir -p "$root"
+python3 -I - "$1" "$2" "$3" "$root/incidents.ndjson" <<'P'
+import json, sys, datetime
+wp, kind, detail, out = sys.argv[1:5]
+rec = {"wp": wp, "kind": kind, "detail": detail,
+       "at": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")}
+with open(out, "a", encoding="utf-8") as f:
+    f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+P

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+        <title><![CDATA[Claude Code changelog]]></title>
+        <description><![CDATA[Release notes for Claude Code, including new features, improvements, and bug fixes by version.]]></description>
+        <link>https://code.claude.com/docs</link>
+        <generator>Mintlify</generator>
+        <lastBuildDate>Sat, 31 Oct 2026 18:17:44 GMT</lastBuildDate>
+        <atom:link href="https://code.claude.com/docs/en/changelog/rss.xml" rel="self" type="application/rss+xml"/>
+        <copyright><![CDATA[Claude Code Docs]]></copyright>
+        <docs>https://code.claude.com/docs</docs>
+        <item>
+            <title><![CDATA[2.1.316]]></title>
+            <link>https://code.claude.com/docs/en/changelog#2-1-316</link>
+            <guid isPermaLink="false">5023f0fa5dc67379</guid>
+            <pubDate>Sat, 31 Oct 2026 01:06:03 GMT</pubDate>
+            
+        </item>
+<item>
+            <title><![CDATA[2.1.314]]></title>
+            <link>https://code.claude.com/docs/en/changelog#2-1-314</link>
+            <guid isPermaLink="false">3d42258ee9081024</guid>
+            <pubDate>Fri, 30 Oct 2026 01:16:56 GMT</pubDate>
+            
+        </item>
+<item>
+            <title><![CDATA[2.1.312]]></title>
+            <link>https://code.claude.com/docs/en/changelog#2-1-312</link>
+            <guid isPermaLink="false">ed0b93c556025f38</guid>
+            <pubDate>Tue, 27 Oct 2026 20:35:04 GMT</pubDate>
+            
+        </item>
+    </channel>
+</rss>

@@ -1,0 +1,86 @@
+# 갱신 주기 클래스(ADR 11장 표). 원본은 이 파일이고 회고가 조정을 제안한다. 지터는 주기의 ±10%.
+# interval_s: 확인 주기, stale_s: stale 기준, retroactive: 놓친 구간을 나중에 소급해 받을 수 있는가.
+# retroactive=false 클래스는 놓친 구간을 gap.recorded로 남기고 놓친 슬롯만큼 돌리지 않는다.
+jitter: 0.1
+classes:
+  rel:
+    interval_s: 21600
+    stale_s: 86400
+    retroactive: true
+    alt: "C01<->C02, O03<->O01"
+    ids: [C01, C02, C13, C14, C16, O01, O03, O07, O08, O10, L02, src:f-tools]
+  docs:
+    interval_s: 86400
+    stale_s: 259200
+    retroactive: false
+    alt: ".md<->HTML"
+    ids: [C03, C04, C06, C07, C10, O02, O04, O05, O09, O11, U01, U02, U03, U16, D15, D19, D22, src:yt-api-docs]
+  feed:
+    interval_s: 86400
+    stale_s: 259200
+    retroactive: true
+    alt: "소스별"
+    ids: [C09, C11, C12, C15, O12, O13, U04, U05, U09, U10, U14, L01, L03, D13, D18]
+  short:
+    interval_s: 43200
+    stale_s: 172800
+    retroactive: false
+    alt: "증인(사용자 결정 6)"
+    ids: [U06, U08]
+  weekly:
+    interval_s: 604800
+    stale_s: 1209600
+    retroactive: true
+    alt: "C05->C02"
+    ids: [C05, O06, U11, U15, L04, M21, X11]
+  monthly:
+    interval_s: 604800
+    stale_s: 3888000
+    retroactive: true
+    alt: ""
+    note: "발행 예상 주에는 매일 확인한다(소스의 fetch.interval_s로 덮는다)"
+    ids: [D03, D04, D20, C08]
+  quarter:
+    interval_s: 604800
+    stale_s: 9504000
+    retroactive: true
+    alt: ""
+    note: "실적 시기에는 매일 확인한다"
+    ids: [D08]
+  semiannual:
+    interval_s: 604800
+    stale_s: 17280000
+    retroactive: true
+    alt: ""
+    ids: [D01]
+  annual:
+    interval_s: 2592000
+    stale_s: 34560000
+    retroactive: true
+    alt: "언론 경유는 2차로만"
+    ids: [D05, D09, D10, D11, D12, D17, D21, D23]
+  event:
+    interval_s: 21600
+    stale_s: 172800
+    retroactive: true
+    alt: ""
+    ids: [L05]
+  paper:
+    interval_s: 604800
+    stale_s: 1209600
+    retroactive: true
+    alt: ""
+    note: "arXiv는 3초당 1회(호스트 간격 3초)"
+    ids: [X15, D16]
+  chart:
+    interval_s: 86400
+    stale_s: 259200
+    retroactive: true
+    alt: ""
+    ids: [P10]
+  meta:
+    interval_s: 86400
+    stale_s: 259200
+    retroactive: true
+    alt: "태그, npm, PyPI 교차"
+    ids: [X16, X17]

@@ -1,0 +1,7 @@
+[Unit]
+Description=sagae-kb tick (collect, parse, gate, ship)
+
+[Service]
+Type=oneshot
+ExecStart=%h/sagae-kb-data/runtime/bin/kb tick --max-runtime 12m
+TimeoutStartSec=14min

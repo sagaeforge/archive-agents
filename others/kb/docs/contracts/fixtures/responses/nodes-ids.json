@@ -1,0 +1,89 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "items": [
+        {
+          "author": "collector:fixture",
+          "body_format": null,
+          "domain": [
+            "F"
+          ],
+          "expired_at": null,
+          "generated_by": null,
+          "id": "e:tool:ma",
+          "label": "병합 A",
+          "link_status": null,
+          "liveness": null,
+          "merged_into": "e:tool:mb",
+          "merged_into_final": "e:tool:mc",
+          "on_behalf_of": null,
+          "origin": "external",
+          "props": {},
+          "recorded_at": "2027-01-15T08:00:53Z",
+          "sensitivity": "public",
+          "status": "superseded",
+          "type": "Tool",
+          "valid": {
+            "from": null,
+            "label": null,
+            "precision": null,
+            "to": null
+          },
+          "verification": null,
+          "version": 2
+        },
+        {
+          "author": "collector:fixture",
+          "body_format": null,
+          "domain": [],
+          "expired_at": null,
+          "generated_by": null,
+          "id": "e:tool:mc",
+          "label": "병합 C",
+          "link_status": null,
+          "liveness": null,
+          "merged_into": null,
+          "merged_into_final": null,
+          "on_behalf_of": null,
+          "origin": "external",
+          "props": {},
+          "recorded_at": "2027-01-15T08:00:49Z",
+          "sensitivity": "public",
+          "status": "active",
+          "type": "Tool",
+          "valid": {
+            "from": null,
+            "label": null,
+            "precision": null,
+            "to": null
+          },
+          "verification": null,
+          "version": 1
+        }
+      ]
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "page": {
+      "next_cursor": null,
+      "total": 2,
+      "truncated": false
+    },
+    "schema_version": "0.3.1"
+  },
+  "case": "nodes-ids",
+  "headers": {
+    "cache-control": "no-cache",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

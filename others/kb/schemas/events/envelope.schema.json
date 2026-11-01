@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/events/envelope.schema.json",
+  "title": "event envelope",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "enum": [
+        "record.put",
+        "record.tombstone",
+        "record.redact",
+        "entity.put",
+        "entity.alias",
+        "entity.merge",
+        "edge.put",
+        "edge.expire",
+        "claim.assert",
+        "claim.confirm",
+        "claim.supersede",
+        "claim.withdraw",
+        "claim.retract",
+        "claim.review",
+        "snapshot.captured",
+        "snapshot.text",
+        "series.define",
+        "series.batch",
+        "source.registered",
+        "source.status",
+        "gap.recorded",
+        "survival.verdict",
+        "extract.run",
+        "extract.rejected",
+        "ticket.open",
+        "ticket.update",
+        "ticket.close",
+        "schema.type_defined",
+        "schema.predicate_defined",
+        "schema.epoch_bumped",
+        "system.fp_opened",
+        "system.projection_quarantined",
+        "system.projection_released"
+      ]
+    },
+    "actor": {
+      "type": "string",
+      "minLength": 1
+    },
+    "origin": {
+      "enum": [
+        "external",
+        "first_party",
+        "system"
+      ]
+    },
+    "idem_key": {
+      "type": "string",
+      "minLength": 1
+    },
+    "subject": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "on_behalf_of": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "generated_by": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "v": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "payload": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "kind",
+    "actor",
+    "origin",
+    "idem_key",
+    "payload"
+  ]
+}

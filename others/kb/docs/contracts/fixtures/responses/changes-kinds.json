@@ -1,0 +1,79 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "items": [
+        {
+          "at": "2027-01-15T08:00:55Z",
+          "id": "f-1",
+          "kind": "record.put",
+          "origin": "first_party",
+          "seq": 55,
+          "type": "Note",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:58Z",
+          "id": "f-agent",
+          "kind": "record.put",
+          "origin": "first_party",
+          "seq": 58,
+          "type": "Decision",
+          "version": 1
+        },
+        {
+          "at": "2027-01-16T14:00:00Z",
+          "id": "f-raise",
+          "kind": "visibility.revoked",
+          "seq": 86
+        },
+        {
+          "at": "2027-01-16T14:00:00Z",
+          "id": "r-eglbpb7yo27e",
+          "kind": "visibility.revoked",
+          "seq": 86
+        },
+        {
+          "at": "2027-01-16T15:00:00Z",
+          "id": "f-1",
+          "kind": "record.put",
+          "origin": "first_party",
+          "seq": 88,
+          "type": "Note",
+          "version": 2
+        },
+        {
+          "at": "2027-01-17T12:00:00Z",
+          "id": "f-tail",
+          "kind": "record.put",
+          "origin": "first_party",
+          "seq": 92,
+          "type": "Note",
+          "version": 1
+        }
+      ]
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "page": {
+      "next_cursor": "eyJlIjoyLCJzIjo5Mn0",
+      "total": null,
+      "truncated": false
+    },
+    "schema_version": "0.3.1"
+  },
+  "case": "changes-kinds",
+  "headers": {
+    "cache-control": "no-cache",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/agent/collector-out.schema.json",
+  "title": "kb-collector 출력",
+  "type": "object",
+  "properties": {
+    "batch_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "items": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "accepted": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "rejected": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "needs_review": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "notes": {
+      "type": "string"
+    },
+    "incidents": {
+      "$ref": "incidents.schema.json"
+    }
+  },
+  "required": [
+    "batch_ids",
+    "items",
+    "accepted",
+    "rejected",
+    "incidents"
+  ],
+  "additionalProperties": true
+}

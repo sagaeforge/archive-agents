@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/events/edge.put.schema.json",
+  "title": "edge.put",
+  "description": "방향 엣지.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "src": {
+      "type": "string",
+      "minLength": 1
+    },
+    "rtype": {
+      "type": "string",
+      "minLength": 1
+    },
+    "dst": {
+      "type": "string",
+      "minLength": 1
+    },
+    "props": {
+      "type": "object"
+    },
+    "claim_id": {
+      "type": "string"
+    },
+    "valid": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        },
+        "precision": {
+          "enum": [
+            "instant",
+            "day",
+            "month",
+            "quarter",
+            "year"
+          ]
+        }
+      }
+    },
+    "sensitivity": {
+      "enum": [
+        "public",
+        "internal",
+        "private",
+        "secret"
+      ]
+    }
+  },
+  "required": [
+    "id",
+    "src",
+    "rtype",
+    "dst"
+  ]
+}

@@ -1,0 +1,4 @@
+{"type": "system", "subtype": "init", "mcp_servers": [{"name": "kb-collect", "status": "connected"}], "tools": ["Workflow"]}
+{"type": "rate_limit_event", "rate_limit_info": {"unifiedWindows": {"five_hour": {"utilization": 0.31}, "seven_day": {"utilization": 0.12}}}}
+{"type": "system", "subtype": "task_notification", "status": "completed"}
+{"type": "result", "subtype": "success", "is_error": false, "permission_denials": [], "result": "{\"workflow\":\"kb-fulfill\",\"incidents\":[]}"}

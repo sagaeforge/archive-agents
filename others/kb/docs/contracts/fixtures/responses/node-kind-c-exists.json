@@ -1,0 +1,195 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "author": "collector:fixture",
+      "body_format": null,
+      "claim": {
+        "author": "collector:fixture",
+        "body_format": null,
+        "conflict_group": null,
+        "domain": [
+          "F"
+        ],
+        "evidence": [
+          {
+            "end": null,
+            "evidence_state": "live",
+            "exact": "history 기능은 위젯을 지원한다",
+            "id": "ev-t4s5iogr57ff",
+            "json_pointer": null,
+            "last_confirmed_at": "2027-01-15T08:00:22Z",
+            "prefix": null,
+            "selector_kind": "text_quote",
+            "snapshot_id": "n-1",
+            "start": null,
+            "suffix": null,
+            "support_check": null
+          }
+        ],
+        "expired_at": null,
+        "generated_by": null,
+        "id": "c-1",
+        "kind": "state",
+        "label": "history 기능은 위젯을 지원한다",
+        "link_status": null,
+        "liveness": null,
+        "merged_into": null,
+        "merged_into_final": null,
+        "method": "llm",
+        "object": null,
+        "on_behalf_of": null,
+        "origin": "external",
+        "own_status": "active",
+        "predicate": "supports",
+        "props": {},
+        "qualifiers": {},
+        "recorded_at": "2027-01-15T08:00:22Z",
+        "sensitivity": "public",
+        "speaker": null,
+        "stance": "stated",
+        "statement": "history 기능은 위젯을 지원한다",
+        "status": "active",
+        "status_basis": "own",
+        "subject": "e:feature:history",
+        "type": "Claim",
+        "unit": null,
+        "valid": {
+          "from": null,
+          "label": null,
+          "precision": null,
+          "to": null
+        },
+        "value": "위젯",
+        "verification": "quote_found",
+        "version": 1,
+        "versions": [
+          {
+            "author": "collector:fixture",
+            "body_format": null,
+            "conflict_group": null,
+            "domain": [
+              "F"
+            ],
+            "expired_at": null,
+            "generated_by": null,
+            "id": "c-1",
+            "kind": "state",
+            "label": "history 기능은 위젯을 지원한다",
+            "link_status": null,
+            "liveness": null,
+            "merged_into": null,
+            "merged_into_final": null,
+            "method": "llm",
+            "object": null,
+            "on_behalf_of": null,
+            "origin": "external",
+            "own_status": "active",
+            "predicate": "supports",
+            "props": {},
+            "qualifiers": {},
+            "recorded_at": "2027-01-15T08:00:22Z",
+            "sensitivity": "public",
+            "speaker": null,
+            "stance": "stated",
+            "statement": "history 기능은 위젯을 지원한다",
+            "status": "active",
+            "status_basis": "own",
+            "subject": "e:feature:history",
+            "type": "Claim",
+            "unit": null,
+            "valid": {
+              "from": null,
+              "label": null,
+              "precision": null,
+              "to": null
+            },
+            "value": "위젯",
+            "verification": "quote_found",
+            "version": 1
+          }
+        ]
+      },
+      "claims": [],
+      "claims_truncated": false,
+      "conflict_group": null,
+      "domain": [
+        "F"
+      ],
+      "edges": {
+        "in": [],
+        "out": [],
+        "truncated": false
+      },
+      "evidence": [
+        {
+          "end": null,
+          "evidence_state": "live",
+          "exact": "history 기능은 위젯을 지원한다",
+          "id": "ev-t4s5iogr57ff",
+          "json_pointer": null,
+          "last_confirmed_at": "2027-01-15T08:00:22Z",
+          "prefix": null,
+          "selector_kind": "text_quote",
+          "snapshot_id": "n-1",
+          "start": null,
+          "suffix": null,
+          "support_check": null
+        }
+      ],
+      "expired_at": null,
+      "generated_by": null,
+      "id": "c-1",
+      "kind": "state",
+      "label": "history 기능은 위젯을 지원한다",
+      "link_status": null,
+      "liveness": null,
+      "merged_into": null,
+      "merged_into_final": null,
+      "method": "llm",
+      "object": null,
+      "on_behalf_of": null,
+      "origin": "external",
+      "own_status": "active",
+      "predicate": "supports",
+      "props": {},
+      "qualifiers": {},
+      "recorded_at": "2027-01-15T08:00:22Z",
+      "sensitivity": "public",
+      "speaker": null,
+      "stance": "stated",
+      "statement": "history 기능은 위젯을 지원한다",
+      "status": "active",
+      "status_basis": "own",
+      "subject": "e:feature:history",
+      "type": "Claim",
+      "unit": null,
+      "valid": {
+        "from": null,
+        "label": null,
+        "precision": null,
+        "to": null
+      },
+      "value": "위젯",
+      "verification": "quote_found",
+      "version": 1
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "schema_version": "0.3.1"
+  },
+  "case": "node-kind-c-exists",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

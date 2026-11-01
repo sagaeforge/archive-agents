@@ -1,0 +1,29 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "end": 33,
+      "start": 0,
+      "text": "자막 규칙: 한국어 자막은 필수다.",
+      "text_format": "text",
+      "total_chars": 33
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "schema_version": "0.3.1"
+  },
+  "case": "text-nfd",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/json",
+    "etag": "\"n-nfd\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/events/edge.expire.schema.json",
+  "title": "edge.expire",
+  "description": "엣지를 닫는다.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reason": {
+      "type": "string"
+    },
+    "valid_to": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "id"
+  ]
+}

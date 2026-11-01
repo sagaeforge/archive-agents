@@ -1,0 +1,30 @@
+{
+  "note": "합성 데이터. first_party 게이트가 닫혀 있어 spool/fp-held에 남는다.",
+  "request": {
+    "idempotency_key": "fixture-held-1",
+    "record": {
+      "body": "합성 본문",
+      "props": {
+        "status": "accepted"
+      },
+      "sensitivity": "internal",
+      "title": "합성 결정",
+      "type": "Decision"
+    }
+  },
+  "response": {
+    "held": true,
+    "id": "f-es2qznpdnrrugsqe6iw3ljabwm",
+    "projected": false,
+    "reason": "offsite_path_missing",
+    "replayed": false,
+    "seq": null,
+    "spooled": false,
+    "version": null,
+    "warnings": []
+  },
+  "tags": [
+    "held"
+  ],
+  "tool": "kb_put"
+}

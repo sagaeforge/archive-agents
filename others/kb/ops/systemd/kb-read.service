@@ -1,0 +1,9 @@
+[Unit]
+Description=sagae-kb read API
+Requires=kb-read.socket
+After=kb-read.socket
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+ExecStart=%h/sagae-kb-data/runtime/bin/kb serve --http --unix %h/sagae-kb-data/run/read.sock

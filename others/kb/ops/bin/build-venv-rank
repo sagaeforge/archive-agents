@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# build-venv-rank [--dry-run] [--kb-only] [--no-models]
+# venv-rank($KB_TOOLCHAIN/venv-rank, torch 때문에 약 6 GB)를 만들고 모델 가중치를 $KB_MODELS에 리비전 고정으로 내려받는다.
+# 전부 디스크다. /tmp와 스크래치패드를 쓰지 않는다. 셸 프로필, ~/.claude, 전역 경로를 건드리지 않는다.
+#   --dry-run   받을 것과 대상 경로만 출력한다. 네트워크 요청 0, 파일 쓰기 0.
+#   --kb-only   venv-rank의 kb 패키지(소스만)를 다시 설치한다. 배포 뒤 코드를 맞출 때 쓴다.
+#   --no-models 모델 내려받기를 건너뛴다.
+set -euo pipefail
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+dry=0; kbonly=0; models=1
+for a in "$@"; do
+  case "$a" in
+    --dry-run) dry=1 ;; --kb-only) kbonly=1 ;; --no-models) models=0 ;;
+    *) echo "usage: build-venv-rank [--dry-run] [--kb-only] [--no-models]" >&2; exit 2 ;;
+  esac
+done
+if [ -z "${KB_TOOLCHAIN:-}" ] || [ -z "${KB_MODELS:-}" ]; then . "$here/env.sh"; fi
+repo="$(cd "$here/../.." && pwd)"
+venv="$KB_TOOLCHAIN/venv-rank"
+req="$repo/ops/rank/requirements.txt"
+fetch="$repo/ops/rank/fetch_models.py"
+case "$venv$KB_MODELS" in /tmp/*|/var/tmp/*) echo "build-venv-rank: /tmp 아래 경로는 쓰지 않는다" >&2; exit 1 ;; esac
+[ -f "$req" ] || { echo "build-venv-rank: $req 없음" >&2; exit 1; }
+if [ "$dry" = 1 ]; then
+  echo "venv: $venv (python 3.14, uv: $KB_TOOLCHAIN/uv)"
+  echo "설치: uv pip install -r $req  ($(grep -c '==' "$req") 개 고정)"
+  echo "kb 패키지: uv pip install --no-deps $repo"
+  echo "모델 경로: $KB_MODELS (kure-v3, kure-reranker-nano), 리비전 고정은 $fetch"
+  echo "캐시: $KB_TOOLCHAIN/uv-cache"
+  echo "dry-run: 네트워크 요청 0, 파일 쓰기 0"
+  exit 0
+fi
+uv="$KB_TOOLCHAIN/uv/uv"; [ -x "$uv" ] || uv="$(command -v uv)"
+if [ "$kbonly" = 0 ]; then
+  [ -x "$venv/bin/python" ] || "$uv" venv --python 3.14 "$venv"
+  "$uv" pip install --python "$venv/bin/python" -r "$req"
+fi
+"$uv" pip install --python "$venv/bin/python" --no-deps --reinstall "$repo"
+if [ "$models" = 1 ] && [ "$kbonly" = 0 ]; then
+  mkdir -p "$KB_MODELS"
+  HF_HOME="$KB_MODELS/.hf" "$venv/bin/python" -I "$fetch" --dest "$KB_MODELS"
+fi
+echo "완료: $venv, $KB_MODELS"

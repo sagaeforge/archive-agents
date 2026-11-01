@@ -1,0 +1,12 @@
+# kb-rank 소켓 활성화. 설치는 결정 3 뒤(~/.config/systemd/user). 구축 중에는 파일만 둔다.
+[Unit]
+Description=kb-rank Unix socket (embed_search, rerank)
+
+[Socket]
+ListenStream=%h/sagae-kb-data/run/kb-rank.sock
+SocketMode=0600
+DirectoryMode=0700
+Accept=no
+
+[Install]
+WantedBy=sockets.target

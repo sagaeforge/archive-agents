@@ -1,0 +1,18 @@
+# 질의 별칭(WP-05). 질의 앞단에서 확장한다. 표준 라이브러리 tomllib로 읽는다.
+# [[group]]: forms 전부가 서로 같은 뜻이다(대칭).
+# [[alias]]: term을 질의에서 만나면 expand도 함께 찾는다(한 방향).
+# 질의는 NFC, 소문자로 비교한다. 여러 단어 형식은 띄어쓰기 유무를 무시한다.
+
+[[group]]
+forms = ["숏츠", "쇼츠", "shorts"]
+
+[[group]]
+forms = ["클로드코드", "클로드 코드", "claude code"]
+
+[[alias]]
+term = "8천"
+expand = ["8000"]
+
+[[alias]]
+term = "gpt5.5"
+expand = ["gpt-5.5"]

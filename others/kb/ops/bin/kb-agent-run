@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# kb-agent-run [--dry-run] [--sample] [--args JSON] [--utilization X] <작업>
+# ADR 20.3의 호출 형태를 고정한다. 작업 위치는 share_dir()이다(KB_SHARE, 없으면 이 파일 기준 저장소 루트).
+# 배포본은 runtime/share-<id>/ops/bin/kb-agent-run이고 runtime/venv의 python을 쓴다.
+set -eu
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+share="${KB_SHARE:-$(cd "$here/../.." && pwd)}"
+export KB_SHARE="$share"
+cd "$share"
+py=""
+for c in "${KB_PYTHON:-}" "$share/../venv/bin/python" "${KB_TOOLCHAIN:-}/venv-dev/bin/python" "${KB_HOME:-}/runtime/venv/bin/python"; do
+  [ -n "$c" ] && [ -x "$c" ] && { py="$c"; break; }
+done
+[ -n "$py" ] || py="$(command -v python3)"
+# 저장소 실행이면 src를 경로에 넣는다(-I는 PYTHONPATH를 무시한다). 설치본은 이미 kb가 있다.
+exec "$py" -I -c '
+import os, sys
+src = os.path.join(os.environ["KB_SHARE"], "src")
+if os.path.isdir(os.path.join(src, "kb")):
+    sys.path.insert(0, src)
+from kb.agentrun.runner import main
+sys.exit(main(sys.argv[1:]))' "$@"

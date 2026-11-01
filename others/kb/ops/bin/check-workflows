@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# check-workflows [파일...] : 워크플로우 스크립트 구문 검사. 인수가 없으면 share 아래 .claude/workflows/*.js 전체.
+# 스크립트는 export, 최상위 await, 최상위 return을 함께 써서 node --check가 직접 받지 못한다.
+# export를 떼고 본문을 async function으로 감싸 검사한다. Date.now, Math.random, 인자 없는 new Date도 거부한다.
+set -u
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+share="${KB_SHARE:-$(cd "$here/../.." && pwd)}"
+if [ $# -eq 0 ]; then set -- "$share"/.claude/workflows/*.js; fi
+command -v node >/dev/null 2>&1 || { echo "check-workflows: node가 없다" >&2; exit 2; }
+tmp="$(mktemp -d "${KB_TMP:-${TMPDIR:-/var/tmp}}/chkwf.XXXXXX")" || exit 2
+trap 'rm -rf "$tmp"' EXIT
+rc=0; n=0
+for f in "$@"; do
+  [ -f "$f" ] || { echo "없음: $f" >&2; rc=1; continue; }
+  n=$((n+1))
+  out="$tmp/$n.js"
+  node -e '
+const fs = require("fs");
+const src = fs.readFileSync(process.argv[1], "utf8");
+const body = src.replace(/^export\s+/gm, "");
+fs.writeFileSync(process.argv[2], "async function __workflow(args, agent, parallel, pipeline, log, phase, budget, workflow) {\n" + body + "\n}\n");
+const bad = src.match(/Date\.now|Math\.random|new Date\(\)/);
+if (bad) { console.error(process.argv[1] + ": 금지 표현 " + bad[0]); process.exit(3); }
+' "$f" "$out" || { rc=1; continue; }
+  node --check "$out" 2>"$tmp/err" || { echo "구문 오류: $f" >&2; sed -n 1,6p "$tmp/err" >&2; rc=1; }
+done
+[ $rc -eq 0 ] && echo "ok: ${n}개"
+exit $rc

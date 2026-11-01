@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Workflow(kb-liveness-review)"
+    ],
+    "deny": [
+      "WebFetch(domain:youtube.com)",
+      "WebFetch(domain:youtu.be)",
+      "WebFetch(domain:youtube-nocookie.com)",
+      "WebFetch(domain:googlevideo.com)",
+      "WebFetch(domain:ytimg.com)",
+      "WebFetch(domain:suggestqueries.google.com)",
+      "WebFetch(domain:trends.google.com)",
+      "WebFetch(domain:sec.gov)",
+      "WebFetch(domain:netflix.com)",
+      "WebFetch(domain:kobaco.co.kr)",
+      "Read",
+      "Bash",
+      "Write",
+      "Edit"
+    ]
+  }
+}

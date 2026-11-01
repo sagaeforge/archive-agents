@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Project",
+  "x-kb-kind": "node",
+  "x-kb-group": "user",
+  "x-kb-overview": true,
+  "x-kb-version": 1,
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": true
+}

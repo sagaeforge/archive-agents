@@ -1,0 +1,17 @@
+{
+  "body": {
+    "code": "cursor_mismatch",
+    "detail": "cursor는 다른 필터로 만들어졌다",
+    "instance": "/v1/nodes",
+    "status": 400,
+    "title": "cursor mismatch",
+    "type": "https://kb.local/problems/cursor-mismatch"
+  },
+  "case": "nodes-cursor-sort-mismatch",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/problem+json",
+    "vary": "Authorization"
+  },
+  "status": 400
+}

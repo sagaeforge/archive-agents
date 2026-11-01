@@ -1,0 +1,46 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "items": [
+        {
+          "closed_at": "2027-01-15T08:00:42Z",
+          "id": "t-1",
+          "opened_at": "2027-01-15T08:00:40Z",
+          "priority": "2",
+          "status": "done",
+          "topic": "위젯 조사"
+        },
+        {
+          "closed_at": null,
+          "id": "t-2",
+          "opened_at": "2027-01-15T08:00:41Z",
+          "priority": "",
+          "status": "queued",
+          "topic": "달 조사"
+        }
+      ]
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "page": {
+      "next_cursor": null,
+      "total": 2,
+      "truncated": false
+    },
+    "schema_version": "0.3.1"
+  },
+  "case": "ops-tickets-ok",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/json",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

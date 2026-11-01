@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/events/extract.run.schema.json",
+  "title": "extract.run",
+  "description": "L2 추출 호출 기록. 원응답은 CAS.",
+  "type": "object",
+  "properties": {
+    "window_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "para_shas": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      }
+    },
+    "prompt_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "model": {
+      "type": "string",
+      "minLength": 1
+    },
+    "output_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "usage": {
+      "type": "object"
+    },
+    "extractor": {
+      "type": "string"
+    },
+    "backend": {
+      "enum": [
+        "claude",
+        "codex",
+        "openrouter",
+        "sllm"
+      ]
+    },
+    "provider": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "served_model": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "schema_profile": {
+      "type": "string"
+    },
+    "purpose": {
+      "type": "string"
+    },
+    "scope": {
+      "enum": [
+        "public",
+        "sensitive"
+      ]
+    },
+    "route_reason": {
+      "type": "string"
+    },
+    "finish_reason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "elapsed_s": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9]+(\\.[0-9]+)?$",
+      "description": "십진 문자열(정규 JSON은 부동소수를 쓰지 않는다)"
+    },
+    "cost_usd": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9]+(\\.[0-9]+)?$",
+      "description": "OpenRouter 실제값, Claude는 구독이라 추정값, Codex는 null, sLLM은 0"
+    }
+  },
+  "required": [
+    "window_sha",
+    "para_shas",
+    "prompt_version",
+    "model",
+    "output_sha"
+  ]
+}

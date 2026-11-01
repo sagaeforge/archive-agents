@@ -1,0 +1,11 @@
+# WP-09 내부 작업. LLM을 부르지 않는다. 네트워크도 쓰지 않는다(재확인 수집은 tick 6.3 live 단계가 capture로 한다).
+# 재확인 주기(ADR 11장 생존 표)는 src/kb/live/schedule.py가 대상별로 정하고, 6.3 단계가 만기 항목을 live 큐에서 꺼낸다.
+jobs:
+  - id: live.seed
+    every_s: 21600
+    stage: 6.3
+    run: "kb.live.jobs:seed"
+  - id: live.review_cap
+    every_s: 86400
+    stage: 6.3
+    run: "kb.live.jobs:review_cap"

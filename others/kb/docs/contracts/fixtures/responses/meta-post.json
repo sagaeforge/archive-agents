@@ -1,0 +1,17 @@
+{
+  "body": {
+    "code": "method_not_allowed",
+    "detail": "GET, HEAD만 받는다",
+    "instance": "/v1/meta",
+    "status": 405,
+    "title": "method not allowed",
+    "type": "https://kb.local/problems/method-not-allowed"
+  },
+  "case": "meta-post",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/problem+json",
+    "vary": "Authorization"
+  },
+  "status": 405
+}

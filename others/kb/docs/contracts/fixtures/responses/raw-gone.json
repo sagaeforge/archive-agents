@@ -1,0 +1,17 @@
+{
+  "body": {
+    "code": "content_removed",
+    "detail": "원본이 지워졌다",
+    "instance": "/v1/snapshots/n-1/raw",
+    "status": 410,
+    "title": "content removed",
+    "type": "https://kb.local/problems/content-removed"
+  },
+  "case": "raw-gone",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/problem+json",
+    "vary": "Authorization"
+  },
+  "status": 410
+}

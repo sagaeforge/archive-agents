@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/ingest/liveness.schema.json",
+  "title": "kb-ingest/1 liveness",
+  "description": "근거 없는 상태 변경 거부. superseded는 successor 필수.",
+  "type": "object",
+  "properties": {
+    "item": {
+      "const": "liveness"
+    },
+    "ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "target": {
+      "type": "string",
+      "minLength": 1
+    },
+    "unit": {
+      "type": "string",
+      "minLength": 1
+    },
+    "state": {
+      "enum": [
+        "active",
+        "renamed",
+        "scheduled_removal",
+        "deprecated",
+        "partial",
+        "superseded",
+        "removed",
+        "stale_suspect",
+        "revived"
+      ]
+    },
+    "signals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "snapshot": {
+            "type": "string",
+            "minLength": 1
+          },
+          "quote": {
+            "type": "string"
+          },
+          "prefix": {
+            "type": "string"
+          },
+          "suffix": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "snapshot"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "decided_by": {
+      "type": "string",
+      "minLength": 1
+    },
+    "successor": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": [
+    "item",
+    "target",
+    "unit",
+    "state",
+    "signals",
+    "decided_by"
+  ],
+  "additionalProperties": false
+}

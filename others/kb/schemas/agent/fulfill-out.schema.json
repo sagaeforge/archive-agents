@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/agent/fulfill-out.schema.json",
+  "title": "kb-fulfill 워크플로우 반환",
+  "type": "object",
+  "properties": {
+    "tickets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "ticket",
+          "status"
+        ],
+        "properties": {
+          "ticket": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "done",
+              "unanswerable",
+              "blocked_policy",
+              "open"
+            ]
+          },
+          "accepted": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "incidents": {
+      "$ref": "incidents.schema.json"
+    }
+  },
+  "required": [
+    "tickets",
+    "incidents"
+  ],
+  "additionalProperties": true
+}

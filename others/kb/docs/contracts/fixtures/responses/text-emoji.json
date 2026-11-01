@@ -1,0 +1,29 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "end": 24,
+      "start": 0,
+      "text": "🎬 업로드 규칙: 🎉🎉 매주 한 편 올린다.",
+      "text_format": "text",
+      "total_chars": 24
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "schema_version": "0.3.1"
+  },
+  "case": "text-emoji",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/json",
+    "etag": "\"n-emoji\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

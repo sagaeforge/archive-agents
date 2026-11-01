@@ -1,0 +1,29 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "end": 79,
+      "start": 0,
+      "text": "합성 도구 알파는 위젯을 지원한다.\n\n달 기능은 채널에 열린다.\n\n시청 시간 기준은 4,000시간이다.\n\nhistory 기능은 위젯을 지원한다",
+      "text_format": "text",
+      "total_chars": 79
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "schema_version": "0.3.1"
+  },
+  "case": "text-ok",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/json",
+    "etag": "\"n-1\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

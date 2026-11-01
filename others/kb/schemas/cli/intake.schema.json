@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/cli/intake.schema.json",
+  "title": "kb intake plan|run|status --json",
+  "type": "object",
+  "required": ["items", "stored", "held", "excluded", "unresolved", "secret_hits", "scrubbed_lines", "urls", "tickets", "new_events"],
+  "properties": {
+    "items": {"type": "integer", "minimum": 0, "description": "매니페스트 항목 수(매니페스트 전체 기준)"},
+    "stored": {"type": "integer", "minimum": 0, "description": "원장에 든 항목 수"},
+    "held": {"type": "integer", "minimum": 0, "description": "first_party 게이트에 막혀 spool/fp-held에 있는 항목 수"},
+    "excluded": {"type": "integer", "minimum": 0, "description": "treat=excluded. 파일을 열지 않는다"},
+    "unresolved": {"type": "integer", "minimum": 0, "description": "읽을 파일이 없는 항목 수. 멈추지 않고 센다"},
+    "unresolved_ids": {"type": "array", "items": {"type": "string"}},
+    "secret_hits": {"type": "integer", "minimum": 0, "description": "비밀 탐지로 secret + 격리가 된 항목 수"},
+    "scrubbed_lines": {"type": "integer", "minimum": 0, "description": "저장 전에 뺀 줄 수(내용은 남기지 않는다)"},
+    "urls": {
+      "type": "object",
+      "required": ["extracted", "registered", "skipped", "denied"],
+      "properties": {
+        "extracted": {"type": "integer", "minimum": 0, "description": "정규화 뒤 중복을 없앤 https URL 수"},
+        "registered": {"type": "integer", "minimum": 0, "description": "티켓 urls에 든 수"},
+        "skipped": {"type": "integer", "minimum": 0, "description": "내부 주소, userinfo, 비밀 쿼리, 활성 소스 URL, 티켓당 URL 상한"},
+        "denied": {"type": "integer", "minimum": 0, "description": "kb.collect.host_allowed가 거부한 호스트의 URL 수"}
+      }
+    },
+    "tickets": {"type": "integer", "minimum": 0, "description": "이 URL들이 든 티켓 수"},
+    "new_events": {"type": "integer", "minimum": 0, "description": "이번 실행이 새로 쓴 이벤트와 보관 항목 수. plan, status는 0"},
+    "mode": {"enum": ["plan", "run", "status"]},
+    "ticket_capped": {"type": "integer", "minimum": 0},
+    "ticket_errors": {"type": "integer", "minimum": 0},
+    "detail": {"type": "array", "items": {"type": "object"}}
+  }
+}

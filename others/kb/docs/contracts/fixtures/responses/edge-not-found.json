@@ -1,0 +1,17 @@
+{
+  "body": {
+    "code": "not_found",
+    "detail": "없음",
+    "instance": "/v1/edges/r-no-such",
+    "status": 404,
+    "title": "not found",
+    "type": "https://kb.local/problems/not-found"
+  },
+  "case": "edge-not-found",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/problem+json",
+    "vary": "Authorization"
+  },
+  "status": 404
+}

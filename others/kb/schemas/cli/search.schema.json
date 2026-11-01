@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kb.local/schemas/cli/search.schema.json",
+  "title": "kb search --json",
+  "description": "/v1/search와 같은 봉투(계약 2.1, 4.8). 결과는 .data.items. 점수와 bm25 값은 없다. --facets면 data가 Facets다.",
+  "type": "object",
+  "required": ["schema_version", "epoch", "build_id", "data_as_of", "applied_seq", "as_of", "degraded", "data"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "epoch": {"type": "integer", "minimum": 1},
+    "build_id": {"type": "string"},
+    "data_as_of": {"type": ["string", "null"]},
+    "applied_seq": {"type": "integer", "minimum": 0},
+    "as_of": {"type": "object", "required": ["valid", "observed"],
+              "properties": {"valid": {"type": ["string", "null"]}, "observed": {"type": ["string", "null"]}}},
+    "degraded": {"type": "array", "items": {"type": "string"}},
+    "page": {"type": "object", "required": ["next_cursor", "total", "truncated"],
+             "properties": {"next_cursor": {"type": ["string", "null"]}, "total": {"type": ["integer", "null"]},
+                            "truncated": {"type": "boolean"}}, "additionalProperties": false},
+    "data": {
+      "type": "object",
+      "oneOf": [
+        {"required": ["items"], "properties": {"items": {"type": "array", "items": {"$ref": "#/$defs/hit"}}}},
+        {"required": ["total", "facets"], "properties": {"total": {"type": "integer"}, "facets": {"type": "object"}}}
+      ]
+    }
+  },
+  "$defs": {
+    "highlight": {"type": "object", "required": ["start", "end"], "properties": {"start": {"type": "integer"}, "end": {"type": "integer"}}},
+    "sourceRef": {"type": "object", "required": ["id", "label"], "properties": {"id": {"type": "string"}, "label": {"type": "string"}, "trust": {"type": "string"}}},
+    "base": {
+      "type": "object",
+      "required": ["id", "kind", "type", "title", "snippet", "highlights", "highlight_unit", "origin", "status"],
+      "properties": {
+        "id": {"type": "string"}, "kind": {"enum": ["claim", "record", "entity", "passage"]}, "type": {"type": "string"},
+        "title": {"type": "string"}, "snippet": {"type": "string"},
+        "highlights": {"type": "array", "items": {"$ref": "#/$defs/highlight"}},
+        "highlight_unit": {"const": "codepoint"},
+        "origin": {"enum": ["external", "first_party", "system"]},
+        "status": {"enum": ["active", "superseded", "dead"]}
+      }
+    },
+    "hit": {
+      "oneOf": [
+        {"allOf": [{"$ref": "#/$defs/base"}], "required": ["subject", "source", "verification", "recorded_at"],
+         "properties": {"kind": {"const": "claim"}, "subject": {"type": "string"}, "source": {"$ref": "#/$defs/sourceRef"},
+                        "verification": {"type": "string"}, "recorded_at": {"type": "string"}}},
+        {"allOf": [{"$ref": "#/$defs/base"}], "required": ["author", "sensitivity", "recorded_at"],
+         "properties": {"kind": {"const": "record"}, "author": {"type": ["string", "null"]},
+                        "sensitivity": {"enum": ["public", "internal", "private", "secret"]}, "recorded_at": {"type": "string"}}},
+        {"allOf": [{"$ref": "#/$defs/base"}],
+         "properties": {"kind": {"const": "entity"}, "liveness": {"type": ["string", "null"]}}},
+        {"allOf": [{"$ref": "#/$defs/base"}], "required": ["snapshot_id", "start", "end", "source"],
+         "properties": {"kind": {"const": "passage"}, "snapshot_id": {"type": "string"},
+                        "start": {"type": "integer"}, "end": {"type": "integer"}, "source": {"$ref": "#/$defs/sourceRef"}}}
+      ]
+    }
+  }
+}

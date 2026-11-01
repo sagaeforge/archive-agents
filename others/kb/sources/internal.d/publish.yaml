@@ -1,0 +1,6 @@
+# WP-10 내부 작업. LLM과 네트워크를 쓰지 않는다. 6.2 publish 단계는 kb/publish/tick_stage.py의 STAGES가 돈다.
+jobs:
+  - id: publish.prune
+    every_s: 86400
+    stage: 6.2
+    run: "kb.publish.tick_stage:job_prune"

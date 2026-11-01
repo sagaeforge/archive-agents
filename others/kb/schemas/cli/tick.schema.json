@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/cli/tick.schema.json",
+  "title": "kb tick --json",
+  "type": "object",
+  "required": ["sources", "failed_sources", "robots_denied", "parsed", "stages", "at"],
+  "properties": {
+    "sources": {"type": "integer", "minimum": 0, "description": "이번 tick에 수집을 시도한 소스 수"},
+    "failed_sources": {"type": "integer", "minimum": 0},
+    "robots_denied": {"type": "integer", "minimum": 0, "description": "robots 거부 횟수. 실패와 따로 센다"},
+    "parsed": {"type": "integer", "minimum": 0},
+    "pages_fetched": {"type": "integer", "minimum": 0},
+    "pages_queued": {"type": "integer", "minimum": 0},
+    "pages_capped": {"type": "integer", "minimum": 0, "description": "max_pages를 넘어 큐에 넣지 않은 URL 수"},
+    "stages": {
+      "type": "object",
+      "additionalProperties": {"enum": ["ok", "failed", "absent"]}
+    },
+    "at": {"type": "integer", "description": "tick 시작 시각(epoch ms)"},
+    "skipped": {"type": "string", "description": "tick을 돌지 않은 이유(locked 등)"},
+    "warnings": {"type": "array", "items": {"type": "string"}},
+    "errors": {"type": "array", "items": {"type": "string"}},
+    "gaps": {"type": "integer", "minimum": 0},
+    "rebuilt": {"type": "boolean"},
+    "collect_paused": {"type": "boolean"}
+  }
+}

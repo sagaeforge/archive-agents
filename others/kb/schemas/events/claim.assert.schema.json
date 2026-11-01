@@ -1,0 +1,213 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/events/claim.assert.schema.json",
+  "title": "claim.assert",
+  "description": "주장 한 건. 근거(evidence) 1건 이상. 제3자 권고는 stance=attributed와 speaker가 필요하다.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "subject": {
+      "type": "string",
+      "minLength": 1
+    },
+    "predicate": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "object": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "value": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "unit": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "qualifiers": {
+      "type": "object"
+    },
+    "statement": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kind": {
+      "enum": [
+        "event",
+        "state",
+        "howto"
+      ]
+    },
+    "stance": {
+      "enum": [
+        "stated",
+        "attributed"
+      ]
+    },
+    "speaker": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "method": {
+      "enum": [
+        "deterministic",
+        "llm",
+        "human"
+      ]
+    },
+    "verification": {
+      "enum": [
+        "unverified",
+        "needs_review",
+        "quote_found",
+        "parser_derived",
+        "first_party"
+      ]
+    },
+    "slot": {
+      "type": "string"
+    },
+    "extractor": {
+      "type": "string"
+    },
+    "valid": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        },
+        "precision": {
+          "enum": [
+            "instant",
+            "day",
+            "month",
+            "quarter",
+            "year"
+          ]
+        }
+      }
+    },
+    "domain": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "A",
+          "B",
+          "C",
+          "D",
+          "E",
+          "F",
+          "G"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "snapshot": {
+            "type": "string",
+            "minLength": 1
+          },
+          "selector_kind": {
+            "enum": [
+              "text_quote",
+              "jsonpointer"
+            ]
+          },
+          "exact": {
+            "type": "string"
+          },
+          "prefix": {
+            "type": "string"
+          },
+          "suffix": {
+            "type": "string"
+          },
+          "start_cp": {
+            "type": "integer"
+          },
+          "end_cp": {
+            "type": "integer"
+          },
+          "json_pointer": {
+            "type": "string"
+          },
+          "text_sha": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "gate_version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "snapshot",
+          "selector_kind"
+        ]
+      },
+      "minItems": 1
+    },
+    "sensitivity_floor": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3,
+      "description": "선택. 파생 주장의 최소 민감도(0 public ~ 3 secret). 투영은 주어, 근거, 이 값 중 최댓값으로 쓴다(ADR 7.9)."
+    }
+  },
+  "required": [
+    "id",
+    "subject",
+    "statement",
+    "kind",
+    "stance",
+    "method",
+    "verification",
+    "evidence"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "stance": {
+            "const": "attributed"
+          }
+        },
+        "required": [
+          "stance"
+        ]
+      },
+      "then": {
+        "required": [
+          "speaker"
+        ],
+        "properties": {
+          "speaker": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  ]
+}

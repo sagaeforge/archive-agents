@@ -1,0 +1,160 @@
+# WP-07 소스 레지스트리(g4-ecosystem.yaml). 원본: ADR-0001 10.4, docs/research/sources-inventory*.md, ADR-0002.
+# policy.reason: 비활성 사유 또는 주의. parse: 어댑터 설정. 비활성 소스는 enabled=false이고 수집 코드가 호출하지 않는다.
+sources:
+- id: src:mcp-registry
+  inventory_id: M21
+  name: MCP Registry
+  domain:
+  - G
+  class: weekly
+  fetch:
+    kind: https
+    url: https://registry.modelcontextprotocol.io/v0/servers?limit=100
+    conditional: true
+  parser: mcp_registry@1
+  expect:
+    content_type: &id001
+    - application/json
+  policy:
+    enabled: true
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:g4-repos
+  inventory_id: null
+  name: G4 도구 생태계 저장소 메타(REST 순환)
+  domain:
+  - G
+  class: weekly
+  fetch:
+    kind: https
+    urls:
+    - https://api.github.com/repos/BloopAI/vibe-kanban
+    - https://api.github.com/repos/ComposioHQ/awesome-claude-skills
+    - https://api.github.com/repos/EveryInc/compound-engineering-plugin
+    - https://api.github.com/repos/Fission-AI/OpenSpec
+    - https://api.github.com/repos/Kilo-Org/kilocode
+    - https://api.github.com/repos/MoonshotAI/kimi-code
+    - https://api.github.com/repos/Nimbalyst/nimbalyst
+    - https://api.github.com/repos/NousResearch/hermes-agent
+    - https://api.github.com/repos/OpenHands/OpenHands
+    - https://api.github.com/repos/QwenLM/qwen-code
+    - https://api.github.com/repos/SuperClaude-Org/SuperClaude_Framework
+    - https://api.github.com/repos/VoltAgent/awesome-agent-skills
+    - https://api.github.com/repos/VoltAgent/awesome-claude-code-subagents
+    - https://api.github.com/repos/Yeachan-Heo/oh-my-claudecode
+    - https://api.github.com/repos/Zoo-Code-Org/Zoo-Code
+    - https://api.github.com/repos/aaif-goose/goose
+    - https://api.github.com/repos/affaan-m/ECC
+    - https://api.github.com/repos/agentskills/agentskills
+    - https://api.github.com/repos/agentsmd/agents.md
+    - https://api.github.com/repos/anomalyco/opencode
+    - https://api.github.com/repos/anthropics/claude-cookbooks
+    - https://api.github.com/repos/anthropics/knowledge-work-plugins
+    - https://api.github.com/repos/anthropics/skills
+    - https://api.github.com/repos/bmad-code-org/BMAD-METHOD
+    - https://api.github.com/repos/cecli-dev/cecli
+    - https://api.github.com/repos/charmbracelet/crush
+    - https://api.github.com/repos/cline/cline
+    - https://api.github.com/repos/code-yeongyu/oh-my-openagent
+    - https://api.github.com/repos/composio-community/awesome-codex-skills
+    - https://api.github.com/repos/dagger/container-use
+    - https://api.github.com/repos/davila7/claude-code-templates
+    - https://api.github.com/repos/disler/claude-code-hooks-mastery
+    - https://api.github.com/repos/earendil-works/pi
+    - https://api.github.com/repos/eyaltoledano/claude-task-master
+    - https://api.github.com/repos/frankbria/ralph-claude-code
+    - https://api.github.com/repos/gastownhall/beads
+    - https://api.github.com/repos/gastownhall/gastown
+    - https://api.github.com/repos/github/copilot-cli
+    - https://api.github.com/repos/github/github-mcp-server
+    - https://api.github.com/repos/github/spec-kit
+    - https://api.github.com/repos/google-gemini/gemini-cli
+    - https://api.github.com/repos/hesreallyhim/awesome-claude-code
+    - https://api.github.com/repos/jarrodwatts/claude-hud
+    - https://api.github.com/repos/microsoft/playwright-mcp
+    - https://api.github.com/repos/mistralai/mistral-vibe
+    - https://api.github.com/repos/modelcontextprotocol/inspector
+    - https://api.github.com/repos/modelcontextprotocol/modelcontextprotocol
+    - https://api.github.com/repos/modelcontextprotocol/python-sdk
+    - https://api.github.com/repos/modelcontextprotocol/registry
+    - https://api.github.com/repos/modelcontextprotocol/servers
+    - https://api.github.com/repos/modelcontextprotocol/typescript-sdk
+    - https://api.github.com/repos/musistudio/claude-code-router
+    - https://api.github.com/repos/nwiizo/ccswarm
+    - https://api.github.com/repos/obra/superpowers
+    - https://api.github.com/repos/open-gsd/gsd-core
+    - https://api.github.com/repos/openai/codex-action
+    - https://api.github.com/repos/openai/codex-plugin-cc
+    - https://api.github.com/repos/openai/plugins
+    - https://api.github.com/repos/openclaw/openclaw
+    - https://api.github.com/repos/oraios/serena
+    - https://api.github.com/repos/punkpeye/awesome-mcp-servers
+    - https://api.github.com/repos/revfactory/claude-code-mastering
+    - https://api.github.com/repos/revfactory/harness
+    - https://api.github.com/repos/rohitg00/awesome-claude-code-toolkit
+    - https://api.github.com/repos/ruvnet/ruflo
+    - https://api.github.com/repos/shanraisshan/claude-code-best-practice
+    - https://api.github.com/repos/sirmalloc/ccstatusline
+    - https://api.github.com/repos/siteboon/claudecodeui
+    - https://api.github.com/repos/smtg-ai/claude-squad
+    - https://api.github.com/repos/snarktank/ralph
+    - https://api.github.com/repos/stablyai/orca
+    - https://api.github.com/repos/tailcallhq/forgecode
+    - https://api.github.com/repos/thedotmack/claude-mem
+    - https://api.github.com/repos/travisvn/awesome-claude-skills
+    - https://api.github.com/repos/upstash/context7
+    - https://api.github.com/repos/vercel-labs/skills
+    - https://api.github.com/repos/winfunc/opcode
+    - https://api.github.com/repos/wshobson/agents
+    - https://api.github.com/repos/ykdojo/claude-code-tips
+    conditional: true
+    max_pages_per_tick: 20
+  parser: github_repo_meta@1
+  expect:
+    content_type: *id001
+  policy:
+    enabled: true
+    tos: allowed
+    tos_ref: https://docs.github.com/en/site-policy/acceptable-use-policies/github-acceptable-use-policies
+    robots: enforce
+    requires_decision: null
+    trust: secondary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:g4-npm
+  inventory_id: null
+  name: G4 npm 패키지 메타
+  domain:
+  - G
+  class: weekly
+  fetch:
+    kind: https
+    urls:
+    - https://registry.npmjs.org/@upstash/context7-mcp/latest
+    - https://registry.npmjs.org/opencode-ai/latest
+    - https://registry.npmjs.org/ccstatusline/latest
+    - https://registry.npmjs.org/@playwright/mcp/latest
+    - https://registry.npmjs.org/task-master-ai/latest
+    - https://registry.npmjs.org/oh-my-claude-sisyphus/latest
+    - https://registry.npmjs.org/@musistudio/claude-code-router/latest
+    conditional: true
+  parser: npm_meta@1
+  expect:
+    content_type: *id001
+  policy:
+    enabled: true
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: secondary
+    retention: permanent
+    pii: false
+    needs_contact: false

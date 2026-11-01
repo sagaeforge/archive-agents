@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/events/survival.verdict.schema.json",
+  "title": "survival.verdict",
+  "description": "생존 판정. liveness=superseded 이면 successor 필수.",
+  "type": "object",
+  "properties": {
+    "target": {
+      "type": "string",
+      "minLength": 1
+    },
+    "unit": {
+      "type": "string",
+      "minLength": 1
+    },
+    "liveness": {
+      "enum": [
+        "alive",
+        "renamed",
+        "scheduled_removal",
+        "removed",
+        "superseded",
+        "stale_suspect",
+        "revived",
+        "deprecated",
+        "partial"
+      ]
+    },
+    "status": {
+      "enum": [
+        "active",
+        "superseded",
+        "dead"
+      ]
+    },
+    "signals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "snapshot": {
+            "type": "string",
+            "minLength": 1
+          },
+          "quote": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      }
+    },
+    "successor": {
+      "type": "string"
+    },
+    "decided_by": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": [
+    "target",
+    "unit",
+    "liveness",
+    "status",
+    "signals",
+    "decided_by"
+  ],
+  "if": {
+    "properties": {
+      "liveness": {
+        "const": "superseded"
+      }
+    },
+    "required": [
+      "liveness"
+    ]
+  },
+  "then": {
+    "required": [
+      "successor"
+    ],
+    "properties": {
+      "successor": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

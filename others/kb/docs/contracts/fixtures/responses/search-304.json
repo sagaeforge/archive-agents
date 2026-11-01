@@ -1,0 +1,10 @@
+{
+  "body": null,
+  "case": "search-304",
+  "headers": {
+    "cache-control": "no-store",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 304
+}

@@ -1,0 +1,2 @@
+{"item": "bundle", "contract": "kb-ingest/0", "batch_id": "bad", "producer": "user:sagae"}
+{"item": "snapshot", "ref": "s1", "snapshot": "n-7d18fe247ea5a460", "source": "src:cc-docs-en"}

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "kb-collect": {
+      "command": "${KB_HOME:-/home/user/sagae-kb-data}/runtime/bin/kb-mcp",
+      "args": [
+        "--profile",
+        "collector"
+      ]
+    }
+  }
+}

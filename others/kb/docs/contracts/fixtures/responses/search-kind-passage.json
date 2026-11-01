@@ -1,0 +1,79 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "items": [
+        {
+          "end": 79,
+          "highlight_unit": "codepoint",
+          "highlights": [
+            {
+              "end": 14,
+              "start": 12
+            }
+          ],
+          "id": "n-1:59",
+          "kind": "passage",
+          "origin": "external",
+          "snapshot_id": "n-1",
+          "snippet": "history 기능은 위젯을 지원한다",
+          "source": {
+            "id": "src:a",
+            "label": "합성 출처 A",
+            "trust": "unknown"
+          },
+          "start": 59,
+          "status": "active",
+          "title": "https://docs.example.test/widget",
+          "type": "Document"
+        },
+        {
+          "end": 19,
+          "highlight_unit": "codepoint",
+          "highlights": [
+            {
+              "end": 12,
+              "start": 10
+            }
+          ],
+          "id": "n-1:0",
+          "kind": "passage",
+          "origin": "external",
+          "snapshot_id": "n-1",
+          "snippet": "합성 도구 알파는 위젯을 지원한다.",
+          "source": {
+            "id": "src:a",
+            "label": "합성 출처 A",
+            "trust": "unknown"
+          },
+          "start": 0,
+          "status": "active",
+          "title": "https://docs.example.test/widget",
+          "type": "Document"
+        }
+      ]
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "page": {
+      "next_cursor": null,
+      "total": 2,
+      "truncated": false
+    },
+    "schema_version": "0.3.1"
+  },
+  "case": "search-kind-passage",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

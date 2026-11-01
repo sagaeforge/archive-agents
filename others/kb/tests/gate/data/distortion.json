@@ -1,0 +1,1418 @@
+[
+ {
+  "cat": "주어 교체",
+  "row": 0,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YouTube 파트너 프로그램(네이버 클립)은 2027년 2월 1일부터 업데이트를 진행한다.",
+  "quote": "2027년 2월 1일부터 YouTube 파트너 프로그램(YPP) 업데이트를 진행합니다."
+ },
+ {
+  "cat": "숫자 교차",
+  "row": 0,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YouTube 파트너 프로그램(YPP)은 2년 2027월 1일부터 업데이트를 진행한다.",
+  "quote": "2027년 2월 1일부터 YouTube 파트너 프로그램(YPP) 업데이트를 진행합니다."
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 0,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YouTube 파트너 프로그램(YPP)은 2028년 2월 1일부터 업데이트를 진행한다.",
+  "quote": "2027년 2월 1일부터 YouTube 파트너 프로그램(YPP) 업데이트를 진행합니다."
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 0,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YouTube 파트너 프로그램(YPP)은 2027년 2월 1일부터 업데이트를 진행한다.",
+  "quote": "2027년 2월 1일까지 YouTube 파트너 프로그램(YPP) 업데이트를 진행합니다."
+ },
+ {
+  "cat": "비교 반전",
+  "row": 1,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP 업데이트된 약관에 동의하려면 2027년 1월 31일부터 YouTube 스튜디오에서 검토·동의해야 한다.",
+  "quote": "2027년 1월 31일까지 YouTube 스튜디오에서 업데이트된 약관을 검토하고 동의하세요."
+ },
+ {
+  "cat": "주어 교체",
+  "row": 1,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "네이버 클립 업데이트된 약관에 동의하려면 2027년 1월 31일까지 YouTube 스튜디오에서 검토·동의해야 한다.",
+  "quote": "2027년 1월 31일까지 YouTube 스튜디오에서 업데이트된 약관을 검토하고 동의하세요."
+ },
+ {
+  "cat": "숫자 교차",
+  "row": 1,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP 업데이트된 약관에 동의하려면 1년 2027월 31일까지 YouTube 스튜디오에서 검토·동의해야 한다.",
+  "quote": "2027년 1월 31일까지 YouTube 스튜디오에서 업데이트된 약관을 검토하고 동의하세요."
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 1,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP 업데이트된 약관에 동의하려면 2028년 1월 31일까지 YouTube 스튜디오에서 검토·동의해야 한다.",
+  "quote": "2027년 1월 31일까지 YouTube 스튜디오에서 업데이트된 약관을 검토하고 동의하세요."
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 1,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP 업데이트된 약관에 동의하려면 2027년 1월 31일까지 YouTube 스튜디오에서 검토·동의해야 한다.",
+  "quote": "2027년 1월 31일까지 YouTube 스튜 임의삽입어 디오에서 업데이트된 약관을 검토하고 동의하세요."
+ },
+ {
+  "cat": "부정 반전",
+  "row": 2,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP 가입을 위해 Google 계정에 2단계 인증이 사용 설정되어 없어도 된다.",
+  "quote": "Google 계정에 2단계 인증이 사용 설정되어 있어야 합니다."
+ },
+ {
+  "cat": "주어 교체",
+  "row": 2,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "네이버 클립 가입을 위해 Google 계정에 2단계 인증이 사용 설정되어 있어야 한다.",
+  "quote": "Google 계정에 2단계 인증이 사용 설정되어 있어야 합니다."
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 2,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP 가입을 위해 Google 계정에 3단계 인증이 사용 설정되어 있어야 한다.",
+  "quote": "Google 계정에 2단계 인증이 사용 설정되어 있어야 합니다."
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 2,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP 가입을 위해 Google 계정에 2단계 인증이 사용 설정되어 있어야 한다.",
+  "quote": "Google 계정에 2단계 인증 임의삽입어 이 사용 설정되어 있어야 합니다."
+ },
+ {
+  "cat": "부정 반전",
+  "row": 3,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP 장편 기준으로 지난 12개월간 유효 시청 시간 4,000시간 이상과 구독자 1,000명 이상이 필요하지 않다.",
+  "quote": "지난 12개월간 유효 시청 시간이 4,000시간 이상이고 구독자가 1,000명인 경우"
+ },
+ {
+  "cat": "비교 반전",
+  "row": 3,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP 장편 기준으로 지난 12개월간 유효 시청 시간 4,000시간 이하과 구독자 1,000명 이상이 필요하다.",
+  "quote": "지난 12개월간 유효 시청 시간이 4,000시간 이상이고 구독자가 1,000명인 경우"
+ },
+ {
+  "cat": "단위 교체",
+  "row": 3,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP 장편 기준으로 지난 12개월간 유효 시청 분 4,000시간 이상과 구독자 1,000명 이상이 필요하다.",
+  "quote": "지난 12개월간 유효 시청 시간이 4,000시간 이상이고 구독자가 1,000명인 경우"
+ },
+ {
+  "cat": "주어 교체",
+  "row": 3,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "네이버 클립 장편 기준으로 지난 12개월간 유효 시청 시간 4,000시간 이상과 구독자 1,000명 이상이 필요하다.",
+  "quote": "지난 12개월간 유효 시청 시간이 4,000시간 이상이고 구독자가 1,000명인 경우"
+ },
+ {
+  "cat": "숫자 교차",
+  "row": 3,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP 장편 기준으로 지난 4,000개월간 유효 시청 시간 12시간 이상과 구독자 1,000명 이상이 필요하다.",
+  "quote": "지난 12개월간 유효 시청 시간이 4,000시간 이상이고 구독자가 1,000명인 경우"
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 3,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP 장편 기준으로 지난 13개월간 유효 시청 시간 4,000시간 이상과 구독자 1,000명 이상이 필요하다.",
+  "quote": "지난 12개월간 유효 시청 시간이 4,000시간 이상이고 구독자가 1,000명인 경우"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 3,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP 장편 기준으로 지난 12개월간 유효 시청 시간 4,000시간 이상과 구독자 1,000명 이상이 필요하다.",
+  "quote": "지난 12개월간 유효 시청 시간이 4,000시간 이하이고 구독자가 1,000명인 경우"
+ },
+ {
+  "cat": "부정 반전",
+  "row": 4,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP Shorts 기준으로 지난 90일간 유효 Shorts 조회수 1,000만 회 이상과 구독자 1,000명 이상이 필요하지 않다.",
+  "quote": "지난 90일간 유효 Shorts 조회수가 1,000만 회 이상이고 구독자가 1,000명인 경우"
+ },
+ {
+  "cat": "비교 반전",
+  "row": 4,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP Shorts 기준으로 지난 90일간 유효 Shorts 조회수 1,000만 회 이하과 구독자 1,000명 이상이 필요하다.",
+  "quote": "지난 90일간 유효 Shorts 조회수가 1,000만 회 이상이고 구독자가 1,000명인 경우"
+ },
+ {
+  "cat": "주어 교체",
+  "row": 4,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "네이버 클립 Shorts 기준으로 지난 90일간 유효 Shorts 조회수 1,000만 회 이상과 구독자 1,000명 이상이 필요하다.",
+  "quote": "지난 90일간 유효 Shorts 조회수가 1,000만 회 이상이고 구독자가 1,000명인 경우"
+ },
+ {
+  "cat": "숫자 교차",
+  "row": 4,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP Shorts 기준으로 지난 1,000일간 유효 Shorts 조회수 90만 회 이상과 구독자 1,000명 이상이 필요하다.",
+  "quote": "지난 90일간 유효 Shorts 조회수가 1,000만 회 이상이고 구독자가 1,000명인 경우"
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 4,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP Shorts 기준으로 지난 91일간 유효 Shorts 조회수 1,000만 회 이상과 구독자 1,000명 이상이 필요하다.",
+  "quote": "지난 90일간 유효 Shorts 조회수가 1,000만 회 이상이고 구독자가 1,000명인 경우"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 4,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP Shorts 기준으로 지난 90일간 유효 Shorts 조회수 1,000만 회 이상과 구독자 1,000명 이상이 필요하다.",
+  "quote": "지난 90일간 유효 Shorts 조회수가 1,000만 회 이하이고 구독자가 1,000명인 경우"
+ },
+ {
+  "cat": "단위 교체",
+  "row": 5,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP 채널 검토 결과는 보통 1주 정도 소요된다.",
+  "quote": "보통 1개월 정도"
+ },
+ {
+  "cat": "주어 교체",
+  "row": 5,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "네이버 클립 채널 검토 결과는 보통 1개월 정도 소요된다.",
+  "quote": "보통 1개월 정도"
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 5,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP 채널 검토 결과는 보통 2개월 정도 소요된다.",
+  "quote": "보통 1개월 정도"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 5,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP 채널 검토 결과는 보통 1개월 정도 소요된다.",
+  "quote": "보통 1 임의삽입어 개월 정도"
+ },
+ {
+  "cat": "부정 반전",
+  "row": 6,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP 결정에 대한 이의신청은 결정 후 21일 이내에 할 수 없다.",
+  "quote": "21일 이내에 결정에 이의신청하거나"
+ },
+ {
+  "cat": "비교 반전",
+  "row": 6,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP 결정에 대한 이의신청은 결정 후 21일 이후에 할 수 있다.",
+  "quote": "21일 이내에 결정에 이의신청하거나"
+ },
+ {
+  "cat": "단위 교체",
+  "row": 6,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP 결정에 대한 이의신청은 결정 후 21시간 이내에 할 수 있다.",
+  "quote": "21일 이내에 결정에 이의신청하거나"
+ },
+ {
+  "cat": "주어 교체",
+  "row": 6,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "네이버 클립 결정에 대한 이의신청은 결정 후 21일 이내에 할 수 있다.",
+  "quote": "21일 이내에 결정에 이의신청하거나"
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 6,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP 결정에 대한 이의신청은 결정 후 22일 이내에 할 수 있다.",
+  "quote": "21일 이내에 결정에 이의신청하거나"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 6,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP 결정에 대한 이의신청은 결정 후 21일 이내에 할 수 있다.",
+  "quote": "21일 이내에 결 임의삽입어 정에 이의신청하거나"
+ },
+ {
+  "cat": "부정 반전",
+  "row": 7,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP 첫 신청이 승인되지 않은 경우 30일 후 다시 신청할 수 없다.",
+  "quote": "30일 후 다시 신청할 수 있습니다"
+ },
+ {
+  "cat": "단위 교체",
+  "row": 7,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP 첫 신청이 승인되지 않은 경우 30주 후 다시 신청할 수 있다.",
+  "quote": "30일 후 다시 신청할 수 있습니다"
+ },
+ {
+  "cat": "주어 교체",
+  "row": 7,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "네이버 클립 첫 신청이 승인되지 않은 경우 30일 후 다시 신청할 수 있다.",
+  "quote": "30일 후 다시 신청할 수 있습니다"
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 7,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP 첫 신청이 승인되지 않은 경우 31일 후 다시 신청할 수 있다.",
+  "quote": "30일 후 다시 신청할 수 있습니다"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 7,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP 첫 신청이 승인되지 않은 경우 30일 후 다시 신청할 수 있다.",
+  "quote": "30일 후 다시  임의삽입어 신청할 수 있습니다"
+ },
+ {
+  "cat": "부정 반전",
+  "row": 8,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP 승인되지 않은 것이 처음이 아니거나 이전에 재신청한 경우 90일 후 다시 신청할 수 없다.",
+  "quote": "90일 후 다시 신청할 수 있습니다"
+ },
+ {
+  "cat": "단위 교체",
+  "row": 8,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP 승인되지 않은 것이 처음이 아니거나 이전에 재신청한 경우 90주 후 다시 신청할 수 있다.",
+  "quote": "90일 후 다시 신청할 수 있습니다"
+ },
+ {
+  "cat": "주어 교체",
+  "row": 8,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "네이버 클립 승인되지 않은 것이 처음이 아니거나 이전에 재신청한 경우 90일 후 다시 신청할 수 있다.",
+  "quote": "90일 후 다시 신청할 수 있습니다"
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 8,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP 승인되지 않은 것이 처음이 아니거나 이전에 재신청한 경우 91일 후 다시 신청할 수 있다.",
+  "quote": "90일 후 다시 신청할 수 있습니다"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 8,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "YPP 승인되지 않은 것이 처음이 아니거나 이전에 재신청한 경우 90일 후 다시 신청할 수 있다.",
+  "quote": "90일 후 다시  임의삽입어 신청할 수 있습니다"
+ },
+ {
+  "cat": "비교 반전",
+  "row": 9,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "6개월 이하 동영상을 업로드하지 않았거나 게시물 탭에 게시하지 않은 채널은 YouTube에서 수익 창출이 중지될 수 있다.",
+  "quote": "동영상을 업로드하지 않았거나 게시물 탭에 게시하지 않은 채널은 YouTube에서 수익 창출을 사용 중지할 수 있습니다"
+ },
+ {
+  "cat": "단위 교체",
+  "row": 9,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "6주 이상 동영상을 업로드하지 않았거나 게시물 탭에 게시하지 않은 채널은 YouTube에서 수익 창출이 중지될 수 있다.",
+  "quote": "동영상을 업로드하지 않았거나 게시물 탭에 게시하지 않은 채널은 YouTube에서 수익 창출을 사용 중지할 수 있습니다"
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 9,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "7개월 이상 동영상을 업로드하지 않았거나 게시물 탭에 게시하지 않은 채널은 YouTube에서 수익 창출이 중지될 수 있다.",
+  "quote": "동영상을 업로드하지 않았거나 게시물 탭에 게시하지 않은 채널은 YouTube에서 수익 창출을 사용 중지할 수 있습니다"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 9,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "6개월 이상 동영상을 업로드하지 않았거나 게시물 탭에 게시하지 않은 채널은 YouTube에서 수익 창출이 중지될 수 있다.",
+  "quote": "동영상을 업로드하지 않았거나 게시물 탭에 게시하지 않은 채 임의삽입어 널은 YouTube에서 수익 창출을 사용 중지할 수 있습니다"
+ },
+ {
+  "cat": "부정 반전",
+  "row": 10,
+  "page": "ypp_ko",
+  "subject": "YouTube용 애드센스 계정",
+  "statement": "새 YouTube용 애드센스 계정은 YouTube 스튜디오에서 만들지 않아도 된다.",
+  "quote": "새 YouTube용 애드센스 계정은 YouTube 스튜디오에서 만들어야 합니다"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 10,
+  "page": "ypp_ko",
+  "subject": "YouTube용 애드센스 계정",
+  "statement": "새 YouTube용 애드센스 계정은 YouTube 스튜디오에서 만들어야 한다.",
+  "quote": "새 YouTube용 애드센스 계정은 Y 임의삽입어 ouTube 스튜디오에서 만들어야 합니다"
+ },
+ {
+  "cat": "부정 반전",
+  "row": 11,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "Shorts 피드의 Shorts 조회로 발생한 유효 시청 시간은 4,000시간 기준에 포함된다.",
+  "quote": "Shorts 피드의 Shorts 조회로 발생한 유효 시청 시간은 유효 시청 시간 기준인 4,000시간에 포함되지 않습니다."
+ },
+ {
+  "cat": "단위 교체",
+  "row": 11,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "Shorts 피드의 Shorts 조회로 발생한 유효 시청 분은 4,000시간 기준에 포함되지 않는다.",
+  "quote": "Shorts 피드의 Shorts 조회로 발생한 유효 시청 시간은 유효 시청 시간 기준인 4,000시간에 포함되지 않습니다."
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 11,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "Shorts 피드의 Shorts 조회로 발생한 유효 시청 시간은 4,001시간 기준에 포함되지 않는다.",
+  "quote": "Shorts 피드의 Shorts 조회로 발생한 유효 시청 시간은 유효 시청 시간 기준인 4,000시간에 포함되지 않습니다."
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 11,
+  "page": "ypp_ko",
+  "subject": "YouTube 파트너 프로그램(YPP)",
+  "statement": "Shorts 피드의 Shorts 조회로 발생한 유효 시청 시간은 4,000시간 기준에 포함되지 않는다.",
+  "quote": "Shorts 피드의 Shorts 조회로 발생한 유효 시청 시간은 유효 시청 시간 기준인 4,000시간에 제외되지 않습니다."
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 12,
+  "page": "headless",
+  "subject": "Claude Code",
+  "statement": "Claude Code는 실행이 성공하면 종료 코드 1으로 끝나고, 실행이 실패하면 0이 아닌 코드로 끝난다.",
+  "quote": "Claude Code exits with code 0 on success and a non-zero code when the "
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 12,
+  "page": "headless",
+  "subject": "Claude Code",
+  "statement": "Claude Code는 실행이 성공하면 종료 코드 0으로 끝나고, 실행이 실패하면 0이 아닌 코드로 끝난다.",
+  "quote": "Claude Code exits with code 0 on su 임의삽입어 ccess and a non-zero code when the "
+ },
+ {
+  "cat": "부정 반전",
+  "row": 13,
+  "page": "headless",
+  "subject": "--bare",
+  "statement": "--bare 옵션은 hooks, skills, custom commands 등의 자동 탐색을 포함해 시작 시간을 줄인다.",
+  "quote": "Add `--bare` to reduce startup time by skipping auto-discovery of hook"
+ },
+ {
+  "cat": "단위 교체",
+  "row": 13,
+  "page": "headless",
+  "subject": "--bare",
+  "statement": "--bare 옵션은 hooks, skills, custom commands 등의 자동 탐색을 건너뛰어 시작 분을 줄인다.",
+  "quote": "Add `--bare` to reduce startup time by skipping auto-discovery of hook"
+ },
+ {
+  "cat": "주어 교체",
+  "row": 13,
+  "page": "headless",
+  "subject": "--bare",
+  "statement": "--print 옵션은 hooks, skills, custom commands 등의 자동 탐색을 건너뛰어 시작 시간을 줄인다.",
+  "quote": "Add `--bare` to reduce startup time by skipping auto-discovery of hook"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 13,
+  "page": "headless",
+  "subject": "--bare",
+  "statement": "--bare 옵션은 hooks, skills, custom commands 등의 자동 탐색을 건너뛰어 시작 시간을 줄인다.",
+  "quote": "Add `--bare` to reduce startup time 임의삽입어  by skipping auto-discovery of hook"
+ },
+ {
+  "cat": "부정 반전",
+  "row": 14,
+  "page": "headless",
+  "subject": "--bare 모드",
+  "statement": "--bare 모드에서 Claude Code는 OAuth 자격 증명이나 시스템 키체인을 읽는다.",
+  "quote": "In bare mode, Claude Code never reads OAuth credentials or the system "
+ },
+ {
+  "cat": "주어 교체",
+  "row": 14,
+  "page": "headless",
+  "subject": "--bare 모드",
+  "statement": "--print 모드에서 Claude Code는 OAuth 자격 증명이나 시스템 키체인을 읽지 않는다.",
+  "quote": "In bare mode, Claude Code never reads OAuth credentials or the system "
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 14,
+  "page": "headless",
+  "subject": "--bare 모드",
+  "statement": "--bare 모드에서 Claude Code는 OAuth 자격 증명이나 시스템 키체인을 읽지 않는다.",
+  "quote": "In bare mode, Claude Code never rea 임의삽입어 ds OAuth credentials or the system "
+ },
+ {
+  "cat": "부정 반전",
+  "row": 15,
+  "page": "headless",
+  "subject": "--bare 모드",
+  "statement": "--bare 모드는 구독 로그인을 사용하지 않으므로 Anthropic API에는 ANTHROPIC_API_KEY 설정이 필요하지 않다.",
+  "quote": "Set `ANTHROPIC_API_KEY` before running it, because bare mode doesn't u"
+ },
+ {
+  "cat": "주어 교체",
+  "row": 15,
+  "page": "headless",
+  "subject": "--bare 모드",
+  "statement": "--print 모드는 구독 로그인을 사용하지 않으므로 Anthropic API에는 ANTHROPIC_API_KEY 설정이 필요하다.",
+  "quote": "Set `ANTHROPIC_API_KEY` before running it, because bare mode doesn't u"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 15,
+  "page": "headless",
+  "subject": "--bare 모드",
+  "statement": "--bare 모드는 구독 로그인을 사용하지 않으므로 Anthropic API에는 ANTHROPIC_API_KEY 설정이 필요하다.",
+  "quote": "Set `ANTHROPIC_API_KEY` before runn 임의삽입어 ing it, because bare mode doesn't u"
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 16,
+  "page": "headless",
+  "subject": "Claude Code -p 실행",
+  "statement": "백그라운드 명령이 실행 중이 아닐 때 Claude Code -p 실행은 기본적으로 연속 유휴 대기 11분 후 실행 중인 작업을 중단한다.",
+  "quote": "stops whatever is still running after 10 minutes of continuous idle wa"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 16,
+  "page": "headless",
+  "subject": "Claude Code -p 실행",
+  "statement": "백그라운드 명령이 실행 중이 아닐 때 Claude Code -p 실행은 기본적으로 연속 유휴 대기 10분 후 실행 중인 작업을 중단한다.",
+  "quote": "stops whatever is still running aft 임의삽입어 er 10 minutes of continuous idle wa"
+ },
+ {
+  "cat": "단위 교체",
+  "row": 17,
+  "page": "headless",
+  "subject": "Monitor watch",
+  "statement": "Monitor watch는 기본적으로 Claude가 시작한 후 5분이 지나면 분 초과된다.",
+  "quote": "By default, a watch times out five minutes after Claude starts it."
+ },
+ {
+  "cat": "주어 교체",
+  "row": 17,
+  "page": "headless",
+  "subject": "Monitor watch",
+  "statement": "Bash watch는 기본적으로 Claude가 시작한 후 5분이 지나면 시간 초과된다.",
+  "quote": "By default, a watch times out five minutes after Claude starts it."
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 17,
+  "page": "headless",
+  "subject": "Monitor watch",
+  "statement": "Monitor watch는 기본적으로 Claude가 시작한 후 6분이 지나면 시간 초과된다.",
+  "quote": "By default, a watch times out five minutes after Claude starts it."
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 17,
+  "page": "headless",
+  "subject": "Monitor watch",
+  "statement": "Monitor watch는 기본적으로 Claude가 시작한 후 5분이 지나면 시간 초과된다.",
+  "quote": "By default, a watch times out fiv 임의삽입어 e minutes after Claude starts it."
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 18,
+  "page": "headless",
+  "subject": "Claude Code",
+  "statement": "stderr가 터미널이고 실행이 6초 동안 대기하면 Claude Code는 백그라운드 작업 대기 메시지를 stderr에 출력한다.",
+  "quote": "When stderr is a terminal and the run has waited five seconds"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 18,
+  "page": "headless",
+  "subject": "Claude Code",
+  "statement": "stderr가 터미널이고 실행이 5초 동안 대기하면 Claude Code는 백그라운드 작업 대기 메시지를 stderr에 출력한다.",
+  "quote": "When stderr is a terminal and  임의삽입어 the run has waited five seconds"
+ },
+ {
+  "cat": "주어 교체",
+  "row": 19,
+  "page": "headless",
+  "subject": "claude -p 세션 (--bare 미사용)",
+  "statement": "--print 없이 실행한 -p 세션은 신뢰하지 않은 폴더에서도 프로젝트의 .claude/settings.json 훅을 실행한다.",
+  "quote": "Without `--bare`, a `-p` session runs the hooks in a project's `.claud"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 19,
+  "page": "headless",
+  "subject": "claude -p 세션 (--bare 미사용)",
+  "statement": "--bare 없이 실행한 -p 세션은 신뢰하지 않은 폴더에서도 프로젝트의 .claude/settings.json 훅을 실행한다.",
+  "quote": "Without `--bare`, a `-p` session ru 임의삽입어 ns the hooks in a project's `.claud"
+ },
+ {
+  "cat": "주어 교체",
+  "row": 20,
+  "page": "headless",
+  "subject": "--bare",
+  "statement": "--print 모드는 향후 릴리스에서 -p의 기본 모드가 될 예정이다.",
+  "quote": "will become the default for `-p` in a future release."
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 20,
+  "page": "headless",
+  "subject": "--bare",
+  "statement": "--bare 모드는 향후 릴리스에서 -p의 기본 모드가 될 예정이다.",
+  "quote": "will become the default fo 임의삽입어 r `-p` in a future release."
+ },
+ {
+  "cat": "주어 교체",
+  "row": 21,
+  "page": "headless",
+  "subject": "Claude Code --bare 모드 제한",
+  "statement": "v2.1.286 이전에는 --print 모드의 제한이 부분적으로만 적용되었다.",
+  "quote": "Before v2.1.286, these limits held only partly"
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 21,
+  "page": "headless",
+  "subject": "Claude Code --bare 모드 제한",
+  "statement": "v2.1.287 이전에는 --bare 모드의 제한이 부분적으로만 적용되었다.",
+  "quote": "Before v2.1.286, these limits held only partly"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 21,
+  "page": "headless",
+  "subject": "Claude Code --bare 모드 제한",
+  "statement": "v2.1.286 이전에는 --bare 모드의 제한이 부분적으로만 적용되었다.",
+  "quote": "Before v2.1.286, these  임의삽입어 limits held only partly"
+ },
+ {
+  "cat": "부정 반전",
+  "row": 22,
+  "page": "headless",
+  "subject": "--bare 모드",
+  "statement": "--bare 모드에서 Claude는 백그라운드 명령이나 백그라운드 서브에이전트를 실행할 수 있다.",
+  "quote": "Claude can't run background commands or background subagents"
+ },
+ {
+  "cat": "주어 교체",
+  "row": 22,
+  "page": "headless",
+  "subject": "--bare 모드",
+  "statement": "--print 모드에서 Claude는 백그라운드 명령이나 백그라운드 서브에이전트를 실행할 수 없다.",
+  "quote": "Claude can't run background commands or background subagents"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 22,
+  "page": "headless",
+  "subject": "--bare 모드",
+  "statement": "--bare 모드에서 Claude는 백그라운드 명령이나 백그라운드 서브에이전트를 실행할 수 없다.",
+  "quote": "Claude can't run background co 임의삽입어 mmands or background subagents"
+ },
+ {
+  "cat": "주어 교체",
+  "row": 23,
+  "page": "headless",
+  "subject": "Agent SDK",
+  "statement": "MCP SDK는 Claude Code를 구동하는 것과 동일한 도구, 에이전트 루프, 컨텍스트 관리를 제공한다.",
+  "quote": "gives you the same tools, agent loop, and context management that powe"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 23,
+  "page": "headless",
+  "subject": "Agent SDK",
+  "statement": "Agent SDK는 Claude Code를 구동하는 것과 동일한 도구, 에이전트 루프, 컨텍스트 관리를 제공한다.",
+  "quote": "gives you the same tools, agent loo 임의삽입어 p, and context management that powe"
+ },
+ {
+  "cat": "주어 교체",
+  "row": 24,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "틱톡는 2005년 2월 14일에 스티브 첸, 채드 헐리, 자베드 카림에 의해 설립되었다.",
+  "quote": "유튜브는 2005년 2월 14일 페이팔의 전 직원인 스티브 첸, 채드 헐리, 자베드 카림에 의해 설립되었다"
+ },
+ {
+  "cat": "숫자 교차",
+  "row": 24,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "유튜브는 2년 2005월 14일에 스티브 첸, 채드 헐리, 자베드 카림에 의해 설립되었다.",
+  "quote": "유튜브는 2005년 2월 14일 페이팔의 전 직원인 스티브 첸, 채드 헐리, 자베드 카림에 의해 설립되었다"
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 24,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "유튜브는 2006년 2월 14일에 스티브 첸, 채드 헐리, 자베드 카림에 의해 설립되었다.",
+  "quote": "유튜브는 2005년 2월 14일 페이팔의 전 직원인 스티브 첸, 채드 헐리, 자베드 카림에 의해 설립되었다"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 24,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "유튜브는 2005년 2월 14일에 스티브 첸, 채드 헐리, 자베드 카림에 의해 설립되었다.",
+  "quote": "유튜브는 2005년 2월 14일 페이팔의 전 직원인  임의삽입어 스티브 첸, 채드 헐리, 자베드 카림에 의해 설립되었다"
+ },
+ {
+  "cat": "주어 교체",
+  "row": 25,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "틱톡는 샌브루노에 본사를 두고 있다.",
+  "quote": "샌브루노에 본사를 두고 있으며"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 25,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "유튜브는 샌브루노에 본사를 두고 있다.",
+  "quote": "샌브루노에 본사 임의삽입어 를 두고 있으며"
+ },
+ {
+  "cat": "단위 교체",
+  "row": 26,
+  "page": "kowiki_yt",
+  "subject": "구글",
+  "statement": "구글은 2006년 11월 13일 유튜브를 16억 5천만 원에 인수했다.",
+  "quote": "2006년 11월 13일, 유튜브는 구글에 16억 5천만 달러"
+ },
+ {
+  "cat": "주어 교체",
+  "row": 26,
+  "page": "kowiki_yt",
+  "subject": "구글",
+  "statement": "구글은 2006년 11월 13일 틱톡를 16억 5천만 달러에 인수했다.",
+  "quote": "2006년 11월 13일, 유튜브는 구글에 16억 5천만 달러"
+ },
+ {
+  "cat": "숫자 교차",
+  "row": 26,
+  "page": "kowiki_yt",
+  "subject": "구글",
+  "statement": "구글은 11년 2006월 13일 유튜브를 16억 5천만 달러에 인수했다.",
+  "quote": "2006년 11월 13일, 유튜브는 구글에 16억 5천만 달러"
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 26,
+  "page": "kowiki_yt",
+  "subject": "구글",
+  "statement": "구글은 2007년 11월 13일 유튜브를 16억 5천만 달러에 인수했다.",
+  "quote": "2006년 11월 13일, 유튜브는 구글에 16억 5천만 달러"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 26,
+  "page": "kowiki_yt",
+  "subject": "구글",
+  "statement": "구글은 2006년 11월 13일 유튜브를 16억 5천만 달러에 인수했다.",
+  "quote": "2006년 11월 13일, 유튜 임의삽입어 브는 구글에 16억 5천만 달러"
+ },
+ {
+  "cat": "비교 반전",
+  "row": 27,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "2024년 1월 기준 유튜브의 월간 활성 사용자는 27억 명 이하이다.",
+  "quote": "2024년 1월 기준으로 유튜브는 27억 명 이상의 월간 활성 사용자를 보유하고 있으며"
+ },
+ {
+  "cat": "단위 교체",
+  "row": 27,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "2024년 1월 기준 유튜브의 월간 활성 사용자는 27만 명 이상이다.",
+  "quote": "2024년 1월 기준으로 유튜브는 27억 명 이상의 월간 활성 사용자를 보유하고 있으며"
+ },
+ {
+  "cat": "주어 교체",
+  "row": 27,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "2024년 1월 기준 틱톡의 월간 활성 사용자는 27억 명 이상이다.",
+  "quote": "2024년 1월 기준으로 유튜브는 27억 명 이상의 월간 활성 사용자를 보유하고 있으며"
+ },
+ {
+  "cat": "숫자 교차",
+  "row": 27,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "1년 2024월 기준 유튜브의 월간 활성 사용자는 27억 명 이상이다.",
+  "quote": "2024년 1월 기준으로 유튜브는 27억 명 이상의 월간 활성 사용자를 보유하고 있으며"
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 27,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "2025년 1월 기준 유튜브의 월간 활성 사용자는 27억 명 이상이다.",
+  "quote": "2024년 1월 기준으로 유튜브는 27억 명 이상의 월간 활성 사용자를 보유하고 있으며"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 27,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "2024년 1월 기준 유튜브의 월간 활성 사용자는 27억 명 이상이다.",
+  "quote": "2024년 1월 기준으로 유튜브는 27억 명 이하의 월간 활성 사용자를 보유하고 있으며"
+ },
+ {
+  "cat": "단위 교체",
+  "row": 28,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "2023년 유튜브의 광고 수익은 317억 원였다.",
+  "quote": "2023년 유튜브의 광고 수익은 317억 달러로"
+ },
+ {
+  "cat": "주어 교체",
+  "row": 28,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "2023년 틱톡의 광고 수익은 317억 달러였다.",
+  "quote": "2023년 유튜브의 광고 수익은 317억 달러로"
+ },
+ {
+  "cat": "숫자 교차",
+  "row": 28,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "317년 유튜브의 광고 수익은 2023억 달러였다.",
+  "quote": "2023년 유튜브의 광고 수익은 317억 달러로"
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 28,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "2024년 유튜브의 광고 수익은 317억 달러였다.",
+  "quote": "2023년 유튜브의 광고 수익은 317억 달러로"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 28,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "2023년 유튜브의 광고 수익은 317억 달러였다.",
+  "quote": "2023년 유튜브의 광고 임의삽입어  수익은 317억 달러로"
+ },
+ {
+  "cat": "주어 교체",
+  "row": 29,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "틱톡의 첫 동영상은 2005년 4월 23일에 업로드되었다.",
+  "quote": "첫 동영상은 2005년 4월 23일에 업로드되었다."
+ },
+ {
+  "cat": "숫자 교차",
+  "row": 29,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "유튜브의 첫 동영상은 4년 2005월 23일에 업로드되었다.",
+  "quote": "첫 동영상은 2005년 4월 23일에 업로드되었다."
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 29,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "유튜브의 첫 동영상은 2006년 4월 23일에 업로드되었다.",
+  "quote": "첫 동영상은 2005년 4월 23일에 업로드되었다."
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 29,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "유튜브의 첫 동영상은 2005년 4월 23일에 업로드되었다.",
+  "quote": "첫 동영상은 2005년 4 임의삽입어 월 23일에 업로드되었다."
+ },
+ {
+  "cat": "비교 반전",
+  "row": 30,
+  "page": "kowiki_yt",
+  "subject": "유튜브 동영상",
+  "statement": "2017년 2월까지 유튜브 동영상은 매일 10억 시간 이하 시청되었다.",
+  "quote": "2017년 2월까지 유튜브 동영상은 매일 10억 시간 이상 시청되었으며"
+ },
+ {
+  "cat": "단위 교체",
+  "row": 30,
+  "page": "kowiki_yt",
+  "subject": "유튜브 동영상",
+  "statement": "2017년 2월까지 유튜브 동영상은 매일 10억 분 이상 시청되었다.",
+  "quote": "2017년 2월까지 유튜브 동영상은 매일 10억 시간 이상 시청되었으며"
+ },
+ {
+  "cat": "주어 교체",
+  "row": 30,
+  "page": "kowiki_yt",
+  "subject": "유튜브 동영상",
+  "statement": "2017년 2월까지 틱톡 동영상은 매일 10억 시간 이상 시청되었다.",
+  "quote": "2017년 2월까지 유튜브 동영상은 매일 10억 시간 이상 시청되었으며"
+ },
+ {
+  "cat": "숫자 교차",
+  "row": 30,
+  "page": "kowiki_yt",
+  "subject": "유튜브 동영상",
+  "statement": "2년 2017월까지 유튜브 동영상은 매일 10억 시간 이상 시청되었다.",
+  "quote": "2017년 2월까지 유튜브 동영상은 매일 10억 시간 이상 시청되었으며"
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 30,
+  "page": "kowiki_yt",
+  "subject": "유튜브 동영상",
+  "statement": "2018년 2월까지 유튜브 동영상은 매일 10억 시간 이상 시청되었다.",
+  "quote": "2017년 2월까지 유튜브 동영상은 매일 10억 시간 이상 시청되었으며"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 30,
+  "page": "kowiki_yt",
+  "subject": "유튜브 동영상",
+  "statement": "2017년 2월까지 유튜브 동영상은 매일 10억 시간 이상 시청되었다.",
+  "quote": "2017년 2월까지 유튜브 동영상은 매일 10억 시간 이하 시청되었으며"
+ },
+ {
+  "cat": "주어 교체",
+  "row": 31,
+  "page": "kowiki_yt",
+  "subject": "수전 워치츠키",
+  "statement": "수전 워치츠키는 2014년 2월 틱톡의 CEO로 임명되었다.",
+  "quote": "수전 워치츠키는 2014년 2월 유튜브의 CEO로 임명되었다."
+ },
+ {
+  "cat": "숫자 교차",
+  "row": 31,
+  "page": "kowiki_yt",
+  "subject": "수전 워치츠키",
+  "statement": "수전 워치츠키는 2년 2014월 유튜브의 CEO로 임명되었다.",
+  "quote": "수전 워치츠키는 2014년 2월 유튜브의 CEO로 임명되었다."
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 31,
+  "page": "kowiki_yt",
+  "subject": "수전 워치츠키",
+  "statement": "수전 워치츠키는 2015년 2월 유튜브의 CEO로 임명되었다.",
+  "quote": "수전 워치츠키는 2014년 2월 유튜브의 CEO로 임명되었다."
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 31,
+  "page": "kowiki_yt",
+  "subject": "수전 워치츠키",
+  "statement": "수전 워치츠키는 2014년 2월 유튜브의 CEO로 임명되었다.",
+  "quote": "수전 워치츠키는 2014년 2월 임의삽입어  유튜브의 CEO로 임명되었다."
+ },
+ {
+  "cat": "단위 교체",
+  "row": 32,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "유튜브는 2016년 1월 샌브루노 사무실 단지를 2억 1,500만 원에 매입했다.",
+  "quote": "2016년 1월, 유튜브는 샌브루노에 있는 본사를 2억 1,500만 달러에 사무실 단지를 매입하여 확장했다."
+ },
+ {
+  "cat": "주어 교체",
+  "row": 32,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "틱톡는 2016년 1월 샌브루노 사무실 단지를 2억 1,500만 달러에 매입했다.",
+  "quote": "2016년 1월, 유튜브는 샌브루노에 있는 본사를 2억 1,500만 달러에 사무실 단지를 매입하여 확장했다."
+ },
+ {
+  "cat": "숫자 교차",
+  "row": 32,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "유튜브는 1년 2016월 샌브루노 사무실 단지를 2억 1,500만 달러에 매입했다.",
+  "quote": "2016년 1월, 유튜브는 샌브루노에 있는 본사를 2억 1,500만 달러에 사무실 단지를 매입하여 확장했다."
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 32,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "유튜브는 2017년 1월 샌브루노 사무실 단지를 2억 1,500만 달러에 매입했다.",
+  "quote": "2016년 1월, 유튜브는 샌브루노에 있는 본사를 2억 1,500만 달러에 사무실 단지를 매입하여 확장했다."
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 32,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "유튜브는 2016년 1월 샌브루노 사무실 단지를 2억 1,500만 달러에 매입했다.",
+  "quote": "2016년 1월, 유튜브는 샌브루노에 있는 본사를 2억 임의삽입어  1,500만 달러에 사무실 단지를 매입하여 확장했다."
+ },
+ {
+  "cat": "단위 교체",
+  "row": 33,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "유튜브는 FTC로부터 13세 미만 미성년자의 개인정보 수집 혐의로 1억 7천만 원의 벌금을 부과받았다.",
+  "quote": "회사는 13세 미만 미성년자의 개인 정보를 수집한 혐의로 FTC로부터 1억 7천만 달러의 벌금을 부과받았다."
+ },
+ {
+  "cat": "주어 교체",
+  "row": 33,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "틱톡는 FTC로부터 13세 미만 미성년자의 개인정보 수집 혐의로 1억 7천만 달러의 벌금을 부과받았다.",
+  "quote": "회사는 13세 미만 미성년자의 개인 정보를 수집한 혐의로 FTC로부터 1억 7천만 달러의 벌금을 부과받았다."
+ },
+ {
+  "cat": "숫자 교차",
+  "row": 33,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "유튜브는 FTC로부터 1세 미만 미성년자의 개인정보 수집 혐의로 13억 7천만 달러의 벌금을 부과받았다.",
+  "quote": "회사는 13세 미만 미성년자의 개인 정보를 수집한 혐의로 FTC로부터 1억 7천만 달러의 벌금을 부과받았다."
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 33,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "유튜브는 FTC로부터 14세 미만 미성년자의 개인정보 수집 혐의로 1억 7천만 달러의 벌금을 부과받았다.",
+  "quote": "회사는 13세 미만 미성년자의 개인 정보를 수집한 혐의로 FTC로부터 1억 7천만 달러의 벌금을 부과받았다."
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 33,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "유튜브는 FTC로부터 13세 미만 미성년자의 개인정보 수집 혐의로 1억 7천만 달러의 벌금을 부과받았다.",
+  "quote": "회사는 13세 미만 미성년자의 개인 정보를 수집한 혐의로 FTC로까지 1억 7천만 달러의 벌금을 부과받았다."
+ },
+ {
+  "cat": "부정 반전",
+  "row": 34,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "유튜브는 2021년 11월에 동영상의 싫어요 수 공개 표시를 도입했다.",
+  "quote": "유튜브는 2021년 11월에 동영상에 대한 싫어요 수 공개 표시를 제거했다."
+ },
+ {
+  "cat": "주어 교체",
+  "row": 34,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "틱톡는 2021년 11월에 동영상의 싫어요 수 공개 표시를 제거했다.",
+  "quote": "유튜브는 2021년 11월에 동영상에 대한 싫어요 수 공개 표시를 제거했다."
+ },
+ {
+  "cat": "숫자 교차",
+  "row": 34,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "유튜브는 11년 2021월에 동영상의 싫어요 수 공개 표시를 제거했다.",
+  "quote": "유튜브는 2021년 11월에 동영상에 대한 싫어요 수 공개 표시를 제거했다."
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 34,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "유튜브는 2022년 11월에 동영상의 싫어요 수 공개 표시를 제거했다.",
+  "quote": "유튜브는 2021년 11월에 동영상에 대한 싫어요 수 공개 표시를 제거했다."
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 34,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "유튜브는 2021년 11월에 동영상의 싫어요 수 공개 표시를 제거했다.",
+  "quote": "유튜브는 2021년 11월에 동영상에  임의삽입어 대한 싫어요 수 공개 표시를 제거했다."
+ },
+ {
+  "cat": "비교 반전",
+  "row": 35,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "2010년부터 유튜브는 comScore에 따르면 약 43%의 시장 점유율을 기록했다.",
+  "quote": "2010년까지 회사는 comScore에 따르면 약 43%의 시장 점유율과 140억 건 이상의 동영상 조회수를 기록했다."
+ },
+ {
+  "cat": "단위 교체",
+  "row": 35,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "2010년까지 유튜브는 comScore에 따르면 약 43포인트의 시장 점유율을 기록했다.",
+  "quote": "2010년까지 회사는 comScore에 따르면 약 43%의 시장 점유율과 140억 건 이상의 동영상 조회수를 기록했다."
+ },
+ {
+  "cat": "주어 교체",
+  "row": 35,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "2010년까지 틱톡는 comScore에 따르면 약 43%의 시장 점유율을 기록했다.",
+  "quote": "2010년까지 회사는 comScore에 따르면 약 43%의 시장 점유율과 140억 건 이상의 동영상 조회수를 기록했다."
+ },
+ {
+  "cat": "숫자 교차",
+  "row": 35,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "43년까지 유튜브는 comScore에 따르면 약 2010%의 시장 점유율을 기록했다.",
+  "quote": "2010년까지 회사는 comScore에 따르면 약 43%의 시장 점유율과 140억 건 이상의 동영상 조회수를 기록했다."
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 35,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "2011년까지 유튜브는 comScore에 따르면 약 43%의 시장 점유율을 기록했다.",
+  "quote": "2010년까지 회사는 comScore에 따르면 약 43%의 시장 점유율과 140억 건 이상의 동영상 조회수를 기록했다."
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 35,
+  "page": "kowiki_yt",
+  "subject": "유튜브",
+  "statement": "2010년까지 유튜브는 comScore에 따르면 약 43%의 시장 점유율을 기록했다.",
+  "quote": "2010년까지 회사는 comScore에 따르면 약 43%의 시장 점유율과 140억 건 이하의 동영상 조회수를 기록했다."
+ },
+ {
+  "cat": "비교 반전",
+  "row": 36,
+  "page": "quota",
+  "subject": "YouTube Data API",
+  "statement": "YouTube Data API의 모든 요청은 잘못된 요청을 포함해 최대 1포인트의 할당량 비용이 든다.",
+  "quote": "All API requests, including invalid requests, incur a quota cost of at"
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 36,
+  "page": "quota",
+  "subject": "YouTube Data API",
+  "statement": "YouTube Data API의 모든 요청은 잘못된 요청을 포함해 최소 2포인트의 할당량 비용이 든다.",
+  "quote": "All API requests, including invalid requests, incur a quota cost of at"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 36,
+  "page": "quota",
+  "subject": "YouTube Data API",
+  "statement": "YouTube Data API의 모든 요청은 잘못된 요청을 포함해 최소 1포인트의 할당량 비용이 든다.",
+  "quote": "All API requests, including invalid 임의삽입어  requests, incur a quota cost of at"
+ },
+ {
+  "cat": "주어 교체",
+  "row": 37,
+  "page": "quota",
+  "subject": "YouTube Data API",
+  "statement": "YouTube Data API를 활성화한 프로젝트의 videos.list와 videos.insert 외 나머지 엔드포인트 기본 할당량은 하루 합계 10,000단위이다.",
+  "quote": "10,000 units per day combined for all other endpoints"
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 37,
+  "page": "quota",
+  "subject": "YouTube Data API",
+  "statement": "YouTube Data API를 활성화한 프로젝트의 search.list와 videos.insert 외 나머지 엔드포인트 기본 할당량은 하루 합계 10,001단위이다.",
+  "quote": "10,000 units per day combined for all other endpoints"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 37,
+  "page": "quota",
+  "subject": "YouTube Data API",
+  "statement": "YouTube Data API를 활성화한 프로젝트의 search.list와 videos.insert 외 나머지 엔드포인트 기본 할당량은 하루 합계 10,000단위이다.",
+  "quote": "10,000 units per day combi 임의삽입어 ned for all other endpoints"
+ },
+ {
+  "cat": "주어 교체",
+  "row": 38,
+  "page": "quota",
+  "subject": "search.list",
+  "statement": "YouTube Data API를 활성화한 프로젝트의 videos.list 기본 할당량은 하루 100회 호출이다.",
+  "quote": "a default quota allocation of 100 `search.list` calls"
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 38,
+  "page": "quota",
+  "subject": "search.list",
+  "statement": "YouTube Data API를 활성화한 프로젝트의 search.list 기본 할당량은 하루 101회 호출이다.",
+  "quote": "a default quota allocation of 100 `search.list` calls"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 38,
+  "page": "quota",
+  "subject": "search.list",
+  "statement": "YouTube Data API를 활성화한 프로젝트의 search.list 기본 할당량은 하루 100회 호출이다.",
+  "quote": "a default quota allocation 임의삽입어  of 100 `search.list` calls"
+ },
+ {
+  "cat": "주어 교체",
+  "row": 39,
+  "page": "quota",
+  "subject": "videos.insert",
+  "statement": "YouTube Data API를 활성화한 프로젝트의 thumbnails.set 기본 할당량은 하루 100회 호출이다.",
+  "quote": "100 `videos.insert` calls"
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 39,
+  "page": "quota",
+  "subject": "videos.insert",
+  "statement": "YouTube Data API를 활성화한 프로젝트의 videos.insert 기본 할당량은 하루 101회 호출이다.",
+  "quote": "100 `videos.insert` calls"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 39,
+  "page": "quota",
+  "subject": "videos.insert",
+  "statement": "YouTube Data API를 활성화한 프로젝트의 videos.insert 기본 할당량은 하루 100회 호출이다.",
+  "quote": "100 `videos. 임의삽입어 insert` calls"
+ },
+ {
+  "cat": "단위 교체",
+  "row": 40,
+  "page": "quota",
+  "subject": "YouTube Data API 일일 할당량",
+  "statement": "YouTube Data API의 일일 할당량은 태평양 분(PT) 자정에 초기화된다.",
+  "quote": "Daily quotas reset at midnight Pacific Time (PT)."
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 40,
+  "page": "quota",
+  "subject": "YouTube Data API 일일 할당량",
+  "statement": "YouTube Data API의 일일 할당량은 태평양 시간(PT) 자정에 초기화된다.",
+  "quote": "Daily quotas reset at mi 임의삽입어 dnight Pacific Time (PT)."
+ },
+ {
+  "cat": "부정 반전",
+  "row": 41,
+  "page": "quota",
+  "subject": "search.list, videos.insert",
+  "statement": "search.list와 videos.insert 메서드는 각각 공용 할당량 버킷을 가진다.",
+  "quote": "The `search.list` and `videos.insert` methods have their own quota buc"
+ },
+ {
+  "cat": "주어 교체",
+  "row": 41,
+  "page": "quota",
+  "subject": "search.list, videos.insert",
+  "statement": "videos.list와 videos.insert 메서드는 각각 별도의 할당량 버킷을 가진다.",
+  "quote": "The `search.list` and `videos.insert` methods have their own quota buc"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 41,
+  "page": "quota",
+  "subject": "search.list, videos.insert",
+  "statement": "search.list와 videos.insert 메서드는 각각 별도의 할당량 버킷을 가진다.",
+  "quote": "The `search.list` and `videos.inser 임의삽입어 t` methods have their own quota buc"
+ },
+ {
+  "cat": "주어 교체",
+  "row": 42,
+  "page": "quota",
+  "subject": "search.list",
+  "statement": "videos.list 메서드는 호출 1회당 할당량 1포인트가 든다.",
+  "quote": "The quota cost is 1 per call."
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 42,
+  "page": "quota",
+  "subject": "search.list",
+  "statement": "search.list 메서드는 호출 2회당 할당량 1포인트가 든다.",
+  "quote": "The quota cost is 1 per call."
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 42,
+  "page": "quota",
+  "subject": "search.list",
+  "statement": "search.list 메서드는 호출 1회당 할당량 1포인트가 든다.",
+  "quote": "The quota cost 임의삽입어  is 1 per call."
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 43,
+  "page": "quota",
+  "subject": "captions.list",
+  "statement": "captions 리소스의 list 메서드 할당량 비용은 51이다.",
+  "quote": "| captions | list | 50 |"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 43,
+  "page": "quota",
+  "subject": "captions.list",
+  "statement": "captions 리소스의 list 메서드 할당량 비용은 50이다.",
+  "quote": "| captions | 임의삽입어  list | 50 |"
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 44,
+  "page": "quota",
+  "subject": "liveChatMessages.delete",
+  "statement": "liveChatMessages 리소스의 delete 메서드 할당량 비용은 21이다.",
+  "quote": "| liveChatMessages | delete | 20 |"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 44,
+  "page": "quota",
+  "subject": "liveChatMessages.delete",
+  "statement": "liveChatMessages 리소스의 delete 메서드 할당량 비용은 20이다.",
+  "quote": "| liveChatMessage 임의삽입어 s | delete | 20 |"
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 45,
+  "page": "quota",
+  "subject": "liveChatModerators.delete",
+  "statement": "liveChatModerators 리소스의 delete 메서드 할당량 비용은 201이다.",
+  "quote": "| liveChatModerators | delete | 200 |"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 45,
+  "page": "quota",
+  "subject": "liveChatModerators.delete",
+  "statement": "liveChatModerators 리소스의 delete 메서드 할당량 비용은 200이다.",
+  "quote": "| liveChatModerato 임의삽입어 rs | delete | 200 |"
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 46,
+  "page": "quota",
+  "subject": "channels.list",
+  "statement": "channels 리소스의 list 메서드 할당량 비용은 2이다.",
+  "quote": "| channels | list | 1 |"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 46,
+  "page": "quota",
+  "subject": "channels.list",
+  "statement": "channels 리소스의 list 메서드 할당량 비용은 1이다.",
+  "quote": "| channels  임의삽입어 | list | 1 |"
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 47,
+  "page": "quota",
+  "subject": "videos.list",
+  "statement": "videos 리소스의 list 메서드 할당량 비용은 2이다.",
+  "quote": "| videos | list | 1 |"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 47,
+  "page": "quota",
+  "subject": "videos.list",
+  "statement": "videos 리소스의 list 메서드 할당량 비용은 1이다.",
+  "quote": "| videos | 임의삽입어  list | 1 |"
+ },
+ {
+  "cat": "숫자 변경(대조군)",
+  "row": 48,
+  "page": "quota",
+  "subject": "thumbnails.set",
+  "statement": "thumbnails 리소스의 set 메서드 할당량 비용은 51이다.",
+  "quote": "| thumbnails | set | 50 |"
+ },
+ {
+  "cat": "인용구 변조",
+  "row": 48,
+  "page": "quota",
+  "subject": "thumbnails.set",
+  "statement": "thumbnails 리소스의 set 메서드 할당량 비용은 50이다.",
+  "quote": "| thumbnails 임의삽입어  | set | 50 |"
+ }
+]

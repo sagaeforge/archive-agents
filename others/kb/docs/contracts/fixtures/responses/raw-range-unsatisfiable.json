@@ -1,0 +1,17 @@
+{
+  "body": {
+    "code": "range_not_satisfiable",
+    "detail": "범위 밖",
+    "instance": "/v1/snapshots/n-raw/raw",
+    "status": 416,
+    "title": "range not satisfiable",
+    "type": "https://kb.local/problems/range-not-satisfiable"
+  },
+  "case": "raw-range-unsatisfiable",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/problem+json",
+    "vary": "Authorization"
+  },
+  "status": 416
+}

@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/events/gap.recorded.schema.json",
+  "title": "gap.recorded",
+  "description": "놓친 구간.",
+  "type": "object",
+  "properties": {
+    "source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "from_at": {
+      "type": "integer"
+    },
+    "to_at": {
+      "type": "integer"
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": [
+    "source",
+    "from_at",
+    "to_at",
+    "reason"
+  ]
+}

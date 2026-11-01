@@ -1,0 +1,116 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "items": [
+        {
+          "highlight_unit": "codepoint",
+          "highlights": [
+            {
+              "end": 2,
+              "start": 0
+            }
+          ],
+          "id": "e:tool:x",
+          "kind": "entity",
+          "liveness": null,
+          "origin": "external",
+          "snippet": "도구 X",
+          "status": "active",
+          "title": "도구 X",
+          "type": "Tool"
+        },
+        {
+          "highlight_unit": "codepoint",
+          "highlights": [
+            {
+              "end": 4,
+              "start": 2
+            }
+          ],
+          "id": "e:tool:new",
+          "kind": "entity",
+          "liveness": null,
+          "origin": "external",
+          "snippet": "새 도구",
+          "status": "active",
+          "title": "새 도구",
+          "type": "Tool"
+        },
+        {
+          "highlight_unit": "codepoint",
+          "highlights": [
+            {
+              "end": 2,
+              "start": 0
+            }
+          ],
+          "id": "e:tool:alpha",
+          "kind": "entity",
+          "liveness": null,
+          "origin": "external",
+          "snippet": "도구 알파",
+          "status": "active",
+          "title": "도구 알파",
+          "type": "Tool"
+        },
+        {
+          "highlight_unit": "codepoint",
+          "highlights": [
+            {
+              "end": 5,
+              "start": 3
+            }
+          ],
+          "id": "e:tool:tail",
+          "kind": "entity",
+          "liveness": null,
+          "origin": "external",
+          "snippet": "꼬리 도구",
+          "status": "active",
+          "title": "꼬리 도구",
+          "type": "Tool"
+        },
+        {
+          "highlight_unit": "codepoint",
+          "highlights": [
+            {
+              "end": 7,
+              "start": 5
+            }
+          ],
+          "id": "e:tool:revived",
+          "kind": "entity",
+          "liveness": "revived",
+          "origin": "external",
+          "snippet": "되살아난 도구",
+          "status": "active",
+          "title": "되살아난 도구",
+          "type": "Tool"
+        }
+      ]
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "page": {
+      "next_cursor": null,
+      "total": 5,
+      "truncated": false
+    },
+    "schema_version": "0.3.1"
+  },
+  "case": "search-kind-entity",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

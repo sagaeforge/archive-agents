@@ -1,0 +1,249 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/cli/status.schema.json",
+  "title": "kb status --json",
+  "description": "운영 상태. 호출할 때 계산한다. 사실과 건수만 담고 점수, 비율, 순위를 담지 않는다. llm 블록은 WP-19가 더한다.",
+  "type": "object",
+  "required": [
+    "ok",
+    "critical",
+    "warnings",
+    "notices",
+    "counts",
+    "by_domain",
+    "freshness",
+    "incidents",
+    "data_as_of"
+  ],
+  "properties": {
+    "ok": {
+      "type": "boolean",
+      "description": "critical이 비었으면 true"
+    },
+    "critical": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/finding"
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/finding"
+      }
+    },
+    "notices": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/finding"
+      }
+    },
+    "counts": {
+      "type": "object",
+      "required": [
+        "nodes",
+        "edges",
+        "entities",
+        "claims_active",
+        "claims_review",
+        "snapshots",
+        "queue_l2"
+      ],
+      "properties": {
+        "nodes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "edges": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "entities": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "claims_active": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "claims_review": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "needs_review 주장 건수"
+        },
+        "snapshots": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "queue_l2": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "by_domain": {
+      "type": "object",
+      "description": "도메인별 건수. 다중 도메인 소스는 각 도메인에 센다. 합이 전체보다 클 수 있다.",
+      "propertyNames": {
+        "pattern": "^[A-Z]$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "sources_active",
+          "sources_failed",
+          "snapshots",
+          "claims_active"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "sources_active": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sources_failed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "snapshots": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "claims_active": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "freshness": {
+      "type": "object",
+      "required": [
+        "last_tick_at",
+        "last_tick_age_s",
+        "stale_sources"
+      ],
+      "properties": {
+        "last_tick_at": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "epoch ms"
+        },
+        "last_tick_age_s": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "stale_sources": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "incidents": {
+      "type": "object",
+      "required": [
+        "open",
+        "items"
+      ],
+      "properties": {
+        "open": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "at",
+              "kind",
+              "detail"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "at": {
+                "type": "integer"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "detail": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "data_as_of": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "gold가 반영한 마지막 변경 시각(ISO 8601 UTC)"
+    },
+    "llm": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "OpenRouter 소진 장부(ADR-0003 4장). 키 파일이 없으면 값은 null이다.",
+      "properties": {
+        "balance_usd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "spend_7d_avg_usd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "projected_underspend_usd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "key_days_left": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "balance_usd",
+        "spend_7d_avg_usd",
+        "projected_underspend_usd",
+        "key_days_left"
+      ]
+    }
+  },
+  "$defs": {
+    "finding": {
+      "type": "object",
+      "required": [
+        "code"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

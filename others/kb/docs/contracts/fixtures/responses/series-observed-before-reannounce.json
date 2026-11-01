@@ -1,0 +1,63 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": "2027-01-16T08:00:00Z",
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "gaps": [
+        {
+          "from": "2027-01-08T08:00:00Z",
+          "reason": "machine_off",
+          "to": "2027-01-10T08:00:00Z"
+        }
+      ],
+      "id": "s:rank",
+      "metric": "chart_rank",
+      "points": [
+        {
+          "end": "2027-01-06T08:00:00Z",
+          "last_seen_at": "2027-01-15T08:00:38Z",
+          "observed_at": "2027-01-15T08:00:38Z",
+          "period": "d1",
+          "snapshot_id": "n-2",
+          "start": "2027-01-05T08:00:00Z",
+          "value": "5"
+        },
+        {
+          "end": "2027-01-07T08:00:00Z",
+          "last_seen_at": "2027-01-15T08:00:38Z",
+          "observed_at": "2027-01-15T08:00:38Z",
+          "period": "d2",
+          "snapshot_id": "n-2",
+          "start": "2027-01-06T08:00:00Z",
+          "value": "4"
+        },
+        {
+          "end": "2027-01-08T08:00:00Z",
+          "last_seen_at": "2027-01-15T08:00:38Z",
+          "observed_at": "2027-01-15T08:00:38Z",
+          "period": "d3",
+          "snapshot_id": "n-2",
+          "start": "2027-01-07T08:00:00Z",
+          "value": "3"
+        }
+      ],
+      "unit": "rank"
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "schema_version": "0.3.1"
+  },
+  "case": "series-observed-before-reannounce",
+  "headers": {
+    "cache-control": "no-cache",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

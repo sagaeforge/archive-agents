@@ -1,0 +1,4606 @@
+# KB 데이터 인터페이스 계약 v0 (OpenAPI 3.1.1 + JSON Schema 2020-12)
+# 원본이다. docs/contracts/data-interface-v0.md는 설명 문서이고 어긋나면 이 파일이 이긴다.
+# 기준선: docs/contracts/baseline/openapi.yaml (바꾸는 절차는 계약 8장).
+openapi: 3.1.1
+info:
+  title: KB 데이터 인터페이스
+  version: 0.3.1
+  summary: 지식 저장소 읽기 전용 HTTP 계약 v0
+  description: 기계 판독 원본이다. `docs/contracts/data-interface-v0.md`는 설명 문서이고 둘이 어긋나면 이 파일이 이긴다. 모든 경로는 `GET`이고 `HEAD`도 받는다. 서버 주소는 선언하지 않는다(Unix 소켓이 기본, TCP는 원격 이전 때). 저장소는 데이터만 제공하며 점수와 추천을 내지 않는다. 모르는 필드와 열린 값은 무시한다. `x-provisional`이 붙은 구간은 잠정이다(`/v1/ops/*`).
+security:
+- {}
+- bearerAuth: []
+tags:
+- name: meta
+  description: 메타와 스키마
+- name: graph
+  description: 노드, 엣지, 주장, 개요, 이력, 시계열
+- name: search
+  description: 검색, 패싯, 개수
+- name: snapshots
+  description: 스냅샷과 원본
+- name: feed
+  description: 변경 피드
+- name: export
+  description: 전체 그래프 export
+- name: ops
+  description: 운영 읽기 [잠정]
+paths:
+  /v1/meta:
+    get:
+      operationId: getMeta
+      tags:
+      - meta
+      summary: 빌드 메타
+      parameters: []
+      responses:
+        '200':
+          description: 성공. `data`는 `Meta`.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetaEnvelope'
+              examples:
+                default:
+                  value:
+                    schema_version: 0.3.1
+                    epoch: 1
+                    build_id: g-000183422-a1b2
+                    data_as_of: '2026-10-31T09:12:03Z'
+                    applied_seq: 183422
+                    as_of:
+                      valid: null
+                      observed: null
+                    degraded: []
+                    data:
+                      contract: v1
+                      kb_version: 0.1.0
+                      limits:
+                        overview_nodes: 100000
+                        overview_edges: 400000
+                        page: 500
+                        concurrent: 16
+                      changes_cursor: eyJlIjoxLCJzIjoxODM0MjJ9
+                      first_party_open: false
+                      counts:
+                        nodes: 48213
+                        edges: 812004
+                        claims: 153201
+        '304':
+          $ref: '#/components/responses/NotModified'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/schema:
+    get:
+      operationId: getSchema
+      tags:
+      - meta
+      summary: 타입 카탈로그와 닫힌 enum
+      parameters: []
+      responses:
+        '200':
+          description: 성공. `data`는 `SchemaCatalog`.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchemaCatalogEnvelope'
+              examples:
+                default:
+                  value:
+                    schema_version: 0.3.1
+                    epoch: 1
+                    build_id: g-000183422-a1b2
+                    data_as_of: '2026-10-31T09:12:03Z'
+                    applied_seq: 183422
+                    as_of:
+                      valid: null
+                      observed: null
+                    degraded: []
+                    data:
+                      node_types:
+                      - name: Feature
+                        group: world
+                        count: 3120
+                        status: stable
+                        properties:
+                        - name: product
+                          type: string
+                          filterable: true
+                          sortable: false
+                        json_schema:
+                          $schema: https://json-schema.org/draft/2020-12/schema
+                          type: object
+                          additionalProperties: true
+                      edge_types:
+                      - name: PART_OF
+                        group: structure
+                        count: 21004
+                        from:
+                        - Feature
+                        to:
+                        - Product
+                      predicates:
+                      - id: removed_in
+                        functional: false
+                        value_kind: version
+                        labels:
+                          ko: 제거 버전
+                          en: removed in
+                      overview_types:
+                      - Platform
+                      - Product
+                      - Feature
+                      - Tool
+                      - Model
+                      - Org
+                      - Concept
+                      - Technique
+                      - Policy
+                      - Note
+                      - Decision
+                      - Artifact
+                      - Learning
+                      - Project
+                      - Record
+                      - Series
+                      enums:
+                        origin:
+                        - external
+                        - first_party
+                        sensitivity:
+                        - public
+                        - internal
+                        - private
+                        - secret
+                        status:
+                        - active
+                        - superseded
+                        - dead
+                        selector_kind:
+                        - text_quote
+                        - jsonpointer
+                        claim_kind:
+                        - event
+                        - state
+                        - howto
+                        hit_kind:
+                        - claim
+                        - record
+                        - entity
+                        - passage
+                        stance:
+                        - stated
+                        - attributed
+                        method:
+                        - deterministic
+                        - llm
+                        - human
+                        precision:
+                        - instant
+                        - day
+                        - month
+                        - quarter
+                        - year
+                        evidence_state:
+                        - live
+                        - archived_only
+                      sort_keys:
+                        '*':
+                        - id
+                        - label
+                        - recorded_at
+                        Feature:
+                        - id
+                        - label
+                        - recorded_at
+                      filter_keys:
+                      - types
+                      - origin
+                      - status
+                      - domain
+                      - source
+                      - author
+        '304':
+          $ref: '#/components/responses/NotModified'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/overview:
+    get:
+      operationId: getOverview
+      tags:
+      - graph
+      summary: 그래프 개요(노드·엣지 열 표)
+      parameters:
+      - $ref: '#/components/parameters/Types'
+      - $ref: '#/components/parameters/Origin'
+      - $ref: '#/components/parameters/Status'
+      - $ref: '#/components/parameters/Domain'
+      - $ref: '#/components/parameters/Source'
+      - $ref: '#/components/parameters/Author'
+      - $ref: '#/components/parameters/IncludeUnverified'
+      - $ref: '#/components/parameters/AsOfValid'
+      - $ref: '#/components/parameters/AsOfObserved'
+      - $ref: '#/components/parameters/EdgeStatus'
+      - $ref: '#/components/parameters/Rtypes'
+      - $ref: '#/components/parameters/LimitOverview'
+      - $ref: '#/components/parameters/EdgeLimitOverview'
+      - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: 성공. `data`는 `Overview`.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OverviewEnvelope'
+              examples:
+                default:
+                  value:
+                    schema_version: 0.3.1
+                    epoch: 1
+                    build_id: g-000183422-a1b2
+                    data_as_of: '2026-10-31T09:12:03Z'
+                    applied_seq: 183422
+                    as_of:
+                      valid: null
+                      observed: null
+                    degraded: []
+                    data:
+                      meta:
+                        graph:
+                          directed: true
+                          multi: true
+                        order: id_asc
+                        node_total: 48213
+                        edge_total: 176402
+                        truncated: false
+                      nodes:
+                        columns:
+                        - id
+                        - type
+                        - label
+                        - origin
+                        - status
+                        rows:
+                        - - e:feature:claude-code-hooks
+                          - Feature
+                          - Hooks
+                          - external
+                          - active
+                      edges:
+                        columns:
+                        - id
+                        - src
+                        - dst
+                        - rtype
+                        - status
+                        rows:
+                        - - r-1a2b3c4d5e6f
+                          - e:feature:claude-code-hooks
+                          - e:product:claude-code
+                          - PART_OF
+                          - active
+                    page:
+                      next_cursor: null
+                      total: 48213
+                      truncated: false
+        '304':
+          $ref: '#/components/responses/NotModified'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/nodes:
+    get:
+      operationId: listNodes
+      tags:
+      - graph
+      summary: 노드 목록, 일괄 읽기, 접두어 찾기
+      parameters:
+      - $ref: '#/components/parameters/Types'
+      - $ref: '#/components/parameters/Origin'
+      - $ref: '#/components/parameters/Status'
+      - $ref: '#/components/parameters/Domain'
+      - $ref: '#/components/parameters/Source'
+      - $ref: '#/components/parameters/Author'
+      - $ref: '#/components/parameters/IncludeUnverified'
+      - $ref: '#/components/parameters/AsOfValid'
+      - $ref: '#/components/parameters/AsOfObserved'
+      - $ref: '#/components/parameters/Type'
+      - $ref: '#/components/parameters/Ids'
+      - $ref: '#/components/parameters/Filter'
+      - $ref: '#/components/parameters/Sort'
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/LimitList'
+      responses:
+        '200':
+          description: 성공. `data`는 `NodeList`.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NodeListEnvelope'
+              examples:
+                default:
+                  value:
+                    schema_version: 0.3.1
+                    epoch: 1
+                    build_id: g-000183422-a1b2
+                    data_as_of: '2026-10-31T09:12:03Z'
+                    applied_seq: 183422
+                    as_of:
+                      valid: null
+                      observed: null
+                    degraded: []
+                    data:
+                      items:
+                      - id: e:repo:anthropics-claude-code
+                        type: Repo
+                        label: anthropics/claude-code
+                        origin: external
+                        status: active
+                        liveness: active
+                        sensitivity: public
+                        domain:
+                        - G
+                        version: 4
+                        merged_into: null
+                        recorded_at: '2026-10-31T01:00:00Z'
+                        props:
+                          stars: '...'
+                    page:
+                      next_cursor: eyJrIjpb...
+                      total: 142
+                      truncated: false
+        '304':
+          $ref: '#/components/responses/NotModified'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/nodes/{id}:
+    get:
+      operationId: getNode
+      tags:
+      - graph
+      summary: 노드 상세(ID 종류별 응답)
+      parameters:
+      - $ref: '#/components/parameters/NodeId'
+      - $ref: '#/components/parameters/Status'
+      - $ref: '#/components/parameters/IncludeUnverified'
+      - $ref: '#/components/parameters/AsOfValid'
+      - $ref: '#/components/parameters/AsOfObserved'
+      - $ref: '#/components/parameters/Include'
+      - $ref: '#/components/parameters/ClaimLimitDetail'
+      - $ref: '#/components/parameters/EdgeLimitDetail'
+      - $ref: '#/components/parameters/BacklinkLimitDetail'
+      responses:
+        '200':
+          description: 성공. `data`는 `NodeDetail`.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NodeDetailEnvelope'
+              examples:
+                default:
+                  value:
+                    schema_version: 0.3.1
+                    epoch: 1
+                    build_id: g-000183422-a1b2
+                    data_as_of: '2026-10-31T09:12:03Z'
+                    applied_seq: 183422
+                    as_of:
+                      valid: null
+                      observed: null
+                    degraded: []
+                    data:
+                      id: e:feature:claude-code-ultraplan
+                      type: Feature
+                      label: /ultraplan
+                      origin: external
+                      status: dead
+                      liveness: removed
+                      sensitivity: public
+                      domain:
+                      - G
+                      version: 3
+                      merged_into: null
+                      merged_into_final: null
+                      valid:
+                        from: null
+                        to: '2026-08-02'
+                        precision: day
+                        label: null
+                      recorded_at: '2026-10-31T01:02:03Z'
+                      expired_at: null
+                      author: null
+                      props:
+                        product: claude-code
+                      claims:
+                      - id: c-8k2p4q7m1xab
+                        type: Claim
+                        label: Claude Code의 /ultraplan 명령은 2.1.222에서 제거됐다.
+                        statement: Claude Code의 /ultraplan 명령은 2.1.222에서 제거됐다.
+                        subject: e:feature:claude-code-ultraplan
+                        predicate: removed_in
+                        value: 2.1.222
+                        unit: version
+                        kind: event
+                        stance: stated
+                        method: llm
+                        status: active
+                        verification: quote_found
+                        origin: external
+                        sensitivity: public
+                        version: 1
+                        recorded_at: '2026-10-31T01:02:03Z'
+                        valid:
+                          from: '2026-08-02'
+                          to: null
+                          precision: day
+                          label: null
+                        evidence:
+                        - id: ev-2m9x4k7q1cab
+                          snapshot_id: n-3fa9c01b77aa12ef
+                          selector_kind: text_quote
+                          exact: /ultraplan Removed in v2.1.222
+                          prefix: '| '
+                          suffix: ' |'
+                          start: 1204
+                          end: 1234
+                          json_pointer: null
+                          evidence_state: live
+                          support_check: null
+                          last_confirmed_at: '2026-10-31T01:02:03Z'
+                      claims_truncated: false
+                      edges:
+                        out:
+                        - id: r-1a2b3c4d5e6f
+                          rtype: PART_OF
+                          src: e:feature:claude-code-ultraplan
+                          dst: e:product:claude-code
+                          status: active
+                          claim_id: null
+                          peer:
+                            id: e:product:claude-code
+                            type: Product
+                            label: Claude Code
+                        in: []
+                        truncated: false
+                      backlinks:
+                      - id: f-01JC8ZQ3T9XYZ
+                        type: Note
+                        label: 쇼츠 후킹 메모
+                        rtype: LINKS_TO
+                      backlinks_truncated: false
+        '304':
+          $ref: '#/components/responses/NotModified'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/nodes/{id}/claims:
+    get:
+      operationId: listNodeClaims
+      tags:
+      - graph
+      summary: 노드의 주장 목록
+      parameters:
+      - $ref: '#/components/parameters/NodeId'
+      - $ref: '#/components/parameters/Types'
+      - $ref: '#/components/parameters/Origin'
+      - $ref: '#/components/parameters/Status'
+      - $ref: '#/components/parameters/Domain'
+      - $ref: '#/components/parameters/Source'
+      - $ref: '#/components/parameters/Author'
+      - $ref: '#/components/parameters/IncludeUnverified'
+      - $ref: '#/components/parameters/AsOfValid'
+      - $ref: '#/components/parameters/AsOfObserved'
+      - $ref: '#/components/parameters/Predicate'
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/LimitList'
+      responses:
+        '200':
+          description: 성공. `data`는 `ClaimList`.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimListEnvelope'
+              examples:
+                default:
+                  value:
+                    schema_version: 0.3.1
+                    epoch: 1
+                    build_id: g-000183422-a1b2
+                    data_as_of: '2026-10-31T09:12:03Z'
+                    applied_seq: 183422
+                    as_of:
+                      valid: null
+                      observed: null
+                    degraded: []
+                    data:
+                      items:
+                      - id: c-8k2p4q7m1xab
+                        type: Claim
+                        label: Claude Code의 /ultraplan 명령은 2.1.222에서 제거됐다.
+                        statement: Claude Code의 /ultraplan 명령은 2.1.222에서 제거됐다.
+                        subject: e:feature:claude-code-ultraplan
+                        predicate: removed_in
+                        value: 2.1.222
+                        unit: version
+                        kind: event
+                        stance: stated
+                        method: llm
+                        status: active
+                        verification: quote_found
+                        origin: external
+                        sensitivity: public
+                        version: 1
+                        recorded_at: '2026-10-31T01:02:03Z'
+                        valid:
+                          from: '2026-08-02'
+                          to: null
+                          precision: day
+                          label: null
+                        evidence:
+                        - id: ev-2m9x4k7q1cab
+                          snapshot_id: n-3fa9c01b77aa12ef
+                          selector_kind: text_quote
+                          exact: /ultraplan Removed in v2.1.222
+                          prefix: '| '
+                          suffix: ' |'
+                          start: 1204
+                          end: 1234
+                          json_pointer: null
+                          evidence_state: live
+                          support_check: null
+                          last_confirmed_at: '2026-10-31T01:02:03Z'
+                    page:
+                      next_cursor: null
+                      total: 1
+                      truncated: false
+        '304':
+          $ref: '#/components/responses/NotModified'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/nodes/{id}/edges:
+    get:
+      operationId: listNodeEdges
+      tags:
+      - graph
+      summary: 노드의 엣지 목록
+      parameters:
+      - $ref: '#/components/parameters/NodeId'
+      - $ref: '#/components/parameters/Types'
+      - $ref: '#/components/parameters/Origin'
+      - $ref: '#/components/parameters/Status'
+      - $ref: '#/components/parameters/Domain'
+      - $ref: '#/components/parameters/Source'
+      - $ref: '#/components/parameters/Author'
+      - $ref: '#/components/parameters/IncludeUnverified'
+      - $ref: '#/components/parameters/AsOfValid'
+      - $ref: '#/components/parameters/AsOfObserved'
+      - $ref: '#/components/parameters/Direction'
+      - $ref: '#/components/parameters/Rtypes'
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/LimitList'
+      responses:
+        '200':
+          description: 성공. `data`는 `EdgeRefList`.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdgeRefListEnvelope'
+              examples:
+                default:
+                  value:
+                    schema_version: 0.3.1
+                    epoch: 1
+                    build_id: g-000183422-a1b2
+                    data_as_of: '2026-10-31T09:12:03Z'
+                    applied_seq: 183422
+                    as_of:
+                      valid: null
+                      observed: null
+                    degraded: []
+                    data:
+                      items:
+                      - id: r-1a2b3c4d5e6f
+                        rtype: PART_OF
+                        src: e:feature:claude-code-ultraplan
+                        dst: e:product:claude-code
+                        status: active
+                        claim_id: null
+                        peer:
+                          id: e:product:claude-code
+                          type: Product
+                          label: Claude Code
+                    page:
+                      next_cursor: null
+                      total: 1
+                      truncated: false
+        '304':
+          $ref: '#/components/responses/NotModified'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/nodes/{id}/body:
+    get:
+      operationId: getNodeBody
+      tags:
+      - graph
+      summary: 사용자 기록 본문 창
+      parameters:
+      - $ref: '#/components/parameters/NodeId'
+      - $ref: '#/components/parameters/AsOfValid'
+      - $ref: '#/components/parameters/AsOfObserved'
+      - $ref: '#/components/parameters/Start'
+      - $ref: '#/components/parameters/MaxChars'
+      responses:
+        '200':
+          description: 성공. `data`는 `NodeBody`.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NodeBodyEnvelope'
+              examples:
+                default:
+                  value:
+                    schema_version: 0.3.1
+                    epoch: 1
+                    build_id: g-000183422-a1b2
+                    data_as_of: '2026-10-31T09:12:03Z'
+                    applied_seq: 183422
+                    as_of:
+                      valid: null
+                      observed: null
+                    degraded: []
+                    data:
+                      text: '첫 3초의 후킹을 먼저 보여 준다.
+
+                        '
+                      start: 0
+                      end: 20
+                      total_chars: 20
+                      body_format: markdown
+        '304':
+          $ref: '#/components/responses/NotModified'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '410':
+          $ref: '#/components/responses/Gone'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/nodes/{id}/neighbors:
+    get:
+      operationId: getNodeNeighbors
+      tags:
+      - graph
+      summary: 이웃 부분 그래프
+      parameters:
+      - $ref: '#/components/parameters/NodeId'
+      - $ref: '#/components/parameters/Types'
+      - $ref: '#/components/parameters/Origin'
+      - $ref: '#/components/parameters/Status'
+      - $ref: '#/components/parameters/Domain'
+      - $ref: '#/components/parameters/Source'
+      - $ref: '#/components/parameters/Author'
+      - $ref: '#/components/parameters/IncludeUnverified'
+      - $ref: '#/components/parameters/AsOfValid'
+      - $ref: '#/components/parameters/AsOfObserved'
+      - $ref: '#/components/parameters/EdgeStatus'
+      - $ref: '#/components/parameters/Depth'
+      - $ref: '#/components/parameters/Rtypes'
+      - $ref: '#/components/parameters/Direction'
+      - $ref: '#/components/parameters/LimitNeighbors'
+      - $ref: '#/components/parameters/EdgeLimitNeighbors'
+      responses:
+        '200':
+          description: 성공. `data`는 `Neighbors`.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NeighborsEnvelope'
+              examples:
+                default:
+                  value:
+                    schema_version: 0.3.1
+                    epoch: 1
+                    build_id: g-000183422-a1b2
+                    data_as_of: '2026-10-31T09:12:03Z'
+                    applied_seq: 183422
+                    as_of:
+                      valid: null
+                      observed: null
+                    degraded: []
+                    data:
+                      nodes:
+                        columns:
+                        - id
+                        - type
+                        - label
+                        - origin
+                        - status
+                        rows:
+                        - - e:feature:claude-code-hooks
+                          - Feature
+                          - Hooks
+                          - external
+                          - active
+                        - - e:product:claude-code
+                          - Product
+                          - Claude Code
+                          - external
+                          - active
+                      edges:
+                        columns:
+                        - id
+                        - src
+                        - dst
+                        - rtype
+                        - status
+                        rows:
+                        - - r-1a2b3c4d5e6f
+                          - e:feature:claude-code-hooks
+                          - e:product:claude-code
+                          - PART_OF
+                          - active
+                      truncated: false
+                      node_total: 2
+                      edge_total: 1
+        '304':
+          $ref: '#/components/responses/NotModified'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/nodes/{id}/history:
+    get:
+      operationId: getNodeHistory
+      tags:
+      - graph
+      summary: 버전 행과 대체 체인
+      parameters:
+      - $ref: '#/components/parameters/NodeId'
+      - $ref: '#/components/parameters/Predicate'
+      responses:
+        '200':
+          description: 성공. `data`는 `History`.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoryEnvelope'
+              examples:
+                default:
+                  value:
+                    schema_version: 0.3.1
+                    epoch: 1
+                    build_id: g-000183422-a1b2
+                    data_as_of: '2026-10-31T09:12:03Z'
+                    applied_seq: 183422
+                    as_of:
+                      valid: null
+                      observed: null
+                    degraded: []
+                    data:
+                      id: e:policy:ypp
+                      versions:
+                      - version: 2
+                        label: YouTube 파트너 프로그램
+                        status: active
+                        recorded_at: '2026-10-31T01:00:00Z'
+                        expired_at: null
+                      chains:
+                      - predicate: entry_watch_hours
+                        slot: a1b2c3
+                        items:
+                        - id: c-3hd9x0w2raab
+                          version: 1
+                          status: active
+                          value: '4000'
+                          unit: hour
+                          valid:
+                            from: '2024-06-01'
+                            to: null
+                            precision: day
+                            label: null
+                          recorded_at: '2026-10-31T01:00:00Z'
+                          expired_at: '2026-11-15T00:00:00Z'
+                          superseded_by: null
+                        - id: c-3hd9x0w2raab
+                          version: 2
+                          status: active
+                          value: '4000'
+                          unit: hour
+                          valid:
+                            from: '2024-06-01'
+                            to: '2027-02-01'
+                            precision: day
+                            label: null
+                          recorded_at: '2026-11-15T00:00:00Z'
+                          expired_at: null
+                          superseded_by: c-8k2p4q7m1xab
+                        - id: c-8k2p4q7m1xab
+                          version: 1
+                          status: active
+                          value: '8000'
+                          unit: hour
+                          valid:
+                            from: '2027-02-01'
+                            to: null
+                            precision: day
+                            label: null
+                          recorded_at: '2026-11-15T00:00:00Z'
+                          expired_at: null
+                          superseded_by: null
+                      edges:
+                      - id: r-7c8d9e0f1a2b
+                        rtype: SUPERSEDES
+                        src: c-8k2p4q7m1xab
+                        dst: c-3hd9x0w2raab
+                        status: active
+                        claim_id: null
+        '304':
+          $ref: '#/components/responses/NotModified'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/claims/{id}:
+    get:
+      operationId: getClaim
+      tags:
+      - graph
+      summary: 주장 상세와 버전
+      parameters:
+      - $ref: '#/components/parameters/ClaimId'
+      - $ref: '#/components/parameters/AsOfValid'
+      - $ref: '#/components/parameters/AsOfObserved'
+      responses:
+        '200':
+          description: 성공. `data`는 `ClaimDetail`.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimDetailEnvelope'
+              examples:
+                default:
+                  value:
+                    schema_version: 0.3.1
+                    epoch: 1
+                    build_id: g-000183422-a1b2
+                    data_as_of: '2026-10-31T09:12:03Z'
+                    applied_seq: 183422
+                    as_of:
+                      valid: null
+                      observed: null
+                    degraded: []
+                    data:
+                      id: c-8k2p4q7m1xab
+                      type: Claim
+                      label: /ultraplan은 2.1.222에서 제거됐다.
+                      statement: /ultraplan은 2.1.222에서 제거됐다.
+                      subject: e:feature:claude-code-ultraplan
+                      predicate: removed_in
+                      value: 2.1.222
+                      unit: version
+                      kind: event
+                      stance: stated
+                      method: llm
+                      status: active
+                      verification: quote_found
+                      origin: external
+                      sensitivity: public
+                      version: 1
+                      recorded_at: '2026-10-31T01:02:03Z'
+                      evidence:
+                      - id: ev-2m9x4k7q1cab
+                        snapshot_id: n-3fa9c01b77aa12ef
+                        selector_kind: text_quote
+                        exact: /ultraplan Removed in v2.1.222
+                        prefix: '| '
+                        suffix: ' |'
+                        start: 1204
+                        end: 1234
+                        json_pointer: null
+                        evidence_state: live
+                        support_check: null
+                        last_confirmed_at: '2026-10-31T01:02:03Z'
+                      versions:
+                      - id: c-8k2p4q7m1xab
+                        type: Claim
+                        label: /ultraplan은 2.1.222에서 제거됐다.
+                        statement: /ultraplan은 2.1.222에서 제거됐다.
+                        subject: e:feature:claude-code-ultraplan
+                        kind: event
+                        stance: stated
+                        method: llm
+                        status: active
+                        origin: external
+                        sensitivity: public
+                        version: 1
+                        recorded_at: '2026-10-31T01:02:03Z'
+        '304':
+          $ref: '#/components/responses/NotModified'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/edges/{id}:
+    get:
+      operationId: getEdge
+      tags:
+      - graph
+      summary: 엣지 상세와 근거 주장
+      parameters:
+      - $ref: '#/components/parameters/EdgeId'
+      - $ref: '#/components/parameters/AsOfValid'
+      - $ref: '#/components/parameters/AsOfObserved'
+      responses:
+        '200':
+          description: 성공. `data`는 `EdgeDetail`.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdgeDetailEnvelope'
+              examples:
+                default:
+                  value:
+                    schema_version: 0.3.1
+                    epoch: 1
+                    build_id: g-000183422-a1b2
+                    data_as_of: '2026-10-31T09:12:03Z'
+                    applied_seq: 183422
+                    as_of:
+                      valid: null
+                      observed: null
+                    degraded: []
+                    data:
+                      id: r-1a2b3c4d5e6f
+                      src: e:feature:claude-code-hooks
+                      dst: e:product:claude-code
+                      rtype: PART_OF
+                      status: active
+                      sensitivity: public
+                      version: 1
+                      claim_id: null
+                      recorded_at: '2026-10-31T01:00:00Z'
+                      expired_at: null
+                      versions:
+                      - id: r-1a2b3c4d5e6f
+                        src: e:feature:claude-code-hooks
+                        dst: e:product:claude-code
+                        rtype: PART_OF
+                        status: active
+                        sensitivity: public
+                        version: 1
+                      claim: null
+        '304':
+          $ref: '#/components/responses/NotModified'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/search:
+    get:
+      operationId: search
+      tags:
+      - search
+      summary: 검색(순서가 곧 순위, 점수 없음)
+      parameters:
+      - $ref: '#/components/parameters/Types'
+      - $ref: '#/components/parameters/Origin'
+      - $ref: '#/components/parameters/Status'
+      - $ref: '#/components/parameters/Domain'
+      - $ref: '#/components/parameters/Source'
+      - $ref: '#/components/parameters/Author'
+      - $ref: '#/components/parameters/IncludeUnverified'
+      - $ref: '#/components/parameters/AsOfValid'
+      - $ref: '#/components/parameters/AsOfObserved'
+      - $ref: '#/components/parameters/Q'
+      - $ref: '#/components/parameters/Mode'
+      - $ref: '#/components/parameters/HitKinds'
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/LimitSearch'
+      responses:
+        '200':
+          description: 성공. `data`는 `SearchResult`.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResultEnvelope'
+              examples:
+                default:
+                  value:
+                    schema_version: 0.3.1
+                    epoch: 1
+                    build_id: g-000183422-a1b2
+                    data_as_of: '2026-10-31T09:12:03Z'
+                    applied_seq: 183422
+                    as_of:
+                      valid: null
+                      observed: null
+                    degraded: []
+                    data:
+                      items:
+                      - id: c-8k2p4q7m1xab
+                        kind: claim
+                        type: Claim
+                        title: YPP 신규 진입 기준은 2027-02-01부터 8,000시간/365일 또는 Shorts 2,000만/90일이다.
+                        snippet: …신규 진입 기준은 2027-02-01부터 8,000시간/365일…
+                        highlights:
+                        - start: 1
+                          end: 3
+                        - start: 24
+                          end: 29
+                        highlight_unit: codepoint
+                        origin: external
+                        status: active
+                        subject: e:policy:ypp
+                        verification: quote_found
+                        source:
+                          id: src:yt-help
+                          label: YouTube 고객센터
+                        recorded_at: '2026-10-31T01:00:00Z'
+                      - id: f-01JC8ZQ3T9XYZ
+                        kind: record
+                        type: Note
+                        title: 쇼츠 후킹 메모
+                        snippet: …첫 3초의 후킹…
+                        highlights:
+                        - start: 7
+                          end: 9
+                        highlight_unit: codepoint
+                        origin: first_party
+                        status: active
+                        author: user:sagae
+                        sensitivity: internal
+                        recorded_at: '2026-10-31T02:00:00Z'
+                      - id: e:platform:youtube-shorts
+                        kind: entity
+                        type: Platform
+                        title: YouTube Shorts
+                        snippet: YouTube Shorts
+                        highlights:
+                        - start: 8
+                          end: 14
+                        highlight_unit: codepoint
+                        origin: external
+                        status: active
+                        liveness: active
+                      - id: n-3fa9c01b77aa12ef:1204
+                        kind: passage
+                        type: Snapshot
+                        title: Commands
+                        snippet: …/ultraplan Removed in v2.1.222…
+                        highlights:
+                        - start: 1
+                          end: 11
+                        highlight_unit: codepoint
+                        origin: external
+                        status: active
+                        snapshot_id: n-3fa9c01b77aa12ef
+                        start: 1204
+                        end: 1234
+                        source:
+                          id: src:cc-docs
+                          label: Claude Code 문서
+                    page:
+                      next_cursor: null
+                      total: 12
+                      truncated: false
+        '304':
+          $ref: '#/components/responses/NotModified'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/facets:
+    get:
+      operationId: getFacets
+      tags:
+      - search
+      summary: 패싯 개수
+      parameters:
+      - $ref: '#/components/parameters/Types'
+      - $ref: '#/components/parameters/Origin'
+      - $ref: '#/components/parameters/Status'
+      - $ref: '#/components/parameters/Domain'
+      - $ref: '#/components/parameters/Source'
+      - $ref: '#/components/parameters/Author'
+      - $ref: '#/components/parameters/IncludeUnverified'
+      - $ref: '#/components/parameters/AsOfValid'
+      - $ref: '#/components/parameters/AsOfObserved'
+      - $ref: '#/components/parameters/Q'
+      - $ref: '#/components/parameters/HitKinds'
+      - $ref: '#/components/parameters/Filter'
+      responses:
+        '200':
+          description: 성공. `data`는 `Facets`.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FacetsEnvelope'
+              examples:
+                default:
+                  value:
+                    schema_version: 0.3.1
+                    epoch: 1
+                    build_id: g-000183422-a1b2
+                    data_as_of: '2026-10-31T09:12:03Z'
+                    applied_seq: 183422
+                    as_of:
+                      valid: null
+                      observed: null
+                    degraded: []
+                    data:
+                      total: 1834
+                      facets:
+                        type:
+                        - value: Feature
+                          count: 812
+                        origin:
+                        - value: external
+                          count: 1800
+                        status:
+                        - value: active
+                          count: 1700
+                        source:
+                        - value: src:cc-docs
+                          label: Claude Code 문서
+                          count: 420
+                        domain:
+                        - value: G
+                          count: 1500
+        '304':
+          $ref: '#/components/responses/NotModified'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/counts:
+    get:
+      operationId: getCounts
+      tags:
+      - search
+      summary: 시간 버킷별 개수
+      parameters:
+      - $ref: '#/components/parameters/Types'
+      - $ref: '#/components/parameters/Origin'
+      - $ref: '#/components/parameters/Status'
+      - $ref: '#/components/parameters/Domain'
+      - $ref: '#/components/parameters/Source'
+      - $ref: '#/components/parameters/Author'
+      - $ref: '#/components/parameters/IncludeUnverified'
+      - $ref: '#/components/parameters/AsOfValid'
+      - $ref: '#/components/parameters/AsOfObserved'
+      - $ref: '#/components/parameters/CountBucket'
+      - $ref: '#/components/parameters/CountField'
+      responses:
+        '200':
+          description: 성공. `data`는 `Counts`.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountsEnvelope'
+              examples:
+                default:
+                  value:
+                    schema_version: 0.3.1
+                    epoch: 1
+                    build_id: g-000183422-a1b2
+                    data_as_of: '2026-10-31T09:12:03Z'
+                    applied_seq: 183422
+                    as_of:
+                      valid: null
+                      observed: null
+                    degraded: []
+                    data:
+                      bucket: week
+                      field: recorded_at
+                      series:
+                      - start: '2026-10-26T00:00:00Z'
+                        count: 812
+        '304':
+          $ref: '#/components/responses/NotModified'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/series/{id}:
+    get:
+      operationId: getSeries
+      tags:
+      - graph
+      summary: 시계열 점과 공백 구간
+      parameters:
+      - $ref: '#/components/parameters/SeriesId'
+      - $ref: '#/components/parameters/AsOfValid'
+      - $ref: '#/components/parameters/AsOfObserved'
+      - $ref: '#/components/parameters/SeriesFrom'
+      - $ref: '#/components/parameters/SeriesTo'
+      - $ref: '#/components/parameters/SeriesBucket'
+      responses:
+        '200':
+          description: 성공. `data`는 `Series`.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeriesEnvelope'
+              examples:
+                default:
+                  value:
+                    schema_version: 0.3.1
+                    epoch: 1
+                    build_id: g-000183422-a1b2
+                    data_as_of: '2026-10-31T09:12:03Z'
+                    applied_seq: 183422
+                    as_of:
+                      valid: null
+                      observed: null
+                    degraded: []
+                    data:
+                      id: s:kworb-yt-daily-kr
+                      metric: chart_rank
+                      unit: rank
+                      points:
+                      - period: '2026-10-26'
+                        start: '2026-10-26T00:00:00Z'
+                        end: '2026-10-27T00:00:00Z'
+                        value: '1'
+                        observed_at: '2026-10-27T03:00:00Z'
+                        last_seen_at: '2026-10-30T03:00:00Z'
+                        snapshot_id: n-...
+                      gaps:
+                      - from: '2026-09-01T00:00:00Z'
+                        to: '2026-09-03T00:00:00Z'
+                        reason: machine_off
+        '304':
+          $ref: '#/components/responses/NotModified'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/snapshots/{id}:
+    get:
+      operationId: getSnapshot
+      tags:
+      - snapshots
+      summary: 스냅샷 메타데이터
+      parameters:
+      - $ref: '#/components/parameters/SnapshotId'
+      responses:
+        '200':
+          description: 성공. `data`는 `Snapshot`.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SnapshotEnvelope'
+              examples:
+                default:
+                  value:
+                    schema_version: 0.3.1
+                    epoch: 1
+                    build_id: g-000183422-a1b2
+                    data_as_of: '2026-10-31T09:12:03Z'
+                    applied_seq: 183422
+                    as_of:
+                      valid: null
+                      observed: null
+                    degraded: []
+                    data:
+                      id: n-3fa9c01b77aa12ef
+                      url: https://code.claude.com/docs/en/commands.md
+                      final_url: https://code.claude.com/docs/en/commands.md
+                      source:
+                        id: src:cc-docs
+                        label: Claude Code 문서
+                        trust: primary
+                      fetched_at: '2026-10-31T01:00:00Z'
+                      http_status: 200
+                      content_type: text/markdown; charset=utf-8
+                      raw_sha256: ab12...
+                      text_sha256: cd34...
+                      text_format: markdown
+                      text_chars: 48211
+                      extractor: passthrough-nfc@1
+                      citing_claims:
+                      - id: c-8k2p4q7m1xab
+                        start: 1204
+                        end: 1234
+        '304':
+          $ref: '#/components/responses/NotModified'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/snapshots/{id}/text:
+    get:
+      operationId: getSnapshotText
+      tags:
+      - snapshots
+      summary: 스냅샷 표시 본문 창
+      parameters:
+      - $ref: '#/components/parameters/SnapshotId'
+      - $ref: '#/components/parameters/Start'
+      - $ref: '#/components/parameters/MaxChars'
+      responses:
+        '200':
+          description: 성공. `data`는 `SnapshotText`.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SnapshotTextEnvelope'
+              examples:
+                default:
+                  value:
+                    schema_version: 0.3.1
+                    epoch: 1
+                    build_id: g-000183422-a1b2
+                    data_as_of: '2026-10-31T09:12:03Z'
+                    applied_seq: 183422
+                    as_of:
+                      valid: null
+                      observed: null
+                    degraded: []
+                    data:
+                      text: '| /ultraplan | Removed in v2.1.222 |
+
+                        '
+                      start: 0
+                      end: 37
+                      total_chars: 37
+                      text_format: markdown
+        '304':
+          $ref: '#/components/responses/NotModified'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '410':
+          $ref: '#/components/responses/Gone'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/snapshots/{id}/raw:
+    get:
+      operationId: getSnapshotRaw
+      tags:
+      - snapshots
+      summary: 스냅샷 원본 바이트(봉투 없음)
+      parameters:
+      - $ref: '#/components/parameters/SnapshotId'
+      responses:
+        '200':
+          description: 원본 바이트와 원 `Content-Type` 그대로. 봉투 없음. 비신뢰 데이터다. `Range` 요청 헤더를 지원한다.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            Content-Disposition:
+              description: '`attachment; filename="<id>"`'
+              schema:
+                type: string
+            X-Content-Type-Options:
+              description: '`nosniff`'
+              schema:
+                type: string
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+              examples:
+                default:
+                  summary: '원본 바이트(예: Markdown 캡처)'
+                  value: '# Commands
+
+
+                    | /ultraplan | Removed in v2.1.222 |
+
+                    '
+        '206':
+          description: '`Range` 요청의 부분 본문.'
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            Content-Disposition:
+              description: '`attachment; filename="<id>"`'
+              schema:
+                type: string
+            X-Content-Type-Options:
+              description: '`nosniff`'
+              schema:
+                type: string
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+              examples:
+                default:
+                  summary: 일부 바이트
+                  value: '# Commands'
+        '304':
+          $ref: '#/components/responses/NotModified'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '410':
+          $ref: '#/components/responses/Gone'
+        '416':
+          $ref: '#/components/responses/RangeNotSatisfiable'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/changes:
+    get:
+      operationId: listChanges
+      tags:
+      - feed
+      summary: 변경 피드
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/LimitChanges'
+      - $ref: '#/components/parameters/ChangeKinds'
+      - $ref: '#/components/parameters/ChangeOrigin'
+      responses:
+        '200':
+          description: 성공. `data`는 `ChangeList`.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChangeListEnvelope'
+              examples:
+                default:
+                  value:
+                    schema_version: 0.3.1
+                    epoch: 1
+                    build_id: g-000183422-a1b2
+                    data_as_of: '2026-10-31T09:12:03Z'
+                    applied_seq: 183422
+                    as_of:
+                      valid: null
+                      observed: null
+                    degraded: []
+                    data:
+                      items:
+                      - seq: 183421
+                        at: '2026-10-31T09:12:02Z'
+                        kind: visibility.revoked
+                        id: f-01JC8ZQ3T9XYZ
+                      - seq: 183422
+                        at: '2026-10-31T09:12:03Z'
+                        kind: claim.assert
+                        id: c-8k2p4q7m1xab
+                        version: 1
+                        type: Claim
+                        origin: external
+                    page:
+                      next_cursor: eyJlIjoxLCJzIjoxODM0MjJ9
+                      total: null
+                      truncated: false
+        '304':
+          $ref: '#/components/responses/NotModified'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '410':
+          $ref: '#/components/responses/Gone'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/export/graph/manifest:
+    get:
+      operationId: getExportManifest
+      tags:
+      - export
+      summary: export 게시 목록
+      parameters: []
+      responses:
+        '200':
+          description: 성공. `data`는 `Manifest`.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManifestEnvelope'
+              examples:
+                default:
+                  value:
+                    schema_version: 0.3.1
+                    epoch: 1
+                    build_id: g-000183422-a1b2
+                    data_as_of: '2026-10-31T09:12:03Z'
+                    applied_seq: 183422
+                    as_of:
+                      valid: null
+                      observed: null
+                    degraded: []
+                    data:
+                      build_id: p-000183422
+                      applied_seq: 183422
+                      epoch: 1
+                      generated_at: '2026-10-31T09:15:00Z'
+                      changes_cursor: eyJlIjoxLCJzIjoxODM0MjJ9
+                      profiles:
+                        core:
+                          path: /v1/export/graph?profile=core
+                          bytes: 612345
+                          sha256: '...'
+                          nodes: 48213
+                          edges: 176402
+                        full:
+                          path: /v1/export/graph?profile=full
+                          bytes: 3212345
+                          sha256: '...'
+                          nodes: 240000
+                          edges: 812004
+        '304':
+          $ref: '#/components/responses/NotModified'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/export/graph:
+    get:
+      operationId: getExportGraph
+      tags:
+      - export
+      summary: 그래프 전체 export(zstd 파일, 봉투 없음)
+      parameters:
+      - $ref: '#/components/parameters/Profile'
+      responses:
+        '200':
+          description: '`ExportFile`(`schema_version`, `build_id`, `applied_seq`, `epoch`, `data_as_of`, `graph`, `nodes`, `edges`)을 JSON으로 직렬화해 zstd로 압축한 파일. 봉투와 `Content-Encoding`이 없다. 소비자가 풀어 읽는다. 첫 게시 전에는 503 `not_ready`.'
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/zstd:
+              schema:
+                type: string
+                format: binary
+              examples:
+                default:
+                  summary: 압축 전 ExportFile JSON
+                  value: '{"schema_version": "0.3.1", "build_id": "p-000183422", "applied_seq": 183422, "epoch": 1, "data_as_of": "2026-10-31T09:12:03Z", "graph": {"directed": true, "multi": true}, "nodes": {"columns": ["id", "type", "label", "origin", "status", "domain", "merged_into"], "rows": [["e:product:claude-code", "Product", "Claude Code", "external", "active", ["G"], null]]}, "edges": {"columns": ["id", "src", "dst", "rtype", "status"], "rows": [["r-1a2b3c4d5e6f", "e:feature:claude-code-hooks", "e:product:claude-code", "PART_OF", "active"]]}}'
+        '304':
+          $ref: '#/components/responses/NotModified'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /v1/ops/freshness:
+    get:
+      operationId: getOpsFreshness
+      tags:
+      - ops
+      summary: 신선도 [잠정]
+      parameters: []
+      responses:
+        '200':
+          description: 성공. `data`는 `OpsFreshness`.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpsFreshnessEnvelope'
+              examples:
+                default:
+                  value:
+                    schema_version: 0.3.1
+                    epoch: 1
+                    build_id: g-000183422-a1b2
+                    data_as_of: '2026-10-31T09:12:03Z'
+                    applied_seq: 183422
+                    as_of:
+                      valid: null
+                      observed: null
+                    degraded: []
+                    data:
+                      classes:
+                      - class: docs
+                        total: 12
+                        stale: 1
+                      sources:
+                      - source_id: src:cc-docs
+                        class: docs
+                        last_ok_at: '2026-10-31T09:00:00Z'
+                        state: ok
+                        stale: false
+                      gaps:
+                      - source_id: src:cc-docs
+                        from: '2026-09-01T00:00:00Z'
+                        to: '2026-09-03T00:00:00Z'
+                        reason: machine_off
+        '304':
+          $ref: '#/components/responses/NotModified'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+      x-provisional: true
+  /v1/ops/tickets:
+    get:
+      operationId: listOpsTickets
+      tags:
+      - ops
+      summary: 요청 큐 [잠정]
+      parameters:
+      - $ref: '#/components/parameters/TicketStatus'
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/LimitList'
+      responses:
+        '200':
+          description: 성공. `data`는 `OpsTicketList`.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpsTicketListEnvelope'
+              examples:
+                default:
+                  value:
+                    schema_version: 0.3.1
+                    epoch: 1
+                    build_id: g-000183422-a1b2
+                    data_as_of: '2026-10-31T09:12:03Z'
+                    applied_seq: 183422
+                    as_of:
+                      valid: null
+                      observed: null
+                    degraded: []
+                    data:
+                      items:
+                      - id: t-4n7q2w8e1rab
+                        topic: Claude Code 훅 문서 재확인
+                        status: open
+                        priority: normal
+                        opened_at: '2026-10-31T03:00:00Z'
+                        closed_at: null
+                    page:
+                      next_cursor: null
+                      total: 1
+                      truncated: false
+        '304':
+          $ref: '#/components/responses/NotModified'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+      x-provisional: true
+  /v1/ops/runs:
+    get:
+      operationId: listOpsRuns
+      tags:
+      - ops
+      summary: 실행 기록 [잠정]
+      parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/LimitList'
+      responses:
+        '200':
+          description: 성공. `data`는 `OpsRunList`.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpsRunListEnvelope'
+              examples:
+                default:
+                  value:
+                    schema_version: 0.3.1
+                    epoch: 1
+                    build_id: g-000183422-a1b2
+                    data_as_of: '2026-10-31T09:12:03Z'
+                    applied_seq: 183422
+                    as_of:
+                      valid: null
+                      observed: null
+                    degraded: []
+                    data:
+                      items:
+                      - job: tick
+                        started_at: '2026-10-31T09:10:00Z'
+                        ended_at: '2026-10-31T09:12:03Z'
+                        outcome: ok
+                    page:
+                      next_cursor: null
+                      total: 1
+                      truncated: false
+        '304':
+          $ref: '#/components/responses/NotModified'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+      x-provisional: true
+  /v1/ops/metrics:
+    get:
+      operationId: getOpsMetrics
+      tags:
+      - ops
+      summary: 운영 지표 [잠정]
+      parameters: []
+      responses:
+        '200':
+          description: 성공. `data`는 `OpsMetrics`.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpsMetricsEnvelope'
+              examples:
+                default:
+                  value:
+                    schema_version: 0.3.1
+                    epoch: 1
+                    build_id: g-000183422-a1b2
+                    data_as_of: '2026-10-31T09:12:03Z'
+                    applied_seq: 183422
+                    as_of:
+                      valid: null
+                      observed: null
+                    degraded: []
+                    data:
+                      items:
+                      - name: snapshots_fetched
+                        dims:
+                          source: src:cc-docs
+                        value: 12
+                        at: '2026-10-31T09:12:03Z'
+        '304':
+          $ref: '#/components/responses/NotModified'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+      x-provisional: true
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: TCP에서만 필수. Unix 소켓은 파일 권한이다(계약 7장).
+  parameters:
+    Types:
+      name: types
+      in: query
+      required: false
+      description: 타입 이름. 쉼표로 여러 값을 주면 OR다(계약 4장 표 문법). 생략하면 경로별 기본이다(계약 2.7 `기본 types`). 명시하면 기본을 대체한다.
+      schema:
+        type: string
+    EdgeStatus:
+      name: edge_status
+      in: query
+      required: false
+      description: 엣지에만 거는 상태. 쉼표로 `active`, `superseded`, `dead`, `all` 여러 값을 준다. 생략하면 `status`와 같다. 노드 집합과 `node_total`은 `status`만 따른다. 허용 밖 값은 400 `bad_param`(계약 2.7).
+      schema:
+        type: string
+        pattern: ^(active|superseded|dead|all)(,(active|superseded|dead|all))*$
+    Origin:
+      name: origin
+      in: query
+      required: false
+      description: 출처 구분 `external`, `first_party`. 쉼표로 여러 값을 주면 OR다.
+      schema:
+        type: string
+    Status:
+      name: status
+      in: query
+      required: false
+      description: 응답 `status` 필터(2.7). 단일 값이고 기본은 `active`만이다. 엣지만 다른 값으로 받으려면 `edge_status`를 쓴다.
+      schema:
+        type: string
+        enum:
+        - active
+        - superseded
+        - dead
+        - all
+        default: active
+    Domain:
+      name: domain
+      in: query
+      required: false
+      description: 수집 도메인 A~G. any-of다. 노드의 `domain`이 나열한 값 중 하나라도 담으면 맞는다. `none`은 `domain=[]`인 노드와 맞고 `G,none`처럼 섞는다(계약 2.7).
+      schema:
+        type: string
+    Source:
+      name: source
+      in: query
+      required: false
+      description: 소스 ID(`src:<slug>`). 쉼표로 여러 값을 주면 OR다.
+      schema:
+        type: string
+    Author:
+      name: author
+      in: query
+      required: false
+      description: 사용자 기록 작성자. 쉼표로 여러 값을 주면 OR다.
+      schema:
+        type: string
+    IncludeUnverified:
+      name: include_unverified
+      in: query
+      required: false
+      description: '`true`면 `needs_review`, `unverified` 주장을 더한다(2.7).'
+      schema:
+        type: boolean
+        default: false
+    AsOfValid:
+      name: as_of_valid
+      in: query
+      required: false
+      description: 유효축 시점. RFC 3339 또는 `YYYY-MM-DD`(그날 00:00Z). 줄 때만 유효축을 건다(2.9).
+      schema:
+        type: string
+    AsOfObserved:
+      name: as_of_observed
+      in: query
+      required: false
+      description: 관측축 시점. RFC 3339. 생략하면 현재(2.9).
+      schema:
+        type: string
+        format: date-time
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      description: 불투명 커서(2.4). 응답 `page.next_cursor`를 그대로 넘긴다. 소비자가 만들거나 해석하지 않는다.
+      schema:
+        type: string
+    LimitList:
+      name: limit
+      in: query
+      required: false
+      description: 페이지당 항목 수. 기본 100, 최대 500. 상한 초과는 400 `limit_too_large`.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 500
+        default: 100
+    LimitSearch:
+      name: limit
+      in: query
+      required: false
+      description: 페이지당 항목 수. 기본 50, 최대 200. 상한 초과는 400 `limit_too_large`.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    LimitChanges:
+      name: limit
+      in: query
+      required: false
+      description: 페이지당 항목 수. 기본 500, 최대 5,000. 상한 초과는 400 `limit_too_large`.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 5000
+        default: 500
+    LimitOverview:
+      name: limit
+      in: query
+      required: false
+      description: 페이지당 노드 상한. 기본 50,000, 최대 100,000. 상한 초과는 400 `limit_too_large`.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100000
+        default: 50000
+    EdgeLimitOverview:
+      name: edge_limit
+      in: query
+      required: false
+      description: 페이지당 엣지 상한. 기본 200,000, 최대 400,000. 상한 초과는 400 `limit_too_large`.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 400000
+        default: 200000
+    LimitNeighbors:
+      name: limit
+      in: query
+      required: false
+      description: 노드 수 상한. 기본 200, 최대 500. 상한 초과는 400 `limit_too_large`.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 500
+        default: 200
+    EdgeLimitNeighbors:
+      name: edge_limit
+      in: query
+      required: false
+      description: 엣지 수 상한. 기본 2,000, 최대 10,000. 상한 초과는 400 `limit_too_large`.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 10000
+        default: 2000
+    ClaimLimitDetail:
+      name: claim_limit
+      in: query
+      required: false
+      description: 내장 `claims` 상한. 기본 50, 최대 200. 상한 초과는 400 `limit_too_large`.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    EdgeLimitDetail:
+      name: edge_limit
+      in: query
+      required: false
+      description: 내장 `edges` 상한. 기본 100, 최대 500. 상한 초과는 400 `limit_too_large`.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 500
+        default: 100
+    BacklinkLimitDetail:
+      name: backlink_limit
+      in: query
+      required: false
+      description: 내장 `backlinks` 상한. 기본 100, 최대 500. 상한 초과는 400 `limit_too_large`.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 500
+        default: 100
+    Rtypes:
+      name: rtypes
+      in: query
+      required: false
+      description: 관계 타입 필터. 쉼표로 여러 값을 주면 OR다.
+      schema:
+        type: string
+    Type:
+      name: type
+      in: query
+      required: false
+      description: 값 하나의 `types`. `types`와 함께 주면 400 `bad_param`.
+      schema:
+        type: string
+    Ids:
+      name: ids
+      in: query
+      required: false
+      description: 노드 ID를 쉼표로 최대 100개. 일괄 읽기이고 `as_of_*` 외 다른 파라미터와 함께 쓰지 않는다.
+      schema:
+        type: string
+    Filter:
+      name: filter
+      in: query
+      required: false
+      description: '`name:op:value`. 반복하면 AND다. 첫 두 `:`만 구분자이고 값은 퍼센트 인코딩한다(4장 표 문법).'
+      schema:
+        type: array
+        items:
+          type: string
+      style: form
+      explode: true
+    Sort:
+      name: sort
+      in: query
+      required: false
+      description: '`key` 또는 `-key`(내림차순). 키는 `/v1/schema`의 `sort_keys`. 기본은 `id` 오름차순.'
+      schema:
+        type: string
+    Include:
+      name: include
+      in: query
+      required: false
+      description: 쉼표로 `claims`, `edges`, `backlinks`, `body`를 고른다. 기본 `claims,edges`.
+      schema:
+        type: string
+    Predicate:
+      name: predicate
+      in: query
+      required: false
+      description: 술어 ID. 그 술어의 주장(체인)만 준다.
+      schema:
+        type: string
+    Direction:
+      name: direction
+      in: query
+      required: false
+      description: 엣지 방향.
+      schema:
+        type: string
+        enum:
+        - out
+        - in
+        - both
+        default: both
+    Depth:
+      name: depth
+      in: query
+      required: false
+      description: 이웃 깊이.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 2
+        default: 1
+    Start:
+      name: start
+      in: query
+      required: false
+      description: 본문 시작 오프셋. 코드포인트.
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    MaxChars:
+      name: max_chars
+      in: query
+      required: false
+      description: 본문 창 크기. 코드포인트. 기본 20,000, 최대 200,000.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200000
+        default: 20000
+    Q:
+      name: q
+      in: query
+      required: true
+      description: 검색어. NFC 정규화 후 KB 안에서 토크나이징한다. 토큰이 하나도 없으면 400 `bad_param`.
+      schema:
+        type: string
+        minLength: 1
+    Mode:
+      name: mode
+      in: query
+      required: false
+      description: 검색 방식. `hybrid`가 불가능하면 `degraded`에 `lexical_only`.
+      schema:
+        type: string
+        enum:
+        - lexical
+        - hybrid
+        default: lexical
+    HitKinds:
+      name: kinds
+      in: query
+      required: false
+      description: 결과 종류. 쉼표로 여러 값을 주면 OR다.
+      schema:
+        type: string
+        default: claim,record,entity,passage
+    CountBucket:
+      name: bucket
+      in: query
+      required: false
+      description: 집계 버킷.
+      schema:
+        type: string
+        enum:
+        - day
+        - week
+        - month
+    CountField:
+      name: field
+      in: query
+      required: false
+      description: 집계 기준 필드.
+      schema:
+        type: string
+        enum:
+        - recorded_at
+        - valid_from
+    SeriesFrom:
+      name: from
+      in: query
+      required: false
+      description: 구간 시작. RFC 3339 또는 `YYYY-MM-DD`.
+      schema:
+        type: string
+    SeriesTo:
+      name: to
+      in: query
+      required: false
+      description: 구간 끝. RFC 3339 또는 `YYYY-MM-DD`.
+      schema:
+        type: string
+    SeriesBucket:
+      name: bucket
+      in: query
+      required: false
+      description: 주면 버킷마다 마지막 점 하나를 준다. 평균이나 합을 내지 않는다.
+      schema:
+        type: string
+        enum:
+        - day
+        - week
+        - month
+    ChangeKinds:
+      name: kinds
+      in: query
+      required: false
+      description: 이벤트 종류(ADR 7.1)와 `visibility.revoked`. 쉼표로 여러 값을 주면 OR다. `visibility.revoked`는 이 필터와 무관하게 항상 나온다.
+      schema:
+        type: string
+    ChangeOrigin:
+      name: origin
+      in: query
+      required: false
+      description: 이벤트 출처.
+      schema:
+        type: string
+        enum:
+        - external
+        - first_party
+        - system
+    Profile:
+      name: profile
+      in: query
+      required: false
+      description: export 프로필(5장).
+      schema:
+        type: string
+        enum:
+        - core
+        - full
+        default: core
+    TicketStatus:
+      name: status
+      in: query
+      required: false
+      description: 티켓 상태.
+      schema:
+        type: string
+    NodeId:
+      name: id
+      in: path
+      required: true
+      description: 노드 ID(계약 2.10 표의 모든 노드 종류).
+      schema:
+        $ref: '#/components/schemas/PublicId'
+      examples:
+        entity:
+          summary: 엔티티
+          value: e:feature:claude-code-ultraplan
+        claim:
+          summary: 주장
+          value: c-8k2p4q7m1xab
+        record:
+          summary: 사용자 기록
+          value: f-01JC8ZQ3T9XYZ
+        snapshot:
+          summary: 스냅샷
+          value: n-3fa9c01b77aa12ef
+        series:
+          summary: 시계열
+          value: s:kworb-yt-daily-kr
+    ClaimId:
+      name: id
+      in: path
+      required: true
+      description: 주장 ID(`c-...`). 다른 종류는 404.
+      schema:
+        $ref: '#/components/schemas/PublicId'
+      examples:
+        claim:
+          summary: 주장
+          value: c-8k2p4q7m1xab
+    EdgeId:
+      name: id
+      in: path
+      required: true
+      description: 엣지 ID(`r-...`). 다른 종류는 404.
+      schema:
+        $ref: '#/components/schemas/PublicId'
+      examples:
+        edge:
+          summary: 엣지
+          value: r-1a2b3c4d5e6f
+    SeriesId:
+      name: id
+      in: path
+      required: true
+      description: 시계열 ID(`s:<slug>`).
+      schema:
+        $ref: '#/components/schemas/PublicId'
+      examples:
+        series:
+          summary: 시계열
+          value: s:kworb-yt-daily-kr
+    SnapshotId:
+      name: id
+      in: path
+      required: true
+      description: 스냅샷 ID(`n-...`).
+      schema:
+        $ref: '#/components/schemas/PublicId'
+      examples:
+        snapshot:
+          summary: 스냅샷
+          value: n-3fa9c01b77aa12ef
+  headers:
+    ETag:
+      description: 데이터 경로는 `"<epoch>-<applied_seq>-<build_id>"`(2.5).
+      schema:
+        type: string
+    CacheControl:
+      description: 경로 구분별 `no-cache`, `no-store`(2.5).
+      schema:
+        type: string
+  responses:
+    NotModified:
+      description: '`If-None-Match`가 맞다. 본문 없음.'
+    BadRequest:
+      description: '파라미터 오류: `bad_param`, `limit_too_large`, `cursor_mismatch`, `as_of_unsupported`.'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            default:
+              value:
+                type: https://kb.local/problems/bad-param
+                title: unknown query parameter
+                status: 400
+                code: bad_param
+    Unauthorized:
+      description: '`token_required`, `token_invalid`.'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            default:
+              value:
+                type: https://kb.local/problems/token-required
+                title: token required
+                status: 401
+                code: token_required
+    Forbidden:
+      description: '`host_rejected`: Host 헤더 불일치.'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            default:
+              value:
+                type: https://kb.local/problems/host-rejected
+                title: host rejected
+                status: 403
+                code: host_rejected
+    NotFound:
+      description: '`not_found`: 없음, 민감도로 숨김, 형식이 틀린 ID.'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            default:
+              value:
+                type: https://kb.local/problems/not-found
+                title: not found
+                status: 404
+                code: not_found
+    MethodNotAllowed:
+      description: '`method_not_allowed`: `GET`, `HEAD` 외 메서드.'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            default:
+              value:
+                type: https://kb.local/problems/method-not-allowed
+                title: method not allowed
+                status: 405
+                code: method_not_allowed
+    Gone:
+      description: '`epoch_changed`, `content_removed`.'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            default:
+              value:
+                type: https://kb.local/problems/epoch-changed
+                title: epoch changed
+                status: 410
+                code: epoch_changed
+    RangeNotSatisfiable:
+      description: '`range_not_satisfiable`: `Range`가 범위 밖.'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            default:
+              value:
+                type: https://kb.local/problems/range-not-satisfiable
+                title: range not satisfiable
+                status: 416
+                code: range_not_satisfiable
+    TooManyRequests:
+      description: '`too_many_requests`: 동시 처리 요청이 상한을 넘었다.'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            default:
+              value:
+                type: https://kb.local/problems/too-many-requests
+                title: too many requests
+                status: 429
+                code: too_many_requests
+      headers:
+        Retry-After:
+          description: 다시 시도까지 초.
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+    InternalError:
+      description: '`internal`: 처리 중 예외.'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            default:
+              value:
+                type: https://kb.local/problems/internal
+                title: internal error
+                status: 500
+                code: internal
+    Unavailable:
+      description: '`read_timeout`, `not_ready`.'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            default:
+              value:
+                type: https://kb.local/problems/not-ready
+                title: not ready
+                status: 503
+                code: not_ready
+      headers:
+        Retry-After:
+          description: 다시 시도까지 초.
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+  schemas:
+    PublicId:
+      type: string
+      pattern: ^[A-Za-z0-9][A-Za-z0-9:._-]*$
+      description: 공개 ID(계약 2.10). 경로에 그대로 넣거나 퍼센트 인코딩한다.
+    Origin:
+      type: string
+      enum:
+      - external
+      - first_party
+    Status:
+      type: string
+      enum:
+      - active
+      - superseded
+      - dead
+    Sensitivity:
+      type: string
+      enum:
+      - public
+      - internal
+      - private
+      - secret
+    SelectorKind:
+      type: string
+      enum:
+      - text_quote
+      - jsonpointer
+    EvidenceState:
+      type: string
+      enum:
+      - live
+      - archived_only
+    Problem:
+      type: object
+      required:
+      - type
+      - title
+      - status
+      - code
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        code:
+          type: string
+        instance:
+          type: string
+        param:
+          type: string
+          description: bad_param의 파라미터 이름
+    Envelope:
+      type: object
+      required:
+      - schema_version
+      - epoch
+      - build_id
+      - data_as_of
+      - applied_seq
+      - as_of
+      - degraded
+      properties:
+        schema_version:
+          type: string
+        epoch:
+          type: integer
+          minimum: 1
+        build_id:
+          type: string
+        data_as_of:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        applied_seq:
+          type: integer
+          minimum: 0
+        as_of:
+          type: object
+          required:
+          - valid
+          - observed
+          properties:
+            valid:
+              type:
+              - string
+              - 'null'
+              format: date-time
+            observed:
+              type:
+              - string
+              - 'null'
+              format: date-time
+        degraded:
+          type: array
+          items:
+            type: string
+    Page:
+      type: object
+      required:
+      - next_cursor
+      - total
+      - truncated
+      properties:
+        next_cursor:
+          type:
+          - string
+          - 'null'
+        total:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+        truncated:
+          type: boolean
+    ValidTime:
+      type: object
+      properties:
+        from:
+          type:
+          - string
+          - 'null'
+        to:
+          type:
+          - string
+          - 'null'
+        precision:
+          type:
+          - string
+          - 'null'
+          enum:
+          - instant
+          - day
+          - month
+          - quarter
+          - year
+          - null
+        label:
+          type:
+          - string
+          - 'null'
+    SourceRef:
+      type: object
+      required:
+      - id
+      - label
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        trust:
+          type: string
+    Node:
+      type: object
+      required:
+      - id
+      - type
+      - label
+      - origin
+      - status
+      - sensitivity
+      - version
+      - recorded_at
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        label:
+          type: string
+        origin:
+          $ref: '#/components/schemas/Origin'
+        status:
+          $ref: '#/components/schemas/Status'
+        liveness:
+          type:
+          - string
+          - 'null'
+        verification:
+          type:
+          - string
+          - 'null'
+        link_status:
+          type:
+          - string
+          - 'null'
+        sensitivity:
+          $ref: '#/components/schemas/Sensitivity'
+        domain:
+          type: array
+          items:
+            type: string
+        version:
+          type: integer
+        merged_into:
+          type:
+          - string
+          - 'null'
+        merged_into_final:
+          type:
+          - string
+          - 'null'
+        valid:
+          $ref: '#/components/schemas/ValidTime'
+        recorded_at:
+          type: string
+          format: date-time
+        expired_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        author:
+          type:
+          - string
+          - 'null'
+        generated_by:
+          type:
+          - string
+          - 'null'
+        on_behalf_of:
+          type:
+          - string
+          - 'null'
+        body_format:
+          type:
+          - string
+          - 'null'
+        body:
+          type:
+          - string
+          - 'null'
+        body_chars:
+          type:
+          - integer
+          - 'null'
+        props:
+          type: object
+    NodeList:
+      type: object
+      required:
+      - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Node'
+    Edge:
+      type: object
+      required:
+      - id
+      - src
+      - dst
+      - rtype
+      - status
+      - sensitivity
+      - version
+      properties:
+        id:
+          type: string
+        src:
+          type: string
+        dst:
+          type: string
+        rtype:
+          type: string
+        status:
+          $ref: '#/components/schemas/Status'
+        sensitivity:
+          $ref: '#/components/schemas/Sensitivity'
+        version:
+          type: integer
+        claim_id:
+          type:
+          - string
+          - 'null'
+        valid:
+          $ref: '#/components/schemas/ValidTime'
+        recorded_at:
+          type: string
+          format: date-time
+        expired_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        props:
+          type: object
+    NodeRef:
+      type: object
+      required:
+      - id
+      - type
+      - label
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        label:
+          type: string
+    EdgeRef:
+      type: object
+      required:
+      - id
+      - rtype
+      - src
+      - dst
+      - status
+      properties:
+        id:
+          type: string
+        rtype:
+          type: string
+        src:
+          type: string
+        dst:
+          type: string
+        status:
+          $ref: '#/components/schemas/Status'
+        claim_id:
+          type:
+          - string
+          - 'null'
+        peer:
+          $ref: '#/components/schemas/NodeRef'
+    EdgeRefList:
+      type: object
+      required:
+      - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/EdgeRef'
+    EdgeGroups:
+      type: object
+      required:
+      - out
+      - in
+      - truncated
+      properties:
+        out:
+          type: array
+          items:
+            $ref: '#/components/schemas/EdgeRef'
+        in:
+          type: array
+          items:
+            $ref: '#/components/schemas/EdgeRef'
+        truncated:
+          type: boolean
+    Backlink:
+      type: object
+      required:
+      - id
+      - type
+      - label
+      - rtype
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        label:
+          type: string
+        rtype:
+          type: string
+    Evidence:
+      type: object
+      required:
+      - id
+      - snapshot_id
+      - selector_kind
+      - evidence_state
+      properties:
+        id:
+          type: string
+        snapshot_id:
+          type: string
+        selector_kind:
+          $ref: '#/components/schemas/SelectorKind'
+        exact:
+          type:
+          - string
+          - 'null'
+        prefix:
+          type:
+          - string
+          - 'null'
+        suffix:
+          type:
+          - string
+          - 'null'
+        start:
+          type:
+          - integer
+          - 'null'
+          description: 표시 본문 코드포인트, 포함
+        end:
+          type:
+          - integer
+          - 'null'
+          description: 표시 본문 코드포인트, 미포함
+        json_pointer:
+          type:
+          - string
+          - 'null'
+        evidence_state:
+          $ref: '#/components/schemas/EvidenceState'
+        support_check:
+          type:
+          - string
+          - 'null'
+        last_confirmed_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+    Claim:
+      allOf:
+      - $ref: '#/components/schemas/Node'
+      - type: object
+        required:
+        - subject
+        - statement
+        - kind
+        - stance
+        - method
+        properties:
+          subject:
+            type: string
+          predicate:
+            type:
+            - string
+            - 'null'
+          object:
+            type:
+            - string
+            - 'null'
+          value:
+            type:
+            - string
+            - 'null'
+          unit:
+            type:
+            - string
+            - 'null'
+          qualifiers:
+            type: object
+          own_status:
+            $ref: '#/components/schemas/Status'
+            description: 버전 행에 저장된 자기 상태. 계약 2.7
+          status_basis:
+            type: string
+            description: status의 출처. own 또는 subject(열린 값). 계약 2.7
+          statement:
+            type: string
+          kind:
+            type: string
+            enum:
+            - event
+            - state
+            - howto
+          stance:
+            type: string
+            enum:
+            - stated
+            - attributed
+          speaker:
+            type:
+            - string
+            - 'null'
+          method:
+            type: string
+            enum:
+            - deterministic
+            - llm
+            - human
+          conflict_group:
+            type:
+            - string
+            - 'null'
+          evidence:
+            type: array
+            items:
+              $ref: '#/components/schemas/Evidence'
+    ClaimList:
+      type: object
+      required:
+      - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Claim'
+    ClaimDetail:
+      allOf:
+      - $ref: '#/components/schemas/Claim'
+      - type: object
+        required:
+        - versions
+        properties:
+          versions:
+            type: array
+            items:
+              $ref: '#/components/schemas/Claim'
+    EdgeDetail:
+      allOf:
+      - $ref: '#/components/schemas/Edge'
+      - type: object
+        required:
+        - versions
+        - claim
+        properties:
+          versions:
+            type: array
+            items:
+              $ref: '#/components/schemas/Edge'
+          claim:
+            oneOf:
+            - $ref: '#/components/schemas/Claim'
+            - type: 'null'
+    NodeDetail:
+      allOf:
+      - $ref: '#/components/schemas/Node'
+      - type: object
+        properties:
+          claims:
+            type: array
+            items:
+              $ref: '#/components/schemas/Claim'
+          claims_truncated:
+            type: boolean
+          edges:
+            $ref: '#/components/schemas/EdgeGroups'
+          backlinks:
+            type: array
+            items:
+              $ref: '#/components/schemas/Backlink'
+          backlinks_truncated:
+            type: boolean
+          claim:
+            $ref: '#/components/schemas/ClaimDetail'
+          snapshot:
+            $ref: '#/components/schemas/Snapshot'
+          series:
+            $ref: '#/components/schemas/SeriesInfo'
+    TextWindow:
+      type: object
+      required:
+      - text
+      - start
+      - end
+      - total_chars
+      properties:
+        text:
+          type: string
+        start:
+          type: integer
+          description: 코드포인트, 포함
+        end:
+          type: integer
+          description: 코드포인트, 미포함
+        total_chars:
+          type: integer
+    NodeBody:
+      allOf:
+      - $ref: '#/components/schemas/TextWindow'
+      - type: object
+        required:
+        - body_format
+        properties:
+          body_format:
+            type: string
+    SnapshotText:
+      allOf:
+      - $ref: '#/components/schemas/TextWindow'
+      - type: object
+        required:
+        - text_format
+        properties:
+          text_format:
+            type: string
+    GraphFlags:
+      type: object
+      required:
+      - directed
+      - multi
+      properties:
+        directed:
+          type: boolean
+        multi:
+          type: boolean
+    ColumnTable:
+      type: object
+      required:
+      - columns
+      - rows
+      properties:
+        columns:
+          type: array
+          items:
+            type: string
+        rows:
+          type: array
+          items:
+            type: array
+            items:
+              type:
+              - string
+              - 'null'
+              - array
+              items:
+                type: string
+    OverviewMeta:
+      type: object
+      required:
+      - graph
+      - order
+      - node_total
+      - edge_total
+      - truncated
+      properties:
+        graph:
+          $ref: '#/components/schemas/GraphFlags'
+        order:
+          type: string
+        node_total:
+          type: integer
+          minimum: 0
+        edge_total:
+          type: integer
+          minimum: 0
+        truncated:
+          type: boolean
+    Overview:
+      type: object
+      required:
+      - meta
+      - nodes
+      - edges
+      properties:
+        meta:
+          $ref: '#/components/schemas/OverviewMeta'
+        nodes:
+          $ref: '#/components/schemas/ColumnTable'
+        edges:
+          $ref: '#/components/schemas/ColumnTable'
+    Neighbors:
+      type: object
+      required:
+      - nodes
+      - edges
+      - truncated
+      - node_total
+      - edge_total
+      properties:
+        nodes:
+          $ref: '#/components/schemas/ColumnTable'
+        edges:
+          $ref: '#/components/schemas/ColumnTable'
+        truncated:
+          type: boolean
+        node_total:
+          type: integer
+          minimum: 0
+        edge_total:
+          type: integer
+          minimum: 0
+    VersionRow:
+      type: object
+      required:
+      - version
+      - status
+      - recorded_at
+      properties:
+        version:
+          type: integer
+        label:
+          type: string
+        status:
+          $ref: '#/components/schemas/Status'
+        recorded_at:
+          type: string
+          format: date-time
+        expired_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+    ChainItem:
+      type: object
+      required:
+      - id
+      - version
+      - status
+      - valid
+      - recorded_at
+      properties:
+        id:
+          type: string
+        version:
+          type: integer
+        status:
+          $ref: '#/components/schemas/Status'
+        own_status:
+          $ref: '#/components/schemas/Status'
+          description: 버전 행에 저장된 자기 상태. 계약 2.7
+        status_basis:
+          type: string
+          description: status의 출처. own 또는 subject(열린 값). 계약 2.7
+        value:
+          type:
+          - string
+          - 'null'
+        unit:
+          type:
+          - string
+          - 'null'
+        valid:
+          $ref: '#/components/schemas/ValidTime'
+        recorded_at:
+          type: string
+          format: date-time
+        expired_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        superseded_by:
+          type:
+          - string
+          - 'null'
+    Chain:
+      type: object
+      required:
+      - predicate
+      - slot
+      - items
+      properties:
+        predicate:
+          type:
+          - string
+          - 'null'
+        slot:
+          type:
+          - string
+          - 'null'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChainItem'
+    History:
+      type: object
+      required:
+      - id
+      - versions
+      - chains
+      - edges
+      properties:
+        id:
+          type: string
+        versions:
+          type: array
+          items:
+            $ref: '#/components/schemas/VersionRow'
+        chains:
+          type: array
+          items:
+            $ref: '#/components/schemas/Chain'
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/EdgeRef'
+    Highlight:
+      type: object
+      required:
+      - start
+      - end
+      properties:
+        start:
+          type: integer
+        end:
+          type: integer
+    SearchHitBase:
+      type: object
+      required:
+      - id
+      - type
+      - title
+      - snippet
+      - highlights
+      - highlight_unit
+      - origin
+      - status
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        title:
+          type: string
+        snippet:
+          type: string
+        highlights:
+          type: array
+          items:
+            $ref: '#/components/schemas/Highlight'
+        highlight_unit:
+          type: string
+          const: codepoint
+        origin:
+          $ref: '#/components/schemas/Origin'
+        status:
+          $ref: '#/components/schemas/Status'
+    SearchHitClaim:
+      allOf:
+      - $ref: '#/components/schemas/SearchHitBase'
+      required:
+      - kind
+      - subject
+      - source
+      - verification
+      - recorded_at
+      properties:
+        kind:
+          type: string
+          const: claim
+        subject:
+          type: string
+        source:
+          $ref: '#/components/schemas/SourceRef'
+        verification:
+          type: string
+        recorded_at:
+          type: string
+          format: date-time
+    SearchHitRecord:
+      allOf:
+      - $ref: '#/components/schemas/SearchHitBase'
+      required:
+      - kind
+      - author
+      - sensitivity
+      - recorded_at
+      properties:
+        kind:
+          type: string
+          const: record
+        author:
+          type:
+          - string
+          - 'null'
+        sensitivity:
+          $ref: '#/components/schemas/Sensitivity'
+        recorded_at:
+          type: string
+          format: date-time
+    SearchHitEntity:
+      allOf:
+      - $ref: '#/components/schemas/SearchHitBase'
+      required:
+      - kind
+      properties:
+        kind:
+          type: string
+          const: entity
+        liveness:
+          type:
+          - string
+          - 'null'
+    SearchHitPassage:
+      allOf:
+      - $ref: '#/components/schemas/SearchHitBase'
+      required:
+      - kind
+      - snapshot_id
+      - start
+      - end
+      - source
+      properties:
+        kind:
+          type: string
+          const: passage
+        id:
+          type: string
+          description: snapshot_id:start. 노드 ID가 아니다. /v1/nodes/{id}, /v1/claims/{id}, /v1/snapshots/{id}에 넣지 않는다(404). 중복 제거에만 쓴다. 계약 4.8
+        snapshot_id:
+          type: string
+        start:
+          type: integer
+          description: 표시 본문 코드포인트, 포함
+        end:
+          type: integer
+          description: 표시 본문 코드포인트, 미포함
+        source:
+          $ref: '#/components/schemas/SourceRef'
+    SearchHit:
+      oneOf:
+      - $ref: '#/components/schemas/SearchHitClaim'
+      - $ref: '#/components/schemas/SearchHitRecord'
+      - $ref: '#/components/schemas/SearchHitEntity'
+      - $ref: '#/components/schemas/SearchHitPassage'
+      discriminator:
+        propertyName: kind
+    SearchResult:
+      type: object
+      required:
+      - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchHit'
+    FacetValue:
+      type: object
+      required:
+      - value
+      - count
+      properties:
+        value:
+          type: string
+        label:
+          type: string
+        count:
+          type: integer
+          minimum: 0
+    Facets:
+      type: object
+      required:
+      - total
+      - facets
+      properties:
+        total:
+          type: integer
+          minimum: 0
+        facets:
+          type: object
+          required:
+          - type
+          - origin
+          - status
+          - source
+          - domain
+          properties:
+            type:
+              type: array
+              items:
+                $ref: '#/components/schemas/FacetValue'
+            origin:
+              type: array
+              items:
+                $ref: '#/components/schemas/FacetValue'
+            status:
+              type: array
+              items:
+                $ref: '#/components/schemas/FacetValue'
+            source:
+              type: array
+              items:
+                $ref: '#/components/schemas/FacetValue'
+            domain:
+              type: array
+              items:
+                $ref: '#/components/schemas/FacetValue'
+    Counts:
+      type: object
+      required:
+      - bucket
+      - field
+      - series
+      properties:
+        bucket:
+          type: string
+          enum:
+          - day
+          - week
+          - month
+        field:
+          type: string
+          enum:
+          - recorded_at
+          - valid_from
+        series:
+          type: array
+          items:
+            type: object
+            required:
+            - start
+            - count
+            properties:
+              start:
+                type: string
+                format: date-time
+              count:
+                type: integer
+                minimum: 0
+    SeriesInfo:
+      type: object
+      required:
+      - id
+      - metric
+      - unit
+      properties:
+        id:
+          type: string
+        metric:
+          type: string
+        unit:
+          type:
+          - string
+          - 'null'
+    SeriesPoint:
+      type: object
+      required:
+      - period
+      - start
+      - value
+      - observed_at
+      - last_seen_at
+      properties:
+        period:
+          type: string
+        start:
+          type: string
+          format: date-time
+        end:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        value:
+          type: string
+        observed_at:
+          type: string
+          format: date-time
+        last_seen_at:
+          type: string
+          format: date-time
+        snapshot_id:
+          type:
+          - string
+          - 'null'
+    Gap:
+      type: object
+      required:
+      - from
+      - to
+      - reason
+      properties:
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+        reason:
+          type: string
+    Series:
+      allOf:
+      - $ref: '#/components/schemas/SeriesInfo'
+      - type: object
+        required:
+        - points
+        - gaps
+        properties:
+          points:
+            type: array
+            items:
+              $ref: '#/components/schemas/SeriesPoint'
+          gaps:
+            type: array
+            items:
+              $ref: '#/components/schemas/Gap'
+    Snapshot:
+      type: object
+      required:
+      - id
+      - url
+      - source
+      - fetched_at
+      - http_status
+      - content_type
+      - raw_sha256
+      - text_chars
+      - citing_claims
+      properties:
+        id:
+          type: string
+        url:
+          type: string
+        final_url:
+          type:
+          - string
+          - 'null'
+        source:
+          $ref: '#/components/schemas/SourceRef'
+        fetched_at:
+          type: string
+          format: date-time
+        http_status:
+          type: integer
+        content_type:
+          type: string
+        raw_sha256:
+          type: string
+        text_sha256:
+          type:
+          - string
+          - 'null'
+        text_format:
+          type:
+          - string
+          - 'null'
+        text_chars:
+          type: integer
+        extractor:
+          type:
+          - string
+          - 'null'
+        citing_claims:
+          type: array
+          items:
+            type: object
+            required:
+            - id
+            properties:
+              id:
+                type: string
+              start:
+                type:
+                - integer
+                - 'null'
+              end:
+                type:
+                - integer
+                - 'null'
+    Change:
+      type: object
+      required:
+      - seq
+      - at
+      - kind
+      - id
+      properties:
+        seq:
+          type: integer
+        at:
+          type: string
+          format: date-time
+        kind:
+          type: string
+        id:
+          type:
+          - string
+          - 'null'
+        version:
+          type:
+          - integer
+          - 'null'
+        type:
+          type:
+          - string
+          - 'null'
+        origin:
+          type:
+          - string
+          - 'null'
+          enum:
+          - external
+          - first_party
+          - system
+          - null
+    ChangeList:
+      type: object
+      required:
+      - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Change'
+    Meta:
+      type: object
+      required:
+      - contract
+      - kb_version
+      - limits
+      - changes_cursor
+      - first_party_open
+      - counts
+      properties:
+        contract:
+          type: string
+        kb_version:
+          type: string
+        limits:
+          type: object
+          required:
+          - overview_nodes
+          - overview_edges
+          - page
+          - concurrent
+          properties:
+            overview_nodes:
+              type: integer
+            overview_edges:
+              type: integer
+            page:
+              type: integer
+            concurrent:
+              type: integer
+              minimum: 12
+        changes_cursor:
+          type: string
+        first_party_open:
+          type: boolean
+        counts:
+          type: object
+          required:
+          - nodes
+          - edges
+          - claims
+          properties:
+            nodes:
+              type: integer
+            edges:
+              type: integer
+            claims:
+              type: integer
+    SchemaProperty:
+      type: object
+      required:
+      - name
+      - type
+      - filterable
+      - sortable
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        filterable:
+          type: boolean
+        sortable:
+          type: boolean
+    NodeType:
+      type: object
+      required:
+      - name
+      - group
+      - count
+      - status
+      properties:
+        name:
+          type: string
+        group:
+          type: string
+        count:
+          type: integer
+          minimum: 0
+        status:
+          type: string
+        in_overview:
+          type: boolean
+          description: overview_types에 든다. 계약 4.2
+        properties:
+          type: array
+          items:
+            $ref: '#/components/schemas/SchemaProperty'
+        json_schema:
+          type: object
+    EdgeType:
+      type: object
+      required:
+      - name
+      - group
+      - count
+      properties:
+        name:
+          type: string
+        group:
+          type: string
+        count:
+          type: integer
+          minimum: 0
+        from:
+          type: array
+          items:
+            type: string
+        to:
+          type: array
+          items:
+            type: string
+    Predicate:
+      type: object
+      required:
+      - id
+      - functional
+      properties:
+        id:
+          type: string
+        functional:
+          type: boolean
+        value_kind:
+          type:
+          - string
+          - 'null'
+        labels:
+          type: object
+          additionalProperties:
+            type: string
+    SchemaCatalog:
+      type: object
+      required:
+      - node_types
+      - edge_types
+      - predicates
+      - overview_types
+      - enums
+      - sort_keys
+      - filter_keys
+      properties:
+        node_types:
+          type: array
+          items:
+            $ref: '#/components/schemas/NodeType'
+        edge_types:
+          type: array
+          items:
+            $ref: '#/components/schemas/EdgeType'
+        predicates:
+          type: array
+          items:
+            $ref: '#/components/schemas/Predicate'
+        overview_types:
+          type: array
+          items:
+            type: string
+        enums:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        sort_keys:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        filter_keys:
+          type: array
+          items:
+            type: string
+    ExportProfile:
+      type: object
+      required:
+      - path
+      - bytes
+      - sha256
+      - nodes
+      - edges
+      properties:
+        path:
+          type: string
+        bytes:
+          type: integer
+        sha256:
+          type: string
+        nodes:
+          type: integer
+        edges:
+          type: integer
+    Manifest:
+      type: object
+      required:
+      - build_id
+      - applied_seq
+      - epoch
+      - generated_at
+      - changes_cursor
+      - profiles
+      properties:
+        build_id:
+          type: string
+          description: 게시 ID p-<applied_seq 9자리>
+        applied_seq:
+          type: integer
+        epoch:
+          type: integer
+        generated_at:
+          type: string
+          format: date-time
+        changes_cursor:
+          type: string
+        profiles:
+          type: object
+          required:
+          - core
+          - full
+          properties:
+            core:
+              $ref: '#/components/schemas/ExportProfile'
+            full:
+              $ref: '#/components/schemas/ExportProfile'
+    ExportFile:
+      type: object
+      required:
+      - schema_version
+      - build_id
+      - applied_seq
+      - epoch
+      - data_as_of
+      - graph
+      - nodes
+      - edges
+      properties:
+        schema_version:
+          type: string
+        build_id:
+          type: string
+          description: 게시 ID p-<applied_seq 9자리>
+        applied_seq:
+          type: integer
+        epoch:
+          type: integer
+        data_as_of:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        graph:
+          $ref: '#/components/schemas/GraphFlags'
+        nodes:
+          $ref: '#/components/schemas/ColumnTable'
+        edges:
+          $ref: '#/components/schemas/ColumnTable'
+    OpsFreshness:
+      type: object
+      required:
+      - classes
+      - sources
+      - gaps
+      properties:
+        classes:
+          type: array
+          items:
+            type: object
+            required:
+            - class
+            - total
+            - stale
+            properties:
+              class:
+                type: string
+              total:
+                type: integer
+              stale:
+                type: integer
+        sources:
+          type: array
+          items:
+            type: object
+            required:
+            - source_id
+            - class
+            - state
+            - stale
+            properties:
+              source_id:
+                type: string
+              class:
+                type: string
+              last_ok_at:
+                type:
+                - string
+                - 'null'
+                format: date-time
+              state:
+                type: string
+              stale:
+                type: boolean
+        gaps:
+          type: array
+          items:
+            allOf:
+            - $ref: '#/components/schemas/Gap'
+            - type: object
+              required:
+              - source_id
+              properties:
+                source_id:
+                  type: string
+      x-provisional: true
+    OpsTicketList:
+      type: object
+      required:
+      - items
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required:
+            - id
+            - topic
+            - status
+            - priority
+            - opened_at
+            properties:
+              id:
+                type: string
+              topic:
+                type: string
+              status:
+                type: string
+              priority:
+                type: string
+              opened_at:
+                type: string
+                format: date-time
+              closed_at:
+                type:
+                - string
+                - 'null'
+                format: date-time
+      x-provisional: true
+    OpsRunList:
+      type: object
+      required:
+      - items
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required:
+            - job
+            - started_at
+            - outcome
+            properties:
+              job:
+                type: string
+              started_at:
+                type: string
+                format: date-time
+              ended_at:
+                type:
+                - string
+                - 'null'
+                format: date-time
+              outcome:
+                type:
+                - string
+                - 'null'
+      x-provisional: true
+    OpsMetrics:
+      type: object
+      required:
+      - items
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required:
+            - name
+            - value
+            - at
+            properties:
+              name:
+                type: string
+              dims:
+                type:
+                - object
+                - 'null'
+              value:
+                type: number
+              at:
+                type: string
+                format: date-time
+      x-provisional: true
+    MetaEnvelope:
+      allOf:
+      - $ref: '#/components/schemas/Envelope'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/Meta'
+    SchemaCatalogEnvelope:
+      allOf:
+      - $ref: '#/components/schemas/Envelope'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/SchemaCatalog'
+    OverviewEnvelope:
+      allOf:
+      - $ref: '#/components/schemas/Envelope'
+      - type: object
+        required:
+        - data
+        - page
+        properties:
+          data:
+            $ref: '#/components/schemas/Overview'
+          page:
+            $ref: '#/components/schemas/Page'
+    NodeListEnvelope:
+      allOf:
+      - $ref: '#/components/schemas/Envelope'
+      - type: object
+        required:
+        - data
+        - page
+        properties:
+          data:
+            $ref: '#/components/schemas/NodeList'
+          page:
+            $ref: '#/components/schemas/Page'
+    NodeDetailEnvelope:
+      allOf:
+      - $ref: '#/components/schemas/Envelope'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/NodeDetail'
+    ClaimListEnvelope:
+      allOf:
+      - $ref: '#/components/schemas/Envelope'
+      - type: object
+        required:
+        - data
+        - page
+        properties:
+          data:
+            $ref: '#/components/schemas/ClaimList'
+          page:
+            $ref: '#/components/schemas/Page'
+    EdgeRefListEnvelope:
+      allOf:
+      - $ref: '#/components/schemas/Envelope'
+      - type: object
+        required:
+        - data
+        - page
+        properties:
+          data:
+            $ref: '#/components/schemas/EdgeRefList'
+          page:
+            $ref: '#/components/schemas/Page'
+    NodeBodyEnvelope:
+      allOf:
+      - $ref: '#/components/schemas/Envelope'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/NodeBody'
+    NeighborsEnvelope:
+      allOf:
+      - $ref: '#/components/schemas/Envelope'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/Neighbors'
+    HistoryEnvelope:
+      allOf:
+      - $ref: '#/components/schemas/Envelope'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/History'
+    ClaimDetailEnvelope:
+      allOf:
+      - $ref: '#/components/schemas/Envelope'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/ClaimDetail'
+    EdgeDetailEnvelope:
+      allOf:
+      - $ref: '#/components/schemas/Envelope'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/EdgeDetail'
+    SearchResultEnvelope:
+      allOf:
+      - $ref: '#/components/schemas/Envelope'
+      - type: object
+        required:
+        - data
+        - page
+        properties:
+          data:
+            $ref: '#/components/schemas/SearchResult'
+          page:
+            $ref: '#/components/schemas/Page'
+    FacetsEnvelope:
+      allOf:
+      - $ref: '#/components/schemas/Envelope'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/Facets'
+    CountsEnvelope:
+      allOf:
+      - $ref: '#/components/schemas/Envelope'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/Counts'
+    SeriesEnvelope:
+      allOf:
+      - $ref: '#/components/schemas/Envelope'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/Series'
+    SnapshotEnvelope:
+      allOf:
+      - $ref: '#/components/schemas/Envelope'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/Snapshot'
+    SnapshotTextEnvelope:
+      allOf:
+      - $ref: '#/components/schemas/Envelope'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/SnapshotText'
+    ChangeListEnvelope:
+      allOf:
+      - $ref: '#/components/schemas/Envelope'
+      - type: object
+        required:
+        - data
+        - page
+        properties:
+          data:
+            $ref: '#/components/schemas/ChangeList'
+          page:
+            $ref: '#/components/schemas/Page'
+    ManifestEnvelope:
+      allOf:
+      - $ref: '#/components/schemas/Envelope'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/Manifest'
+    OpsFreshnessEnvelope:
+      allOf:
+      - $ref: '#/components/schemas/Envelope'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/OpsFreshness'
+      x-provisional: true
+    OpsTicketListEnvelope:
+      allOf:
+      - $ref: '#/components/schemas/Envelope'
+      - type: object
+        required:
+        - data
+        - page
+        properties:
+          data:
+            $ref: '#/components/schemas/OpsTicketList'
+          page:
+            $ref: '#/components/schemas/Page'
+      x-provisional: true
+    OpsRunListEnvelope:
+      allOf:
+      - $ref: '#/components/schemas/Envelope'
+      - type: object
+        required:
+        - data
+        - page
+        properties:
+          data:
+            $ref: '#/components/schemas/OpsRunList'
+          page:
+            $ref: '#/components/schemas/Page'
+      x-provisional: true
+    OpsMetricsEnvelope:
+      allOf:
+      - $ref: '#/components/schemas/Envelope'
+      - type: object
+        required:
+        - data
+        properties:
+          data:
+            $ref: '#/components/schemas/OpsMetrics'
+      x-provisional: true

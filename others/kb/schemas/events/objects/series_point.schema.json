@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/events/objects/series_point.schema.json",
+  "title": "series_point",
+  "description": "시계열 점 하나. 수치는 십진 문자열과 단위. period_start, period_end는 UTC ms.",
+  "type": "object",
+  "properties": {
+    "period_key": {
+      "type": "string",
+      "minLength": 1
+    },
+    "period_start": {
+      "type": "integer"
+    },
+    "period_end": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "value": {
+      "type": "string",
+      "pattern": "^-?[0-9]+(\\.[0-9]+)?$"
+    },
+    "unit": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "period_key",
+    "period_start",
+    "period_end",
+    "value",
+    "unit"
+  ],
+  "additionalProperties": false
+}

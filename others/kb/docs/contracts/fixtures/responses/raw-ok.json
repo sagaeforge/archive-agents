@@ -1,0 +1,14 @@
+{
+  "body_base64": "IyBDb21tYW5kcwoKfCAvd2lkZ2V0IHwg7JiI7IucIOuqheuguSB8IO2VqeyEsSB8Cg==",
+  "case": "raw-ok",
+  "headers": {
+    "accept-ranges": "bytes",
+    "cache-control": "no-store",
+    "content-disposition": "attachment; filename=\"n-raw\"",
+    "content-type": "text/markdown",
+    "etag": "\"n-raw\"",
+    "vary": "Authorization",
+    "x-content-type-options": "nosniff"
+  },
+  "status": 200
+}

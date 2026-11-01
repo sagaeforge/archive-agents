@@ -1,0 +1,160 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "author": "collector:fixture",
+      "body_format": null,
+      "claims": [],
+      "claims_truncated": false,
+      "domain": [
+        "F"
+      ],
+      "edges": {
+        "in": [],
+        "out": [
+          {
+            "claim_id": null,
+            "dst": "d-n-1",
+            "id": "r-fyvbzlpfyore",
+            "peer": {
+              "id": "d-n-1",
+              "label": "https://docs.example.test/widget",
+              "type": "Document"
+            },
+            "rtype": "SNAPSHOT_OF",
+            "src": "n-1",
+            "status": "active"
+          }
+        ],
+        "truncated": false
+      },
+      "expired_at": null,
+      "generated_by": null,
+      "id": "n-1",
+      "label": "https://docs.example.test/widget",
+      "link_status": null,
+      "liveness": null,
+      "merged_into": null,
+      "merged_into_final": null,
+      "on_behalf_of": null,
+      "origin": "external",
+      "props": {
+        "content_type": "text/plain",
+        "document_id": "d-n-1",
+        "extractor": "fixture@1",
+        "fetched_at": 1800000000000,
+        "http_status": 200,
+        "paras_sha": "8eb8d5193b889b786cb1dc2877591af3302d40695c52fd53f3eed15ec81484e3",
+        "raw_sha": "51aeea8ffa05d2620d35c87463465885e77df13171d5708746df1a9f36d47f35",
+        "source": "src:a",
+        "text_format": "text",
+        "text_sha": "0f80ed70e5392fdb470d3020a31658d12b8424ddada10abcacc93fa69a179f69",
+        "url": "https://docs.example.test/widget"
+      },
+      "recorded_at": "2027-01-15T08:00:05Z",
+      "sensitivity": "public",
+      "snapshot": {
+        "citing_claims": [
+          {
+            "end": null,
+            "id": "c-1",
+            "start": null
+          },
+          {
+            "end": null,
+            "id": "c-dead-event",
+            "start": null
+          },
+          {
+            "end": null,
+            "id": "c-dead-state",
+            "start": null
+          },
+          {
+            "end": null,
+            "id": "c-ko-1",
+            "start": null
+          },
+          {
+            "end": null,
+            "id": "c-ko-2",
+            "start": null
+          },
+          {
+            "end": null,
+            "id": "c-ko-3",
+            "start": null
+          },
+          {
+            "end": null,
+            "id": "c-ma",
+            "start": null
+          },
+          {
+            "end": null,
+            "id": "c-mb",
+            "start": null
+          },
+          {
+            "end": null,
+            "id": "c-old-state",
+            "start": null
+          },
+          {
+            "end": null,
+            "id": "c-rev-state",
+            "start": null
+          },
+          {
+            "end": null,
+            "id": "c-tail",
+            "start": null
+          }
+        ],
+        "content_type": "text/plain",
+        "extractor": "fixture@1",
+        "fetched_at": "2027-01-15T08:00:00Z",
+        "final_url": null,
+        "http_status": 200,
+        "id": "n-1",
+        "raw_sha256": "51aeea8ffa05d2620d35c87463465885e77df13171d5708746df1a9f36d47f35",
+        "source": {
+          "id": "src:a",
+          "label": "합성 출처 A",
+          "trust": "unknown"
+        },
+        "text_chars": 79,
+        "text_format": "text",
+        "text_sha256": "0f80ed70e5392fdb470d3020a31658d12b8424ddada10abcacc93fa69a179f69",
+        "url": "https://docs.example.test/widget"
+      },
+      "status": "active",
+      "type": "Snapshot",
+      "valid": {
+        "from": "2027-01-15T08:00:00Z",
+        "label": null,
+        "precision": null,
+        "to": null
+      },
+      "verification": null,
+      "version": 2
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "schema_version": "0.3.1"
+  },
+  "case": "node-kind-n-exists",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

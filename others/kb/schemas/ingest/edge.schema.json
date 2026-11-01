@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/ingest/edge.schema.json",
+  "title": "kb-ingest/1 edge",
+  "description": "외부 출처 엣지는 evidence 필수(E_NO_EVIDENCE, 처리기가 검사).",
+  "type": "object",
+  "properties": {
+    "item": {
+      "const": "edge"
+    },
+    "ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "src": {
+      "type": "string",
+      "minLength": 1
+    },
+    "rtype": {
+      "type": "string",
+      "minLength": 1
+    },
+    "dst": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence": {
+      "type": "object",
+      "properties": {
+        "snapshot": {
+          "type": "string",
+          "minLength": 1
+        },
+        "quote": {
+          "type": "string"
+        },
+        "prefix": {
+          "type": "string"
+        },
+        "suffix": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "snapshot",
+        "quote"
+      ],
+      "additionalProperties": false
+    },
+    "props": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "item",
+    "src",
+    "rtype",
+    "dst"
+  ],
+  "additionalProperties": false
+}
