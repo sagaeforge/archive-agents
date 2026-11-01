@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Callable
 
-GATE_VERSION = "gate@2"
+GATE_VERSION = "gate@3"
 # G 도메인 단위 타입(노드 type의 소문자). 이 타입의 G 주어는 생존 상태가 있어야 한다(ADR 9.2, 10.6 9단계).
 G_UNIT_TYPES = frozenset({"repo", "package", "feature", "model", "document"})
 # 도메인 정보가 비어 있을 때도 G로 보는 타입(개발 도구 전용)

@@ -40,14 +40,19 @@ def pairs(s: str) -> set:
 
 _N = r"\d[\d,.]*\s*(?:년|월|일|시간|분|주|개월|회|명|달러|원|%|억|만|천|포인트|단계|개|건|초|배)?\s*"
 _NUMLIKE = r"(?:v?\d|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d)"
+# 날짜 표기만. concepts()는 spell() 뒤에 돌므로 "August 24"는 "8 24"로 온다(may만 남는다). through, beginning은 이 뒤에서만 비교어다.
+_DATE = r"(?:\d{1,2}/\d{1,2}/\d{2,4}|\d{4}-\d{2}-\d{2}|\d{1,2}\s+\d{1,2}\b|may\s+\d)"
 CONCEPT = {
-    "ge": [_N + "이상", r"at least", r"or more", r"최소", r"minimum", r"more than"],
-    "le": [_N + r"(?:이하|미만|이내)", r"at most", r"or less", r"최대", r"maximum", r"up to", r"less than",
+    "ge": [_N + "이상", r"at least", r"or more", r"최소", r"minimum", r"more than",
+           r"approx_traffic>\d[\d,]*\+<"],                # Google Trends RSS의 값 표기만. S24+, Python 3+ 같은 이름의 +는 비교어가 아니다
+    "le": [_N + r"(?:이하|미만|이내)", r"at most", r"or less", r"\d\s*seconds?\s+or\s+shorter", r"최대", r"maximum", r"up to", r"less than",
            rf"\bwithin\s+{_NUMLIKE}"],
-    "after": [_N + r"(?:부터|이후)", rf"\b(?:after|from|since|starting)\s+(?:on\s+|in\s+|the\s+)?{_NUMLIKE}"],
-    "before": [_N + r"(?:까지|이전)", rf"\b(?:before|until|by|within)\s+(?:the\s+)?(?:next\s+|last\s+)?{_NUMLIKE}"],
+    "after": [_N + r"(?:부터|이후)", rf"\b(?:after|from|since|starting)\s+(?:on\s+|in\s+|the\s+)?{_NUMLIKE}",
+              rf"\bbeginning\s+(?:on\s+)?{_DATE}"],
+    "before": [_N + r"(?:까지|이전)", rf"\b(?:before|until|by|within)\s+(?:the\s+)?(?:next\s+|last\s+)?{_NUMLIKE}",
+               rf"\bthrough\s+{_DATE}"],
     "usd": [r"달러", r"\$", r"USD"], "krw": [r"\d\s*원", r"KRW", r"₩"],
-    "hour": [r"\d\s*시간", r"\d[\s-]*hours?\b"], "min": [r"\d\s*분", r"\d[\s-]*minutes?\b"],
+    "hour": [r"\d\s*시간", r"\d[\s-]*hours?\b", r"\d\s+(?:(?:qualified|public)\s+){0,2}watch[\s-]hours?\b"], "min": [r"\d\s*분", r"\d[\s-]*minutes?\b"],
     "day": [r"\d\s*일\b", r"\d\s*일\s", r"\d[\s-]*days?\b"], "week": [r"\d\s*주", r"\d[\s-]*weeks?\b"],
     "month": [r"\d\s*개월", r"\d[\s-]*months?\b"], "year": [r"\d\s*년", r"\d[\s-]*years?\b"],
     "pct": [r"%", r"퍼센트", r"percent"], "eok": [r"\d\s*억", r"billion"], "man": [r"\d\s*만", r"million"],
@@ -73,6 +78,18 @@ def _drop_ordinal_no(s: str) -> str:
     return _ORDINAL_NO.sub(f, s)
 
 
+# 부정어 동등 표현은 문장 표현과 인용구 표현이 짝으로 있을 때만 지운다.
+# "instead of B"는 문장의 "B 대신"과 바로 앞뒤 낱말이 같아야 한다. A와 B가 뒤바뀐 문장은 그대로 걸린다.
+_INSTEAD_ST = re.compile(r"(\S+)\s+대신")
+_INSTEAD_Q = re.compile(r"\binstead of\s+([\w.-]+)", re.I)
+# 광고 형식 이름 Non-skippable. 인용구에 이 이름이 있으면 문장에도 같은 이름이 있어야 한다. 짝을 지운 뒤 남은 부분의 부정을 비교한다.
+_NONSKIP_ST = re.compile(r"건너뛸\s+수\s+없는|\bnon-skippable\b", re.I)
+_NONSKIP_Q = re.compile(r"\bnon-skippable\b", re.I)
+# "0.6%포인트"와 "0.6 share points". 문장의 %가 모두 %포인트일 때만 맞는다. "0.6%"는 share points와 다른 값이다.
+_SHARE_PT = re.compile(r"\d\s+share\s+points?\b", re.I)
+_PCT_PLAIN = re.compile(r"%(?!\s*포인트)|퍼센트(?!\s*포인트)|percent(?!age\s+points?)", re.I)
+# 생략 연도 "’24년 79.2%". 아포스트로피와 바로 뒤의 % 값이 함께 있을 때만 20YY로 본다(00~29). "’30년 전통", "경력 24년", "(24년)"은 넓히지 않는다.
+_APOS_YY = re.compile(r"[’‘'](?=[0-2]\d\s*년\s+\d[\d.]*\s*%)")
 _YEAR_ST = re.compile(r"(?<!\d)((?:19|20)\d{2})\s*년")
 _ISO_DATE = re.compile(r"(?<!\d)(?:19|20)\d{2}-\d{2}-\d{2}")
 _ISO_TIME = re.compile(r"(?<!\d)\d{1,2}:\d{2}")
@@ -99,6 +116,21 @@ def has_neg(s: str) -> bool:
     return any(p.search(s) for p in NEGW)
 
 
+def _neg_differs(statement: str, quote: str) -> bool:
+    """부정어 동등성. 양쪽에 같은 뜻으로 있는 짝만 지운다. 문장에 부정이 없는데 인용구에 not이 있으면 걸린다."""
+    s, q = statement, quote
+    if _NONSKIP_Q.search(q):
+        if not _NONSKIP_ST.search(s):
+            return True
+        s, q = _NONSKIP_ST.sub(" ", s), _NONSKIP_Q.sub(" ", q)
+    if has_neg(s) == has_neg(q):
+        return False
+    a, b = _INSTEAD_ST.search(s), _INSTEAD_Q.search(q)
+    if a and b and a.group(1).lower() == b.group(1).lower():
+        s, q = _INSTEAD_ST.sub(" ", s), _INSTEAD_Q.sub(" ", q)
+    return has_neg(s) != has_neg(q)
+
+
 def value_issues(statement: str, quote: str, subject_forms=()) -> list:
     """문장이 인용구에 없는 값을 말하면 사유 목록. 비면 통과.
     subject_forms: 주어의 라벨·별칭. 주어 식별자에 든 숫자(게시물 번호 등)는 인용구에 없어도 된다."""
@@ -106,13 +138,16 @@ def value_issues(statement: str, quote: str, subject_forms=()) -> list:
     own = set()
     for f in subject_forms or ():
         own |= nums(f)
-    extra = nums(statement) - nums(quote) - own
+    full = _APOS_YY.sub("20", quote)                              # 인용구 값만 넓힌다. 원래 값도 그대로 남긴다
+    qnums = nums(quote) | nums(full)
+    extra = nums(statement) - qnums - own
     if extra:
         why.append("num:" + ",".join(sorted(extra)))
     if HANGUL.search(quote):
-        qn = {n for n, _ in pairs(quote)}
-        bare = nums(quote) - qn                                  # 단위 없이 나온 숫자(순위 표 등)는 단위 불일치로 보지 않는다
-        px = {(n, u) for n, u in pairs(statement) - pairs(quote) if n not in bare}
+        qpairs = pairs(quote) | pairs(full)
+        qn = {n for n, _ in qpairs}
+        bare = qnums - qn                                        # 단위 없이 나온 숫자(순위 표 등)는 단위 불일치로 보지 않는다
+        px = {(n, u) for n, u in pairs(statement) - qpairs if n not in bare}
         if px:
             why.append("pair:" + ",".join(f"{n}{u}" for n, u in sorted(px)))
     sc, qc = concepts(statement), quote_concepts(quote)
@@ -120,9 +155,11 @@ def value_issues(statement: str, quote: str, subject_forms=()) -> list:
         ys = _YEAR_ST.findall(spell(statement))
         if ys and all(y in nums(quote) for y in ys):
             qc = qc | {"year"}
+    if "pct" in sc and "pct" not in qc and _SHARE_PT.search(spell(quote)) and not _PCT_PLAIN.search(statement):
+        qc = qc | {"pct"}
     miss = {c for c in sc if c not in qc and not (EQUIV.get(c, set()) & qc)}
     if miss:
         why.append("concept:" + ",".join(sorted(miss)))
-    if has_neg(statement) != has_neg(quote):
+    if _neg_differs(statement, quote):
         why.append("neg")
     return why

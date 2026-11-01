@@ -35,7 +35,7 @@ def test_prompt_version_change_recalls(ent):
     f = H.Fake("claude", True, H.extract_all(ent))
     _run(f)
     assert len(f.calls) == 1
-    with settings.override(prompt_version="extract-2"):
+    with settings.override(prompt_version="extract-3"):
         r = tick_stage.enqueue_new()
         assert r["queued"] == 4
         _run(f)

@@ -234,7 +234,7 @@ def test_ambiguous_quote_confirmed_without_position(ent):
     # 철회 뒤 재추출: 대체된 옛 스냅샷의 창은 건너뛰므로(order.py) 새 스냅샷만 다시 뽑는다. 인용구가 두 곳인 주장은
     # 게이트가 E_QUOTE_AMBIGUOUS로 거부하므로 되살아나지 않고, 나머지 위치 있는 주장은 되살아난다
     from kb.cli import main
-    assert main(["claim", "retract", "--extractor", "l2:claude:haiku:extract-1", "--json"]) == 0
+    assert main(["claim", "retract", "--extractor", "l2:claude:haiku:extract-2", "--json"]) == 0
     f = H.Fake("claude", True, _responder(ent))
     with settings.override(**{"openrouter.enabled": False}):
         out = runner.run_agent("public", backends={"claude": f}, do_support=False, reextract=True)

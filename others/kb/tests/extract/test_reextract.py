@@ -55,7 +55,7 @@ def test_bulk_retract_by_extractor(ent, capsys):
     H.ingest_doc(text=DOC)
     _run(ent, [0, 1, 2], "haiku")
     ex = H.claims()[0][5]
-    assert ex == "l2:claude:haiku:extract-1"
+    assert ex == "l2:claude:haiku:extract-2"
     rc = main(["claim", "retract", "--extractor", ex, "--json"])
     out = json.loads(capsys.readouterr().out.strip().splitlines()[-1])
     assert rc == 0 and out["matched"] == 3 and out["retracted"] == 3

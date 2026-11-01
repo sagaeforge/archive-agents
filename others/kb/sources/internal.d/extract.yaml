@@ -11,8 +11,9 @@ jobs:
     every_s: 21600
     cmd: "kb agent run --scope sensitive"
 settings:
-  prompt_version: "extract-1"
+  prompt_version: "extract-2"
   extract_schema: "extract-schema-1"
+  done_carry: ["extract-1:extract-schema-1"]   # 이 판본의 완료 문단은 다시 부르지 않는다. 재추출은 kb agent run --reextract만
   window_chars: 6000
   take_batch: 24
   max_attempts: 3                 # 첫 시도 + 재시도 2회. 넘으면 DLQ

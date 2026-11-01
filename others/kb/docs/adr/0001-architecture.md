@@ -517,7 +517,7 @@ AND coalesce(valid_from, -9e18) <= :v AND (valid_to IS NULL OR valid_to > :v)  -
 | 결정적 주장, 같은 슬롯, 같은 출처, 함수형 술어, 값이 다름 | 자동 `claim.supersede`. `valid_from`이 앞서면 소급 정정 |
 | 결정적 주장, 같은 슬롯, 다른 출처 | 공존 + `CONFLICTS_WITH`. 시스템이 승자를 정하지 않는다 |
 | LLM 주장 | 자동 대체 없음. 공존 |
-| 같은 문단을 새 `extractor`로 다시 뽑음. 명시 명령 `kb agent run --reextract`일 때만 | 재추출에 없는 옛 `extractor` 주장을 `claim.retract`한다. ID가 같으면 그대로 둔다. 백엔드나 모델 전환은 재추출이 아니다. 큐는 `(para_sha, prompt_version, extract_schema)`로 판정하므로 전환해도 이미 뽑은 문단을 다시 부르지 않고 옛 주장을 철회하지 않는다(0003 2장) |
+| 같은 문단을 새 `extractor`로 다시 뽑음. 명시 명령 `kb agent run --reextract`일 때만 | 재추출에 없는 옛 `extractor` 주장을 `claim.retract`한다. ID가 같으면 그대로 둔다. 백엔드나 모델 전환은 재추출이 아니다. 큐는 `(para_sha, prompt_version, extract_schema)`로 판정하므로 전환해도 이미 뽑은 문단을 다시 부르지 않고 옛 주장을 철회하지 않는다(0003 2장). 프롬프트 판본을 올릴 때는 `done_carry`로 옛 완료 표시를 인정해 재추출이 저절로 일어나지 않게 한다(10.5) |
 | 같은 URL 새 스냅샷에서 인용구가 사라짐, `state`·`howto` | `claim.withdraw`. `status=superseded`, `valid_to`를 닫는다. `feed`, `short` 클래스처럼 창이 움직이는 소스는 철회하지 않는다. 창 밖으로 밀린 것과 구분할 수 없다 |
 | 같은 URL 새 스냅샷에서 인용구가 사라짐, `event` | 유지. `evidence_state=archived_only` |
 | 한 문서에서 활성 주장의 30% 초과가 한 번에 사라짐 | 철회하지 않는다. 소스를 `degraded`로 두고 보류한다(구조 변경 의심) |
@@ -929,7 +929,8 @@ env -i HOME="$HOME" PATH="<고정>" LANG=C.UTF-8 DISABLE_AUTOUPDATER=1 RTK_DISAB
     --output-format stream-json --verbose < window.txt
 ```
 
-- **입력.** 아직 추출하지 않은 문단만 모아 6,000자 이하 창을 만든다. 큐는 도메인을 순환해 꺼낸다. G 문단이 A~F를 밀어내지 않는다. 큐 소속은 `(para_sha, prompt_version, extract_schema)`로 판정하고 백엔드와 모델을 보지 않는다. 경로가 바뀌어도 이미 뽑은 문단을 다시 부르지 않는다(0003 2장). 캐시 키 `(para_sha, extractor_id, prompt_version, extract_schema, model)`은 원응답 재사용용으로 남는다. 한 글자 변경이 문서 전체를 다시 부르지 않는다(레드팀 X19 차단).
+- **입력.** 아직 추출하지 않은 문단만 모아 6,000자 이하 창을 만든다. 큐는 도메인을 순환해 꺼낸다. G 문단이 A~F를 밀어내지 않는다. 큐 소속은 `(para_sha, prompt_version, extract_schema)`로 판정하고 백엔드와 모델을 보지 않는다. 경로가 바뀌어도 이미 뽑은 문단을 다시 부르지 않는다(0003 2장). `settings.done_carry`에 적은 옛 `prompt_version:extract_schema`의 완료 표시는 이미 뽑은 문단으로 인정한다. 판본을 올려도 끝난 문단이 다시 불리지 않고 큐 재훑기도 일어나지 않으며, 새 판본은 아직 뽑지 않은 문단에만 적용된다. 옛 문단을 새 프롬프트로 다시 뽑는 길은 `kb agent run --reextract`뿐이고 그때만 옛 주장을 철회한다. `done_carry`에 없는 판본으로 바뀌면 완료 표시가 무효가 되어 전부 다시 부른다. 캐시 키 `(para_sha, extractor_id, prompt_version, extract_schema, model)`은 원응답 재사용용으로 남는다. 한 글자 변경이 문서 전체를 다시 부르지 않는다(레드팀 X19 차단).
+- **프롬프트 구조(`extract-2`, 2026-11-01).** `<document>`에는 창 본문만 넣는다. 문서 제목과 발행처는 `<source_info>`로 가른다. 이 머리글이 본문 블록 안에 있을 때 Sol이 `문서 제목: ... 발행처: ...`를 인용구로 냈다(실행 D의 kisdi-stat 6건, 창 본문 8~34자). 게이트는 이 인용을 이미 `E_QUOTE_NOT_FOUND`로 막았고(프롬프트는 표시 본문에 없다), 구조 변경은 모델이 그것을 인용할 이유를 없애는 것이다. 제목, 발행처, 후보 라벨, 창 본문의 `<document>`, `<source_info>`, `<candidates>` 태그는 `<`를 `&lt;`로 바꿔 구획을 닫거나 열지 못하게 한다. 그 밖의 표기는 글자 그대로 둔다(XML 본문 인용). 함의 판정의 `<statement>`, `<quote>`, `<context>`도 같다. `__new__`의 `label`과 `aliases`는 본문이나 `<source_info>`에 나온 표기 그대로 쓰고, 이름으로 나오지 않는 주어는 라벨을 짓지 말고 주장을 뺀다. `extract_schema`는 그대로다.
 - **스키마는 호출마다 만든다.** `subject`, `predicate`는 그 창의 후보로 `enum`을 준다. 슬롯 재현율 문제를 줄인다. 출력에 `subject_new`, `depends_on`, `changed_on`이 있고 `kind=event`는 시점을 요구한다.
 - **상한(Claude 경로 값).** 호출 $0.02, 3턴, 일일 400창, 동시 4, 함의 판정 일일 100건은 Claude 경로의 값이다. 다른 경로의 상한과 지출 규칙은 0003 4, 5장이다. `--max-budget-usd`는 사후 검사이므로 호출 수가 실제 상한이다.
 - **판정.** 마지막 `result.is_error=false`, `permission_denials` 비어 있음, `structured_output` 존재. exit 코드를 보지 않는다.
@@ -947,7 +948,7 @@ env -i HOME="$HOME" PATH="<고정>" LANG=C.UTF-8 DISABLE_AUTOUPDATER=1 RTK_DISAB
 |---|---|---|
 | 1 | 스키마 | `extract.rejected` / `E_SCHEMA` |
 | 2 | 소스 정책, 호스트 정책, 미승인 `requires_decision`, 에이전트 묶음의 `record` | `E_POLICY` |
-| 3 | 인용구가 표시 본문에 있음. NFC와 공백 접기만 허용. 8자 이상. 여러 곳이면 `prefix`, `suffix`로 좁히고 그래도 여럿이면 거부. L2만 모델이 본 창 구간을 대역 밖으로 넘기며(`ingest.submit(windows=)`, 묶음 안의 값은 무시), 문서에서 여러 곳이고 `prefix`, `suffix`로도 못 가른 경우에만 창 안 적중으로 좁힌다. 창 안 정확히 1곳이면 그곳, 2곳 이상이거나 0곳이면 `E_QUOTE_AMBIGUOUS`이고 첫 적중을 고르지 않는다. 창 구간은 모델이 받은 문단과 본문이 같은 문단의 다른 사본, 사이가 공백뿐인 인접 문단의 합이다. 문서에서 1곳이거나 `prefix`, `suffix`로 1곳이 되는 경우는 창과 무관하게 이전과 같다. 프롬프트와 `prompt_version`은 바꾸지 않는다 | `E_QUOTE_*` |
+| 3 | 인용구가 표시 본문에 있음. NFC와 공백 접기만 허용. 8자 이상. 여러 곳이면 `prefix`, `suffix`로 좁히고 그래도 여럿이면 거부. L2만 모델이 본 창 구간을 대역 밖으로 넘기며(`ingest.submit(windows=)`, 묶음 안의 값은 무시), 문서에서 여러 곳이고 `prefix`, `suffix`로도 못 가른 경우에만 창 안 적중으로 좁힌다. 창 안 정확히 1곳이면 그곳, 2곳 이상이거나 0곳이면 `E_QUOTE_AMBIGUOUS`이고 첫 적중을 고르지 않는다. 창 구간은 모델이 받은 문단과 본문이 같은 문단의 다른 사본, 사이가 공백뿐인 인접 문단의 합이다. 문서에서 1곳이거나 `prefix`, `suffix`로 1곳이 되는 경우는 창과 무관하게 이전과 같다 | `E_QUOTE_*` |
 | 4 | 값 토큰: 숫자는 인용구 안에서만 찾는다. 숫자 + 단위 쌍, 비교어(이상, 이하, 미만, 까지, 부터), 부정어 동등성 | `needs_review` |
 | 5 | 주어 문맥: 주어 별칭이 인용구, 같은 문단, 표 머리, 절 제목, 문서 제목 중 하나에 있음. 문장에 나온 등록 엔티티 별칭은 `subject`의 별칭이거나 인용구·문맥에 있어야 한다(`R_ALIAS_MISMATCH`). 비교 대상에서 빠지는 별칭은 하나뿐이다: 현재 노드가 `Concept`이고, `props.provisional`이 참이고, 현재 버전의 `author`(ledger actor)가 `agent:l2`이고, 별칭에 한글이 있는 경우. 라틴 문자 별칭과 다른 타입은 항상 검사한다. `producer=agent:l2`는 대역 밖 `windows=`가 없는 경로(MCP, `kb ingest`)에서 `E_POLICY`로 거부하고, `entity` 항목의 `props.provisional`은 버리므로 묶음이 이 출처를 주장할 수 없다. L2 밖의 주체가 같은 ID에 쓰면 확정이다(0003 5장) | `needs_review` |
 | 6 | 엔티티, 술어 해석: 닫힌 후보. 새 값은 후보 큐 | 주장은 유지 |
@@ -956,6 +957,8 @@ env -i HOME="$HOME" PATH="<고정>" LANG=C.UTF-8 DISABLE_AUTOUPDATER=1 RTK_DISAB
 | 9 | 생존 입장: 주어 상태 조회. G 단위 주어의 `liveness`가 없으면 보류하고 `queue(kind=live)`에 넣는다. 단 `kind=event` 주장은 보류하지 않는다(사용자 결정 2026-11-01, `state`, `howto`는 보류). TTL이 지났으면 같은 큐에만 넣는다. 값은 저장하지 않고 `eff_status`로 반영 | `R_LIVENESS_UNKNOWN`, `needs_review` |
 
 **선택 시각 필드(2026-11-01).** L2 변환(`extract/items.py`)은 허용 목록 하나만 바꾼다. 값이 정확히 `25년` 또는 `25년도`이고, 인용구에 정확히 `(25년)`(바로 앞이 숫자 또는 `%`) 또는 `25년도`(앞이 숫자가 아님)가 있고, 20YY가 스냅샷 연도 이하이면 `2025`(연 정밀도)로 바꾼다. 그 밖의 값(`경력 25년`, `창립 25년`, `25년 뒤`, `25년간`, `지난 10년`, 미래 연도 등)은 건드리지 않아 적재 단계에서 에이전트 묶음과 같이 `E_SCHEMA`를 받는다. 필드를 빼지도, 주장을 시각 없이 남기지도 않는다. `kb agent run --json`의 `normalized_fields`가 필드별 건수를 보인다. 4단계 부정어 검사는 같은 줄에서 숫자가 뒤따르는 문장 중간의 `No.`(순번, `No. 2`)를 부정으로 보지 않는다. 글 첫머리나 `. ! ? : ;` 줄바꿈, 대시 뒤의 `No. 3`은 질문의 답 `No.`와 구별되지 않으므로 부정으로 둔다. `No ETA`, `no longer`, `not`도 그대로 부정이다(인용구에만 `No`가 있고 문장에 부정이 없으면 `needs_review`).
+
+**4단계 값 표기 보정(2026-11-01, `gate@3`).** 규칙은 양성 조건으로만 넓히고, 정확히 쓸 수 없는 규칙은 두지 않는다. 비교어: `<ht:approx_traffic>500+<`의 값(이상, 이름의 `S24+`, `Python 3+`는 아니다), `<수> seconds or shorter`(이하), `Beginning <날짜>`(부터), `through <날짜>`(까지). 뒤의 둘은 날짜 표기일 때만이고 `through 5 steps`는 비교어가 아니다. 단위: `<수> [qualified|public] watch hours`(시간, `2 billion watch hours`는 아니다). 문장의 %가 모두 `%포인트`일 때만 `share points`를 인정한다. 연도: 아포스트로피와 바로 뒤의 % 값이 함께 있는 `’24년 79.2%`만 20YY로 읽는다(00~29, 원래 값도 유지). `’30년 전통`은 넓히지 않는다. 부정: 문장에 부정이 없고 인용구에 부정이 있으면 걸린다. 예외는 짝 두 개다. 인용구에 `Non-skippable`이 있으면 문장에 `건너뛸 수 없는` 또는 같은 이름이 있어야 하고, 짝을 지운 나머지의 부정을 비교한다. 문장의 `B 대신`과 인용구의 `instead of B`는 앞뒤 낱말이 같을 때만 지운다. 고치지 않고 `needs_review`로 둔 경우: `to not`과 `피하-`(문장에 부정이 없다, `피해`는 명사일 수 있다), 인용구에 이름이 없는 Non-skippable 문장, 다른 절의 부정(`No ETA`, `express none`), 조건절의 부정(`if you don't`), 표 열 이름에만 단위가 있는 행(`Wks`), 인용구에 없는 값, 글자가 붙은 날짜.
 
 통과하면 `quote_found`다. `needs_review`는 저장하되 기본 검색에서 뺀다. 0003 2장의 함의 판정 경로가 `support_check`를 기록하고, 뒷받침되면 `claim.review`로 `quote_found`가 된다. 경로는 OpenRouter `anthropic/claude-sonnet-5.5`(141건 보정 통과 뒤, 일 1,000건 [설정값])이고 대체는 `claude -p --model haiku` 일일 100건이다. 대상은 공개 범위 주장의 `R_VALUE_MISMATCH`, `R_SUBJECT_CONTEXT`, `R_ALIAS_MISMATCH`뿐이고 민감 범위 주장은 `needs_review`로 남는다. 판단어 문장은 이 경로에 오지 않는다. 함의 판정은 인용구가 문장을 뒷받침하는지만 보므로 귀속 없는 판단을 올릴 수 있기 때문이다(RULE-17). `R_LIVENESS_UNKNOWN`은 생존 판정이 끝나면 `claim.review`로 풀린다. 표본 감사도 같은 함수를 쓴다. 결과는 지표로만 쓴다.
 

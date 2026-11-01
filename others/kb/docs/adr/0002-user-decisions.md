@@ -115,3 +115,8 @@
   - 첫 정지 뒤: "고친 뒤 재추진 (Recommended)"
   - 기준선: "기준선 재설정 후 소진 (Recommended)"
   - 세 번째 정지 뒤: "세 가지 고친 뒤 재개 (Recommended)"
+
+## 프롬프트와 정규식 수정 (2026-11-01)
+
+- 실행 D의 정지 뒤 사용자가 AskUserQuestion에 직접 "프롬프트와 정규식 수정 (Recommended)"로 답했다.
+- 적용: 값/부정 정규식 수정, 프롬프트 `extract-2`, `done_carry`, `gate@3`. Sol 재개는 리드가 한다.

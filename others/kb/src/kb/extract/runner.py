@@ -1,5 +1,6 @@
 """kb agent run의 본체. 큐(문단) -> 창 -> 가드 -> 라우팅 -> 백엔드 -> 원응답 CAS -> extract.run -> kb.ingest(게이트) 순서다.
-L2가 멈춰도 L0, L1, 조회는 돈다. 경로 전환은 재추출이 아니다: 큐 소속은 (para_sha, prompt_version, extract_schema)다."""
+L2가 멈춰도 L0, L1, 조회는 돈다. 경로 전환은 재추출이 아니다: 큐 소속은 (para_sha, prompt_version, extract_schema)다.
+프롬프트 판본을 올려도 done_carry의 옛 판본 문단은 다시 부르지 않는다(cache.py)."""
 from __future__ import annotations
 
 import json

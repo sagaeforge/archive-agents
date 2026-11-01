@@ -129,12 +129,12 @@ def test_retract_then_reextract_revives(ent, second, capsys):
     H.ingest_doc(text=DOC)
     _claude_run(ent, "haiku")
     assert len(H.claims("n.status='active'")) == 3
-    _retract("l2:claude:haiku:extract-1")
+    _retract("l2:claude:haiku:extract-2")
     assert not H.claims("n.status='active'")
     out, _ = _claude_run(ent, second, reextract=True)
     active = H.claims("n.status='active'")
     assert len(active) == 3 and out["claims"] == 3 and out["revived"] == 3
-    assert all(r[5] == f"l2:claude:{second}:extract-1" for r in active)
+    assert all(r[5] == f"l2:claude:{second}:extract-2" for r in active)
     con = H.gold()
     try:
         assert con.execute("SELECT count(*) FROM evidence").fetchone()[0] == 3
@@ -298,7 +298,7 @@ def test_confirm_rows_keep_text_sha_and_revive_after_confirm(ent):
         assert con.execute("SELECT count(*) FROM evidence WHERE snapshot_id=?", (sid,)).fetchone()[0] == 3
     finally:
         con.close()
-    _retract("l2:claude:haiku:extract-1")
+    _retract("l2:claude:haiku:extract-2")
     assert not H.claims("n.status='active'")
     out, _ = _claude_run(ent, "haiku", reextract=True)
     assert out["revived"] == 3 and len(H.claims("n.status='active'")) == 3

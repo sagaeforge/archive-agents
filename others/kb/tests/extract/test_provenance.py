@@ -30,7 +30,7 @@ def test_extractor_format_and_same_gate_for_all_backends(ent, monkeypatch):
     clf = H.Fake("claude", True, _resp(ent, [0, 1]))
     out2 = runner.run_agent("public", backends={"openrouter": orf, "claude": clf}, do_support=False)
     ex = {r[5] for r in H.claims()}
-    assert ex == {"l2:openrouter:openai/gpt-6.1-sol:extract-1", "l2:claude:haiku:extract-1"}
+    assert ex == {"l2:openrouter:openai/gpt-6.1-sol:extract-2", "l2:claude:haiku:extract-2"}
     assert all(re.fullmatch(r"l2:[a-z]+:[^:]+:[^:]+", e) for e in ex)
     assert len(calls) == 2                                              # 두 백엔드 모두 같은 함수를 지났다
     con = H.gold()
@@ -38,12 +38,12 @@ def test_extractor_format_and_same_gate_for_all_backends(ent, monkeypatch):
         gv = {r[0] for r in con.execute("SELECT gate_version FROM evidence")}
     finally:
         con.close()
-    assert gv == {"gate@2"}                                             # 게이트 판본은 evidence.gate_version
+    assert gv == {"gate@3"}                                             # 게이트 판본은 evidence.gate_version
     # 경로별 철회
     from kb.cli import main
-    assert main(["claim", "retract", "--extractor", "l2:claude:haiku:extract-1"]) == 0
+    assert main(["claim", "retract", "--extractor", "l2:claude:haiku:extract-2"]) == 0
     st = {r[5]: r[1] for r in H.claims()}
-    assert st["l2:claude:haiku:extract-1"] == "dead" and st["l2:openrouter:openai/gpt-6.1-sol:extract-1"] == "active"
+    assert st["l2:claude:haiku:extract-2"] == "dead" and st["l2:openrouter:openai/gpt-6.1-sol:extract-2"] == "active"
 
 
 def test_extract_run_event_fields(ent):

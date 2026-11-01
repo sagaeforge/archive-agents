@@ -30,8 +30,9 @@ def enqueue_new(limit: int = BATCH) -> dict:
     """새 snapshot.text의 문단 중 아직 추출하지 않은 것을 큐에 넣는다. 도메인은 소스 목록의 첫 값이다."""
     after = int(state.get(CURSOR, 0) or 0)
     ver = f"{settings.get('prompt_version')}|{settings.get('extract_schema')}"
-    if state.get("extract:enq:ver") not in (None, ver):
-        after = 0                       # 프롬프트나 스키마 판본이 바뀌면 큐 소속이 달라진다: 처음부터 다시 훑는다
+    prev = state.get("extract:enq:ver")
+    if prev not in (None, ver) and not cache.is_carried(str(prev)):
+        after = 0                       # 프롬프트나 스키마 판본이 바뀌면 큐 소속이 달라진다: 처음부터 다시 훑는다. done_carry의 옛 판본은 소속이 그대로다
     led = ledger.open_ledger()
     try:
         evs = ledger.iter_events(led, after, limit)
