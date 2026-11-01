@@ -55,7 +55,7 @@ export function floorRect(s: Snapshot): Rect {
 export function stateSuffix(n: Entity, stale: boolean): string {
   if (n.gone) return ' · 사라짐';
   const st = n.state === 'creating' || n.state === 'starting' || n.state === 'error' || n.state === 'stopped' || n.state === 'stopping' || n.state === 'migrating' ? ` · ${STATE_LABEL[n.state]}` : '';
-  return st + (stale ? ' · 낡음' : '');
+  return st + (stale ? ' · 낡음' : '') + (n.warnings?.length ? ' · 어긋남' : '');
 }
 
 export function buildScene(s: Snapshot, o: SceneOpts): Scene {
@@ -92,8 +92,9 @@ export function buildScene(s: Snapshot, o: SceneOpts): Scene {
     grow(top); if (o.mode === 'iso') { grow(left); grow(right); }
     const dash = n.basis === 'derived' || hollow;
     const selected = o.sel === n.id;
-    const stroke = selected ? '#0b3fbf' : hollow ? '#7c8798' : n.basis === 'derived' ? shade(base, 0.7) : 'rgba(255,255,255,.55)';
-    const sw = selected ? 2.4 : dash ? 1.2 : 0.6;
+    const warned = !!n.warnings?.length;
+    const stroke = selected ? '#0b3fbf' : warned ? '#d9483b' : hollow ? '#7c8798' : n.basis === 'derived' ? shade(base, 0.7) : 'rgba(255,255,255,.55)';
+    const sw = selected ? 2.4 : warned ? 2 : dash ? 1.2 : 0.6;
     const faces: Face[] = [];
     const mk = (face: Face['face'], p: Pt[], color: string, opacity?: number): Face => ({ face, pts: pts(p), fill: color, stroke, sw, dash, ...(opacity != null ? { fillOpacity: opacity } : {}) });
     if (hollow) {
@@ -115,8 +116,8 @@ export function buildScene(s: Snapshot, o: SceneOpts): Scene {
     const label = STATE_LABEL[n.state];
     prims.push({
       t: 'obj', id: n.id, kind: n.kind, basis: n.basis, state: n.state, opacity: (st ? 0.5 : 1) * dim, faces, selected,
-      title: `${n.title}${label ? ` · ${label}` : ''}${st ? ' · 낡음' : ''} · ${BASIS_LABEL[n.basis]}`,
-      aria: `${n.title}, ${label || '상태 없음'}${st ? ', 낡음' : ''}, 근거 ${BASIS_LABEL[n.basis]}`,
+      title: `${n.title}${label ? ` · ${label}` : ''}${st ? ' · 낡음' : ''}${warned ? ' · 어긋남' : ''} · ${BASIS_LABEL[n.basis]}`,
+      aria: `${n.title}, ${label || '상태 없음'}${st ? ', 낡음' : ''}${warned ? `, 어긋남 ${n.warnings!.join(', ')}` : ''}, 근거 ${BASIS_LABEL[n.basis]}`,
       ...(n.parent ? { parent: n.parent } : {}),
     });
     topOf.set(n.id, top);

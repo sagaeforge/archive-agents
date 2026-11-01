@@ -7,7 +7,7 @@ import { z } from 'zod';
 export const DEFAULT_TOWER_URL = 'http://127.0.0.1:4800/mcp';
 export const DEFAULT_PORT = 4815;
 
-export type Paths = { tokenFile: string; reliefJson: string; stateDir: string };
+export type Paths = { tokenFile: string; reliefJson: string; edgeJson: string; stateDir: string };
 
 /** Same lookup as tower's config.ts: TOWER_CONFIG names tower.json, and the token sits next to it. */
 export function resolvePaths(env: NodeJS.ProcessEnv = process.env): Paths {
@@ -16,6 +16,7 @@ export function resolvePaths(env: NodeJS.ProcessEnv = process.env): Paths {
   return {
     tokenFile: join(dirname(towerJson), 'token'),
     reliefJson: join(env.RELIEF_CONFIG ?? join(configHome, 'relief'), 'relief.json'),
+    edgeJson: join(env.RELIEF_CONFIG ?? join(configHome, 'relief'), 'edge.json'),
     stateDir: env.RELIEF_STATE ?? join(env.XDG_STATE_HOME ?? join(homedir(), '.local/state'), 'relief'),
   };
 }
@@ -40,15 +41,28 @@ export function loopbackUrl(raw: string): URL {
   return u;
 }
 
-const ReliefJson = z.strictObject({ towerUrl: z.string().optional() });
+/** HTTPS only, so nothing on the way can answer for the service. Plain http stays on loopback, where the tests' mock lives. */
+export function publicIpUrl(raw: string): string {
+  let u: URL;
+  try { u = new URL(raw); } catch { throw new Error('publicIpUrl is not a URL'); }
+  const local = LOOPBACK.has(u.hostname);
+  if (u.protocol !== 'https:' && !(u.protocol === 'http:' && local)) throw new Error('publicIpUrl must be https');
+  if (u.username || u.password) throw new Error('publicIpUrl must carry no credentials');
+  return u.href;
+}
+
+const ReliefJson = z.strictObject({ towerUrl: z.string().optional(), publicIpUrl: z.unknown().optional() });
 
 /** relief.json is optional. A bad file is an error to report, never a reason not to start. */
-export function loadConfig(p: Paths): { towerUrl: string; error?: string } {
+export function loadConfig(p: Paths): { towerUrl: string; publicIpUrl?: string; publicIpError?: string; error?: string } {
   let raw: string;
   try { raw = readFileSync(p.reliefJson, 'utf8'); } catch { return { towerUrl: DEFAULT_TOWER_URL }; }
   try {
     const cfg = ReliefJson.parse(JSON.parse(raw));
-    return { towerUrl: loopbackUrl(cfg.towerUrl ?? DEFAULT_TOWER_URL).href };
+    const towerUrl = loopbackUrl(cfg.towerUrl ?? DEFAULT_TOWER_URL).href;
+    if (cfg.publicIpUrl === undefined) return { towerUrl };
+    // Its own verdict: this field reaches one optional source, and must not stop the reads that have nothing to do with it.
+    try { if (typeof cfg.publicIpUrl !== 'string') throw new Error('not text'); return { towerUrl, publicIpUrl: publicIpUrl(cfg.publicIpUrl) }; } catch { return { towerUrl, publicIpError: 'publicIpUrl 설정 오류' }; }
   } catch (e) {
     return { towerUrl: DEFAULT_TOWER_URL, error: e instanceof z.ZodError ? 'relief.json has an unknown or malformed field' : String((e as Error).message).slice(0, 200) };
   }

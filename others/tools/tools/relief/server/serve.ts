@@ -2,6 +2,7 @@
 import { serve as listen } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
+import { networkInterfaces } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { createApi } from './app.ts';
 import { createReader } from './collect/mcp.ts';
@@ -11,6 +12,9 @@ import { Live, type LiveOptions } from './live.ts';
 
 const DIST = fileURLToPath(new URL('../dist', import.meta.url));
 
+/** This machine's own addresses: how the workstation gets an observed one (design 7.1). */
+const localIps = () => Object.values(networkInterfaces()).flat().flatMap((i) => (i && i.family === 'IPv4' && !i.internal ? [i.address] : []));
+
 export type ServeOptions = { port?: number; dist?: string; env?: NodeJS.ProcessEnv; period?: LiveOptions['period'] };
 
 export async function startLive(o: ServeOptions = {}) {
@@ -18,7 +22,7 @@ export async function startLive(o: ServeOptions = {}) {
   const paths = resolvePaths(env);
   const cfg = loadConfig(paths);
   const reader = createReader({ url: cfg.towerUrl, token: () => readToken(paths.tokenFile) });
-  const live = new Live({ reader, stateDir: paths.stateDir, period: o.period, fault: cfg.error });
+  const live = new Live({ reader, stateDir: paths.stateDir, period: o.period, fault: cfg.error, edgePath: paths.edgeJson, wanUrl: cfg.publicIpUrl, wanFault: cfg.publicIpError, localIps });
   await live.start();
   const app = new Hono();
   app.use('*', async (c, next) => { await next(); c.header('Content-Security-Policy', APP_CSP); c.header('X-Content-Type-Options', 'nosniff'); });

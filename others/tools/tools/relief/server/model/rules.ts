@@ -3,7 +3,7 @@ import type { Snapshot } from './fact.ts';
 
 export type Wire = { node: string; iface: string; cidr: string | null; gateway: string | null };
 
-const v4 = (a: string): number | null => {
+export const v4 = (a: string): number | null => {
   const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(a);
   if (!m) return null;
   const p = m.slice(1).map(Number);
@@ -19,6 +19,9 @@ export function networkOf(cidr: string): string | null {
   const size = 2 ** (32 - bits);
   return `${dotted(Math.floor(n / size) * size)}/${bits}`;
 }
+
+/** `from` and `to` inclusive. Anything that is no IPv4 address is outside. */
+export const inRange = (a: string, from: string, to: string) => { const n = v4(a); const lo = v4(from); const hi = v4(to); return n !== null && lo !== null && hi !== null && n >= lo && n <= hi; };
 
 export const inNetwork = (addr: string, net: string): boolean => { const a = v4(addr); return a !== null && networkOf(`${addr}/${net.split('/')[1]}`) === net; };
 
@@ -40,6 +43,8 @@ export function sameDefaultGateway(wires: Wire[]): Map<string, Wire[]> {
 const BACKING: [RegExp, string][] = [
   [/^pve:/, 'pve'],
   [/^edge\.json/, 'edge'],
+  [/^wan-ip:/, 'wan-ip'],
+  [/^rule:(a-record|address-plan|nat-layers)$/, 'edge'],
   [/^docker:/, 'docker'],
 ];
 
@@ -55,6 +60,8 @@ export function checkNoFake(s: Snapshot): string[] {
       if (hit) {
         const st = state.get(hit[1]);
         if (st !== 'ok' && st !== 'failing') bad.push(`${n.id}.${k}: source ${hit[1]} is ${st ?? 'absent'}`);
+      } else if (f.source.startsWith('local:')) {
+        // This machine's own interfaces: no source to configure.
       } else if (f.source.startsWith('rule:')) {
         // A derived entity needs the observations the rule reads. Today both rules read nodes.
         if (!s.nodes.some((m) => m.kind === 'node' && m.basis === 'observed')) bad.push(`${n.id}.${k}: rule without input`);
@@ -66,6 +73,7 @@ export function checkNoFake(s: Snapshot): string[] {
   // A source with status none cannot have entities of its layer.
   if (state.get('docker') !== 'ok' && s.nodes.some((n) => n.kind === 'container')) bad.push('container without docker source');
   if (state.get('pve') === 'none' && s.nodes.some((n) => ['node', 'vm', 'lxc', 'bridge', 'storage'].includes(n.kind))) bad.push('pve entity without pve source');
-  if (state.get('edge') !== 'ok' && s.nodes.some((n) => n.basis === 'declared')) bad.push('declared entity without edge source');
+  // Failing keeps the last good file on the map; only `none` has nothing to stand on.
+  if ((state.get('edge') ?? 'none') === 'none' && s.nodes.some((n) => n.basis === 'declared')) bad.push('declared entity without edge source');
   return bad;
 }

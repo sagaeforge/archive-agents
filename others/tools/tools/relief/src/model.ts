@@ -9,12 +9,16 @@ export const KIND_LABEL: Record<Kind, string> = {
 export const FACT_LABEL: Record<string, string> = {
   state: '상태', address: '주소', cidr: '대역', cpu: 'CPU', mem: '메모리', disk: '디스크', nic: 'NIC', ip: 'IP 주소', os: 'OS', docker: 'Docker',
   fw: '방화벽 규칙', tags: '태그', vlan: 'VLAN', image: '이미지', isp: '통신사', protocol: '프로토콜',
-  dns: 'DNS', method: '주소 방식', gateway: '게이트웨이', network: '네트워크', ipDropped: '버린 주소', task: '진행 중 태스크', cores: '코어', ostype: 'OS 종류',
+  dns: 'DNS', method: '주소 방식', gateway: '게이트웨이', network: '네트워크', publicIp: '공인 IP', record: 'A 레코드 값', aRecord: 'A 레코드 비교', path: '경로', natLayers: 'NAT 겹', natCheck: 'NAT 검사', lease: '본 주소', plan: '주소 계획', bmc: 'BMC',
+  portForwards: '포트 포워드', forwardsOff: '꺼진 포워드', forwardsLost: '대상 미확인 포워드', lanCidr: 'LAN 대역', dhcpRange: 'DHCP 범위', addressPlan: '주소 계획표', declaredAddress: '선언 주소',
+  unmatchedHosts: '관측과 안 맞는 호스트', vendor: '제조사', model: '모델', firmware: '펌웨어', mode: '모드', provider: '등록 기관', presence: '접속', devices: '기기', bands: '대역폭', ddns: 'DDNS', interface: '인터페이스',
+  link: '연결', ipDropped: '버린 주소', task: '진행 중 태스크', cores: '코어', ostype: 'OS 종류',
 };
 /** The smallest step that fills a blank (design 9.4). Keyed by fact name; an unknown name gets no suggestion. */
 export const HOLE_ACTION: Record<string, string> = {
   ip: 'VM 안에 qemu-guest-agent를 설치한다', os: 'VM 안에 qemu-guest-agent를 설치한다',
-  docker: 'Docker 호스트를 지정하고 출처를 연결한다', state: '출처를 연결하거나 edge.json에 선언한다',
+  docker: 'Docker 호스트를 지정하고 출처를 연결한다', publicIp: 'relief.json에 publicIpUrl을 정한다', aRecord: '공인 IP 출처와 A 레코드 값을 채운다',
+  record: 'edge.json에 A 레코드 값을 적는다', natLayers: 'edge.json에 natLayers를 적는다', portForwards: 'edge.json에 portForwards를 적는다', bmc: 'edge.json에 bmc를 적는다', state: '출처를 연결하거나 edge.json에 선언한다',
 };
 
 export function factText(key: string, f: Fact<unknown>): string {
@@ -61,7 +65,13 @@ export function tierCards(s: Snapshot, nowMs: number): TierCard[] {
   const staleNodes = s.nodes.filter((e) => e.kind === 'node' && stale.has(e.id)).length;
   const gw = n('gateway');
   const declared = s.nodes.filter((e) => e.basis === 'declared').length;
-  const outside = [edge?.state === 'ok' ? `선언 ${declared}` : srcText(edge, '', nowMs), gw ? `GW ${gw} 추정` : ''].filter(Boolean).join(' · ');
+  const warned = s.nodes.filter((e) => e.warnings?.length).length;
+  const wan = src('wan-ip');
+  const outside = [
+    edge?.state === 'ok' ? `선언 ${declared}` : srcText(edge, '', nowMs), edge?.state === 'failing' && declared ? `마지막 선언 ${declared}` : '',
+    gw ? `GW ${gw}${s.nodes.some((e) => e.kind === 'gateway' && e.basis === 'derived') ? ' 추정' : ''}` : '',
+    wan ? `공인 IP ${srcText(wan, '관측', nowMs)}` : '', warned ? `어긋남 ${warned}` : '',
+  ].filter(Boolean).join(' · ');
   const counted = Object.entries(pve?.counts ?? {}).map(([k, v]) => ` · ${k} ${v}`).join('');
   const nodes = pve?.state === 'ok' ? `${n('node')} 관측${staleNodes ? ` · 낡음 ${staleNodes}` : ''}${n('node') ? ` · 브리지 ${n('bridge')} · 저장소 ${n('storage')}` : ''}${counted}` : srcText(pve, '', nowMs);
   const guests = pve?.state === 'ok' ? (n('vm') + n('lxc') === 0 ? `QEMU ${n('vm')} · LXC ${n('lxc')} · 0개 관측` : `QEMU ${n('vm')} · LXC ${n('lxc')}`) : srcText(pve, '', nowMs);

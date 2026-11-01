@@ -1,6 +1,7 @@
 // `relief status` and `relief check` (design 11). Output names templates, never a real name or address, and never the token.
 import { existsSync } from 'node:fs';
 import { PATHS, TOOLS, type Target } from './collect/allowlist.ts';
+import { readEdge } from './collect/edge.ts';
 import { createReader, ReadError } from './collect/mcp.ts';
 import { DEFAULT_PORT, loadConfig, readToken, resolvePaths } from './config.ts';
 import type { LiveStatus } from './live.ts';
@@ -76,7 +77,12 @@ export async function check(o: CliOptions & { live?: boolean } = {}): Promise<nu
   if (cfg.error) code = 1;
   const token = () => readToken(paths.tokenFile);
   print(`tower token: ${token() ? 'readable' : 'missing'}`);
-  print('edge.json: not read before Phase 3');
+  // The verdict and the place of a fault, never a value out of the file.
+  const edge = readEdge(paths.edgeJson);
+  print(`edge.json: ${edge.kind === 'none' ? 'none' : edge.kind === 'ok' ? 'ok' : edge.why}`);
+  if (edge.kind === 'bad') code = 1;
+  print(`publicIpUrl: ${cfg.publicIpError ?? (cfg.publicIpUrl ? 'set' : 'none, wan-ip off')}`);
+  if (cfg.publicIpError) code = 1;
   if (!o.live || cfg.error) return code; // A file that failed its check names no tower to trust, so the token goes nowhere.
   if (!token()) return 1;
 

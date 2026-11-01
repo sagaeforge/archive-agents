@@ -2,6 +2,7 @@
 import type { Bridge, GuestConfig, Resource, StatusRow, Task } from '../collect/pve.ts';
 import { validId, validNode } from '../collect/allowlist.ts';
 import type { Basis, Entity, Fact, Relation, State } from './fact.ts';
+import { overlayEdge, type External } from './edgemap.ts';
 import { clean, guestText, parseIps, type AgentIps } from './guest.ts';
 import { inNetwork, sameDefaultGateway, sameSubnet, type Wire } from './rules.ts';
 
@@ -84,14 +85,22 @@ const tagsOf = (s: string | undefined) => (s ? s.split(/[;, ]+/).filter(Boolean)
 
 const nicText = (n: GuestConfig['nics'][number]) => `${n.key} → ${n.bridge ? clean(n.bridge, 32) : '브리지 없음'}, ${n.tag === null ? 'VLAN 없음' : `VLAN ${n.tag}`}`;
 
-export function normalize(raw: Raw, nowMs: number): { nodes: Entity[]; edges: Relation[] } {
+const NO_EXTERNAL: External = { edge: null, wan: null, wanOff: true, localIps: [] };
+
+export function normalize(raw: Raw, nowMs: number, ext: External = NO_EXTERNAL): { nodes: Entity[]; edges: Relation[] } {
+  const out = fromPve(raw, nowMs);
+  overlayEdge(out, ext, nowMs);
+  return out;
+}
+
+function fromPve(raw: Raw, nowMs: number): { nodes: Entity[]; edges: Relation[] } {
   const nodes: Entity[] = [];
   const edges: Relation[] = [];
   const seen = new Set<string>();
   const ent = (e: Entity) => { if (!seen.has(e.id)) { seen.add(e.id); nodes.push(e); } };
   const rel = (id: string, source: string, target: string, kind: Relation['kind'], basis: Basis, facts: Relation['facts'] = {}) => { if (seen.has(source) && seen.has(target)) edges.push({ id, source, target, kind, basis, facts }); };
 
-  // Edge declarations are Phase 3: until then the WAN is a blank box, whatever Proxmox says.
+  // The blank box. `overlayEdge` replaces it when the edge file names lines.
   ent({ id: 'decl:wan:none', kind: 'wan', title: 'WAN 미확인', basis: 'unknown', state: 'unknown', facts: { state: unk('edge.json', 'WAN을 읽을 출처가 없다') } });
 
   const f = raw.fast;

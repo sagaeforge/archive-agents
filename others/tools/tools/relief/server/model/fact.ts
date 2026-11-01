@@ -32,6 +32,8 @@ export type Entity = {
   facts: Record<string, Fact<unknown>>;
   /** Read as absent by a healthy source: kept one cycle as an outline, then removed (design 4). */
   gone?: boolean;
+  /** Drift between two values (design 7.1). A warning on the object: its source stays `ok`. */
+  warnings?: string[];
 };
 
 export type Relation = {

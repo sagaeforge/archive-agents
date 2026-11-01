@@ -43,6 +43,7 @@ function ObjectPanel({ snap, nowMs, e }: { snap: Snapshot; nowMs: number; e: Ent
       <h3>{e.title}</h3>
       <p className="sub">{KIND_LABEL[e.kind]}{parent ? ` · ${parent.title}` : ''} · 존재 근거 {BASIS_LABEL[e.basis]}</p>
       {stale ? <p className="warn">낡음 · 값이 마지막으로 읽힌 뒤 오래됐다{st ? ` (마지막 표시 ${st})` : ''}</p> : null}
+      {e.warnings?.length ? <p className="warn" data-testid="warnings">어긋남 · {e.warnings.join(', ')}</p> : null}
       {Object.entries(e.facts).map(([k, f]) => (
         <div className="row" key={k} data-fact={k} data-basis={f.basis}>
           <div className="k">{FACT_LABEL[k] ?? k}</div>

@@ -2,16 +2,20 @@
 import { appendFileSync, chmodSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { runLoop, type Loop, type ReadAdapter } from './collect/adapter.ts';
+import { readEdge, type EdgeFile, type EdgeRead } from './collect/edge.ts';
 import type { Reader } from './collect/mcp.ts';
 import { isSource, readFast, readGuest, readMetrics, readSlow, validId, validNode, whyOf, type FastRead, type GuestRead, type GuestRef, type MetricValues, type SlowRead, type Tried } from './collect/pve.ts';
+import { readPublicIp } from './collect/wanip.ts';
 import { layoutSnapshot } from './layout/elk.ts';
 import { diff, hashesOf, isEmpty, type Hashes, type StateMap } from './model/diff.ts';
 import type { Entity, Relation, Snapshot, SourceStatus } from './model/fact.ts';
+import type { WanRead } from './model/edgemap.ts';
 import { activeTask, emptyRaw, guestKey, isGuest, normalize, type Part, type Raw } from './model/normalize.ts';
 
 // activeS + the browser's 5 s must stay inside the 10 s budget of design 13.
-export const PERIOD = { fastS: 15, activeS: 4, idleS: 60, largeS: 30, slowS: 300, guestS: 600, guestFailS: 1800, guestTickS: 20, metricsS: 15, viewerGoneS: 120, overlayGoneS: 30, minTtlS: 45 };
+export const PERIOD = { fastS: 15, activeS: 4, idleS: 60, largeS: 30, slowS: 300, guestS: 600, guestFailS: 1800, guestTickS: 20, metricsS: 15, viewerGoneS: 120, overlayGoneS: 30, minTtlS: 45, edgeS: 10, wanS: 600 };
 export const CHANGES_MAX = 5000;
+const WAITING = '첫 수집 대기';
 const GUEST_CONCURRENCY = 2;
 const LARGE_GUESTS = 200;
 
@@ -19,13 +23,20 @@ export type LiveOptions = {
   reader: Reader; stateDir: string; period?: Partial<typeof PERIOD>;
   /** A configuration fault found before the first read. Shown on the source, and nothing is read. */
   fault?: string | undefined;
+  /** Absent: the source is `none`, and nothing is read. */
+  edgePath?: string | undefined;
+  /** Absent: `wan-ip` is off and relief makes no outside call at all. There is no default. */
+  wanUrl?: string | undefined;
+  /** A `publicIpUrl` that failed its check. It fails this one source and nothing else. */
+  wanFault?: string | undefined;
+  localIps?: () => string[];
   now?: () => number;
 };
 
 export type Served = { snapshot: Snapshot; etag: string };
 export type LiveStatus = { seq: number; sources: SourceStatus[]; calls: Reader['record']; lastRead: string | null };
 
-type Persisted = { schema: 1; seq: number; raw: Raw; slots: Record<string, number>; nextSlot: number };
+type Persisted = { schema: 1; seq: number; raw: Raw; slots: Record<string, number>; nextSlot: number; wan?: WanRead | null };
 
 export class Live {
   private o: LiveOptions;
@@ -42,7 +53,7 @@ export class Live {
   private states: StateMap = {};
   private layout: Pick<Snapshot, 'layout' | 'routes'> = { layout: {}, routes: {} };
   private topology = '';
-  private source: SourceStatus = { id: 'pve', state: 'failing', count: null, at: null, why: '첫 수집 대기' };
+  private source: SourceStatus = { id: 'pve', state: 'failing', count: null, at: null, why: WAITING };
   private served: Snapshot | null = null;
   private metrics: { at: string | null; values: MetricValues } = { at: null, values: {} };
   private loops: Loop[] = [];
@@ -50,6 +61,8 @@ export class Live {
   private guestLoop: Loop | null = null;
   private slowLoop: Loop | null = null;
   private baseline = true;
+  private restored = false;
+  private prepared = false;
   private lastViewer = -Infinity;
   private lastOverlay = -Infinity;
   private guestDue = new Map<string, number>();
@@ -59,9 +72,15 @@ export class Live {
   private changeLines = 0;
   private commits: Promise<void> = Promise.resolve();
   private storeFault = false;
+  private edge: { file: EdgeFile | null; body: string; status: SourceStatus } = { file: null, body: '', status: { id: 'edge', state: 'none', count: null, at: null, why: '출처 없음' } };
+  private wan: { read: WanRead | null; status: SourceStatus } = { read: null, status: { id: 'wan-ip', state: 'none', count: null, at: null, why: '출처 없음' } };
+  private wanWasFresh = false;
+  private lastBody = '';
 
   constructor(o: LiveOptions) {
     this.o = o; this.p = { ...PERIOD, ...o.period }; this.now = o.now ?? Date.now;
+    if (o.wanFault) this.wan.status = { id: 'wan-ip', state: 'failing', count: null, at: null, why: o.wanFault };
+    else if (o.wanUrl) this.wan.status = { id: 'wan-ip', state: 'failing', count: null, at: null, why: WAITING };
     this.write(() => {});
     try { this.changeLines = readFileSync(this.file('changes.jsonl'), 'utf8').split('\n').length - 1; } catch { /* no history yet */ }
     this.restore();
@@ -77,6 +96,9 @@ export class Live {
       if (s.schema !== 1) return;
       this.seq = s.seq; this.raw = s.raw; this.slots = s.slots; this.nextSlot = s.nextSlot;
       this.source.at = s.raw.fast?.at ?? null;
+      this.restored = true;
+      // The last public address comes back with its old time, or every restart would "change" what it compares.
+      if (this.o.wanUrl && s.wan) { this.wan.read = s.wan; this.wan.status = { ...this.wan.status, at: s.wan.at }; this.wanWasFresh = this.wanFresh(); }
     } catch { /* no snapshot: a first start */ }
   }
 
@@ -94,7 +116,7 @@ export class Live {
     if (!force && this.now() - this.savedAt < 60_000) return;
     this.write(() => {
       const tmp = this.file(`state.json.${process.pid}`);
-      const body: Persisted = { schema: 1, seq: this.seq, raw: this.raw, slots: this.slots, nextSlot: this.nextSlot };
+      const body: Persisted = { schema: 1, seq: this.seq, raw: this.raw, slots: this.slots, nextSlot: this.nextSlot, wan: this.wan.read };
       writeFileSync(tmp, JSON.stringify(body), { mode: 0o600 });
       renameSync(tmp, this.file('state.json'));
       this.savedAt = this.now(); this.dirty = false;
@@ -131,10 +153,11 @@ export class Live {
 
   /** @param inventory this commit follows a good inventory read: the only thing that ends a gone object's cycle. */
   private async build(inventory: boolean) {
-    const next = normalize(this.raw, this.now());
+    const next = normalize(this.raw, this.now(), { edge: this.edge.file, wan: this.wan.read, wanOff: !this.o.wanUrl, localIps: this.o.localIps?.() ?? [] });
     const nextIds = new Set(next.nodes.map((n) => n.id));
     // Gone: last time here, this time absent from a good read. One cycle as an outline, then out. A failed read cannot get here with a shorter list.
-    const gone = this.nodes.filter((n) => !n.gone && !nextIds.has(n.id)).map((n) => ({ ...n, gone: true }));
+    // Observed objects only: taking a declaration out of the file is the person's own act, and it reverts at once, tower or no tower.
+    const gone = this.nodes.filter((n) => !n.gone && n.basis === 'observed' && !nextIds.has(n.id)).map((n) => ({ ...n, gone: true }));
     const carried = inventory ? [] : this.nodes.filter((n) => n.gone && !nextIds.has(n.id));
     const kept = [...next.nodes, ...gone, ...carried];
     const ids = new Set(kept.map((n) => n.id));
@@ -142,7 +165,7 @@ export class Live {
     const nextHashes = hashesOf(next.nodes, next.edges);
     const nextStates = Object.fromEntries(next.nodes.map((n) => [n.id, n.state]));
     // What a restart brings back is the old state, not a change.
-    const restored = this.baseline && !!this.raw.fast;
+    const restored = this.baseline && this.restored;
     this.baseline = false;
     const change = diff(restored ? nextHashes : this.hashes, nextHashes, restored ? nextStates : this.states, nextStates);
     const empty = isEmpty(change);
@@ -172,8 +195,9 @@ export class Live {
       nodes: this.nodes, edges: this.edges,
       sources: [
         { ...this.source, count: this.raw.fast ? count : null, ...(Object.keys(counts).length ? { counts } : {}) },
-        { id: 'edge', state: 'none', count: null, at: null, why: '출처 없음' },
+        { ...this.edge.status, count: this.edge.status.state === 'none' ? null : this.nodes.filter((n) => n.basis === 'declared' && !n.gone).length },
         { id: 'docker', state: 'none', count: null, at: null, why: '출처 없음' },
+        this.wan.status,
         ...(this.storeFault ? [{ id: 'store', state: 'failing' as const, count: null, at: null, why: '상태 저장 실패' }] : []),
       ],
       ...this.layout,
@@ -189,7 +213,7 @@ export class Live {
   private recovered(at: string) {
     const was = this.source;
     this.source = { id: 'pve', state: 'ok', count: was.count, at };
-    if (was.state === 'failing') this.log({ at, seq: this.seq, source: 'pve', state: 'ok' });
+    if (was.state === 'failing' && was.why !== WAITING) this.log({ at, seq: this.seq, source: 'pve', state: 'ok' }); // Starting up is no recovery.
   }
 
   // --- applying reads
@@ -296,6 +320,38 @@ export class Live {
     return (this.raw.fast?.resources ?? []).filter((r) => r.type === 'node' && r.node && !offline.has(r.node) && r.status === 'online').map((r) => r.node!);
   }
 
+  /** A bad file keeps the last good one on the map, and says so. Deleting the file is not a failure: the blanks come back. */
+  private setEdge(r: EdgeRead) {
+    const declaredAt = this.edge.file?.declaredAt ?? null;
+    if (r.kind === 'none') this.edge = { file: null, body: '', status: { id: 'edge', state: 'none', count: null, at: null, why: '출처 없음' } };
+    else if (r.kind === 'bad') this.edge = { ...this.edge, status: { id: 'edge', state: 'failing', count: null, at: declaredAt, why: `edge.json 오류 · ${r.why}` } };
+    else this.edge = { file: r.file, body: JSON.stringify(r.file), status: { id: 'edge', state: 'ok', count: null, at: r.file.declaredAt } };
+  }
+
+  private async applyEdge(r: EdgeRead) {
+    const before = JSON.stringify(this.edge.status);
+    this.setEdge(r);
+    const fresh = this.wanFresh();
+    const changed = r.kind === 'ok' ? this.lastBody !== this.edge.body : r.kind === 'none' && this.lastBody !== '';
+    this.lastBody = this.edge.body;
+    if (changed || fresh !== this.wanWasFresh) { this.wanWasFresh = fresh; await this.commit(); } else if (JSON.stringify(this.edge.status) !== before) this.publish();
+  }
+
+  private wanFresh() { const w = this.wan.read; return !!w && (this.now() - Date.parse(w.at)) / 1000 <= w.ttlS; }
+
+  private async applyWan(r: Tried<string>) {
+    const at = this.iso();
+    if (r.ok) {
+      const address = r.value;
+      this.wan = { read: { address, at, ttlS: this.ttlS(this.p.wanS) }, status: { id: 'wan-ip', state: 'ok', count: 1, at } };
+      this.wanWasFresh = true;
+      await this.commit();
+    } else {
+      this.wan = { read: this.wan.read, status: { id: 'wan-ip', state: 'failing', count: null, at: this.wan.status.at, why: whyOf(r.error) } };
+      this.publish();
+    }
+  }
+
   // --- adapters
 
   private fastAdapter(): ReadAdapter<FastRead> { return { id: 'pve-fast', periodS: () => this.fastPeriodS(), read: (s) => readFast(this.o.reader, s) }; }
@@ -313,6 +369,10 @@ export class Live {
       },
     };
   }
+  private edgeAdapter(path: string): ReadAdapter<EdgeRead> { return { id: 'edge', periodS: () => this.p.edgeS, read: async () => readEdge(path) }; }
+  private wanAdapter(url: string): ReadAdapter<Tried<string>> {
+    return { id: 'wan-ip', periodS: () => this.p.wanS, read: (s) => readPublicIp(url, s).then((value) => ({ ok: true as const, value }), (error: unknown) => ({ ok: false as const, error })) };
+  }
   private metricsAdapter(): ReadAdapter<MetricValues | null> {
     return {
       id: 'pve-metrics', periodS: () => this.p.metricsS,
@@ -322,14 +382,25 @@ export class Live {
 
   // --- life cycle
 
-  async start() {
+  /** The file goes in before the first build: a map drawn without it would "lose" every declared object at each restart. */
+  private async prepare() {
+    if (this.prepared) return;
+    this.prepared = true;
+    if (this.o.edgePath) { this.setEdge(readEdge(this.o.edgePath)); this.lastBody = this.edge.body; }
     await this.commit();
-    if (this.o.fault) { this.failing(this.o.fault); return; }
+  }
+
+  async start() {
+    await this.prepare();
     const after = <R>(f: (r: R) => Promise<void>) => (r: R) => void f(r).catch((e: unknown) => console.error(`relief: apply: ${String((e as Error).name)}`));
+    // Neither needs tower, so a Proxmox fault stops neither (design 1, criterion 5).
+    if (this.o.edgePath) this.loops.push(runLoop(this.edgeAdapter(this.o.edgePath), after((r) => this.applyEdge(r))));
+    if (this.o.wanUrl) this.loops.push(runLoop(this.wanAdapter(this.o.wanUrl), after((r) => this.applyWan(r))));
+    if (this.o.fault) { this.failing(this.o.fault); return; }
     this.fastLoop = runLoop(this.fastAdapter(), after((r) => this.applyFast(r)));
     this.guestLoop = runLoop(this.guestAdapter(), after((r) => this.applyGuest(r)));
     this.slowLoop = runLoop(this.slowAdapter(), after((r) => this.applySlow(r)));
-    this.loops = [this.fastLoop, this.guestLoop, this.slowLoop, runLoop(this.metricsAdapter(), (m) => { if (m) this.metrics = { at: this.iso(), values: m }; })];
+    this.loops.push(this.fastLoop, this.guestLoop, this.slowLoop, runLoop(this.metricsAdapter(), (m) => { if (m) this.metrics = { at: this.iso(), values: m }; }));
   }
 
   async stop() {
@@ -341,7 +412,9 @@ export class Live {
 
   /** One full collection without timers: fast, slow, guests. */
   async collectOnce(signal = new AbortController().signal) {
-    await this.commit();
+    await this.prepare();
+    if (this.o.edgePath) await this.applyEdge(await this.edgeAdapter(this.o.edgePath).read(signal));
+    if (this.o.wanUrl) await this.applyWan(await this.wanAdapter(this.o.wanUrl).read(signal));
     await this.applyFast(await this.fastAdapter().read(signal));
     await this.applySlow(await this.slowAdapter().read(signal));
     await this.applyGuest(await this.guestAdapter().read(signal));

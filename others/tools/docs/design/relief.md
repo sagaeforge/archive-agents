@@ -142,7 +142,7 @@ type Relation = { id: string; source: string; target: string; kind: RelKind; bas
 | `dns` | domain → gateway | A 레코드 | 선언 |
 | `wireless` | wifi → clients | 무선 클라이언트 그룹 | 선언 |
 | `tunnel` | tunnel → gateway | VPN | 선언 |
-| `lan` | gateway → switch, gateway → wifi, switch → node/workstation | 내부 배선. 노드 이름이 관측과 맞을 때만 잇는다 | 선언 |
+| `lan` | gateway → switch, gateway → wifi, switch → node/workstation, gateway → workstation | 내부 배선. 노드 이름이 관측과 맞을 때만 잇는다. 어느 스위치에도 없는 작업 머신은 라우터에 바로 잇고 패널에 "유선 · 라우터"로 적는다 | 선언 |
 | `forward` | gateway → node/workstation | 포트 포워드. `host` 키로 잇는다. 대상이 없으면 게이트웨이 패널에 "대상 미확인"으로 남는다 | 선언 |
 | `mounts` | vm/lxc → storage | 디스크 위치. 기본은 숨기고 선택할 때 그린다 | 관측 |
 
@@ -201,8 +201,8 @@ type Fact<T> = {
 | 1 | proxmox MCP (tower `/mcp`) | 노드, 게스트, 브리지, 저장소, SDN, 방화벽, 태스크, 메트릭 | 기존 tower bearer를 읽는다(6.2절). 새 PVE 권한 없음 | 쓰는 경로의 응답을 확인했다 [측정] |
 | 1 | 추정 규칙 | 게이트웨이, 세그먼트 | 없음 | 가능 [측정: Q4] |
 | 2 | guest agent | 게스트 IP, OS | 없음. VM 안에 설치만(사용자 결정) | VM 100에서 500 [측정: Q2] |
-| 3 | `edge.json` | 회선, 모뎀, 라우터, DNS 레코드, 포트 포워드, 주소 임대와 계획, BMC 유무, VPN, Wi-Fi, 클라이언트, 스위치 | 없음. 파일 작성 | 로컬 파일 있음. 주소와 펌웨어는 비어 있다(R2) |
-| 3 | 공인 IP 관측 | A 레코드 비교 | 없음. 켜져 있다(D9) | URL은 구현 때 후보를 비교해 고른다(D9) |
+| 3 | `edge.json` | 회선, 모뎀, 라우터, DNS 레코드, 포트 포워드, 주소 임대와 계획, BMC 유무, VPN, Wi-Fi, 클라이언트, 스위치 | 없음. 파일 작성 | 구현됨. 로컬 파일 있음. 주소와 펌웨어는 비어 있다(R2) |
+| 3 | 공인 IP 관측 | A 레코드 비교 | 없음 | 구현됨. 이 머신에서 켜져 있다(D10) |
 | 보류 | Docker | 컨테이너 | 호스트별(7.2절) | Docker 호스트가 없다 [측정: Q3]. 호스트가 생길 때까지 시작하지 않는다 |
 
 라우터 자동 수집은 단계에 없다. ipTIME은 API로 읽지 못한다(사용자 확인). 뒤의 일은 19절이다.
@@ -242,7 +242,7 @@ type Fact<T> = {
 
 - 값은 로그, 스냅샷, `/api/*`, `relief status`, 오류 문구, 환경 변수, 명령줄, `relief.json` 어디에도 없다. 유닛에 `EnvironmentFile`을 쓰지 않는다. 브라우저는 tower에 닿지 않고 relief의 `/api/*`만 읽는다.
 - PVE 토큰은 relief가 보지도 읽지도 않는다. `~/.config/proxmox-mcp/token`은 proxmox 자식이 호출마다 읽는다 [출처: `plugins/proxmox/server/index.mjs:14`, `pve.mjs:235`]. 그 토큰을 회전해도 relief는 바뀌지 않는다.
-- `relief.json`은 없어도 된다. PVE 주소 목록은 플러그인에 있으므로 relief가 갖지 않는다.
+- `relief.json`은 없어도 된다. 칸은 `towerUrl`, `publicIpUrl` 둘이다. PVE 주소 목록은 플러그인에 있으므로 relief가 갖지 않는다.
 
 **클라이언트.** `@modelcontextprotocol/client` 2.4.0의 `Client`와 `StreamableHTTPClientTransport`를 쓴다. `versionNegotiation`은 `auto`, `undici` dispatcher의 `connect.timeout`은 1 s다. tower의 업스트림 연결과 같은 모양이고 [출처: `tools/tower/src/upstream.ts:14-16,53,61`] 코드는 import하지 않는다. 이 호스트에서 닫힌 loopback 포트는 refused가 아니라 hang이어서 connect 제한이 필요하다 [출처: `tower.md:353`]. capability는 선언하지 않고 `listChanged`도 쓰지 않는다. 폴링이 전부다.
 
@@ -455,7 +455,7 @@ type EdgeFile = {
 
 | 검사 | 비교 | 결과 |
 |---|---|---|
-| `a-record` | `dnsRecords[].value`(선언)와 관측 공인 IP | 같음: 표시 없음. 다름: 경고 "A 레코드 낡음 가능". 선언값이나 관측이 없거나 관측이 낡음: "비교 불가", 일치로 치지 않는다 |
+| `a-record` | `dnsRecords[].value`(선언)와 관측 공인 IP | 같음: 경고 없음, 패널에 "일치"와 두 값. 다름: 경고 "A 레코드 낡음 가능". 선언값이나 관측이 없거나 관측이 낡음: "비교 불가", 일치로 치지 않는다 |
 | `address-plan` | `plan`이 가리키는 범위와 현재 주소(관측 우선, 없으면 `lease`) | 범위 안: 표시 없음. 밖: 경고 "계획 밖 주소". `plan` 없음: 검사 안 함. 주소 없음: "비교 불가" |
 | `nat-layers` | `natLayers`와 모뎀 `mode`. `bridge`인데 2 이상이거나 `router`인데 1 이하 | 경고 "NAT 선언 모순" |
 
@@ -484,6 +484,18 @@ type EdgeFile = {
 - **모르는 값은 지어내지 않는다.** 그래서 라우터 주소, `lanCidr`, A 레코드 값, 클라이언트의 `via`는 선택이다. 칸을 비우면 미확인으로 그린다.
 - 이 작업 머신에 Tailscale, WireGuard, 프록시가 없다는 기록이 있다 [출처: `understand-ecosystem.md:11,92`]. 머신 하나의 기록이고 라우터는 덮지 않으므로 relief가 "없음"으로 옮기지 않는다. `vpn: []`은 사람이 적을 때만 생긴다.
 - 스키마 오류는 그 파일만 거절하고 직전 값을 유지한다. `relief check`가 저장 전에 검사한다. 파일은 10 s 간격으로 다시 본다. 파일이 없으면 출처는 `none`이고 WAN은 미확인이다.
+
+**구현 기록(Phase 3).**
+
+- `wan-ip`에는 코드 기본 URL이 없다. `relief.json`의 `publicIpUrl`이 없으면 상태는 `none`이고 머신 밖 호출이 0건이다. D10의 값을 이 머신의 `relief.json`에 넣어 켰다. URL은 https만 받고 http는 loopback(시험의 mock)만 받는다. 리다이렉트를 따르지 않고 본문은 64바이트까지만 읽으며 IPv4로 파싱되지 않으면 실패다. 주기는 10 min, `ttlS`는 30 min이다.
+- 응답은 공인 주소여야 한다. 사설, loopback, 링크 로컬, CGNAT, 멀티캐스트, RFC 5737 범위는 실패이고 이유를 출처 상태에 적는다. RFC 5737만 loopback URL(시험의 mock)에서 받는다. `publicIpUrl`이 잘못되면 `wan-ip`만 실패하고 Proxmox 읽기는 계속된다.
+- 마지막 공인 IP는 `state.json`에 시각과 함께 남는다. 재시작이 비교 결과를 바꾸지 않게 하려는 것이다. 파일에서 온 값이 아니라 관측값이다. 파일은 첫 빌드 전에 읽어 재시작이 변경으로 기록되지 않는다.
+- 프록시를 가리키는 A 레코드는 이 회선의 공인 IP와 비교할 수 없어 "비교 불가"다. 게이트웨이가 없으면 NAT 모순은 모뎀에 붙는다. 어긋남 검사의 주소는 관측을 쓰되 관측보다 새로운 `lease`가 있으면 `lease`를 쓴다. 작업 머신의 관측 주소는 `lanCidr` 안의 인터페이스만 쓴다.
+- 낡은 공인 IP는 일치로 치지 않는다. tower가 내려가 다른 커밋이 없어도 10 s 파일 틱이 낡음 전환을 잡아 "비교 불가"로 바꾼다.
+- 어긋남은 객체의 `warnings`와 추정 사실(`rule:a-record`, `rule:address-plan`, `rule:nat-layers`)로 남고 출처 상태는 `ok`다. 비교 불가는 값 없는 미확인 사실이라 구멍 목록에 오른다.
+- 값은 `edge.json`에서 온 사람의 글이어도 데이터다. 자유 문자열은 스키마에서 제어 문자와 서식 문자를 지우고 길이를 자른다. 파일은 일반 파일만 받고 256 KiB에서 읽기를 멈춘다. 심볼릭 링크는 거절한다. 이 설계에 링크가 필요한 경로가 없고, 링크는 읽는 대상을 다른 곳으로 돌릴 수 있기 때문이다. 오류 문구는 위치와 종류만 적고 값과 모르는 칸의 이름을 적지 않는다. 칸 이름은 잘못 붙여 넣은 비밀일 수 있어 개수만 적는다.
+- 파일 내용은 `state.json`과 `changes.jsonl`에 값으로 남지 않는다. 변경 기록에는 객체 ID만 남는다. ID는 주소 대신 `key`로 만든다. 그래서 선언한 라우터는 `decl:gateway:<key>`이고 3절 표의 `net:gw:<주소>`는 추정 게이트웨이에만 쓴다.
+- **구현 편차.** `lines: []`이면 미확인 WAN 상자를 뺀다. `hosts`의 `kind: "other"`와 관측되지 않은 노드는 그리지 않고 게이트웨이 패널에 적는다. 작업 머신의 BMC는 놓을 슬래브 자리가 없어 패널 사실로만 둔다. '사라짐' 윤곽은 관측 객체에만 쓴다. 선언을 지우면 tower가 없어도 바로 되돌아가야 하기 때문이다. 공인 IP 후보 비교는 저장소 밖에 있다(16절 D10).
 
 ### 7.2 Docker: 보류
 
@@ -685,7 +697,7 @@ tools/relief/
 | 서버 | hono 4.13.13, @hono/node-server 2.1.5, elkjs 0.12.0 | loupe 설치본과 같은 판 [측정: `tools/loupe/package.json`] |
 | MCP, 검증 | @modelcontextprotocol/client 2.4.0, undici 8.12.2, zod 4.6.7 | tower 설치본과 같은 판 [측정: `tools/tower/package.json:15-23`]. 프로토콜과 `edge.json` 검증을 직접 짜지 않는다 |
 | 화면 | Vite 8.3.5, React 19.3.1, 라우터 없음, 상태는 해시 | 저장소가 이미 아는 스택. 공유 패키지는 만들지 않는다 |
-| 구현 편차(Phase 2) | `server/`에 `config.ts`, `check.ts`, `live.ts`를 더했다. `live.ts`가 수집 루프의 결과를 스냅샷으로 만든다. 마지막 스냅샷은 파생값 대신 고른 필드의 원본 `state.json`으로 저장해 재시작 때 다시 정규화한다. `rrddata` 패널(선택 시 읽기)은 패널 UI가 없어 만들지 않았고 `relief check --live`만 읽는다. `Entity.gone`, `State`의 `creating`, `SourceStatus.counts`, `Snapshot.origin`, `store` 출처를 더했다. 시험의 그림은 `.cache/screenshots`에 쓰고 추적되는 `screenshots/`는 `npm run screenshots:refresh`로만 바꾼다 | 12절 시험 |
+| 구현 편차(Phase 2) | `server/`에 `config.ts`, `check.ts`, `live.ts`를 더했다. `live.ts`가 수집 루프의 결과를 스냅샷으로 만든다. 마지막 스냅샷은 파생값 대신 고른 필드의 원본 `state.json`으로 저장해 재시작 때 다시 정규화한다. `rrddata` 패널(선택 시 읽기)은 패널 UI가 없어 만들지 않았고 `relief check --live`만 읽는다. `Entity.gone`, `State`의 `creating`, `SourceStatus.counts`, `Snapshot.origin`, `store` 출처를 더했다. Phase 3은 `server/model/edgemap.ts`, `Entity.warnings`, `wan-ip` 출처를 더했다. 시험의 그림은 `.cache/screenshots`에 쓰고 추적되는 `screenshots/`는 `npm run screenshots:refresh`로만 바꾼다 | 12절 시험 |
 | 구현 편차(Phase 1) | `@modelcontextprotocol/client`, `undici`, `zod`, `dev/mcp-mock/`는 Phase 2로 미뤘다. Phase 1은 합성 fixture만 읽으므로 쓸 곳이 없다. 가짜 금지 시험은 mcp-mock 대신 생성기로 돌린다. fixture에 생성형 `scale`(547객체, 파일 없음)을 더했다 | 500객체 측정용 |
 | 쓰지 않음 | `@modelcontextprotocol/server`(시험용 mock 제외), Docker SDK, three.js, 상태 관리 라이브러리 | 필요가 없다 |
 | 포트 | 설치본 4815, dev 4816, mcp-mock 4817 | 4800, 4810~4813, 4836이 쓰이는 중이고 4815~4817은 문서와 설정에 없다 [측정: grep] |
@@ -758,7 +770,7 @@ fixture의 이름과 주소는 합성이고 주소는 RFC 5737 범위만 쓴다.
 | 1 정적 지도 | 워크스페이스, 스냅샷 타입, fixture, mcp-mock, 레이아웃, 3D/2D, 패널, 오버레이 넷, 키보드, 목록 | 12절 단위·화면·가짜 금지 통과. 전용 Chrome 창에서 500객체 팬 측정. 사용자가 모양을 수락 | 없음 |
 | 2 실제 PVE | MCP 클라이언트, 허용 목록, 수집 루프, 변경 판정, 기동 표시, 낡음 | 실제 VM을 시작해 20 s 안에 '기동 중'이 뜬다. 태스크 표를 실제 값으로 고친다. tower를 세우면 낡음으로 바뀌고 다시 켜면 회복한다. Q6 한도의 주인을 확인한다 | 없음. 기존 tower bearer를 읽는다 |
 | 2 남은 확인 | **대기.** 코드는 끝났고 두 항목은 mcp-mock으로만 증명했다. 실제 VM을 시작해 20 s 안에 '기동 중'이 뜨는지, 실제 tower를 세워 낡음으로 바뀌고 다시 켜면 회복하는지 | 사용자가 실제 시스템에서 확인한다 | 사용자 |
-| 3 외부 | `edge.json`, 공인 IP 관측, 어긋남 검사, 규칙, 근거 오버레이, 구멍 목록 | 사용자의 파일로 미확인 칸이 선언으로 바뀐다. 파일을 지우면 되돌아간다. A 레코드를 일부러 틀리게 적으면 경고가 뜬다. guest agent를 설치하면 VM 100의 IP가 관측이 된다 | 내용(R2), 공인 IP 출처(D9), 설치(D4) |
+| 3 외부 | `edge.json`, 공인 IP 관측, 어긋남 검사, 규칙, 근거 오버레이, 구멍 목록 | 사용자의 파일로 미확인 칸이 선언으로 바뀐다. 파일을 지우면 되돌아간다. A 레코드를 일부러 틀리게 적으면 경고가 뜬다. guest agent를 설치하면 VM 100의 IP가 관측이 된다(Phase 2에서 이미 관측). 앞의 셋은 임시 설정과 mock으로 증명했다. 실제 공인 IP와 사용자의 파일로 한 비교도 헤드리스 화면에서 확인했다(2026-11-01). 틀린 값의 경고는 mock으로만 봤다 | 내용(R2), 공인 IP 출처(D9), 설치(D4) |
 | 4 Docker | **보류.** 호스트 하나, 대응 선언, Docker 평면 | Docker 호스트가 생긴 뒤 정한다. 7.2절의 후보를 다시 본다 | 호스트(R5) |
 | 5 설치 | 유닛, CLI, Chrome 창, tower 마운트 확인 | 소켓 기동으로 지도가 열린다. tower를 세워도 프로세스와 지도가 남고 Proxmox는 낡음이다. Docker 없이 돈다 | 유닛 연결(R4) |
 | 나중 | 변경 타임라인, 두 줄 배치 | 요구가 생기면 | |
@@ -798,7 +810,9 @@ fixture의 이름과 주소는 합성이고 주소는 RFC 5737 범위만 쓴다.
 | D4 | VM 100 | `qemu-guest-agent`를 설치한다. 기존 토큰 권한으로 읽는다 | 관측 IP와 OS(Phase 3). 내용은 설치 뒤 확인한다 |
 | D5 | Docker | Docker 호스트가 생길 때까지 보류 | 7.2절, Phase 4 |
 | D8 | 설계 승인(2026-11-01) | tower `/mcp` 경유를 승인한다. 두 대가를 받아들인다: tower가 내려가면 Proxmox가 낡는다. 기존 bearer가 relief에도 열려 `kb_put`을 막는 것은 relief 코드뿐이다 | 6절 구조 확정. (b) stdio 직접 실행과 구조 원칙 예외는 쓰지 않는다 |
-| D9 | 공인 IP 관측(2026-11-01) | `wan-ip`를 켠다. HTTPS URL 하나는 구현 때 후보를 비교해 고른다 | 7.1절. `relief.json`의 `publicIpUrl`. 고른 URL과 근거는 구현 기록에 남긴다 |
+| D9 | 공인 IP 관측(2026-11-01) | `wan-ip`를 켠다. 코드에 기본 URL은 없다 | 7.1절. `relief.json`의 `publicIpUrl` |
+| D10 | 공인 IP 출처(2026-11-01) | 사용자가 고른 공인 IP 서비스를 쓴다. URL은 이 머신의 `relief.json`에만 두고 저장소에는 두지 않는다 | 후보 3개를 비교해 고른 값이다. 비교 자료는 저장소 밖에 있다 |
+| D11 | A 레코드 값(2026-11-01) | `dnsRecords[].value`는 이 머신의 `edge.json`에 손으로 적는 값이다. 처음 값은 공개 DNS 조회로 한 번 채웠다. 저장소에 값을 두지 않고 relief는 DNS를 고치지 않는다 | 값이 낡으면 어긋남 경고로 드러나고 사람이 고친다 |
 
 **남은 것**
 
@@ -860,7 +874,7 @@ VM 100 설치의 실행 시점은 Phase 3 전이면 된다. 플러그인 저장�
 | 출처 | Cloudcraft 동작, 렌더러 번들 크기, Tecnativa `haproxy.cfg`, wollomatic README, Docker API v1.47, tower 소스와 설계, proxmox 플러그인 소스(코드 읽기, 실행하지 않음) |
 | 가정 | 수명 태스크 이름(`qmstart` 등. 실제 VM을 시작해야 보인다), `WARNINGS` 처리, 멈춘 태스크 1시간과 `uptime` 40 s, 모든 예산, 팬·줌 성능, SSH 강제 명령 동작, Orca 탭의 SVG 비용, 500객체의 실제 PVE 응답 크기, 사실을 담은 스냅샷 크기, vmid·컨테이너 이름의 안정성, 호출 기한과 응답 상한, 공인 IP 관측 방식 |
 | 미검증 | 19절의 라우터와 BMC 읽기 경로. 검색 요약이 근거이고 장비에서 확인하지 않았다 |
-| 재지 않음 | 실제 VM 시작이 20 s 안에 '기동 중'으로 뜨는지, 실제 tower를 세웠을 때의 낡음과 회복(둘 다 mcp-mock으로만 증명했고 사용자가 실제로 확인한다), PVE가 진행 중 태스크를 `/cluster/tasks`에 올리는 지연, 실제 tower의 401 처리, 실제 GPU에서의 SVG 팬과 줌. 이 문서의 어떤 그림도 실제 데이터가 아니다 |
+| 재지 않음 | 실제 값에서 어긋남 경고가 뜨는 모습(실제 비교 결과는 일치였다), 실제 VM 시작이 20 s 안에 '기동 중'으로 뜨는지, 실제 tower를 세웠을 때의 낡음과 회복(둘 다 mcp-mock으로만 증명했고 사용자가 실제로 확인한다), PVE가 진행 중 태스크를 `/cluster/tasks`에 올리는 지연, 실제 tower의 401 처리, 실제 GPU에서의 SVG 팬과 줌. 이 문서의 어떤 그림도 실제 데이터가 아니다 |
 
 ## 19. 성장 경로: 내부 하드웨어 관리 도구
 
