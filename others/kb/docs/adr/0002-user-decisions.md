@@ -109,4 +109,9 @@
 
 - 에이전트 작업이 활용률 0.95에서 `claude -p`를 부른 일이 있어, 작업 게이트가 나오기 전까지 `kb-agent.timer`를 켜지 않는다.
 - 이번 배포: 별칭 규칙 축소, `switch.gate_window` 50, 에이전트 작업 게이트. Sol 재개와 타이머 켜기는 리드가 사용자 결정으로 따로 한다.
-- 주의: 이 항목의 사용자 원문은 위임 지시에 없었다. 리드의 결정 기록과 대조해 보정한다.
+- 2026-11-01 사용자의 AskUserQuestion 직접 답변 원문:
+  - Sol 재개: "승인 (Recommended)"
+  - event 주장: "event는 보류 제외 (Recommended)"
+  - 첫 정지 뒤: "고친 뒤 재추진 (Recommended)"
+  - 기준선: "기준선 재설정 후 소진 (Recommended)"
+  - 세 번째 정지 뒤: "세 가지 고친 뒤 재개 (Recommended)"
