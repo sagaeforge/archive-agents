@@ -15,7 +15,7 @@ bash ops/bin/install-units.sh --apply      # 외장 SSD 전송은 --with-tcp와 
 ## 1. wsl --shutdown 뒤 작업 스케줄러만으로 catch-up 완주
 
 - 단계: 작업 `kb-tick` 등록 확인(`schtasks.exe /Query /TN kb-tick`). PowerShell에서 `wsl --shutdown`. 로그온 트리거 또는 6시간 반복을 기다리거나 `schtasks.exe /Run /TN kb-tick`.
-- 기대: 작업이 distro를 깨워 `kb tick --until-idle`을 끝까지 돈다. `kb status --json`의 `freshness.last_tick_at`이 갱신된다. 재부팅 뒤 `/mnt/e`가 마운트돼 있지 않으면 `kb ship`이 offsite-e를 건너뛰고 `offsite_unmounted`를 낸다. 사용자가 수동으로 마운트(옵션 `metadata` 확인: `findmnt /mnt/e`)한 뒤 다음 박동이 전송을 잇는다.
+- 기대: 작업이 distro를 깨워 `kb tick --until-idle`을 끝까지 돈다. `kb status --json`의 `freshness.last_tick_at`이 갱신된다. 재부팅 뒤 `/mnt/e`가 마운트돼 있지 않으면 `kb ship`이 offsite-e를 건너뛰고 `offsite_unmounted`를 낸다. 사용자가 수동으로 마운트(`findmnt /mnt/e`로 TARGET, SOURCE, FSTYPE 확인)한 뒤 다음 박동이 전송을 잇는다.
 - 되돌림: `schtasks.exe /Delete /TN kb-tick /F`. 마운트 해제는 `sudo umount /mnt/e`.
 
 ## 2. 클라이언트 없는 부팅에서 tick이 끊긴 뒤 이어 가는가

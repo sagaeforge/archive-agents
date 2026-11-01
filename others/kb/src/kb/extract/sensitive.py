@@ -141,7 +141,7 @@ def _window(run, proc, plan, be, ext, pv, rid, text, paras, sens, chunk, cap, ca
     out = run.out
     body = "\n\n".join(t for _, t in chunk)
     w = Window(f"{rid}#{chunk[0][0][:8]}", rid, body, chunk, [], rid, "", "", "")
-    w.candidates = windows.candidates_for(proc, body)
+    w.candidates = windows.candidates_for(proc, body, public=False)
     w.sha = hashlib.sha256(body.encode()).hexdigest()
     sch = schema.extract_schema([x["id"] for x in w.candidates])
     model = ext.split(":")[2]

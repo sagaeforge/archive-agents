@@ -57,13 +57,14 @@ def check_claim(claim: dict, text: str, paras, ctx: GateCtx) -> GateResult:
         res.stance, res.speaker = "attributed", speaker
 
     codes, details = [], []
-    vi = values.value_issues(st, exact)                                                # 4
+    vi = values.value_issues(st, exact, ctx.subject_aliases)                                                # 4
     if vi:
         codes.append("R_VALUE_MISMATCH")
         details.append("문장의 값이 인용구와 다르다: " + "; ".join(vi))
     para = _para_for(paras, loc.start)                                                 # 5
     ptxt = text[_attr(para, "start_cp"):_attr(para, "end_cp")] if para is not None else ""
-    hay = context.build_hay(exact, ptxt, _attr(para, "table_header"), _attr(para, "heading_path"), ctx.doc_title)
+    hay = context.build_hay(exact, ptxt, _attr(para, "table_header"), _attr(para, "heading_path"), ctx.doc_title,
+                           ctx.source_names)
     if not context.subject_in_context(ctx.subject_aliases, hay):
         codes.append("R_SUBJECT_CONTEXT")
         details.append("주어 별칭이 인용구, 문단, 표 머리, 절 제목, 문서 제목에 없다")

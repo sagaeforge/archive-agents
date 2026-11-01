@@ -42,7 +42,9 @@ settings:
     support_calibrated: false     # 141건 보정(오승인 <=0.05, 재현율 >=0.80) 통과 뒤 true
     support_daily: 1000
     max_tokens: 4000
-    reserve_usd: 0.054
+    reserve_usd: 0.054            # 요청 크기를 모를 때(가짜 어댑터 등)만 쓰는 바닥값. 실제 예약은 요청의 토큰 상한과 모델 가격에서 구한다
+    max_input_tokens: 32000       # 입력 토큰 상한(요청 바이트 수로 보수적으로 잰다). 넘으면 보내지 않는다
+    reserve_margin: 1.10          # 플랫폼 수수료 여유
     daily_valve_usd: 30.0
     min_balance_usd: 0.10
     timeout_s: 300

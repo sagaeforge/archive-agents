@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/cli/harvest.schema.json",
+  "title": "kb harvest [--dry-run] --json",
+  "description": "세션 지식 자동 수확의 보고. 본문과 비밀값, 호스트 이름은 담지 않는다(건수, 규칙 ID, 표본 제목만).",
+  "type": "object",
+  "required": ["mode", "new_events"],
+  "properties": {
+    "mode": {"enum": ["dry-run", "run"]},
+    "skipped": {
+      "description": "실행이 겹쳐 잠금에 막혔을 때만 있는 문자열. 정상 보고에서는 사유별 건수 객체다",
+      "oneOf": [{"const": "locked"}, {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}}]
+    },
+    "sources": {
+      "type": "object",
+      "required": ["found", "excluded_projects", "capped", "by_kind_candidates"],
+      "properties": {
+        "found": {"type": "integer", "minimum": 0, "description": "스크래치패드와 시험 프로젝트를 뺀 뒤 훑은 원본 수"},
+        "excluded_projects": {"type": "integer", "minimum": 0, "description": "폴더를 열기 전에 뺀 프로젝트 수"},
+        "capped": {"type": "integer", "minimum": 0, "description": "max_sources 때문에 이번에 훑지 않은 원본 수"},
+        "by_kind_candidates": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}}
+      }
+    },
+    "candidates": {"type": "integer", "minimum": 0, "description": "비밀 탐지와 정화를 지나 저장 후보가 된 원본 수"},
+    "actions": {
+      "type": "object",
+      "description": "후보별 처리: new, changed, unchanged, removed_by_user(사용자가 지운 기록은 되살리지 않는다)",
+      "additionalProperties": {"type": "integer", "minimum": 0}
+    },
+    "deferred": {
+      "type": "object",
+      "description": "new, changed 중 이번 실행에서 못 쓴 것의 사유별 건수: cap(쓰기 상한), held(보관분 적재 대기), deadline(시간 상한). 다음 실행이 잇는다",
+      "additionalProperties": {"type": "integer", "minimum": 0}
+    },
+    "skipped_secret_rules": {"type": "object", "description": "비밀이 탐지돼 통째로 건너뛴 원본의 규칙 ID별 건수. 값은 담지 않는다",
+                             "additionalProperties": {"type": "integer", "minimum": 0}},
+    "lines_removed": {"type": "integer", "minimum": 0, "description": "정화로 뺀 줄 수(내용은 남기지 않는다)"},
+    "git_sha_values_shortened": {"type": "integer", "minimum": 0, "description": "KEY=<40자리 SHA> 값을 12자리로 줄인 수(비밀 오탐 방지)"},
+    "filters": {
+      "type": "object",
+      "description": "정화에 쓴 차단 목록의 크기(이름은 담지 않는다)",
+      "properties": {"deny_entries": {"type": "integer", "minimum": 0}, "deny_stems": {"type": "integer", "minimum": 0}}
+    },
+    "urls": {
+      "type": "object",
+      "required": ["extracted"],
+      "properties": {
+        "extracted": {"type": "integer", "minimum": 0},
+        "registered": {"type": "integer", "minimum": 0, "description": "티켓에 올렸거나(run) 올릴(dry-run) URL 수"},
+        "skipped": {"type": "integer", "minimum": 0},
+        "denied": {"type": "integer", "minimum": 0},
+        "known": {"type": "integer", "minimum": 0, "description": "이미 티켓에 올랐던 URL(닫힌 티켓 포함)"},
+        "capped": {"type": "integer", "minimum": 0},
+        "capped_source": {"type": "integer", "minimum": 0},
+        "capped_run": {"type": "integer", "minimum": 0},
+        "capped_ticket": {"type": "integer", "minimum": 0},
+        "errors": {"type": "integer", "minimum": 0},
+        "aborted": {"type": "string", "description": "티켓 이력을 읽지 못해 이번 실행은 URL을 올리지 않았다(예외 이름)"}
+      }
+    },
+    "tickets": {"type": "integer", "minimum": 0},
+    "writes": {
+      "type": "object",
+      "properties": {
+        "events": {"type": "integer", "minimum": 0, "description": "새로 쓴 기록 이벤트와 보관 항목 수"},
+        "stored": {"type": "integer", "minimum": 0},
+        "held": {"type": "integer", "minimum": 0},
+        "bytes": {"type": "integer", "minimum": 0},
+        "errors": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+        "secret_hits": {"type": "integer", "minimum": 0, "description": "put_record가 격리한 기록 수. 사전 탐지가 막으므로 0이어야 한다"}
+      }
+    },
+    "new_events": {"type": "integer", "minimum": 0, "description": "이번 실행이 쓴 이벤트 전부(기록 + 티켓). dry-run은 0"},
+    "caps": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+    "verify": {
+      "type": "object",
+      "required": ["records", "deny_hits", "internal_addr_hits", "email_hits", "extra_hits", "secret_hits"],
+      "properties": {
+        "records": {"type": "integer", "minimum": 0},
+        "deny_hits": {"type": "integer", "minimum": 0, "description": "차단 목록 항목과 거기서 뽑은 앞부분 토큰(epyc- 등)에 걸린 줄 수"},
+        "internal_addr_hits": {"type": "integer", "minimum": 0},
+        "email_hits": {"type": "integer", "minimum": 0},
+        "extra_hits": {"type": "integer", "minimum": 0},
+        "secret_hits": {"type": "integer", "minimum": 0}
+      }
+    },
+    "projects": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["sources", "candidates", "skipped_secret", "skipped_other", "lines_removed", "urls_found"],
+        "properties": {
+          "sources": {"type": "integer", "minimum": 0},
+          "candidates": {"type": "integer", "minimum": 0},
+          "skipped_secret": {"type": "integer", "minimum": 0},
+          "skipped_other": {"type": "integer", "minimum": 0},
+          "lines_removed": {"type": "integer", "minimum": 0},
+          "urls_found": {"type": "integer", "minimum": 0},
+          "new": {"type": "integer", "minimum": 0},
+          "changed": {"type": "integer", "minimum": 0},
+          "unchanged": {"type": "integer", "minimum": 0},
+          "deferred": {"type": "integer", "minimum": 0}
+        }
+      }
+    },
+    "samples": {
+      "type": "array",
+      "description": "표본 제목만. 본문은 싣지 않는다",
+      "items": {
+        "type": "object",
+        "required": ["kind", "project", "title", "action"],
+        "additionalProperties": false,
+        "properties": {"kind": {"type": "string"}, "project": {"type": "string"}, "title": {"type": "string"}, "action": {"type": "string"}}
+      }
+    },
+    "stopped_early": {"type": "boolean"},
+    "plan": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}}
+  }
+}

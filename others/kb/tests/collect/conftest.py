@@ -97,3 +97,16 @@ def events(kind=None):
         return out
     finally:
         c.close()
+
+
+@pytest.fixture(autouse=True)
+def _no_live_stage(monkeypatch):
+    """6.3 live는 WP-09 소유다. 수집 시험의 fetch 횟수를 세므로 live 단계는 이 시험들에서 뺀다(live 시험은 tests/live)."""
+    from kb.collect import tick as T
+    orig = T.discover_stages
+
+    def wrapped():
+        ok, bad = orig()
+        return ({k: v for k, v in ok.items() if k[1] != "live"}, {k: v for k, v in bad.items() if k[1] != "live"})
+
+    monkeypatch.setattr(T, "discover_stages", wrapped)

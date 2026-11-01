@@ -11,9 +11,9 @@ targets:
     repo: /mnt/c/Users/<사용자>/kb-restic
     tiers: [t0, t1, t3]
 
-  # 사본 B: 외장 SSD E:(Windows E 드라이브, WSL /mnt/e, drvfs metadata, NTFS). 결정 2.
+  # 사본 B: 외장 SSD E:(Windows E 드라이브, WSL /mnt/e, drvfs, NTFS). 결정 2.
   # /mnt/e는 사용자가 수동으로 마운트한다(docs/runbooks/restore.md). kb는 mount, sudo, /etc/fstab, wsl.conf를 건드리지 않는다.
-  # 전송 직전마다 findmnt -T /mnt/e 의 SOURCE, FSTYPE, OPTIONS와 마커를 본다. 하나라도 어긋나면 이 대상만 건너뛴다.
+  # 전송 직전마다 findmnt -T /mnt/e 의 TARGET, SOURCE, FSTYPE와 마커를 본다. 하나라도 어긋나면 이 대상만 건너뛴다. 마운트 옵션(metadata)은 요구하지 않는다.
   - id: offsite-e
     kind: external_drive
     repo: /mnt/e/kb-restic
@@ -22,6 +22,5 @@ targets:
       path: /mnt/e
       fstype: drvfs            # findmnt가 9p로 보여 주면 옵션의 aname=drvfs로 확인한다
       source: "E:"             # 생략하면 E:
-      options_require: [metadata]
       marker: .kb-offsite-id   # <repo>/.kb-offsite-id 내용이 위 id와 같아야 한다. kb ship --init offsite-e 가 만든다
     # copy_from: local-c       # 선택: 같은 박동에 local-c가 성공했으면 restic copy로 옮긴다(기본은 독립 backup)

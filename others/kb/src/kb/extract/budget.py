@@ -100,6 +100,28 @@ def _llm_block(nul: dict) -> dict:
 
 
 # ------------------------------------------------------------------ 예약과 정산
+class TooLarge(Exception):
+    """요청의 입력 토큰 상한이 설정 상한을 넘는다. 보내지 않는다."""
+
+
+def price_bound(model: str, input_tokens: int, output_tokens: int) -> float:
+    """입력과 출력 토큰 상한에 모델 가격(백만 토큰당)을 곱한 호출당 비용 상한. 가격표에 없는 모델은 표의 최고가로 본다."""
+    table = settings.get("openrouter.price_per_m") or {}
+    pr = table.get(model)
+    if not pr:
+        pr = [max((v[0] for v in table.values()), default=5.0), max((v[1] for v in table.values()), default=25.0)]
+    usd = (input_tokens * float(pr[0]) + output_tokens * float(pr[1])) / 1e6 * float(settings.get("openrouter.reserve_margin", 1.10))
+    return math.ceil(usd * 1e6) / 1e6
+
+
+def reservation_for(be, job) -> float:
+    """호출 전 예약액. 어댑터가 요청의 토큰 상한을 알면 거기서 구하고, 모르면 설정의 바닥값이다. 너무 큰 요청은 TooLarge."""
+    f = getattr(be, "reservation_usd", None)
+    if f is None:
+        return float(settings.get("openrouter.reserve_usd", 0.054))
+    return f(job)
+
+
 class Refused(Exception):
     def __init__(self, reason: str):
         super().__init__(reason)

@@ -4,7 +4,7 @@
 openapi: 3.1.1
 info:
   title: KB 데이터 인터페이스
-  version: 0.3.1
+  version: 0.3.2
   summary: 지식 저장소 읽기 전용 HTTP 계약 v0
   description: 기계 판독 원본이다. `docs/contracts/data-interface-v0.md`는 설명 문서이고 둘이 어긋나면 이 파일이 이긴다. 모든 경로는 `GET`이고 `HEAD`도 받는다. 서버 주소는 선언하지 않는다(Unix 소켓이 기본, TCP는 원격 이전 때). 저장소는 데이터만 제공하며 점수와 추천을 내지 않는다. 모르는 필드와 열린 값은 무시한다. `x-provisional`이 붙은 구간은 잠정이다(`/v1/ops/*`).
 security:
@@ -48,7 +48,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.1
+                    schema_version: 0.3.2
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -109,7 +109,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.1
+                    schema_version: 0.3.2
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -274,7 +274,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.1
+                    schema_version: 0.3.2
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -375,7 +375,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.1
+                    schema_version: 0.3.2
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -451,7 +451,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.1
+                    schema_version: 0.3.2
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -593,7 +593,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.1
+                    schema_version: 0.3.2
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -697,7 +697,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.1
+                    schema_version: 0.3.2
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -767,7 +767,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.1
+                    schema_version: 0.3.2
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -842,7 +842,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.1
+                    schema_version: 0.3.2
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -928,7 +928,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.1
+                    schema_version: 0.3.2
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -1038,7 +1038,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.1
+                    schema_version: 0.3.2
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -1135,7 +1135,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.1
+                    schema_version: 0.3.2
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -1218,7 +1218,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.1
+                    schema_version: 0.3.2
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -1327,7 +1327,7 @@ paths:
       - $ref: '#/components/parameters/IncludeUnverified'
       - $ref: '#/components/parameters/AsOfValid'
       - $ref: '#/components/parameters/AsOfObserved'
-      - $ref: '#/components/parameters/Q'
+      - $ref: '#/components/parameters/QOptional'
       - $ref: '#/components/parameters/HitKinds'
       - $ref: '#/components/parameters/Filter'
       responses:
@@ -1345,7 +1345,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.1
+                    schema_version: 0.3.2
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -1422,7 +1422,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.1
+                    schema_version: 0.3.2
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -1481,7 +1481,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.1
+                    schema_version: 0.3.2
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -1547,7 +1547,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.1
+                    schema_version: 0.3.2
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -1619,7 +1619,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.1
+                    schema_version: 0.3.2
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -1766,7 +1766,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.1
+                    schema_version: 0.3.2
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -1832,7 +1832,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.1
+                    schema_version: 0.3.2
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -1900,7 +1900,7 @@ paths:
               examples:
                 default:
                   summary: 압축 전 ExportFile JSON
-                  value: '{"schema_version": "0.3.1", "build_id": "p-000183422", "applied_seq": 183422, "epoch": 1, "data_as_of": "2026-10-31T09:12:03Z", "graph": {"directed": true, "multi": true}, "nodes": {"columns": ["id", "type", "label", "origin", "status", "domain", "merged_into"], "rows": [["e:product:claude-code", "Product", "Claude Code", "external", "active", ["G"], null]]}, "edges": {"columns": ["id", "src", "dst", "rtype", "status"], "rows": [["r-1a2b3c4d5e6f", "e:feature:claude-code-hooks", "e:product:claude-code", "PART_OF", "active"]]}}'
+                  value: '{"schema_version": "0.3.2", "build_id": "p-000183422", "applied_seq": 183422, "epoch": 1, "data_as_of": "2026-10-31T09:12:03Z", "graph": {"directed": true, "multi": true}, "nodes": {"columns": ["id", "type", "label", "origin", "status", "domain", "merged_into"], "rows": [["e:product:claude-code", "Product", "Claude Code", "external", "active", ["G"], null]]}, "edges": {"columns": ["id", "src", "dst", "rtype", "status"], "rows": [["r-1a2b3c4d5e6f", "e:feature:claude-code-hooks", "e:product:claude-code", "PART_OF", "active"]]}}'
         '304':
           $ref: '#/components/responses/NotModified'
         '400':
@@ -1937,7 +1937,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.1
+                    schema_version: 0.3.2
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -2002,7 +2002,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.1
+                    schema_version: 0.3.2
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -2062,7 +2062,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.1
+                    schema_version: 0.3.2
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -2118,7 +2118,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.1
+                    schema_version: 0.3.2
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -2226,9 +2226,11 @@ components:
       name: as_of_valid
       in: query
       required: false
-      description: 유효축 시점. RFC 3339 또는 `YYYY-MM-DD`(그날 00:00Z). 줄 때만 유효축을 건다(2.9).
+      description: 유효축 시점. RFC 3339 또는 `YYYY-MM-DD`(그날 00:00Z). 줄 때만 유효축을 건다(2.9). 빈 값은 400 `bad_param`.
       schema:
         type: string
+        minLength: 1
+        pattern: '^\d{4}-\d{2}-\d{2}([Tt]\d{2}:\d{2}:\d{2}(\.\d+)?([Zz]|[+-]\d{2}:\d{2}))?$'
     AsOfObserved:
       name: as_of_observed
       in: query
@@ -2443,6 +2445,14 @@ components:
       in: query
       required: true
       description: 검색어. NFC 정규화 후 KB 안에서 토크나이징한다. 토큰이 하나도 없으면 400 `bad_param`.
+      schema:
+        type: string
+        minLength: 1
+    QOptional:
+      name: q
+      in: query
+      required: false
+      description: 검색어(선택). 주면 전체 일치에서 센다(4.9). NFC 정규화 후 KB 안에서 토크나이징한다. 토큰이 하나도 없으면 400 `bad_param`.
       schema:
         type: string
         minLength: 1

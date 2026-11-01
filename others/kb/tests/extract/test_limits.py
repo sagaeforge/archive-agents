@@ -97,7 +97,7 @@ def test_seven_day_stops(ent):
     assert out["windows"] == 0 and not f.calls
 
 
-def test_queue_domain_round_robin(ent):
+def test_queue_af_before_g(ent):
     docs = [("G", 0), ("G", 1), ("A", 0), ("A", 1)]
     for dom, i in docs:
         H.ingest_doc(url=f"https://example.test/{dom}{i}.md", text=f"샘플도구는 하루 최대 500건의 요청을 지원한다 {dom}{i}.\n", domain=(dom,))
@@ -106,4 +106,4 @@ def test_queue_domain_round_robin(ent):
         out = runner.run_agent("public", backends={"claude": f}, do_support=False, max_windows=2)
     assert out["windows"] == 2
     seen = [c.window.url for c in f.calls]
-    assert any("/G" in u for u in seen) and any("/A" in u for u in seen)    # 한 도메인이 큐를 독점하지 않는다
+    assert all("/A" in u for u in seen)    # A~F가 G보다 먼저(리드 판정 2026-11-01, test_order.py)

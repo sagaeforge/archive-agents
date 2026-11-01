@@ -4,11 +4,9 @@ from __future__ import annotations
 
 import json
 import time
-import urllib.error
-import urllib.request
 
 from kb.core import paths
-from kb.extract import budget, guard, schema, settings, state
+from kb.extract import budget, guard, llmhttp, schema, settings, state
 from kb.extract.types import Job, Preflight, Result
 
 NAME = "openrouter"
@@ -26,13 +24,7 @@ def read_key() -> str | None:
 def _req(path: str, key: str, body: dict | None = None, timeout: float = 30.0) -> dict:
     url = str(settings.get("openrouter.base_url")).rstrip("/") + path
     h = {"Authorization": "Bearer " + key, "User-Agent": "sagae-kb", "X-Title": "sagae-kb"}
-    data = None
-    if body is not None:
-        data = json.dumps(body).encode()
-        h["Content-Type"] = "application/json"
-    req = urllib.request.Request(url, data=data, headers=h)
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.load(r)
+    return llmhttp.request_json(url, body=body, headers=h, timeout=timeout)
 
 
 def fetch_credits(key: str) -> float | None:
@@ -86,12 +78,21 @@ class OpenRouter:
             body["provider"].update(order=list(order), allow_fallbacks=False)
         return body
 
+    def reservation_usd(self, job: Job) -> float:
+        """이 요청이 쓸 수 있는 최대 비용. 입력 토큰은 요청 본문의 UTF-8 바이트 수로 본다(토큰은 1바이트 이상이므로 상한이다).
+        출력은 max_tokens다. 입력이 상한을 넘으면 TooLarge."""
+        body = self.request_body(job)
+        tin = len(json.dumps(body, ensure_ascii=False).encode("utf-8")) + 64
+        if tin > int(settings.get("openrouter.max_input_tokens", 32000)):
+            raise budget.TooLarge(f"input<= {tin} tokens")
+        return budget.price_bound(job.model, tin, int(body["max_tokens"]))
+
     def extract(self, job: Job, permit) -> Result:
         guard.verify(permit, NAME, job.user)
         key = read_key()
         r = Result(job.window.window_id, NAME, job.model)
         if not key:
-            r.error = "no_key"
+            r.error, r.cost_usd = "no_key", 0.0               # 요청이 나가지 않았다
             return r
         t0 = time.time()
         try:
@@ -109,8 +110,10 @@ class OpenRouter:
                        "cached_input_tokens": pd.get("cached_tokens"), "reasoning_tokens": cd.get("reasoning_tokens")}
             r.cost_usd = u.get("cost")
             r.provider, r.served_model = d.get("provider"), d.get("model")
-        except urllib.error.HTTPError as e:
+        except llmhttp.HTTPError as e:
             r.error = f"HTTP {e.code}: {e.read()[:200].decode('utf8', 'replace')}"
+            if e.code in (401, 402):                       # 인증, 잔액 거절은 일을 하기 전에 끝난다. 나머지 실패는 비용을 모른다(None)
+                r.cost_usd = 0.0
         except Exception as e:  # noqa: BLE001
             r.error = f"{type(e).__name__}: {str(e)[:200]}"
         r.elapsed_s = round(time.time() - t0, 3)

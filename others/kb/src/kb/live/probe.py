@@ -46,6 +46,9 @@ class OfflineFetcher:
         self.responses = responses or {}
         self.calls: list = []
 
+    def why(self, url: str) -> str:
+        return "no_response"
+
     def get(self, url: str) -> Resp | None:
         self.calls.append(url)
         r = self.responses.get(url)
@@ -70,6 +73,10 @@ class CaptureFetcher:
             sources = [s for s in registry.load_registry(validate=False)]
         self.sources = sources
         self.calls: list = []
+        self.failed: dict = {}      # URL -> 받지 못한 이유
+
+    def why(self, url: str) -> str:
+        return self.failed.get(url, "no_source")
 
     def owner(self, url: str):
         from kb.collect import registry
@@ -99,7 +106,11 @@ class CaptureFetcher:
         first = chain[0][1] if chain else ref.status
         final = chain[-1][0] if chain else url
         if not ref.ok and ref.status is None:
+            self.failed[url] = ref.outcome          # budget_exceeded, circuit_open, robots_denied, error 등
             return None
+        if ref.ok and body and not 200 <= (ref.status or 0) < 300:
+            # 304이거나 재사용이면 직전 정상 본문이 곧 현재 본문이다. 살아 있는 URL이다
+            return Resp(url, 200, body, final, 200, ref.content_type, ref.snapshot, src.id)
         return Resp(url, ref.status, body, final, first, ref.content_type, ref.snapshot, src.id)
 
 
@@ -121,6 +132,7 @@ class Probe:
     sigs: list = field(default_factory=list)
     requests: int = 0
     missing: list = field(default_factory=list)       # 소스가 없어 못 받은 URL
+    reasons: list = field(default_factory=list)       # 신호를 못 낸 이유(요약의 unreachable_reasons)
     chain: list = field(default_factory=list)
 
 
@@ -128,8 +140,11 @@ def _get(fx, url: str, pr: Probe) -> Resp | None:
     r = fx.get(url)
     if r is None:
         pr.missing.append(url)
+        pr.reasons.append(fx.why(url) if hasattr(fx, "why") else "no_response")
     else:
         pr.requests += 1
+        if not r.ok:
+            pr.reasons.append(f"http_{r.status}")
     return r
 
 

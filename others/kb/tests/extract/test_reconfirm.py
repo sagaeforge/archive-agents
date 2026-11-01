@@ -1,8 +1,13 @@
 """인용구 재확인: 남으면 confirm, state/howto 소실은 withdraw, event는 유지, 30% 초과 소실은 degraded, feed/short는 철회 없음, 효력일 대체 완결."""
+import json
+
 import pytest
 
-from kb import ingest
+from kb import ingest, read
+from kb.core import cas, ledger
 from kb.extract import reconfirm, runner, settings, tick_stage
+from kb.project import rebuild
+from kb.read import ReadCtx, search
 
 from . import helpers as H
 
@@ -130,3 +135,125 @@ def test_moving_window_source_is_not_degraded(ent, monkeypatch):
     H.ingest_doc(url=url, text="# 피드\n\n샘플도구의 다른 항목이 올라왔다.\n", source="src:feed", fetched_at=1_793_000_100_000)
     r = reconfirm.run_new_snapshots()
     assert r["degraded"] == 0 and not H.events("source.status") and not H.events("claim.withdraw")
+
+
+SHIFTED = "# 샘플도구 안내\n\n새로 앞에 붙은 문단은 추출 대상이 아닌 설명이다.\n\n" + "\n\n".join(S) + "\n"
+
+
+def _evidence(sid):
+    con = H.gold()
+    try:
+        return con.execute("SELECT claim_id, id, exact, prefix, suffix, start_cp, end_cp FROM evidence WHERE snapshot_id=? ORDER BY claim_id",
+                           (sid,)).fetchall()
+    finally:
+        con.close()
+
+
+def _text(sid):
+    con = H.gold()
+    try:
+        props = json.loads(con.execute("SELECT props FROM node WHERE id=? AND expired_at IS NULL", (sid,)).fetchone()[0])
+    finally:
+        con.close()
+    return cas.get(props["text_sha"]).decode("utf-8")
+
+
+def test_confirm_offsets_point_into_new_snapshot(ent):
+    """계약 2.11: 새 스냅샷의 근거 행은 그 스냅샷 표시 본문의 코드포인트 위치를 갖는다. 세 조회 경로가 맞는 값을 낸다."""
+    _extract(ent, _doc([0, 1, 2, 3]), 1_793_000_000_000)
+    _stage()
+    sid = H.ingest_doc(url=URL, text=SHIFTED, fetched_at=1_793_000_100_000, enqueue=False)
+    assert _stage().detail["reconfirm"]["confirmed"] == 4
+    text = _text(sid)
+    rows = _evidence(sid)
+    assert len(rows) == 4
+    for _, _, exact, prefix, suffix, a, b in rows:
+        assert a is not None and text[a:b] == exact
+        assert text[:a].endswith(prefix) and text[b:].startswith(suffix)
+    con = H.gold()
+    ctx = ReadCtx(max_sensitivity="internal", include_unverified=True)
+    try:
+        by_id = {r[0]: r for r in rows}
+        for cc in read.snapshot_meta(con, ctx, sid)["citing_claims"]:
+            assert (cc["start"], cc["end"]) == by_id[cc["id"]][5:7]
+            ev = [e for e in read.get_claim(con, ctx, cc["id"])["evidence"] if e["snapshot_id"] == sid][0]
+            assert text[ev["start"]:ev["end"]] == ev["exact"]
+        a = text.index("새로 앞에")
+        assert search.promote_passage(con, ctx, {"kind": "passage", "snapshot_id": sid, "start": a, "end": a + 20}) == []
+        i = text.index(S[2])
+        hit = {"kind": "passage", "snapshot_id": sid, "start": i, "end": i + len(S[2])}
+        assert search.promote_passage(con, ctx, hit) == [r[0] for r in rows if S[2][:10] in r[2]]
+    finally:
+        con.close()
+
+
+def test_confirm_offsets_survive_rebuild_and_third_snapshot(ent):
+    """오프셋은 이벤트에 실려 재구축으로 그대로 복원된다. 세 번째 스냅샷도 자기 본문의 위치를 갖는다."""
+    _extract(ent, _doc([0, 1, 2, 3]), 1_793_000_000_000)
+    _stage()
+    s2 = H.ingest_doc(url=URL, text=SHIFTED, fetched_at=1_793_000_100_000, enqueue=False)
+    _stage()
+    s3 = H.ingest_doc(url=URL, text="머리말 한 줄을 더 둔다.\n\n" + SHIFTED, fetched_at=1_793_000_200_000, enqueue=False)
+    assert _stage().detail["reconfirm"]["confirmed"] == 4
+    assert all(_text(s3)[r[5]:r[6]] == r[2] for r in _evidence(s3))
+    before = _evidence(s2), _evidence(s3)
+    led = ledger.open_ledger()
+    try:
+        rebuild(led=led)
+    finally:
+        led.close()
+    assert (_evidence(s2), _evidence(s3)) == before
+    assert all(e["payload_v"] == 2 for e in _confirm_versions())
+
+
+def _confirm_versions():
+    led = ledger.open_ledger()
+    try:
+        return [{"payload_v": e["v"]} for e in ledger.iter_events(led, 0, 100000) if e["kind"] == "claim.confirm"]
+    finally:
+        led.close()
+
+
+def test_ambiguous_quote_confirmed_without_position(ent):
+    """새 본문에 인용구가 두 곳이면 있다는 것만 확인한다. 옛 위치를 쓰지 않고 NULL이며 조회와 승격이 깨지지 않는다."""
+    _extract(ent, _doc([0, 1, 2, 3]), 1_793_000_000_000)
+    _stage()
+    twice = "# 제목이 바뀌었다\n\n" + "\n\n".join(S) + "\n\n맺음말을 붙인다.\n\n" + S[0] + "\n"     # prefix로도 못 가른다
+    sid = H.ingest_doc(url=URL, text=twice, fetched_at=1_793_000_100_000, enqueue=False)
+    assert _stage().detail["reconfirm"]["confirmed"] == 4
+    rows = _evidence(sid)
+    nulls = [r for r in rows if r[5] is None]
+    assert len(rows) == 4 and len(nulls) == 1 and S[0][:10] in nulls[0][2]
+    con = H.gold()
+    ctx = ReadCtx(max_sensitivity="internal", include_unverified=True)
+    try:
+        meta = {c["id"]: c for c in read.snapshot_meta(con, ctx, sid)["citing_claims"]}
+        assert meta[nulls[0][0]]["start"] is None
+    finally:
+        con.close()
+    # 철회 뒤 재추출: 대체된 옛 스냅샷의 창은 건너뛰므로(order.py) 새 스냅샷만 다시 뽑는다. 인용구가 두 곳인 주장은
+    # 게이트가 E_QUOTE_AMBIGUOUS로 거부하므로 되살아나지 않고, 나머지 위치 있는 주장은 되살아난다
+    from kb.cli import main
+    assert main(["claim", "retract", "--extractor", "l2:claude:haiku:extract-1", "--json"]) == 0
+    f = H.Fake("claude", True, _responder(ent))
+    with settings.override(**{"openrouter.enabled": False}):
+        out = runner.run_agent("public", backends={"claude": f}, do_support=False, reextract=True)
+    assert out["revived"] == 3 and len(H.claims("n.status='active'")) == 3
+
+
+def test_v1_confirm_replays_without_stale_offsets(ent):
+    """옛 형식(v1, 위치 없음) 이벤트는 업캐스터를 지나 재구축되고 옛 스냅샷 오프셋을 복사하지 않는다."""
+    from kb.write import commit
+    _extract(ent, _doc([0, 1, 2, 3]), 1_793_000_000_000)
+    sid = H.ingest_doc(url=URL, text=SHIFTED, fetched_at=1_793_000_100_000, enqueue=False)
+    cid = H.claims()[0][0]
+    commit([{"kind": "claim.confirm", "actor": "l2", "origin": "system", "subject": cid, "idem_key": f"old:{cid}", "v": 1,
+             "payload": {"id": cid, "snapshot": sid}}], "l2", timeout=60.0)
+    led = ledger.open_ledger()
+    try:
+        rebuild(led=led)
+    finally:
+        led.close()
+    rows = _evidence(sid)
+    assert len(rows) == 1 and rows[0][0] == cid and rows[0][5] is None and rows[0][6] is None and rows[0][2]
+

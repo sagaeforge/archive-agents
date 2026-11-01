@@ -20,6 +20,7 @@ class GateCtx:
     known_aliases: dict = field(default_factory=dict)  # 정규화 별칭 -> 등록 엔티티 ID (R_ALIAS_MISMATCH용)
     doc_title: str = ""                               # 문서 제목(없으면 빈 문자열)
     publisher: str | None = None                      # 소스 발행처. 판단어·howto의 화자 확정에 쓴다
+    source_names: tuple = ()                          # 소스 이름·발행처·레지스트리 별칭. 5단계 주어 문맥에만 쓴다(문서 제목이 'Changelog'뿐일 때)
     liveness: Callable[[str], str | None] | None = None  # liveness_stance. None이면 9단계를 건너뛴다
     scope: str = "public"                             # public | sensitive
 

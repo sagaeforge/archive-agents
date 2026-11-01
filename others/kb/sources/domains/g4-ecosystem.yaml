@@ -158,3 +158,146 @@ sources:
     retention: permanent
     pii: false
     needs_contact: false
+- id: src:g4-gh-readme
+  inventory_id: null
+  name: GitHub 저장소 README(raw, 생존 판정용 소유)
+  domain:
+  - G
+  class: weekly
+  fetch:
+    kind: https
+    urls:
+    - https://raw.githubusercontent.com/anthropics/claude-code/HEAD/README.md
+    owns:
+    - ^https://raw\.githubusercontent\.com/[^/]+/[^/]+/HEAD/README\.md$
+    conditional: true
+  parser: raw_file@1
+  expect:
+    content_type:
+    - text/plain
+    - text/markdown
+  policy:
+    enabled: true
+    tos: allowed
+    tos_ref: https://docs.github.com/en/site-policy/acceptable-use-policies/github-acceptable-use-policies
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:g4-npm-registry
+  inventory_id: null
+  name: npm 레지스트리 패키지 문서(생존 판정용 소유)
+  domain:
+  - G
+  class: weekly
+  fetch:
+    kind: https
+    urls:
+    - https://registry.npmjs.org/opencode-ai
+    owns:
+    - ^https://registry\.npmjs\.org/[^?#]+$
+    conditional: true
+  parser: raw_file@1
+  expect:
+    content_type:
+    - application/json
+    - application/vnd.npm.install-v1+json
+  policy:
+    enabled: true
+    tos: allowed
+    tos_ref: https://docs.npmjs.com/policies/open-source-terms
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:g4-pypi-registry
+  inventory_id: null
+  name: PyPI 패키지 JSON(생존 판정용 소유)
+  domain:
+  - G
+  class: weekly
+  fetch:
+    kind: https
+    urls:
+    - https://pypi.org/pypi/mcp/json
+    owns:
+    - ^https://pypi\.org/pypi/[^/]+/json$
+    conditional: true
+  parser: raw_file@1
+  expect:
+    content_type:
+    - application/json
+  policy:
+    enabled: true
+    tos: allowed
+    tos_ref: https://docs.pypi.org/api/json/
+    robots: official_api
+    requires_decision: 8
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:g4-feed-items-official
+  inventory_id: null
+  name: 공식 피드 항목 페이지(status.openai.com, lmstudio.ai, ollama.com; 생존 판정용 소유)
+  domain:
+  - G
+  class: weekly
+  fetch:
+    kind: https
+    urls:
+    - https://ollama.com/blog
+    - https://lmstudio.ai/blog
+    - https://status.openai.com/
+    owns:
+    - ^https://(status\.openai\.com|lmstudio\.ai|ollama\.com)/
+    conditional: true
+  parser: page_md@1
+  expect:
+    content_type:
+    - text/html
+    - application/xhtml+xml
+    - text/plain
+    - text/markdown
+  policy:
+    enabled: true
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: ttl
+    pii: false
+    needs_contact: false
+- id: src:g4-feed-items-geeknews
+  inventory_id: null
+  name: GeekNews 항목 페이지(생존 판정용 소유)
+  domain:
+  - G
+  class: weekly
+  fetch:
+    kind: https
+    urls:
+    - https://news.hada.io/
+    owns:
+    - ^https://news\.hada\.io/
+    conditional: true
+  parser: page_md@1
+  expect:
+    content_type:
+    - text/html
+    - application/xhtml+xml
+  policy:
+    enabled: true
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: community
+    retention: ttl
+    pii: false
+    needs_contact: false

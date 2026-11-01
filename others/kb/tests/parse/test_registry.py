@@ -9,6 +9,8 @@ import jsonschema
 
 from kb.collect import hostpolicy, registry
 
+from .conftest import base_sources
+
 REPO = Path(__file__).resolve().parents[2]
 SRC = REPO / "sources"
 
@@ -64,9 +66,9 @@ SCHEMA = {
 
 
 @pytest.fixture(scope="module")
-def srcs():
-    assert not (SRC / "overlays").exists(), "기본 레지스트리 시험은 overlay 없이 돈다"
-    return registry.load_registry(SRC)
+def srcs(tmp_path_factory):
+    """기본 레지스트리 시험은 overlay 없이 돈다. overlay는 WP-24 소유라 저장소에 있어도 여기서는 뺀다."""
+    return registry.load_registry(base_sources(tmp_path_factory.mktemp("base-sources")))
 
 
 def test_every_domain_file_passes_schema_and_domain_is_a_list():

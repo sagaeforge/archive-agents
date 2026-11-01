@@ -88,3 +88,28 @@ def test_deploy_from_snapshot_and_generations(repo, kb_home):
     assert r.returncode == 0, r.stdout + r.stderr
     import json
     assert json.loads(r.stdout)["share_dir"] == str(rt / "share")
+
+
+def test_deploy_source_change_reaches_venv(repo, kb_home):
+    """pyproject가 같아도 소스 변경은 배포된 venv에 들어간다(uv 빌드 캐시 재사용 금지)."""
+    src = kb_home / "src-tree"
+    for rel in ("pyproject.toml", "uv.lock", ".python-version"):
+        (src / rel).parent.mkdir(parents=True, exist_ok=True)
+        (src / rel).write_bytes((repo / rel).read_bytes())
+    for f in (repo / "src/kb").rglob("*.py"):
+        t = src / f.relative_to(repo)
+        t.parent.mkdir(parents=True, exist_ok=True)
+        t.write_bytes(f.read_bytes())
+    (src / "ops/bin").mkdir(parents=True)
+    for f in (repo / "ops/bin").iterdir():
+        if f.is_file():
+            (src / "ops/bin" / f.name).write_bytes(f.read_bytes())
+            (src / "ops/bin" / f.name).chmod(f.stat().st_mode)
+    env = {"KB_HOME": str(kb_home / "kb"), "KB_CONFIG_DIR": str(kb_home / "cfg"), "KB_TMP": str(kb_home / "tmp")}
+    rt = kb_home / "kb/runtime"
+    for n in range(2):  # 같은 경로, 같은 pyproject, 소스만 변경
+        (src / "src/kb/_deploy_marker.py").write_text(f"MARK = {n}\n")
+        r = sh(src, "ops/bin/deploy", env)
+        assert r.returncode == 0, r.stdout + r.stderr
+        found = list((rt / "venv").glob("lib/python*/site-packages/kb/_deploy_marker.py"))
+        assert found and found[0].read_text() == f"MARK = {n}\n"

@@ -197,3 +197,52 @@ def test_liveness_states_use_survival_verdict(env, state):
     assert res(rep, "l1")["would_be"]["status"] == "active"
     assert "survival.verdict" in kinds()
     assert tuple(node("e:concept:gadget-engine"))[1:] == (state, "active")
+
+
+def _adhoc_snapshot_without_domain(url):
+    """capturer의 adhoc 스냅샷에는 domain이 없다."""
+    from kb.core import cas, ids
+    from kb.write import commit
+    from kb.write.engine import project_pending
+    sha = cas.put(DOC)
+    sid = ids.snapshot_id(sha, url)
+    commit([{"kind": "snapshot.captured", "actor": "collector", "origin": "external", "idem_key": f"snapshot:{sid}", "subject": sid,
+             "payload": {"id": sid, "document_id": ids.document_id(url), "source": "src:adhoc", "url": url, "raw_sha": sha,
+                         "content_type": "text/markdown", "bytes": len(DOC), "fetched_at": 1_793_000_000_000, "tier": "objects"}}],
+           "collector")
+    project_pending()
+    return sid
+
+
+def _claim_domains(cid):
+    con = gold()
+    try:
+        return [r[0] for r in con.execute("SELECT domain FROM node_domain WHERE node_id=? ORDER BY domain", (cid,))]
+    finally:
+        con.close()
+
+
+def test_claim_inherits_header_domain_on_adhoc_snapshot(env):
+    """항목에 domain이 없으면 entity, series처럼 머리를 쓴다. 안 그러면 도메인 필터 검색에서 빠진다."""
+    sid = _adhoc_snapshot_without_domain("https://example.org/plain")
+    rep = run([ENT, plain(sid)], write=True, batch="t-dom", domain=("B",))
+    assert res(rep, "c1")["result"] == "accepted"
+    assert _claim_domains(res(rep, "c1")["would_be"]["id"]) == ["B"]
+
+
+def test_claim_item_domain_wins_over_header(env):
+    sid = _adhoc_snapshot_without_domain("https://example.org/plain2")
+    rep = run([ENT, plain(sid, domain=["C"])], write=True, batch="t-dom2", domain=("B",))
+    assert _claim_domains(res(rep, "c1")["would_be"]["id"]) == ["C"]
+
+
+def test_unparseable_url_is_a_row_not_a_crash(snap):
+    rep = run([{"item": "snapshot", "ref": "s1", "source": "src:adhoc", "url": "http://[bad"}, ENT, plain(snap)])
+    assert res(rep, "s1")["code"] == "E_POLICY" and res(rep, "c1")["result"] == "accepted"
+
+
+def test_claim_multi_domain_snapshot_with_narrow_header(env):
+    """다중 도메인 소스(예: [B, E])를 좁은 머리 [B]로 제출해도 주장은 스냅샷 도메인을 잃지 않는다."""
+    sid = capture("https://example.org/multi", DOC)  # 스냅샷 domain ["G"]
+    rep = run([ENT, plain(sid)], write=True, batch="t-dom3", domain=("B",))
+    assert _claim_domains(res(rep, "c1")["would_be"]["id"]) == ["B", "G"]

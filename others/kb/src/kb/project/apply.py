@@ -618,19 +618,26 @@ def h_claim_confirm(c: Ctx, p: dict) -> None:
         if ev["snapshot_id"] == p["snapshot"]:
             g.execute("UPDATE evidence SET last_confirmed_at=?, evidence_state='live' WHERE id=?", (c.at, ev["id"]))
             continue
+        # 오프셋은 스냅샷마다 다르다(계약 2.11). 페이로드에 위치가 없으면 옛 값을 복사하지 않고 NULL로 둔다
+        located = ev["selector_kind"] == "text_quote" and p.get("start_cp") is not None
         sel = {"selector_kind": ev["selector_kind"]}
         if ev["selector_kind"] == "jsonpointer":
             sel["json_pointer"] = ev["json_pointer"]
+        elif located:
+            sel.update(start_cp=p["start_cp"], end_cp=p["end_cp"])
         elif ev["start_cp"] is not None:
-            sel.update(start_cp=ev["start_cp"], end_cp=ev["end_cp"])
+            sel.update(start_cp=ev["start_cp"], end_cp=ev["end_cp"])  # 근거 ID를 v1 재생과 같게 둔다. 행의 위치는 NULL이다
         else:
             sel["exact"] = ev["exact"]
         nid = ids.evidence_id(cid, p["snapshot"], sel)
+        sn = cur_node(g, p["snapshot"])
+        tsha = (jl(sn["props"]) or {}).get("text_sha") if sn else None
+        exact, prefix, suffix = (p.get("exact"), p.get("prefix"), p.get("suffix")) if located else (ev["exact"], ev["prefix"], ev["suffix"])
         g.execute("INSERT OR IGNORE INTO evidence(id,claim_id,snapshot_id,text_sha,selector_kind,exact,prefix,suffix,start_cp,"
                   "end_cp,json_pointer,evidence_state,support_check,gate_version,last_confirmed_at,seq) "
-                  "VALUES(?,?,?,NULL,?,?,?,?,?,?,?,'live',?,?,?,?)",
-                  (nid, cid, p["snapshot"], ev["selector_kind"], ev["exact"], ev["prefix"], ev["suffix"], ev["start_cp"],
-                   ev["end_cp"], ev["json_pointer"], ev["support_check"], ev["gate_version"], c.at, c.seq))
+                  "VALUES(?,?,?,?,?,?,?,?,?,?,?,'live',?,?,?,?)",
+                  (nid, cid, p["snapshot"], tsha, ev["selector_kind"], exact, prefix, suffix, p.get("start_cp") if located else None,
+                   p.get("end_cp") if located else None, ev["json_pointer"], ev["support_check"], ev["gate_version"], c.at, c.seq))
     add_change(c, cid, prev["version"], "Claim", prev["sensitivity"])
 
 
@@ -706,7 +713,9 @@ def h_snapshot_text(c: Ctx, p: dict) -> None:
         return add_change(c, sid, None, "Snapshot", 0)
     props = jl(snap["props"]) or {}
     props.update(text_sha=p["text_sha"], text_format=p["text_format"], paras_sha=p["paras_sha"], extractor=p["extractor"])
-    row = node_new(c, sid, snap, props=jb(props))
+    # first_party가 본문을 바꾸면 이 스냅샷은 더 이상 외부 본문이 아니다. 출처는 더 제한적인 쪽으로 올린다
+    up = {"origin": "first_party"} if e["origin"] == "first_party" and snap["origin"] != "first_party" else {}
+    row = node_new(c, sid, snap, props=jb(props), **up)
     tb, pb = c.obj(p["text_sha"]), c.obj(p["paras_sha"])
     if tb is None or pb is None:  # skip 모드: 없는 객체는 목록에 남고 문단은 건너뛴다
         return add_change(c, sid, row["version"], "Snapshot", 0)

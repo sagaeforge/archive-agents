@@ -11,6 +11,8 @@ from kb.live.model import AUTO_DEAD_CAP, TYPE_UNIT, Decision, Item
 DECIDER = "live-rules@1"
 QUEUE_KIND = "live"
 SEED_EVERY_S = 6 * 3600
+TRANSIENT = {"budget_exceeded", "circuit_open"}
+RETRY_TRANSIENT_MS = 3600_000
 TYPES = tuple(TYPE_UNIT)
 
 
@@ -89,7 +91,7 @@ def run(targets: list, fx, *, now: int | None = None, dry_run: bool = False, con
             con = G.open_gold()
         except Exception:  # noqa: BLE001  gold가 아직 없다
             con = None
-    s = {"targets": len(targets), "checked": 0, "unreachable": 0, "changed": 0, "written": 0, "queued": 0, "capped": 0,
+    s = {"targets": len(targets), "checked": 0, "unreachable": 0, "unreachable_reasons": {}, "changed": 0, "written": 0, "queued": 0, "capped": 0,
          "rejected": 0, "released": 0, "propagated": 0, "rechecks": 0, "errors": [], "dry_run": dry_run, "decisions": []}
     try:
         decs, probes = [], {}
@@ -102,6 +104,8 @@ def run(targets: list, fx, *, now: int | None = None, dry_run: bool = False, con
             probes[t["id"]] = pr
             if d is None:
                 s["unreachable"] += 1
+                why = pr.reasons[0] if pr.reasons else "no_probe"       # no_probe: 확인할 URL이나 속성이 없다
+                s["unreachable_reasons"][why] = s["unreachable_reasons"].get(why, 0) + 1
                 continue
             s["checked"] += 1
             decs.append(d)
@@ -122,6 +126,9 @@ def run(targets: list, fx, *, now: int | None = None, dry_run: bool = False, con
                     d = next((x for x in decs if x.target == t["id"]), None)
                     lv = d.liveness if d else t.get("liveness")
                     at = schedule.next_at_ms(t["id"], t["type"], lv, now if (d and d.changed) else t.get("recorded_at"), now)
+                    pr = probes.get(t["id"])
+                    if d is None and pr is not None and TRANSIENT & set(pr.reasons):
+                        at = min(at, now + RETRY_TRANSIENT_MS)      # 예산, 회로 차단은 주기를 기다리지 않고 곧 다시 본다
                     opsdb.queue_put(c, QUEUE_KIND, t["id"], domain="G", priority=0, next_at=at)
                     opsdb.queue_done(c, QUEUE_KIND, t["id"], requeue_at=at)
             finally:

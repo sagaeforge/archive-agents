@@ -9,8 +9,10 @@ from kb.core import conn as _conn
 from kb.project import verify_projection
 
 SHA = re.compile(r"^[0-9a-f]{64}$")
+# window_sha는 넣지 않는다. 창 본문의 내용 해시(캐시 키)일 뿐 CAS 객체가 아니다. 본문은 스냅샷 문단에서 다시 만든다.
+# 창을 CAS에 넣으면 ttl 스냅샷 본문이 영구 객체로 남는다.
 CAS_KEYS = {"raw_sha": None, "text_sha": None, "paras_sha": None, "points_sha": None, "output_sha": None,
-            "window_sha": None, "body_sha": "fp"}
+            "body_sha": "fp"}
 
 
 def _led():

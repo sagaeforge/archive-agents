@@ -199,7 +199,7 @@ def test_provisional():
 
 def test_version():
     assert SPEC["openapi"] == "3.1.1"
-    assert SPEC["info"]["version"] == "0.3.1"
+    assert SPEC["info"]["version"] == "0.3.2"
     assert "servers" not in SPEC
 
 

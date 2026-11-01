@@ -1,0 +1,68 @@
+# 1차 수집 배치 (WP-21). 활성이고 runnable인 https 소스만. 순서: G1~G3, G5, G4, A~F 문서형, F 개발.
+# 결정 8, 9 승인(~/.config/sagae-kb/decisions.toml)으로 requires_decision 8/9 소스를 넣었다. 비활성, 결정 대기, local_exec, 연락처 요구, 서킷 열린 opensurvey-trend는 뺐다.
+# max_pages: discover 소스의 첫 배치 상한.
+sources:
+  - {id: src:cc-changelog-gh, domain: [G]}
+  - {id: src:cc-changelog-docs, domain: [G]}
+  - {id: src:cc-docs-en, domain: [G]}
+  - {id: src:cc-docs-ko, domain: [G]}
+  - {id: src:cc-whats-new, domain: [G]}
+  - {id: src:claude-model-deprecations, domain: [G]}
+  - {id: src:claude-api-release-notes, domain: [G]}
+  - {id: src:anthropic-engineering, domain: [G]}
+  - {id: src:claude-com-sitemap, domain: [G]}
+  - {id: src:claude-support-release-notes, domain: [G]}
+  - {id: src:claude-status, domain: [G]}
+  - {id: src:cc-repo-meta, domain: [G]}
+  - {id: src:cc-npm, domain: [G]}
+  - {id: src:cc-agent-sdk, domain: [G]}
+  - {id: src:claude-plugins-official, domain: [G]}
+  - {id: src:cc-system-prompts, domain: [G]}
+  - {id: src:codex-releases, domain: [G]}
+  - {id: src:codex-docs, domain: [G]}  # 결정 9
+  - {id: src:codex-changelog, domain: [G]}  # 결정 9
+  - {id: src:codex-feature-maturity, domain: [G]}  # 결정 9
+  - {id: src:codex-models, domain: [G]}  # 결정 9
+  - {id: src:codex-whats-new, domain: [G]}  # 결정 9
+  - {id: src:codex-features-lib, domain: [G]}
+  - {id: src:openai-api-deprecations, domain: [G]}  # 결정 9
+  - {id: src:codex-npm, domain: [G]}
+  - {id: src:agents-md, domain: [G]}
+  - {id: src:openai-status, domain: [G]}  # 결정 9
+  - {id: src:cc-best-practices, domain: [G]}
+  - {id: src:cc-workflows, domain: [G]}
+  - {id: src:awesome-claude-code, domain: [G]}
+  - {id: src:simonw-atom, domain: [G]}
+  - {id: src:hn-algolia-g, domain: [G]}
+  - {id: src:geeknews, domain: [G]}
+  - {id: src:pytorch-kr, domain: [G]}
+  - {id: src:yozm-it, domain: [G]}
+  - {id: src:kr-tech-blogs, domain: [G]}
+  - {id: src:ollama-blog, domain: [G]}
+  - {id: src:lmstudio-blog, domain: [G]}
+  - {id: src:hf-models, domain: [G]}
+  - {id: src:llama-cpp-releases, domain: [G]}
+  - {id: src:ollama-releases, domain: [G]}
+  - {id: src:lmstudio-docs, domain: [G]}
+  - {id: src:korea-sovereign-ai, domain: [G]}
+  - {id: src:mcp-registry, domain: [G]}
+  - {id: src:g4-repos, domain: [G]}
+  - {id: src:g4-npm, domain: [G]}
+  - {id: src:datareportal, domain: [B, C]}
+  - {id: src:mobileindex-blog, domain: [B]}
+  - {id: src:nielsen-gauge, domain: [B, C]}
+  - {id: src:kmcc-media-survey, domain: [B]}
+  - {id: src:kisdi-stat, domain: [B]}
+  - {id: src:youtube-official-blog, domain: [C, D, E]}
+  - {id: src:yt-ypp-help, domain: [C, D, E]}
+  - {id: src:arxiv-audit, domain: [C]}  # 결정 8
+  - {id: src:nasmedia-npr, domain: [B, E]}
+  - {id: src:yt-how-recommendations, domain: [C, D]}
+  - {id: src:so-octoverse, domain: [F]}  # 결정 9
+  - {id: src:google-ads-help, domain: [E]}
+  - {id: src:yt-api-docs, domain: [F]}
+  - {id: src:f-tools, domain: [F]}
+  - {id: src:hn-algolia-f, domain: [F]}
+  - {id: src:pypi-meta, domain: [F]}  # 결정 8
+  - {id: src:arxiv-api, domain: [C, F]}  # 결정 8
+  - {id: src:kworb, domain: [A, B]}

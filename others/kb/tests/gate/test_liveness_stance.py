@@ -98,5 +98,97 @@ def test_gate_l1_stage_applies_to_deterministic_claims(env):
     assert again.detail["scanned"] == 0 and again.detail["held"] == 0
 
 
+def _reassert(subject, cid, key):
+    """파서가 새 스냅샷에서 같은 주장을 다시 낸다(값은 같고 본문만 바뀐 경우)."""
+    from kb.write import commit
+    snap = capture("https://t.example/" + key, f"# T\n\nlatest 1.0 {key}\n".encode())
+    commit([{"kind": "claim.assert", "actor": "parser", "origin": "external", "subject": subject,
+             "idem_key": f"claim:{cid}:{snap['id']}",
+             "payload": {"id": cid, "subject": subject, "predicate": "latest_version", "value": "1.0", "statement": "latest 1.0",
+                         "kind": "state", "stance": "stated", "method": "deterministic", "verification": "parser_derived",
+                         "evidence": [{"snapshot": snap["id"], "selector_kind": "text_quote", "exact": "latest 1.0"}]}}], "parser")
+
+
+def _hold_events():
+    from kb.core import ledger
+    led = ledger.open_ledger()
+    try:
+        return led.execute("SELECT idem_key FROM event WHERE kind='claim.review' ORDER BY seq").fetchall()
+    finally:
+        led.close()
+
+
+def test_reasserted_claim_is_held_again(env):
+    """정기 수집에서 본문만 바뀌어 주장이 parser_derived로 돌아와도 생존 미상이면 다시 보류된다."""
+    s = "e:repo:acme-r"
+    put_entity(s, "Repo", "acme/r")
+    cid = _det_claim(s, "r1")
+    tick_stage.run()
+    assert _verification(cid) == "needs_review"
+    for i in (2, 3):                                                       # 두 번 되풀이해도 매번 묶인다
+        _reassert(s, cid, f"r{i}")
+        assert _verification(cid) == "parser_derived"
+        assert tick_stage.run().detail["held"] == 1
+        assert _verification(cid) == "needs_review"
+    assert len(_hold_events()) == 3
+
+
+def test_rescan_after_crash_adds_no_events(env):
+    """커서를 저장하기 전에 죽어 같은 assert를 다시 봐도 이벤트가 늘지 않는다. 재보류 키도 같다."""
+    s = "e:repo:acme-c"
+    put_entity(s, "Repo", "acme/c")
+    cid = _det_claim(s, "c1")
+    tick_stage.run()
+    _reassert(s, cid, "c2")
+    tick_stage.run()
+    before = _hold_events()
+    assert len(before) == 2
+    c = opsdb.connect()
+    try:
+        opsdb.tick_state_set(c, tick_stage.CURSOR, 0)
+    finally:
+        c.close()
+    tick_stage.run()
+    assert _hold_events() == before
+
+
+def test_rehold_stays_visible_to_liveness_release(env):
+    """재보류된 주장도 생존 확정 때 풀린다. kb.live.effects는 첫 보류의 키로 이력을 찾는다."""
+    from kb.live.effects import _gate_l1_held
+    s = "e:repo:acme-l"
+    put_entity(s, "Repo", "acme/l")
+    cid = _det_claim(s, "l1")
+    tick_stage.run()
+    _reassert(s, cid, "l2")
+    tick_stage.run()
+    assert _gate_l1_held(cid)
+
+
+def test_real_parser_second_snapshot_stays_held(env):
+    """실제 파서 경로: 값은 그대로이고 본문만 바뀐 두 번째 스냅샷 뒤에도 G 단위 주어의 주장은 보류를 벗어나지 않는다."""
+    import json
+    from kb.collect import registry
+    from kb.parse import pipeline
+    src = registry._build({"id": "src:rel", "name": "rel", "domain": ["G"], "class": "rel", "parser": "github_release@1",
+                           "fetch": {"kind": "https", "url": "https://api.github.com/repos/o/r/releases/latest"},
+                           "policy": {"enabled": True, "tos": "allowed", "robots": "enforce", "trust": "primary"}})
+
+    def active():
+        con = gold()
+        try:
+            return dict(con.execute("SELECT n.id, n.verification FROM claim c JOIN node n ON n.vid=c.vid "
+                                    "WHERE n.expired_at IS NULL AND c.method='deterministic'").fetchall())
+        finally:
+            con.close()
+
+    for i, note in enumerate(("first", "body changed"), 1):
+        body = json.dumps({"tag_name": "v1.0.0", "published_at": "2026-10-29T00:00:00Z", "name": "v1.0.0", "body": note}).encode()
+        snap = capture(src.fetch["url"] if isinstance(src.fetch, dict) else src.fetch.url, body, "application/json", source=src.id,
+                       fetched_at=1_790_000_000_000 + i)
+        assert pipeline.parse_snapshot(snap, src)["status"] == "ok"
+        assert active() and tick_stage.run().detail["held"] >= 1
+        assert set(active().values()) == {"needs_review"}
+
+
 def test_stage_is_registered_for_tick(env):
     assert tick_stage.STAGES[0][:2] == (4.5, "gate_l1")

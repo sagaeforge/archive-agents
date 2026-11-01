@@ -94,7 +94,7 @@ def test_stage_failure_does_not_block_next_and_autodiscovery(one, monkeypatch, t
     assert rep["parsed"] == 4 + 1 and rc == 1                   # 가짜 단계 4건 + 4단계 parse가 이 시험의 스냅샷 1건
     assert one.count("t.example", "/doc") == 1                  # 앞 단계 실패와 무관하게 수집은 끝났다
     for n, name, mod in T.EXPECTED:
-        if name == "fetch":
+        if name in ("fetch", "live"):                           # live는 conftest가 뺀다
             continue
         try:
             present = importlib.util.find_spec(mod) is not None

@@ -19,8 +19,14 @@ def parse_ref(ref: str) -> tuple:
     return s, p, int(st)
 
 
-def candidates_for(proc, text: str, limit: int = MAX_CANDIDATES) -> list:
-    """등록 엔티티 중 창 본문에 별칭이 나오는 것 + FTS 상위. 닫힌 enum의 재료다."""
+def _is_public(con, eid: str) -> bool:
+    r = con.execute("SELECT sensitivity, origin FROM node WHERE id=? AND expired_at IS NULL", (eid,)).fetchone() if con else None
+    return bool(r) and r[0] == 0 and r[1] != "first_party"
+
+
+def candidates_for(proc, text: str, limit: int = MAX_CANDIDATES, *, public: bool = True) -> list:
+    """등록 엔티티 중 창 본문에 별칭이 나오는 것 + FTS 상위. 닫힌 enum의 재료다.
+    public이면 후보가 외부 프롬프트로 나가므로 민감 엔티티를 뺀다. 민감 범위(sLLM 전용)만 False로 부른다."""
     out: dict = {}
     hay = norm(text)
     gold = proc.gold
@@ -28,7 +34,7 @@ def candidates_for(proc, text: str, limit: int = MAX_CANDIDATES) -> list:
         for a, eid in gold.all_aliases().items():
             if eid not in out and alias_in(a, hay):
                 n = gold.node(eid)
-                if n:
+                if n and (not public or _is_public(gold.conn(), eid)):
                     out[eid] = {"id": eid, "label": n["label"], "aliases": [a]}
                 if len(out) >= limit:
                     break
@@ -42,12 +48,13 @@ def candidates_for(proc, text: str, limit: int = MAX_CANDIDATES) -> list:
             if toks and con is not None:
                 q = " OR ".join('"' + t.replace('"', "") + '"' for t in toks)
                 rows = con.execute("SELECT s.subject, count(*) c FROM fts f JOIN span s ON s.sid=f.rowid WHERE fts MATCH ? "
-                                   "AND s.rec_to IS NULL AND s.subject IS NOT NULL GROUP BY s.subject ORDER BY c DESC LIMIT ?",
+                                   "AND s.rec_to IS NULL AND s.subject IS NOT NULL AND s.sensitivity=0 AND s.origin<>'first_party' GROUP BY s.subject ORDER BY c DESC LIMIT ?",
                                    (q, limit)).fetchall()
                 for sid, _ in rows:
                     if sid not in out and len(out) < limit:
                         n = gold.node(sid)
-                        if n and n["type"] not in ("Claim", "Snapshot", "Document", "Record"):
+                        if n and n["type"] not in ("Claim", "Snapshot", "Document", "Record") \
+                                and (not public or _is_public(con, sid)):     # 주어의 현재 라벨도 외부로 나간다
                             out[sid] = {"id": sid, "label": n["label"], "aliases": []}
         except Exception:  # noqa: BLE001
             pass

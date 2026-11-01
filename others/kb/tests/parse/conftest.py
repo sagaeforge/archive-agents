@@ -12,6 +12,14 @@ REPO = Path(__file__).resolve().parents[2]
 FX = Path(__file__).resolve().parent / "fixtures"
 
 
+def base_sources(dest: Path) -> Path:
+    """overlays를 뺀 sources 사본(심볼릭 링크)을 dest에 만든다. 기본 레지스트리 시험용."""
+    for p in (REPO / "sources").iterdir():
+        if p.name != "overlays":
+            (dest / p.name).symlink_to(p)
+    return dest
+
+
 def fx(name: str) -> bytes:
     return (FX / name).read_bytes()
 

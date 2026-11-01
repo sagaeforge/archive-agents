@@ -51,6 +51,7 @@ class TickCtx:
     batch: list | None = None
     batch_caps: dict = field(default_factory=dict)    # 소스 id -> --batch 항목의 max_pages
     paused: bool = False
+    force_spent: bool = False     # --only, --batch의 강제 재요청은 run_tick 한 번에 1회다(--until-idle 반복 제외)
     discoverers: dict | None = None
     counters: dict = field(default_factory=lambda: {k: 0 for k in COUNTER_KEYS})
     warnings: list = field(default_factory=list)

@@ -10,10 +10,9 @@ import signal
 import subprocess
 import sys
 import time
-import urllib.request
 
 from kb.core import paths
-from kb.extract import settings, state
+from kb.extract import llmhttp, settings, state
 from kb.extract.types import Job, Preflight, Result
 
 NAME = "sllm"
@@ -64,10 +63,7 @@ def _pdeathsig():
 
 
 def _http(path: str, body: dict | None, port: int, timeout: float):
-    req = urllib.request.Request(f"http://127.0.0.1:{port}{path}", data=None if body is None else json.dumps(body).encode(),
-                                 headers={"Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.load(r)
+    return llmhttp.request_json(f"http://127.0.0.1:{port}{path}", body=body, timeout=timeout)
 
 
 class Session:

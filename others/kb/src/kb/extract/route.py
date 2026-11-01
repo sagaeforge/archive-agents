@@ -290,7 +290,9 @@ class Router:
         c: list = []
         sm = str(settings.get("openrouter.support_model", OR_SONNET))
         if settings.get("openrouter.support_calibrated", False):
-            ok, _ = self._or_ok(sm)
+            ok, why = self._or_ok(sm)
+            if not ok and why == "daily_valve":
+                return Plan([], "daily_valve")              # 밸브 도달 뒤에는 Claude, Codex로 번지지 않는다
             if ok and budget.windows_today("openrouter", support=True) < int(settings.get("openrouter.support_daily", 1000)):
                 c.append(Cand("openrouter", sm, "support:or_sonnet"))
         cl, w = self._claude_ok(support=True)
@@ -303,7 +305,9 @@ class Router:
         m = settings.get("openrouter.cross_models") or {}
         model = m.get(extractor) or m.get("default") or SOL
         c: list = []
-        ok, _ = self._or_ok(model)
+        ok, why = self._or_ok(model)
+        if not ok and why == "daily_valve":
+            return Plan([], "daily_valve")                  # 밸브 도달 뒤에는 Codex, Claude로 번지지 않는다
         if ok:
             c.append(Cand("openrouter", model, "cross:other_vendor"))
         cx, _ = self._codex_ok()

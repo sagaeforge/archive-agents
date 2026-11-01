@@ -48,6 +48,7 @@ def test_no_denied_host_requests():
 
 
 def test_no_systemd_kb_units():
+    """WP-25는 kb-agent 유닛을 설치하지 않는다. kb-tick, kb-read 유닛은 결정 3으로 합법이다."""
     d = Path.home() / ".config" / "systemd" / "user"
     if d.is_dir():
-        assert [p.name for p in d.iterdir() if "kb" in p.name.lower()] == []
+        assert [p.name for p in d.iterdir() if "kb-agent" in p.name.lower()] == []

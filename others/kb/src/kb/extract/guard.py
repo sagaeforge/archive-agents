@@ -85,6 +85,20 @@ def classify_inputs(paras: list) -> tuple:
     return worst, why
 
 
+def _body_not_external(con, snapshot_id: str) -> bool:
+    """스냅샷의 본문 출처. (1) 이 노드의 어느 판에서든 출처가 외부가 아니었던 적이 있으면(first_party snapshot.text가 본문을
+    바꾼 경우) 참. (2) 같은 text_sha를 가진 다른 스냅샷이 외부가 아니면 참(본문 객체를 공유한다)."""
+    if con.execute("SELECT 1 FROM node WHERE id=? AND origin<>'external' LIMIT 1", (snapshot_id,)).fetchone():
+        return True
+    cur = con.execute("SELECT json_extract(CAST(props AS TEXT),'$.text_sha') FROM node WHERE id=? AND expired_at IS NULL",
+                      (snapshot_id,)).fetchone()
+    sha = cur[0] if cur else None
+    if not sha:
+        return False
+    return con.execute("SELECT 1 FROM node WHERE type='Snapshot' AND origin<>'external' AND id<>? AND expired_at IS NULL "
+                       "AND json_extract(CAST(props AS TEXT),'$.text_sha')=? LIMIT 1", (snapshot_id, sha)).fetchone() is not None
+
+
 def inspect_snapshot(snapshot_id: str, text: str, con=None) -> dict:
     """gold의 head에서 최신 민감도를 읽는다. 읽기 실패나 값 없음이면 error/None이다."""
     from kb.core.conn import connect_ro
@@ -104,6 +118,9 @@ def inspect_snapshot(snapshot_id: str, text: str, con=None) -> dict:
             out["origin"] = n[0]
             out["display"] = ("f:" + (n[2] or "user")) if n[0] == "first_party" else None
         out["sensitivity"] = h[0] if h else None
+        if n and n[0] == "external" and n[1] == "Snapshot" and _body_not_external(con, snapshot_id):
+            out["origin"] = "first_party"                  # 본문 출처가 외부가 아니다. 모르면 막는다
+            out["display"] = "f:user"
     except Exception as e:  # noqa: BLE001
         out["error"] = f"{type(e).__name__}"
     finally:

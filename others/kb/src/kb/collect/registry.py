@@ -103,8 +103,15 @@ class Source:
                 return d
         return None
 
+    def owns_patterns(self) -> list[str]:
+        """fetch.owns: 이 소스가 소유하는 URL 정규식. 정적 URL 밖의 개별 URL(저장소 README, 패키지 문서, 피드 항목 페이지)용."""
+        v = self.fetch.get("owns") or []
+        return [v] if isinstance(v, str) else list(v)
+
     def owns_url(self, url: str) -> bool:
         if url in self.all_urls():
+            return True
+        if any(re.search(p, url) for p in self.owns_patterns()):
             return True
         h = host_of(url)
         return bool(h and h in self.hosts() and self.discover)
@@ -240,6 +247,11 @@ def validate_registry(srcs: list[Source]) -> None:
                 raise RegistryError(f"{s.id}: discover.kind 값 오류: {disc.get('kind')!r}")
             if not isinstance(disc.get("max_pages"), int) or disc["max_pages"] < 1:
                 raise RegistryError(f"{s.id}: discover.max_pages는 필수 정수다")
+        for pat in s.owns_patterns():
+            try:
+                re.compile(pat)
+            except re.error as e:
+                raise RegistryError(f"{s.id}: fetch.owns 정규식 오류 {pat!r}: {e}")
         for u in s.all_urls():
             if not host_of(u):
                 raise RegistryError(f"{s.id}: URL 형식 오류: {u!r}")

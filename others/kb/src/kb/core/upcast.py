@@ -39,3 +39,9 @@ def upcast(kind: str, v: int, payload: dict | None) -> tuple[int, dict | None]:
         payload = fn(dict(payload))
         v += 1
     return v, payload
+
+
+@register("claim.confirm", 1)
+def _claim_confirm_v1(payload: dict) -> dict:
+    """v1에는 새 스냅샷의 위치가 없다. 옛 스냅샷 오프셋을 복사하던 동작을 재현하지 않고 위치 없는 페이로드로 둔다."""
+    return payload

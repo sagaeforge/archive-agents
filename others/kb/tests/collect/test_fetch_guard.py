@@ -140,6 +140,7 @@ def test_connect_to_private_peer_blocked(monkeypatch):
 
 
 def test_no_urlopen_in_source():
-    r = subprocess.run(["rg", "-n", r"urlopen|urllib\.request|requests\.|httpx|aiohttp", str(REPO / "src/kb")],
+    # 허용 목록: src/kb/extract/llmhttp.py (LLM 전용 클라이언트, https 또는 루프백만 허용)
+    r = subprocess.run(["rg", "-n", "-g", "!**/extract/llmhttp.py", r"urlopen|urllib\.request|requests\.|httpx|aiohttp", str(REPO / "src/kb")],
                        capture_output=True, text=True)
     assert r.returncode == 1, r.stdout

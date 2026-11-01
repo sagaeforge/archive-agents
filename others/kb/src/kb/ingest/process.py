@@ -168,6 +168,14 @@ class Processor:
         self.snaps[sid] = info
         return info
 
+    def _source_names(self, info: SnapInfo) -> tuple:
+        """주어 문맥에 쓰는 소스 이름·발행처·레지스트리 별칭."""
+        src = self.sources.get(info.source)
+        if src is None or src.id == ADHOC:
+            return (info.publisher,) if info.publisher else ()
+        out = [src.name, src.raw.get("publisher"), info.publisher, *(src.raw.get("aliases") or [])]
+        return tuple(x for x in dict.fromkeys(out) if x)
+
     def text_of(self, info: SnapInfo) -> SnapInfo:
         try:
             return load_text(info, self.sources, write=self.write)
@@ -185,8 +193,12 @@ class Processor:
             self.refs[it.get("ref") or sid] = {"kind": "snapshot", "id": sid}
             return Outcome(would_be={"snapshot": sid, "url": info.url, "source": info.source})
         url = it["url"]
-        u = urlsplit(url)
-        if u.scheme not in ("http", "https") or not u.hostname:
+        try:
+            u = urlsplit(url)
+            host = u.hostname
+        except ValueError:                                  # http://[bad 같은 URL이 묶음 전체를 멈추면 안 된다
+            raise ItemError("E_POLICY", f"URL을 해석할 수 없다: {url[:80]}") from None
+        if u.scheme not in ("http", "https") or not host:
             raise ItemError("E_POLICY", f"http(s) URL이 아니다: {url[:80]}")
         from kb.collect import hostpolicy, registry
         why = hostpolicy.denied_reason(u.hostname)
@@ -570,7 +582,8 @@ class Processor:
             para = _para_for(info.paras, pre_loc.start) if pre_loc else None
             ptxt = info.text[_attr(para, "start_cp"):_attr(para, "end_cp")] if para is not None else ""
             hay = context.build_hay(info.text[pre_loc.start:pre_loc.end] if pre_loc else "", ptxt,
-                                    _attr(para, "table_header"), _attr(para, "heading_path"), info.title)
+                                    _attr(para, "table_header"), _attr(para, "heading_path"), info.title,
+                                    self._source_names(info))
             cand = [sn["label"], *(sn.get("aliases") or [])]
             new_aliases = [a for a in dict.fromkeys(cand) if context.alias_in(a, hay)]
             forms = new_aliases
@@ -593,7 +606,7 @@ class Processor:
                 if len(norm(a)) >= 2:
                     known.setdefault(norm(a), eid)
         ctx = GateCtx(subject=sid, subject_aliases=tuple(forms), known_aliases=known, doc_title=info.title,
-                      publisher=info.publisher, liveness=self._liveness_fn(sid))
+                      publisher=info.publisher, source_names=self._source_names(info), liveness=self._liveness_fn(sid))
         res = check_claim({"statement": it["statement"], "kind": kind, "stance": it["stance"], "speaker": it.get("speaker"),
                            "quote": ev["quote"], "prefix": ev.get("prefix", ""), "suffix": ev.get("suffix", "")},
                           info.text, info.paras, ctx)
@@ -639,7 +652,8 @@ class Processor:
             payload["qualifiers"] = qual
         if valid:
             payload["valid"] = valid
-        dom = it.get("domain")
+        # 항목에 domain이 없으면 머리와 근거 스냅샷 도메인의 합집합을 쓴다. 좁은 머리가 다중 도메인 소스를 깎지 않게 한다
+        dom = list(it.get("domain") or sorted({*self.domain, *self.gold.domains(info.id)}))
         if dom:
             payload["domain"] = dom
         if method == "deterministic":

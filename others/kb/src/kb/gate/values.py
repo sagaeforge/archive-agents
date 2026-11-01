@@ -55,30 +55,58 @@ CONCEPT = {
 _CRE = {k: [re.compile(p, re.I) for p in ps] for k, ps in CONCEPT.items()}
 EQUIV = {"after": {"ge"}, "le": {"before"}, "before": {"le"}}
 NEGW = [re.compile(p, re.I) for p in (
-    r"않", r"없", r"(?<![가-힣])못(?![가-힣]*된)", r"불가", r"금지", r"아니", r"\bnot\b", r"\bno\b", r"\bnever\b",
-    r"cannot", r"can't", r"n't\b", r"without", r"unless", r"neither")]
-
-
+    r"않", r"없", r"(?<![가-힣])못(?![가-힣]*된)", r"불가", r"금지", r"아니", r"누락", r"\bnot\b", r"\bno\b", r"\bnever\b",
+    r"cannot", r"can't", r"n't\b", r"without", r"unless", r"neither", r"\bnothing\b", r"\bnone\b", r"\binstead of\b",
+    r"\bunable\b", r"\bunbound\b", r"\bunset\b", r"\bunavailable\b")]
+# 부정이 아닌 가산 구문: "A뿐 아니라 B", "not only/just". 부정어 검사 전에 지운다.
+_ADDITIVE = re.compile(r"뿐(?:만)?\s*아니라|\bnot\s+(?:only|just|merely)\b", re.I)
+_YEAR_ST = re.compile(r"(?<!\d)((?:19|20)\d{2})\s*년")
+_ISO_DATE = re.compile(r"(?<!\d)(?:19|20)\d{2}-\d{2}-\d{2}")
+_ISO_TIME = re.compile(r"(?<!\d)\d{1,2}:\d{2}")
+_EN_DATE = re.compile(r"\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2}\b|\b\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b", re.I)
 def concepts(s: str) -> set:
     s = spell(s)
     return {k for k, ps in _CRE.items() if any(p.search(s) for p in ps)}
 
 
+def quote_concepts(q: str) -> set:
+    """인용구의 개념. 날짜·시각 표기(ISO, 영어 월 이름)는 년·일·분·시간 개념을 함께 제공한다(한국어 문장이 이를 풀어 쓴 경우)."""
+    out = concepts(q)
+    if _ISO_DATE.search(q):
+        out |= {"year", "day"}
+    if _EN_DATE.search(q) or _ISO_DATE.search(q):
+        out |= {"day"}
+    if _ISO_TIME.search(q):
+        out |= {"min", "hour"}
+    return out
+
+
 def has_neg(s: str) -> bool:
+    s = _ADDITIVE.sub(" ", s.replace("\u2019", "'"))
     return any(p.search(s) for p in NEGW)
 
 
-def value_issues(statement: str, quote: str) -> list:
-    """문장이 인용구에 없는 값을 말하면 사유 목록. 비면 통과."""
+def value_issues(statement: str, quote: str, subject_forms=()) -> list:
+    """문장이 인용구에 없는 값을 말하면 사유 목록. 비면 통과.
+    subject_forms: 주어의 라벨·별칭. 주어 식별자에 든 숫자(게시물 번호 등)는 인용구에 없어도 된다."""
     why = []
-    extra = nums(statement) - nums(quote)
+    own = set()
+    for f in subject_forms or ():
+        own |= nums(f)
+    extra = nums(statement) - nums(quote) - own
     if extra:
         why.append("num:" + ",".join(sorted(extra)))
     if HANGUL.search(quote):
-        px = pairs(statement) - pairs(quote)
+        qn = {n for n, _ in pairs(quote)}
+        bare = nums(quote) - qn                                  # 단위 없이 나온 숫자(순위 표 등)는 단위 불일치로 보지 않는다
+        px = {(n, u) for n, u in pairs(statement) - pairs(quote) if n not in bare}
         if px:
             why.append("pair:" + ",".join(f"{n}{u}" for n, u in sorted(px)))
-    sc, qc = concepts(statement), concepts(quote)
+    sc, qc = concepts(statement), quote_concepts(quote)
+    if "year" in sc and "year" not in qc:                         # 'YYYY년'이 인용구에 YYYY로 있으면 년 개념을 가졌다고 본다
+        ys = _YEAR_ST.findall(spell(statement))
+        if ys and all(y in nums(quote) for y in ys):
+            qc = qc | {"year"}
     miss = {c for c in sc if c not in qc and not (EQUIV.get(c, set()) & qc)}
     if miss:
         why.append("concept:" + ",".join(sorted(miss)))

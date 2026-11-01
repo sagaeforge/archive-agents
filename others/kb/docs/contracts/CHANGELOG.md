@@ -2,6 +2,15 @@
 
 `docs/contracts/openapi.yaml`의 변경 기록이다. 파괴 변경은 major(0.x 동안은 minor)를 올리고 여기에 적은 뒤 sagae-tools 세션에 알린다(계약 8장). 기준선은 `docs/contracts/baseline/openapi.yaml`이고 올리는 것은 소비자 통지 뒤의 명시 절차다.
 
+## 0.3.2 (2026-11-01) 소비자 확정본 요청 3건, 호환 변경만
+
+입력은 `docs/contracts/consumers/sagae-tools.md` 확정본의 열린 요청 1~3이다. 파괴 변경은 없다.
+
+- 정정(스키마): `as_of_valid`에 `minLength: 1`과 `pattern`(RFC 3339 또는 `YYYY-MM-DD`)을 선언했다. 빈 값은 무효(400 `bad_param`). `as_of_observed`는 `format: date-time`이 이미 있다.
+- 정정(스키마): `/v1/facets`의 `q`를 선택으로 했다(`QOptional` 파라미터 추가). `/v1/search`의 `q`는 필수 그대로다. 4.9 산문과 일치한다. 소비자는 항상 보내므로 호환이다.
+- 정정(문서): 12장 예상 규모의 주장 수를 29만~37만으로 고쳤다(측정 창당 7.2~9.53건 통과, ADR 부록 A).
+- 버전: `info.version`과 예시의 `schema_version`을 0.3.2로 올렸다. 기준선(`baseline/`)은 sagae-tools가 2026-11-01에 0.3.2를 수용한 뒤 0.3.2로 올렸다.
+
 ## 0.3.1 (2026-11-01) 3차 회신 처리, 호환 변경만
 
 입력은 `docs/contracts/consumers/sagae-tools-reply-3.md`이고 항목별 처리는 `sagae-tools-reply-3-response.md`다. 파괴 변경은 없다. `docs/contracts/baseline/openapi.yaml`은 sagae-tools 수용 회신(2026-11-01) 뒤 0.3.1로 올렸다. 호환 변경이라 기준선을 올리는 것은 소비자 통지 뒤의 명시 절차다. `test_baseline_in_sync`가 같은 판이면 바이트 일치, 더 높은 판이면 경로, 파라미터, 속성, `required`, 닫힌 enum을 줄이지 않았는지 본다.

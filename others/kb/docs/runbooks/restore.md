@@ -34,16 +34,16 @@ export PATH="$KB_TOOLCHAIN/bin:$PATH"
 
 ## 2. 외장 SSD E: 마운트(사본 B를 쓸 때)
 
-`kb` 는 마운트하지 않는다. 사용자가 직접 한다. 재부팅이나 `wsl --shutdown` 뒤에는 사라진다.
+`kb` 는 마운트하지 않는다. 사용자가 직접 한다. 드라이브를 꽂아 둔 채 재부팅하면 자동으로 마운트되는 것을 확인했다(2026-11-01 03:12 재부팅 뒤 `/mnt/e` 자동 마운트). 드라이브가 빠져 있거나 마운트가 풀렸을 때만 아래 명령으로 직접 마운트한다.
 
 ```
 sudo mkdir -p /mnt/e
-sudo mount -t drvfs E: /mnt/e -o metadata
-findmnt -T /mnt/e -o TARGET,SOURCE,FSTYPE,OPTIONS     # SOURCE E:\, FSTYPE 9p(drvfs), OPTIONS에 metadata
+sudo mount -t drvfs E: /mnt/e
+findmnt -T /mnt/e -o TARGET,SOURCE,FSTYPE,OPTIONS     # SOURCE E:\, FSTYPE 9p(drvfs), OPTIONS에 aname=drvfs
 cat /mnt/e/kb-restic/.kb-offsite-id                    # offsite-e
 ```
 
-`metadata` 가 옵션에 없으면 `kb ship` 은 이 대상을 건너뛴다(`offsite_unmounted`). 이미 마운트돼 있으면 `sudo umount /mnt/e` 뒤 위 명령으로 다시 한다.
+TARGET, SOURCE, FSTYPE, 마커 중 하나라도 어긋나면 `kb ship` 은 이 대상을 건너뛴다(`offsite_unmounted`). `metadata` 옵션은 확인하지 않는다. 이미 마운트돼 있으면 `sudo umount /mnt/e` 뒤 위 명령으로 다시 한다.
 `/mnt/e` 가 마운트돼 있지 않으면 빈 ext4 디렉터리라 거기에 쓰면 사본이 ext4에 생긴다. 위 `findmnt` 가 `E:\` 를 보여 줄 때만 진행한다.
 
 ## 3. 저장소 열기
@@ -146,4 +146,8 @@ kb drill restore --offsite        # 사본 B에서 full. 통과하면 7일 안�
 | `kb ship` 이 offsite-e 를 건너뜀 | 2장의 `findmnt` 와 마커를 본다. `kb ship --dry-run --json` 의 `targets[].reason` 이 이유다 |
 | 마커 없음/불일치 | 다른 드라이브다. 맞는 드라이브면 `echo offsite-e > /mnt/e/kb-restic/.kb-offsite-id` |
 | I/O 오류로 한 대상만 실패 | 드라이브를 다시 꽂고 마운트한다. 다음 `kb ship` 이 unlock 뒤 `check` 를 먼저 돈다 |
-| NTFS 위 restic | 권한 비트와 fsync 동작은 실측 전이다. `kb drill restore --offsite` 가 실제 복원으로 확인한다 |
+| NTFS 위 restic | C:와 E:에서 실측했고 권한·fsync 오류는 없었다. 열린 과제는 맨 아래 참조 |
+
+## 열린 과제
+
+- 메타데이터 옵션(`-o metadata`)으로 만든 저장소를 옵션 없이 읽는 경우는 실측하지 않았다. 다음 재부팅 뒤 `kb ship --dry-run --json`, `restic check --read-data`(3장 저장소 환경), `kb drill restore --offsite`로 확인한다.

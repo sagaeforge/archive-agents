@@ -176,6 +176,8 @@ class OrServer:
         self.requests: list = []
         self.responder = responder or (lambda body: {"claims": []})
         self.cost, self.balance, self.status = cost, balance, status
+        self.delay = 0.0                 # 응답 전 대기(초). 시간 초과 시험용
+        self.raw: bytes | None = None    # 있으면 본문 대신 이 바이트를 200으로 보낸다(디코딩 실패 시험용)
         outer = self
 
         class H(http.server.BaseHTTPRequestHandler):
@@ -201,6 +203,15 @@ class OrServer:
                 n = int(self.headers.get("Content-Length") or 0)
                 body = json.loads(self.rfile.read(n) or b"{}")
                 outer.requests.append(("POST", self.path, body))
+                if outer.delay:
+                    import time
+                    time.sleep(outer.delay)
+                if outer.raw is not None:
+                    self.send_response(200)
+                    self.send_header("Content-Length", str(len(outer.raw)))
+                    self.end_headers()
+                    self.wfile.write(outer.raw)
+                    return
                 if outer.status != 200:
                     self._send(outer.status, {"error": {"message": "x", "code": outer.status}})
                     return

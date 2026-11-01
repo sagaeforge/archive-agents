@@ -559,6 +559,7 @@ Claim ─EVIDENCED_BY{selector}→ Snapshot    Claim ─ABOUT→ 엔티티
 | 표시 | 사용자 기록 `f:user`, 세션 기록 `f:agent:<세션>`. 세션 기록은 판단이나 미검증 사실일 수 있다 |
 | 갱신 | `expected_version` 필수. 내용 해시가 같으면 새 버전 없음 |
 | 세션 조사 자료 | 다른 프로젝트 세션의 조사 자료는 세션 기록이다. 대장 `docs/intake/session-research.md`의 항목은 `kb intake`가, 새 자료는 세션이 `kb_put`으로 넣는다. 둘 다 타입 `Artifact`, 표시 `f:agent:<세션>`, 비밀 탐지, 결정 2 전 `held`다. 문서의 1차 출처 URL은 `kb_request`와 같은 티켓의 `urls`로 쌓여 수집 경로의 게이트를 지난다. 세션 서술은 어느 경로로도 `claim.assert`가 되지 않는다. 내부 주소, 호스트·노드 이름, 토큰 권한 목록은 저장하지 않는다. 대장 경로는 `kb intake`가 빼고(WP-26) `kb_put` 경로는 세션이 뺀 뒤 낸다. 서버는 비밀 탐지만 건다 |
+| 세션 지식 자동 수확 | `kb harvest`(tick 내부 작업, 한 시간에 한 번, LLM 없음)가 이 PC 세션의 큐레이션 결과만 거둔다: 메모리 파일(`metadata.type: user` 프로필 제외), 워크플로우 `journal.jsonl`의 결과 요약, 끝난 에이전트의 보고서(마지막 assistant 글, 길이 거름), 저장소의 `docs/research/*.md`. 전사 전체, 스크래치패드, 도구 출력은 읽지 않는다. 원본 하나에 기록 하나이고 타입 `Learning`, 민감도 `internal`이다. **작성자는 `agent:harvest`(`transport=intake`, 세션 `harvest`, 대리 `user:sagae`)이고 원본 세션은 `props.session`에 자기 신고 표시값으로 남긴다.** `kb intake`가 대장의 세션을 작성자로 쓰는 것과 다르며 수확에서는 이 귀속을 받아들인다. 내용이 바뀌면 같은 ID의 새 버전(`expected_version`)이고 같으면 아무것도 쓰지 않는다. 사용자가 지운(tombstone, redact) 기록은 되살리지 않는다. 쓰기 전에 원문에 비밀 탐지를 걸어 걸리면 원본을 통째로 건너뛰고(`KEY=<40자리 git SHA>`만 12자리로 줄여 오탐을 피한다), 남은 글에서 내부 주소·차단 목록(호스트·노드 이름과 그 앞부분 토큰)·토큰 권한 줄·이메일 주소가 든 줄을 줄 단위로 뺀다. 세션 자료는 외부 LLM으로 가지 않고 `claim.assert`도 되지 않는다. 글 안의 공개 URL만 `세션 수확 출처 재확인` 티켓으로 가며(실행당·원본당·티켓당 상한, 한 번 오른 URL은 다시 올리지 않음) 사실 확인은 수집 경로의 몫이다. 절차와 상한은 `docs/runbooks/harvest.md` |
 | 경계 | 같은 UID의 Bash 앞에서 민감도 필터와 작성자 구분은 보안 경계가 아니라 실수 방지다 |
 
 ### 7.9 민감도와 보존
@@ -960,7 +961,7 @@ env -i HOME="$HOME" PATH="<고정>" LANG=C.UTF-8 DISABLE_AUTOUPDATER=1 RTK_DISAB
 
 ### 10.7 재확인과 공백
 
-- 새 내용 스냅샷마다 그 URL을 근거로 하는 활성 주장의 인용구를 찾는다. 있으면 `claim.confirm`, 없으면 7.6의 규칙이다. 스냅샷당 이벤트 1개로 묶는다.
+- 새 내용 스냅샷마다 그 URL을 근거로 하는 활성 주장의 인용구를 찾는다. 있으면 `claim.confirm`, 없으면 7.6의 규칙이다. 스냅샷당 이벤트 1개로 묶는다. `claim.confirm`(v2)은 새 스냅샷 표시 본문에서 찾은 `start_cp`, `end_cp`, `exact`, `prefix`, `suffix`를 싣는다. 위치를 못 정한 경우(여러 곳에 있는 인용구, v1 이벤트)는 새 근거 행의 위치가 NULL이고 옛 스냅샷의 오프셋을 쓰지 않는다.
 - 머신이 꺼졌거나 차단돼 시점 소실 소스를 놓치면 `gap.recorded {source, from, to, reason}`를 남긴다. 놓친 슬롯만큼 돌리지 않고 1회 수집한다. "값이 안 변했다"와 "못 봤다"가 데이터로 구분된다.
 
 ## 11. 갱신 주기
@@ -1255,14 +1256,14 @@ f-01JC8ZQ3	채널 첫 시리즈는 Claude Code 활용으로 정했다.	user	2026
 | 사본 | 위치 | 대상 | 막는 장애 | 상태 |
 |---|---|---|---|---|
 | A | `/mnt/c/.../kb-restic` | T0, T1, T3 | ext4, vhdx 손상, 실수 | 설치 승인 뒤(사용자 결정 3) |
-| B | 머신 밖: 외장 SSD E:(Windows E 드라이브, WSL `/mnt/e`, drvfs `metadata`, NTFS 3.7TB) | T0, T1 | C: SSD 고장, vhdx 손상, 실수 삭제 | 결정됨(결정 2). 마운트와 `restic init`은 사용자 입회 |
+| B | 머신 밖: 외장 SSD E:(Windows E 드라이브, WSL `/mnt/e`, drvfs, NTFS 3.7TB) | T0, T1 | C: SSD 고장, vhdx 손상, 실수 삭제 | 결정됨(결정 2). 마운트와 `restic init`은 사용자 입회 |
 | C | (쓰지 않음) Cloudflare R2, Proxmox LXC | - | 집 단위 재해 | 결정 2 답: 쓰지 않는다. 집 단위 재해는 막지 못한다(24장) |
 | D | (쓰지 않음) GitHub 비공개 평문 Markdown + 앵커 | - | - | 결정 2 답: 평문 푸시를 쓰지 않는다. `export/first_party`는 로컬 작업 트리까지다 |
 
 - **이 문서의 "머신 밖".** 이 PC 본체의 C: 디스크 밖에 있는 별도 물리 매체, 곧 외장 SSD E:다. 같은 집의 같은 PC에 꽂혀 있으므로 PC 도난, 화재, 쓰기 가능 상태로 마운트된 동안의 랜섬웨어는 막지 못한다. 그래도 C: SSD 단일 장애, vhdx 손상, 실수 삭제에는 독립 사본이다. 결정 2가 이 경로를 머신 밖으로 정했다.
-- **E: 마운트 확인과 빠졌을 때.** `/mnt/e`는 수동 마운트이고 WSL을 재시작하면 사라진다. `kb ship`은 offsite-e로 보내기 직전마다 (1) `findmnt -T /mnt/e`의 SOURCE가 `E:`, FSTYPE이 drvfs(9p), OPTIONS에 `metadata`가 있고 (2) `/mnt/e/kb-restic/.kb-offsite-id` 마커가 `targets.yaml`의 id와 같은지 본다. 하나라도 어긋나면 이 대상은 건너뛴다. 마운트가 빠진 `/mnt/e`는 ext4의 빈 디렉터리일 수 있어 그대로 쓰면 ext4에 사본이 생기기 때문이다. 건너뜀은 실패가 아니라 `target_unavailable`(ops.db)과 `notices.offsite_unmounted`다. 마지막 성공 전송이 T0 1일, T1 3일을 넘으면 기존 `offsite_age`가 치명이 된다. `/mnt/c` 사본과 라이브 쓰기는 계속된다. `kb`는 스스로 `mount`, `sudo`, `/etc/fstab`, `wsl.conf`를 건드리지 않는다(전역 파일).
+- **E: 마운트 확인과 빠졌을 때.** `/mnt/e`는 수동 마운트이고 WSL을 재시작하면 사라진다. `kb ship`은 offsite-e로 보내기 직전마다 (1) `findmnt -T /mnt/e`의 SOURCE가 `E:`, FSTYPE이 drvfs(9p)이고 TARGET이 `/mnt/e`이며 (2) `/mnt/e/kb-restic/.kb-offsite-id` 마커가 `targets.yaml`의 id와 같은지 본다. 하나라도 어긋나면 이 대상은 건너뛴다. 마운트가 빠진 `/mnt/e`는 ext4의 빈 디렉터리일 수 있어 그대로 쓰면 ext4에 사본이 생기기 때문이다. 건너뜀은 실패가 아니라 `target_unavailable`(ops.db)과 `notices.offsite_unmounted`다. 마지막 성공 전송이 T0 1일, T1 3일을 넘으면 기존 `offsite_age`가 치명이 된다. `/mnt/c` 사본과 라이브 쓰기는 계속된다. `kb`는 스스로 `mount`, `sudo`, `/etc/fstab`, `wsl.conf`를 건드리지 않는다(전역 파일).
 - **재부팅 뒤.** 재부팅 직후 첫 박동은 건너뜀이 정상이다. 사용자가 다시 마운트하면 다음 박동이 이어 전송한다. WP-14 입회 시험이 이 순서를 확인한다. 전송 중 드라이브가 빠지면 그 대상만 I/O 오류로 실패하고 다음 주기에 `restic unlock` 뒤 `restic check --read-data-subset`을 먼저 돈다.
-- **first_party 개방 조건.** E:는 8장의 `kb fp open`이 요구하는 머신 밖 경로를 충족한다. `kb drill restore --offsite`가 offsite-e에서 복원하고 그 통과 기록이 7일 안에 있으면 `kb fp open`이 열린다. `--accept-single-copy`는 필요 없다. 마운트 확인을 통과하지 못하면 훈련도 돌지 않으므로 개방 조건은 충족되지 않는다. NTFS 위 restic 동작(권한, fsync)은 시험으로 확인한다(미측정).
+- **first_party 개방 조건.** E:는 8장의 `kb fp open`이 요구하는 머신 밖 경로를 충족한다. `kb drill restore --offsite`가 offsite-e에서 복원하고 그 통과 기록이 7일 안에 있으면 `kb fp open`이 열린다. `--accept-single-copy`는 필요 없다. 마운트 확인을 통과하지 못하면 훈련도 돌지 않으므로 개방 조건은 충족되지 않는다. NTFS 위 restic 동작(권한, fsync)은 C:와 E:에서 측정했고 권한·fsync 오류가 없었다. 통과한 offsite 훈련 뒤 2026-11-01에 개방했다.
 - **원장 사본.** SQLite 백업 API로 만든다. `VACUUM INTO`를 쓰지 않는다. 봉인 내보내기(`ledger/export/`)가 평문 복구 경로다.
 - **`restic`.** 0.19.1 고정. 주기 작업 앞에 `restic unlock`, `--retry-lock 2m`(레드팀 X17). `check --read-data-subset`을 매일 1/30 순환한다.
 - **`secret`, `private`, 보관 중인 first_party.** restic 암호화 경로로만 나간다. 평문 내보내기에서 뺀다.

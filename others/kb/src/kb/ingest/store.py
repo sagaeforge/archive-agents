@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import time
 from dataclasses import dataclass, field
@@ -32,10 +33,11 @@ class Gold:
         if p is None:
             self.close()
             return None
-        if self.con is None or str(p) != self.path:
+        real = os.path.realpath(p)                       # current는 symlink다. 재구축이 가리키는 빌드를 바꿔도 이름은 그대로다
+        if self.con is None or real != self.path:
             self.close()
-            self.con = connect_ro(p, 3600.0)
-            self.path = str(p)
+            self.con = connect_ro(real, 3600.0)
+            self.path = real
         return self.con
 
     def close(self):

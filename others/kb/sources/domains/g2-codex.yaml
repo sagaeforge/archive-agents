@@ -48,11 +48,12 @@ sources:
     conditional: true
   parser: llms_txt@1
   expect:
-    content_type: &id001
+    content_type:
     - text/plain
     - text/markdown
     - text/html
     - application/xhtml+xml
+    - application/octet-stream
   policy:
     enabled: true
     tos: signals_conflict
@@ -103,7 +104,11 @@ sources:
     conditional: true
   parser: page_md@1
   expect:
-    content_type: *id001
+    content_type: &id001
+    - text/plain
+    - text/markdown
+    - text/html
+    - application/xhtml+xml
   policy:
     enabled: true
     tos: signals_conflict

@@ -130,7 +130,7 @@ def _norm_source(s: str) -> str:
 
 
 def check_mount(t: Target) -> MountCheck:
-    """findmnt -T <경로>의 TARGET, SOURCE, FSTYPE, OPTIONS와 저장소의 마커를 본다. 하나라도 어긋나면 ok=False.
+    """findmnt -T <경로>의 TARGET, SOURCE, FSTYPE과 저장소의 마커를 본다. OPTIONS는 options_require가 설정된 경우에만 확인한다. 하나라도 어긋나면 ok=False.
     마운트가 빠진 /mnt/e는 ext4의 빈 디렉터리라 그대로 쓰면 ext4에 사본이 생긴다."""
     m = t.mount
     if not m:

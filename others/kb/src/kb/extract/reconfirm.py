@@ -10,6 +10,7 @@ from kb.extract import settings, state
 from kb.gate.textmatch import QuoteError, locate
 
 CURSOR = "extract:rc:seq"
+CONTEXT = 24                                              # prefix, suffix 길이. kb.ingest와 같다
 
 
 def _src_class(source_id: str | None) -> str | None:
@@ -29,13 +30,15 @@ def _snap_source(led, sid: str) -> str | None:
     return (json.loads(r[0]).get("source") if r and r[0] else None)
 
 
-def _found(text: str, ev: tuple) -> bool:
+def _selector(text: str, ev: tuple) -> dict | None:
+    """새 본문에서 찾은 인용구의 선택자. 없으면 None. 여러 곳에 있어 위치를 못 정하면 빈 dict(있지만 위치 미확정)다."""
     exact, prefix, suffix = ev
     try:
-        locate(text, exact, prefix or "", suffix or "")
-        return True
+        loc = locate(text, exact, prefix or "", suffix or "")
     except QuoteError as e:
-        return e.code != "E_QUOTE_NOT_FOUND"
+        return None if e.code == "E_QUOTE_NOT_FOUND" else {}
+    a, b = loc.start, loc.end
+    return {"exact": text[a:b], "prefix": text[max(0, a - CONTEXT):a], "suffix": text[b:b + CONTEXT], "start_cp": a, "end_cp": b}
 
 
 def reconfirm_snapshot(con, led, sid: str, text: str, url: str, source: str | None, moving: set) -> dict:
@@ -52,23 +55,28 @@ def reconfirm_snapshot(con, led, sid: str, text: str, url: str, source: str | No
         return res
     ph = ",".join("?" * len(prev))
     rows = con.execute(
-        f"SELECT n.id, c.kind, e.exact, e.prefix, e.suffix FROM evidence e JOIN node n ON n.id=e.claim_id AND n.expired_at IS NULL "
+        f"SELECT n.id, c.kind, e.id, e.exact, e.prefix, e.suffix FROM evidence e JOIN node n ON n.id=e.claim_id AND n.expired_at IS NULL "
         f"JOIN claim c ON c.vid=n.vid WHERE e.snapshot_id IN ({ph}) AND n.status='active' AND e.exact IS NOT NULL "
-        f"AND e.selector_kind='text_quote' ORDER BY n.id", prev).fetchall()
+        f"AND e.selector_kind='text_quote' ORDER BY n.id, e.seq, e.id", prev).fetchall()
+    # 주장마다 가장 먼저 쓰인 근거 행을 기준으로 삼는다. 뒤 스냅샷이 처리된 뒤 재시작해도 같은 행이라 같은 페이로드가 나온다
     seen, claims = set(), []
-    for cid, kind, ex, pre, suf in rows:
+    for cid, kind, evid, ex, pre, suf in rows:
         if cid in seen:
             continue
         seen.add(cid)
-        claims.append((cid, kind, (ex, pre, suf)))
+        claims.append((cid, kind, evid, (ex, pre, suf)))
     res["claims"] = len(claims)
     if not claims:
         return res
     ok, gone = [], []
-    for cid, kind, ev in claims:
-        (ok if _found(text, ev) else gone).append((cid, kind))
+    for cid, kind, evid, ev in claims:
+        sel = _selector(text, ev)
+        if sel is None:
+            gone.append((cid, kind))
+        else:
+            ok.append((cid, evid, sel))
     evs = [{"kind": "claim.confirm", "actor": "l2", "origin": "system", "subject": cid, "idem_key": f"confirm:{cid}:{sid}",
-            "payload": {"id": cid, "snapshot": sid}} for cid, _ in ok]
+            "payload": {"id": cid, "snapshot": sid, "evidence_id": evid, **sel}} for cid, evid, sel in ok]
     res["confirmed"] = len(ok)
     ratio = len(gone) / len(claims)
     if _src_class(source) in moving:

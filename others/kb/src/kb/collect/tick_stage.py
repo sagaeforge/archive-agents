@@ -136,7 +136,7 @@ def run(ctx) -> StageResult:
             ctx.warnings.append(w)
     now = clock.now_ms()
     srcs = registry.load_registry()
-    force = ctx.only is not None or ctx.batch is not None
+    force = (ctx.only is not None or ctx.batch is not None) and not getattr(ctx, "force_spent", False)
     per_src: dict[str, int] = {}
     by_id = {s.id: s for s in srcs}
     touched = 0
@@ -172,6 +172,7 @@ def run(ctx) -> StageResult:
                 if not url and c["pages_queued"] > queued0:      # 이번에 만기인 URL이 있을 때만 소스로 센다
                     c["sources"] += 1
                     touched += 1
+        ctx.force_spent = True  # --until-idle 다음 회차는 만기만 본다. 본문이 매번 다른 URL이 회차마다 스냅샷을 만들지 않게 한다
         _drain(st, by_id, ctx, per_src)
         st.page_reclaim()       # 소스별 상한 때문에 남긴 것은 다음 tick이 잇는다
     res.detail.update(touched=touched, queue_left=0)

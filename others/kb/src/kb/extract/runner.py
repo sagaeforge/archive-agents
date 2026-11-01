@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 
 from kb.core import canon, cas, gatelock, opsdb
-from kb.extract import budget, cache, guard, items as itm, prompt, route, schema, settings, state, support, windows
+from kb.extract import budget, cache, guard, items as itm, order, prompt, route, schema, settings, state, support, windows
 from kb.extract.types import Job
 
 QUEUE = "l2"
@@ -104,6 +104,7 @@ class Run:
         self.pf: dict = {}
         self.claude_calls = 0
         self.last_called = False
+        self.oversize = False
         self.stop = False
 
     # ------------------------------------------------------------------ 사전 점검
@@ -122,9 +123,7 @@ class Run:
     # ------------------------------------------------------------------ 한 창
     def window(self, proc, w) -> str:
         """반환: ok | guarded | blocked | failed | stop."""
-        inputs = []
-        for ptxt in (t for _, t in w.paras):
-            inputs.append(guard.inspect_snapshot(w.snapshot, ptxt, proc.gold.conn()))
+        inputs = self._inspect(proc, w)
         scope, why = guard.classify_inputs(inputs)
         if scope != guard.PUBLIC and self.scope == "public":
             state.metric("llm.guard_denied", 1, {"scope": scope, "why": why})
@@ -144,6 +143,7 @@ class Run:
             return "blocked"
         last_err = None
         called = False
+        self.oversize = False
         for cand in plan.cands:
             be = self.backends.get(cand.backend)
             pf = self._pf(cand)
@@ -157,11 +157,21 @@ class Run:
             if r == "stop":
                 self._requeue(w)
                 return "stop"
+            if r == "guard":                                  # 전송 직전 재검사가 거부했다. 호출 0이고 호출 쪽 사유가 남아 있다
+                why = str(self.out["reason"] or "").removeprefix("guard:")
+                for it in w.items:
+                    if why in GUARD_TRANSIENT:
+                        retry_or_dlq(it, f"guard:{why}")
+                    else:
+                        _qdone(it["ref"])
+                return "guarded"
             if r == "switched":                               # 호출 없이 넘어갔거나 그 모델이 꺼졌다
                 called = called or bool(self.last_called)
                 continue
             last_err = r
             break
+        if last_err is None and not called and self.oversize:  # 요청이 너무 커서 어느 경로로도 못 보낸다. 큐에 두면 영원히 돈다
+            last_err = "too_large"
         if last_err is None and not called:                   # 전 경로가 막혔다. 호출 0이고 큐에 그대로 남는다
             self.out["reason"] = self.out["reason"] or "all_blocked"
             self._requeue(w)
@@ -171,6 +181,10 @@ class Run:
         for it in w.items:
             retry_or_dlq(it, str(last_err or "switched"))
         return "failed"
+
+    @staticmethod
+    def _inspect(proc, w) -> list:
+        return [guard.inspect_snapshot(w.snapshot, ptxt, proc.gold.conn()) for _, ptxt in w.paras]
 
     def _requeue(self, w) -> None:
         for it in w.items:
@@ -192,7 +206,11 @@ class Run:
             res.extra.update(replayed=True, run_sha=cached.get("run_sha"))
         else:
             if cand.backend == "openrouter":
-                reserve = float(settings.get("openrouter.reserve_usd", 0.054))
+                try:
+                    reserve = budget.reservation_for(be, job)      # 요청의 토큰 상한과 모델 가격에서 구한다
+                except budget.TooLarge:
+                    self.oversize = True
+                    return "switched"
                 d = budget.day()
                 v = route.apply("daily_valve", spent=d["spent"] + d["reserved"], reserve=reserve)
                 if v.action == "off":
@@ -205,10 +223,17 @@ class Run:
                 try:
                     resv = budget.reserve(reserve)
                 except budget.Refused as e:
+                    if e.reason == "valve":                  # 밸브 도달 뒤에는 다른 경로로 넘기지 않는다
+                        d = budget.day()
+                        route.apply("daily_valve", spent=d["spent"] + d["reserved"], reserve=reserve)
+                        self.out["reason"] = "daily_valve"
+                        self.stop = True
+                        return "stop"
                     route.apply("balance_exhausted", balance=budget.balance()) if e.reason == "balance" else None
                     return "switched"
             try:
-                permit = guard.authorize(inputs, cand.backend, job.user)
+                # 사전 점검과 예약은 느릴 수 있다. 그 사이에 제한이 걸렸을 수 있으므로 전송 직전에 다시 검사한다
+                permit = guard.authorize(self._inspect(proc, w), cand.backend, job.user)
             except guard.GuardDenied as e:
                 if resv:
                     budget.release(resv)
@@ -230,7 +255,7 @@ class Run:
             if cand.backend == "claude":
                 self.claude_calls += 1
         if resv is not None:
-            over = budget.settle(resv, res.cost_usd if res.error is None else (res.cost_usd or 0.0))
+            over = budget.settle(resv, res.cost_usd)         # 비용을 모르면(None) 예약액을 청구한다. 실패도 유료일 수 있다
             if res.error and "HTTP 402" in res.error:
                 route.apply("balance_exhausted", http=402)
             if res.error and "HTTP 401" in res.error:
@@ -359,10 +384,12 @@ class Run:
                                 "WHERE n.id=? AND n.expired_at IS NULL", (cid,)).fetchone()
                 if n is None or n[0] == "active":
                     continue
-                sel = [{"snapshot": r[0], "selector_kind": r[1], "exact": r[2], "start_cp": r[3], "end_cp": r[4], "prefix": r[5],
-                        "suffix": r[6], "text_sha": r[7], "gate_version": r[8]} for r in con.execute(
-                            "SELECT snapshot_id, selector_kind, exact, start_cp, end_cp, prefix, suffix, text_sha, gate_version "
-                            "FROM evidence WHERE claim_id=? ORDER BY id", (cid,))]
+                sel_keys = ("snapshot", "selector_kind", "exact", "start_cp", "end_cp", "prefix", "suffix", "text_sha", "gate_version")
+                sel = [{k: v for k, v in zip(sel_keys, r) if v is not None} for r in con.execute(   # 위치 없는 행은 키를 뺀다(스키마)
+                            "SELECT e.snapshot_id, e.selector_kind, e.exact, e.start_cp, e.end_cp, e.prefix, e.suffix, "
+                            "COALESCE(e.text_sha, (SELECT json_extract(CAST(sn.props AS TEXT),'$.text_sha') FROM node sn "
+                            "WHERE sn.id=e.snapshot_id AND sn.expired_at IS NULL)), e.gate_version "
+                            "FROM evidence e WHERE e.claim_id=? ORDER BY e.id", (cid,))]
                 p = {"id": cid, "subject": n[4], "statement": n[10], "kind": n[11], "stance": n[12], "method": "llm",
                      "verification": ver or "needs_review", "extractor": extractor, "evidence": sel}
                 for k, v in (("predicate", n[5]), ("object", n[6]), ("value", n[7]), ("unit", n[8]), ("speaker", n[13])):
@@ -392,15 +419,17 @@ class Run:
             return
         con = connect_ro(gp, 60.0)
         try:
-            rows = con.execute("SELECT n.id, c.extractor, e.start_cp FROM node n JOIN claim c ON c.vid=n.vid JOIN evidence e "
+            rows = con.execute("SELECT n.id, c.extractor, e.start_cp, e.exact FROM node n JOIN claim c ON c.vid=n.vid JOIN evidence e "
                                "ON e.claim_id=n.id WHERE n.type='Claim' AND n.expired_at IS NULL AND n.status='active' "
                                "AND c.extractor LIKE 'l2:%' AND c.extractor<>? AND e.snapshot_id=?",
                                (new_extractor, w.snapshot)).fetchall()
         finally:
             con.close()
         evs = []
-        for cid, ex, st in rows:
-            if cid in keep or st is None or not any(a <= st < b for a, b in w.spans):
+        for cid, ex, st, exact in rows:
+            # 소속은 시작 위치로 정한다. 위치가 없는 행(여러 곳에 있는 인용구, v1 확인)만 인용구가 창 본문에 있는지로 본다
+            inside = any(a <= st < b for a, b in w.spans) if st is not None else bool(exact and exact in w.text)
+            if cid in keep or not inside:
                 continue
             evs.append({"kind": "claim.retract", "actor": "l2", "origin": "system", "subject": cid,
                         "idem_key": f"retract:{cid}:{new_extractor}",
@@ -504,10 +533,11 @@ def _run_locked(run, scope, max_windows, reextract, snapshot, backends, do_suppo
             out["requeued"] = reextract_enqueue(proc, snapshot)
         cap = max_windows if max_windows is not None else budget.daily_window_cap()
         guard_rounds = 0
+        meta_cache: dict = {}
         while out["windows"] < cap and not run.stop:
             c = opsdb.connect()
             try:
-                taken = opsdb.queue_take(c, QUEUE, min(int(settings.get("take_batch", 24)), 200))
+                taken = order.take(proc, c, QUEUE, min(int(settings.get("take_batch", 24)), 200), meta_cache)
             finally:
                 c.close()
             if not taken:

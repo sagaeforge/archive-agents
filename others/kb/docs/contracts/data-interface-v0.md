@@ -1,6 +1,6 @@
 # KB 데이터 인터페이스 계약 v0
 
-- 상태: 0.3.1. sagae-tools 3차 회신(`docs/contracts/consumers/sagae-tools-reply-3.md`)을 항목별로 처리했고(`sagae-tools-reply-3-response.md`) 13장이 합의 상태다. 0.3.1은 호환 변경만 담는다. 남은 `[잠정]`은 v1 소비자가 쓰지 않는 구간이다(1장의 TCP와 Proxmox 주소, 4.13의 `/v1/ops/*`).
+- 상태: 0.3.2. sagae-tools 3차 회신(`docs/contracts/consumers/sagae-tools-reply-3.md`)을 항목별로 처리했고(`sagae-tools-reply-3-response.md`) 13장이 합의 상태다. 0.3.1은 호환 변경만 담는다. 남은 `[잠정]`은 v1 소비자가 쓰지 않는 구간이다(1장의 TCP와 Proxmox 주소, 4.13의 `/v1/ops/*`).
 - 날짜: 2026-10-31
 - 기준: `docs/adr/0001-architecture.md`, `docs/contracts/consumers/sagae-tools.md`(잠정본), `docs/contracts/consumers/sagae-tools-reply-2.md`(2차 회신). 항목별 처리는 `docs/contracts/consumers/sagae-tools-reply-2-response.md`(이하 응답표)다.
 - 계약 형식: OpenAPI 3.1.1 + JSON Schema 2020-12. 기계 판독 원본은 `docs/contracts/openapi.yaml`이다. WP-23이 WP-04, WP-05, WP-10 전에 이 문서에서 만든다. 그 뒤로 두 문서가 어긋나면 `openapi.yaml`이 이긴다.
@@ -12,6 +12,7 @@
 
 | 버전 | 날짜 | 변경 | 결함 |
 |---|---|---|---|
+| 0.3.2 | 2026-11-01 | 호환 변경: `as_of_valid` 형식 제약, `/v1/facets` `q` 선택으로 정정, 12장 주장 규모 29만~37만 | 소비자 확정본 요청 1~3 |
 | 0.3.1 | 2026-11-01 | `domain` 필터를 any-of로 확정했다. 도메인 없는 노드는 `[]`이고 `domain=none`과 패싯 `none`이 이를 고른다 | 보완 1 |
 | 0.3.1 | 2026-11-01 | `/v1/overview`, `/v1/nodes/{id}/neighbors`에 엣지 전용 `edge_status`를 더했다(복수 값). `status`는 단일 값 그대로다 | 확인 c |
 | 0.3.1 | 2026-11-01 | `Claim`과 `ChainItem`에 `own_status`, `status_basis`를 더했다. `ChainItem.status`, `ClaimDetail.versions[].status`는 `eff_status`다 | 보완 5 |
@@ -84,7 +85,7 @@ http.get({ socketPath: "/home/user/sagae-kb-data/run/read.sock", path: "/v1/meta
 
 ```json
 {
-  "schema_version": "0.3.1",
+  "schema_version": "0.3.2",
   "epoch": 1,
   "build_id": "g-000183422-a1b2",
   "data_as_of": "2026-10-31T09:12:03Z",
@@ -1078,7 +1079,7 @@ OpsMetrics:
 ### 4.1 `GET /v1/meta`
 
 ```json
-{"schema_version":"0.3.1","epoch":1,"build_id":"g-000183422-a1b2","data_as_of":"2026-10-31T09:12:03Z","applied_seq":183422,"as_of":{"valid":null,"observed":null},"degraded":[],
+{"schema_version":"0.3.2","epoch":1,"build_id":"g-000183422-a1b2","data_as_of":"2026-10-31T09:12:03Z","applied_seq":183422,"as_of":{"valid":null,"observed":null},"degraded":[],
  "data":{"contract":"v1","kb_version":"0.1.0","limits":{"overview_nodes":100000,"overview_edges":400000,"page":500,"concurrent":16},
          "changes_cursor":"eyJlIjoxLCJzIjoxODM0MjJ9","first_party_open":false,"counts":{"nodes":48213,"edges":812004,"claims":153201}}}
 ```
@@ -1349,7 +1350,7 @@ KB가 내는 집계는 개수와 분포까지다. 레이아웃, 커뮤니티, �
 **`g-`와 `p-`.** 봉투의 `build_id`(`g-`)는 gold 빌드이고 manifest와 파일의 `build_id`(`p-<applied_seq 9자리>`)는 게시 판이다. 둘은 `applied_seq`로 잇는다. 게시는 최소 5분 간격이라 manifest의 `applied_seq`가 봉투 값보다 낮을 수 있다. 소비자는 manifest의 `applied_seq`, `changes_cursor`로 잇고 두 ID를 문자열로 비교하지 않는다.
 
 ```json
-{"schema_version":"0.3.1","build_id":"p-000183422","applied_seq":183422,"epoch":1,"data_as_of":"2026-10-31T09:12:03Z","graph":{"directed":true,"multi":true},
+{"schema_version":"0.3.2","build_id":"p-000183422","applied_seq":183422,"epoch":1,"data_as_of":"2026-10-31T09:12:03Z","graph":{"directed":true,"multi":true},
  "nodes":{"columns":["id","type","label","origin","status","domain","merged_into"],"rows":[["e:product:claude-code","Product","Claude Code","external","active",["G"],null]]},
  "edges":{"columns":["id","src","dst","rtype","status"],"rows":[["r-1a2b3c4d5e6f","e:feature:claude-code-hooks","e:product:claude-code","PART_OF","active"]]}}
 ```
@@ -1593,7 +1594,7 @@ links: [e:platform:youtube-shorts]
 
 | 질문 | 답 |
 |---|---|
-| 1. 예상 규모 | 추정이다. 1년차 엔티티 2만~5만, 주장 10만~30만(운영 상한 50만), 고유 스냅샷 2만~5만, 고유 문단 5만~15만, 엣지 50만~150만(근거 포함). 개요 기본 프로필 노드 2만~5만, 엣지 5만~20만. 키워드 경로를 켜면 `Keyword` 5만~10만, 시계열 점 연 200만이 더해진다. 산식은 ADR 부록 A다 |
+| 1. 예상 규모 | 추정이다. 1년차 엔티티 2만~5만, 주장 29만~37만(운영 상한 50만. 측정 창당 7.2~9.53건 통과, ADR 부록 A), 고유 스냅샷 2만~5만, 고유 문단 5만~15만, 엣지 50만~150만(근거 포함). 개요 기본 프로필 노드 2만~5만, 엣지 5만~20만. 키워드 경로를 켜면 `Keyword` 5만~10만, 시계열 점 연 200만이 더해진다. 산식은 ADR 부록 A다 |
 | 2. 실행 위치, HTTP 제공 | 로컬 WSL2 ext4. 소켓 활성화 HTTP를 KB가 낸다. 상주 프로세스 0, 유휴 600초 종료. 유닛 설치는 사용자 승인 대상이다. 설치 전에는 `kb api` CLI. Proxmox로 옮기면 KB 전체를 옮기고 같은 계약을 TCP + Bearer로 낸다 |
 | 3. 스냅샷 본문 형식 | 원본은 받은 바이트(HTML, Markdown, JSON, XML, PDF). 표시 본문은 NFC 고정이고 `text_format`이 `markdown`, `text`, `json`, `pdf_text`다. 인용 오프셋의 기준이다. 이미지 위주 PDF는 표시 본문이 없다. first_party는 Markdown이다 |
 | 4. 구현 언어, 동시 읽기 | Python 3.14, 코어는 표준 라이브러리. 게이트웨이 프로세스 안에서 호출할 수 없다. HTTP 또는 CLI로 붙는다. 같은 호스트 다중 프로세스 동시 읽기는 안전하다. 네트워크 파일시스템과 읽기 전용 디렉터리는 지원하지 않고 파일 경로를 제공하지 않는다 |

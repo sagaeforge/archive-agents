@@ -13,7 +13,7 @@ QUEUE = "support_check"
 
 
 def _claim(con, cid: str) -> dict | None:
-    r = con.execute("SELECT n.verification, n.sensitivity, c.statement, c.extractor FROM node n JOIN claim c ON c.vid=n.vid "
+    r = con.execute("SELECT n.verification, n.sensitivity, c.statement, c.extractor, n.origin FROM node n JOIN claim c ON c.vid=n.vid "
                     "WHERE n.id=? AND n.expired_at IS NULL", (cid,)).fetchone()
     if not r:
         return None
@@ -21,7 +21,7 @@ def _claim(con, cid: str) -> dict | None:
     if not e:
         return None
     return {"id": cid, "verification": r[0], "sensitivity": r[1], "statement": r[2], "extractor": r[3] or "",
-            "snapshot": e[0], "quote": e[1] or "", "context": f"{e[2] or ''}{e[1] or ''}{e[3] or ''}"}
+            "origin": r[4], "snapshot": e[0], "quote": e[1] or "", "context": f"{e[2] or ''}{e[1] or ''}{e[3] or ''}"}
 
 
 def judge(c: dict, backends: dict, router, *, purpose: str = "support", extractor: str = "") -> dict:
@@ -29,7 +29,9 @@ def judge(c: dict, backends: dict, router, *, purpose: str = "support", extracto
     plan = router.plan("public", purpose, extractor=extractor)
     if not plan.cands:
         return {"ok": False, "reason": plan.stop or "no_route"}
-    inputs = [guard.inspect_snapshot(c["snapshot"], c["context"] or c["quote"])]     # job.user에 함께 가는 앞뒤 문맥까지 검사한다
+    # job.user에는 주장 문장과 인용구, 앞뒤 문맥이 간다. 문장은 주장 노드의 출처와 민감도로, 문맥은 스냅샷으로 따로 검사한다
+    inputs = [guard.inspect_snapshot(c["snapshot"], c["context"] or c["quote"]),
+              guard.inspect_snapshot(c["id"], c["statement"])]
     last = "no_route"
     called = False
     for cand in plan.cands:
@@ -54,8 +56,16 @@ def judge(c: dict, backends: dict, router, *, purpose: str = "support", extracto
         resv = None
         if cand.backend == "openrouter":
             try:
-                resv = budget.reserve(float(settings.get("openrouter.reserve_usd", 0.054)), purpose="support")
+                reserve = budget.reservation_for(be, job)
+                resv = budget.reserve(reserve, purpose="support")
+            except budget.TooLarge:
+                last = "too_large"
+                continue
             except budget.Refused as e:
+                if e.reason == "valve":                        # 밸브 도달 뒤에는 Claude, Codex로 번지지 않는다
+                    d = budget.day()
+                    route.apply("daily_valve", spent=d["spent"] + d["reserved"], reserve=reserve)
+                    return {"ok": False, "reason": "daily_valve"}
                 last = e.reason
                 continue
         try:
@@ -69,7 +79,10 @@ def judge(c: dict, backends: dict, router, *, purpose: str = "support", extracto
         if rate and (rate.get("five_hour") is not None or rate.get("seven_day") is not None):
             state.put("claude:rate", dict(rate, at=settings.now_s()))
         if resv is not None:
-            budget.settle(resv, res.cost_usd)
+            if budget.settle(resv, res.cost_usd):             # 호출당 비용 초과: 배치를 멈추고 사고로 남긴다
+                route.apply("cost_exceeded", actual=res.cost_usd or 0.0, reserved=resv["usd"])
+                budget.count_window(cand.backend, support=True)
+                return {"ok": False, "reason": "cost_exceeded", "called": True}
         budget.count_window(cand.backend, support=True)
         if res.error or res.raw is None:
             last = res.error or "empty"
@@ -87,6 +100,17 @@ def judge(c: dict, backends: dict, router, *, purpose: str = "support", extracto
     return {"ok": False, "reason": last, "called": called}
 
 
+STOP_REASONS = ("daily_valve", "cost_exceeded")        # 배치를 멈춘다. 다른 경로로 넘기지 않는다
+
+
+def _release(ref: str) -> None:
+    c = opsdb.connect()
+    try:
+        c.execute("UPDATE queue SET state='queued', next_at=NULL, attempts=max(attempts-1, 0) WHERE kind=? AND ref=?", (QUEUE, ref))
+    finally:
+        c.close()
+
+
 def run_queue(backends: dict, router, limit: int = 20) -> dict:
     """support_check 큐를 처리한다. 뒷받침되면 claim.review(quote_found), 아니면 needs_review 유지."""
     from kb.core.conn import connect_ro
@@ -102,14 +126,22 @@ def run_queue(backends: dict, router, limit: int = 20) -> dict:
     gp = current_gold_path()
     con = connect_ro(gp, 60.0) if gp else None
     from kb.write import commit
+    stop = None
     try:
         for it in items:
+            if stop:                                           # 멈춘 뒤의 항목은 시도 횟수를 쓰지 않고 돌려놓는다
+                _release(it["ref"])
+                continue
             cl = _claim(con, it["ref"]) if con is not None else None
             done = True
-            if cl is None or cl["verification"] != "needs_review" or cl["sensitivity"] > 0:
+            if cl is None or cl["verification"] != "needs_review" or cl["sensitivity"] > 0 or cl["origin"] != "external":
                 out["skipped"] += 1
             else:
                 j = judge(cl, backends, router)
+                if not j["ok"] and j["reason"] in STOP_REASONS:
+                    stop = out["stopped"] = j["reason"]
+                    _release(it["ref"])
+                    continue
                 if not j["ok"]:
                     out["skipped"] += 1
                     # 호출 없이 막힌 항목은 한도가 풀리면 다시 본다. 실제 호출이 실패한 항목만 시도 횟수를 쓴다
@@ -154,7 +186,7 @@ def cross_check(backends: dict, router, now_s: float | None = None) -> dict:
     con = connect_ro(gp, 60.0)
     try:
         rows = con.execute("SELECT n.id FROM node n JOIN claim c ON c.vid=n.vid WHERE n.type='Claim' AND n.expired_at IS NULL "
-                           "AND n.sensitivity=0 AND c.method='llm' AND c.extractor LIKE 'l2:%' ORDER BY n.id").fetchall()
+                           "AND n.sensitivity=0 AND n.origin='external' AND c.method='llm' AND c.extractor LIKE 'l2:%' ORDER BY n.id").fetchall()
         for (cid,) in rows:
             if got["n"] >= total:
                 break
@@ -167,6 +199,8 @@ def cross_check(backends: dict, router, now_s: float | None = None) -> dict:
             ex_model = cl["extractor"].split(":")[2] if cl["extractor"].count(":") >= 3 else ""
             j = judge(cl, backends, router, purpose="cross", extractor=ex_model)
             if not j["ok"]:
+                if str(j["reason"]).startswith("guard:"):
+                    continue                                   # 가드가 거부한 주장 하나가 표본 감사를 끝내지 않는다
                 if j["reason"] == "week_gap":
                     out["gap"] = True
                     state.metric("llm.cross_gap", 1, {"week": wk})

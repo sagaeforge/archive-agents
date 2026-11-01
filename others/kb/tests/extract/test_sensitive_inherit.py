@@ -168,3 +168,17 @@ def test_secret_source_not_extracted(setup, ent):
         c.close()
     out = runner.run_agent("sensitive", backends={"sllm": Sllm(port=18932)})
     assert out["windows"] == 0 and len(H.events("claim.assert")) == 0
+
+
+def test_candidates_exclude_first_party_spans(setup, ent):
+    """first_party(열림) 주장의 span으로 찾은 엔티티 라벨은 외부 프롬프트 후보에 들어가지 않는다."""
+    from kb.extract import windows
+    from kb.ingest.process import Processor
+    out = runner.run_agent("sensitive", backends={"sllm": Sllm(port=18932)})
+    assert out["claims"] == 1
+    proc = Processor({"item": "bundle", "contract": "kb-ingest/1", "batch_id": "t", "producer": "agent:t"}, fetch=False, write=False)
+    try:
+        got = {c["id"] for c in windows.candidates_for(proc, "내부 목표 처리량 하루 500건")}
+    finally:
+        proc.gold.close()
+    assert ent not in got

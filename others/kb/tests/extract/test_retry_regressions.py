@@ -243,7 +243,7 @@ def test_support_guard_checks_context_not_only_quote(ent):
     with m.patch.object(guard, "inspect_snapshot", spy):
         support.judge({"id": "c", "snapshot": sid, "quote": "Q", "context": "앞Q뒤", "statement": "s", "extractor": ""},
                       {"claude": H.Fake("claude", True, lambda j: {"supported": True})}, route.Router({}))
-    assert seen == ["앞Q뒤"]
+    assert seen == ["앞Q뒤", "s"]                              # 문맥과 주장 문장을 따로 검사한다
 
 
 def test_watchdog_counts_sensitive_queue(env):
@@ -274,3 +274,110 @@ def test_support_fallback_respects_claude_limits(ent):
     f = H.Fake("claude", True, lambda j: {"supported": True})
     r = support.judge({"id": "c", "snapshot": sid, "quote": "Q", "context": "앞Q뒤", "statement": "s", "extractor": ""}, {"claude": f}, route.Router({}))
     assert r == {"ok": False, "reason": "claude_limit", "called": False} and not f.calls
+
+
+URL2 = "https://example.test/shift.md"
+SHIFT = "# 안내\n\n새로 앞에 붙은 문단은 추출 대상이 아닌 설명이다.\n\n" + "\n\n".join(S) + "\n"
+
+
+def _confirmed_second_snapshot(ent):
+    from kb.extract import tick_stage
+    H.ingest_doc(url=URL2, text=DOC, fetched_at=1_793_000_000_000)
+    _claude_run(ent, "haiku")
+    H.ingest_doc(url=URL2, text=SHIFT, fetched_at=1_793_000_100_000, enqueue=False)
+    assert tick_stage.run().detail["reconfirm"]["confirmed"] == 3
+    return H.ingest_doc(url=URL2, text=SHIFT, fetched_at=1_793_000_100_000)
+
+
+def test_confirm_rows_keep_text_sha_and_revive_after_confirm(ent):
+    """claim.confirm이 만든 근거 행도 text_sha를 가지며, 확인된 주장도 철회 뒤 재추출로 되살아난다."""
+    sid = _confirmed_second_snapshot(ent)
+    con = H.gold()
+    try:
+        assert con.execute("SELECT count(*) FROM evidence WHERE snapshot_id=? AND text_sha IS NULL", (sid,)).fetchone()[0] == 0
+        assert con.execute("SELECT count(*) FROM evidence WHERE snapshot_id=?", (sid,)).fetchone()[0] == 3
+    finally:
+        con.close()
+    _retract("l2:claude:haiku:extract-1")
+    assert not H.claims("n.status='active'")
+    out, _ = _claude_run(ent, "haiku", reextract=True)
+    assert out["revived"] == 3 and len(H.claims("n.status='active'")) == 3
+
+
+def test_reextract_multi_window_after_confirm_keeps_claims(ent):
+    """확인으로 복사된 옛 오프셋 때문에 나중 창이 앞 창에서 방금 재추출된 주장을 철회하지 않는다."""
+    _confirmed_second_snapshot(ent)
+    with settings.override(**{"window_chars": 80}):
+        out, _ = _claude_run(ent, "haiku2", reextract=True)
+    assert out["windows"] >= 2
+    act = H.claims("n.status='active'")
+    assert len(act) == 3, act
+    assert not out.get("retracted"), out
+
+
+def test_llmhttp_does_not_follow_redirect_or_env_proxy(monkeypatch):
+    """업스트림 리다이렉트로 Authorization이 다른 곳에 가지 않고, 루프백 본문이 환경변수 프록시로 나가지 않는다."""
+    import http.server
+    import threading
+    import urllib.error
+
+    from kb.extract import llmhttp
+    hits = []
+
+    class Target(http.server.BaseHTTPRequestHandler):
+        def do_POST(self):
+            hits.append(self.headers.get("Authorization"))
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"{}")
+
+        def log_message(self, *a):
+            pass
+
+    target = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Target)
+
+    class Redirect(Target):
+        def do_POST(self):
+            self.send_response(302)
+            self.send_header("Location", f"http://127.0.0.1:{target.server_port}/stolen")
+            self.end_headers()
+
+    redirect = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Redirect)
+    for srv in (target, redirect):
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        with pytest.raises(urllib.error.HTTPError):
+            llmhttp.request_json(f"http://127.0.0.1:{redirect.server_port}/x", body={}, headers={"Authorization": "Bearer t"})
+        assert hits == []
+        monkeypatch.setenv("http_proxy", f"http://127.0.0.1:{redirect.server_port}")
+        monkeypatch.setenv("no_proxy", "")
+        assert llmhttp.request_json(f"http://127.0.0.1:{target.server_port}/y", body={}) == {}
+        assert hits == [None]
+    finally:
+        target.shutdown()
+        redirect.shutdown()
+
+
+def test_alias_candidates_skip_sensitive_entities_for_public_windows(env, monkeypatch):
+    """first_party 엔티티의 별칭이 공개 창 본문에 나와도 라벨이 외부 프롬프트 후보에 들어가지 않는다. 민감 범위에서는 쓴다."""
+    import kb.write.engine as eng
+    import kb.write.fpgate as fp
+    from kb.extract import windows
+    from kb.ingest.process import Processor
+    from kb.write import commit
+    from kb.write.engine import project_pending
+    monkeypatch.setattr(fp, "is_open", lambda: True)
+    monkeypatch.setattr(eng, "fp_is_open", lambda led: True)
+    H.put_entity("e:tool:public-one", "공개도구", aliases=["공개도구"])
+    commit([{"kind": "entity.put", "actor": "user:sagae", "origin": "first_party", "subject": "e:tool:inner-one",
+             "idem_key": "t:ent:inner", "payload": {"id": "e:tool:inner-one", "type": "Tool", "label": "내부전용라벨",
+                                                    "domain": ["G"], "aliases": ["사내도구"]}}], "user:sagae")
+    project_pending()
+    proc = Processor({"item": "bundle", "contract": "kb-ingest/1", "batch_id": "t", "producer": "agent:t"}, fetch=False, write=False)
+    try:
+        text = "공개도구와 사내도구를 비교한다."
+        assert {c["id"] for c in windows.candidates_for(proc, text)} == {"e:tool:public-one"}
+        assert {c["id"] for c in windows.candidates_for(proc, text, public=False)} == {"e:tool:public-one", "e:tool:inner-one"}
+    finally:
+        proc.gold.close()
+

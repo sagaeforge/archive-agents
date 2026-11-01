@@ -100,7 +100,9 @@ def test_abandoned_waiter_closes_fd_on_lock_error(kb_home, monkeypatch):
 
 def test_no_nonblocking_retry_in_source(repo):
     needle = "LOCK_" + "NB"
-    hits = [str(p) for p in (repo / "src").rglob("*.py") if needle in p.read_text(encoding="utf-8")]
+    # rank/indexer.py는 재시도가 아니라 "이미 돌고 있으면 건너뜀" 단일 실행 잠금이다(skipped: locked)
+    allow = {repo / "src/kb/rank/indexer.py"}
+    hits = [str(p) for p in (repo / "src").rglob("*.py") if p not in allow and needle in p.read_text(encoding="utf-8")]
     assert hits == []
 
 

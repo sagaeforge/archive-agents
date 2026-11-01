@@ -41,13 +41,27 @@ def alias_in(alias: str, hay: str) -> bool:
     return len(parts) >= 2 and all(len(p) >= 2 and _bounded(p, hay) for p in parts)
 
 
-def build_hay(quote: str, para_text: str, table_header, heading_path, doc_title: str) -> str:
-    bits = [quote, para_text, " ".join(table_header or []), " ".join(heading_path or []), doc_title or ""]
+def build_hay(quote: str, para_text: str, table_header, heading_path, doc_title: str, source_names=()) -> str:
+    """source_names: 소스 이름·발행처·레지스트리 별칭. 문서 제목이 일반어일 때 주어를 소스 문맥에서 찾는다."""
+    bits = [quote, para_text, " ".join(table_header or []), " ".join(heading_path or []), doc_title or "",
+            " ".join(x for x in (source_names or ()) if x)]
     return norm(" ".join(bits))
 
 
+def _prefixes(alias: str) -> list:
+    """3단어 이상 라벨의 앞쪽 단어열(2단어 이상, 6자 이상). 'Hacker News 게시물 1019360'의 'Hacker News'처럼
+    라벨 끝의 식별자·수식어가 문맥에 없어도 주어의 이름 부분이 있으면 맞는 것으로 본다."""
+    toks = norm(alias).split()
+    out = []
+    for k in range(len(toks) - 1, 1, -1):
+        p = " ".join(toks[:k]).rstrip(":,;-")
+        if len(p) >= 6:
+            out.append(p)
+    return out
+
+
 def subject_in_context(aliases, hay: str) -> bool:
-    return any(alias_in(a, hay) for a in aliases if a)
+    return any(alias_in(a, hay) or any(_bounded(p, hay) for p in _prefixes(a)) for a in aliases if a)
 
 
 def alias_conflicts(statement: str, subject_id: str, subject_aliases, known: dict, hay: str) -> list:

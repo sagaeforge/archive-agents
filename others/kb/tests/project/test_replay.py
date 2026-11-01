@@ -27,9 +27,13 @@ def test_golden_fingerprint(led, kb_home, monkeypatch):
     monkeypatch.setattr(socket, "create_connection", boom)
     monkeypatch.setattr(subprocess, "Popen", boom)
     # 재구축 코드가 파서·추출기·수집기 패키지를 끌어오지 않는다
-    assert not [m for m in sys.modules if m.split(".")[:2] in (["kb", "parse"], ["kb", "extract"], ["kb", "collect"])]
+    def heavy():
+        return [m for m in sys.modules if m.split(".")[:2] in (["kb", "parse"], ["kb", "extract"], ["kb", "collect"])]
+    for m in heavy():                                   # 앞선 시험이 임포트했을 수 있으니 비우고 시작한다(종료 때 복원)
+        monkeypatch.delitem(sys.modules, m)
     g = new_gold(kb_home, "a")
     replay(led, g, missing="skip")
+    assert not heavy()
     fp = fingerprint_conn(g)
     assert fp == FP.read_text().strip(), f"골든 지문이 바뀌었다: {fp}"
 

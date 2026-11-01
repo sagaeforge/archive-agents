@@ -61,7 +61,7 @@ P
 RT="$KB_HOME/runtime"
 echo "id: $ID"
 echo "원본: $SRC"
-echo "설치: $RT/venv-$ID (uv sync --frozen --no-editable --extra serve --extra collect)"
+echo "설치: $RT/venv-$ID (uv sync --frozen --no-editable --reinstall-package sagae-kb --extra serve --extra collect)"
 echo "복사: $RT/share-$ID (schemas sources prompts ops/bin/kb-agent-run ops/job-settings .claude/agents .claude/workflows 중 있는 것)"
 echo "교체: $RT/venv -> venv-$ID, $RT/share -> share-$ID"
 echo "래퍼: $RT/bin/kb, $RT/bin/kb-mcp"
@@ -76,7 +76,7 @@ mkdir -p "$RT/bin"
 V="$RT/venv-$ID"; S="$RT/share-$ID"
 if [ ! -f "$V/.complete" ]; then
   rm -rf "$V"
-  UV_PROJECT_ENVIRONMENT="$V" uv sync --frozen --no-editable --extra serve --extra collect --project "$SRC"
+  UV_PROJECT_ENVIRONMENT="$V" uv sync --frozen --no-editable --reinstall-package sagae-kb --extra serve --extra collect --project "$SRC"
   touch "$V/.complete"
 fi
 if [ ! -f "$S/.complete" ]; then
