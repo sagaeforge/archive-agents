@@ -1,6 +1,6 @@
 # sagae-claude-plugins
 
-사내 Claude Code 플러그인 마켓플레이스입니다. 현재 플러그인은 `proxmox`(읽기 전용 MCP 서버 + 스킬)와 `tower`(관제 서버 MCP 엔드포인트 등록) 둘입니다.
+사내 Claude Code 플러그인 마켓플레이스입니다. 현재 플러그인은 `proxmox`(읽기 전용 스킬과 서버 코드)와 `tower`(관제 서버 MCP 엔드포인트 등록) 둘입니다.
 
 ## 새 PC 설치
 
@@ -28,10 +28,11 @@ GitHub SSH 키가 없는 머신은 먼저 셸 프로필에 `export CLAUDE_CODE_P
 gh auth login && gh auth setup-git
 claude plugin marketplace add sagaeforge/sagae-claude-plugins
 claude plugin install proxmox@sagae
+claude plugin install tower@sagae
 ~/.claude/plugins/marketplaces/sagae/plugins/proxmox/scripts/bootstrap-token.sh
 ```
 
-`bootstrap-token.sh`는 이 머신 전용 토큰을 발급합니다.
+`bootstrap-token.sh`는 이 머신 전용 토큰을 발급합니다. proxmox 도구는 tower 경유로만 보이므로 `tower`도 설치합니다. 기존 토큰 파일이 있으면 `bootstrap-token.sh` 대신 `~/.config/proxmox-mcp/token`에 복사해도 됩니다.
 
 이어서 세션을 열고 `/plugin` > Marketplaces > `sagae` > Enable auto-update를 선택합니다. 기본값이 꺼짐이라 이 단계를 빠뜨리면 그 머신은 갱신되지 않습니다.
 
@@ -43,7 +44,7 @@ claude plugin install proxmox@sagae
 
 종료 코드 `0`이면 설치가 끝났습니다. `1`이나 `2`이면 항목마다 나오는 안내를 따른 뒤 다시 실행합니다. 항목의 뜻은 [상태 점검](#상태-점검)에 있습니다.
 
-새 세션에서 `/mcp`를 열어 `proxmox` 서버가 연결되어 있는지 보고, `클러스터 상태 알려줘`라고 물어 노드 3개가 나오는지 확인합니다.
+새 세션에서 `/mcp`를 열어 `tower` 서버가 연결되어 있는지 보고, `클러스터 상태 알려줘`라고 물어 노드 3개가 나오는지 확인합니다.
 
 ### 설치가 막히면
 
@@ -53,17 +54,13 @@ claude plugin install proxmox@sagae
 | `SSH host key is not in your known_hosts file` | `ssh -T git@github.com`을 한 번 실행해 지문을 수락합니다 |
 | `bootstrap-token.sh`의 `Could not issue token` | 위의 SSH 조건을 확인합니다. 기존 토큰과 파일은 바뀌지 않습니다. 메시지에 나오는 명령으로 노드에 남은 ID를 확인합니다 |
 | doctor 4번 실패, `claude plugin list`에 `The packages it lists`로 시작하는 Note | 의존성 자동 설치가 끝나지 못했습니다. `npm`이 PATH에 없으면 `The packages it lists were not installed, because it needs npm`이, `npm`은 있는데 60초 안에 끝나지 못했으면 `The packages it lists are not installed`가 나옵니다. 다른 이유로 설치를 거부했으면 `because` 뒤의 이유를 읽습니다. `npm`을 PATH에 두고 `claude plugin update proxmox@sagae`로 다시 시도합니다 |
-| `/mcp`에서 서버가 연결되지 않음 | `claude --debug`로 시작해 `~/.claude/debug/<세션 ID>.txt`를 봅니다. `node`를 찾지 못했다면 PATH를 고칩니다 |
+| `/mcp`에서 `tower`가 연결되지 않음 | 관제 서버(127.0.0.1:4800)가 떠 있는지, `~/.config/tower/token`이 있는지 봅니다. 연결됐는데 proxmox 도구만 없으면 관제 서버의 `proxmox` 업스트림 설정(`~/.config/tower/tower.json`)과 그 체크아웃의 `npm ci`를 봅니다. 그래도 모르면 `claude --debug`로 시작해 `~/.claude/debug/<세션 ID>.txt`를 봅니다 |
 
 ## tower 플러그인
 
 `tower`는 이 머신에서 도는 관제 서버(127.0.0.1:4800)의 병합 MCP 엔드포인트 하나를 Claude Code에 등록하는 얇은 HTTP 플러그인입니다. 서버 코드는 없습니다. 관제 서버가 설치돼 있고 `~/.config/tower/token`이 있어야 합니다. 토큰은 `scripts/tower-auth.sh`가 연결 때마다 이 파일에서 읽으며 저장소에는 값이 없습니다.
 
-```sh
-claude plugin install tower@sagae
-```
-
-도구 이름은 `mcp__plugin_tower_tower__<업스트림>_<도구>` 형태입니다. 권한 와일드카드 `mcp__plugin_tower_tower__*`는 프로젝트 설정이 아니라 사용자 설정(`~/.claude/settings.json`)에 둡니다.
+`proxmox` 플러그인은 더 이상 MCP 서버를 등록하지 않습니다. proxmox MCP 서버(`plugins/proxmox/server/index.mjs`)는 tower가 `~/.config/tower/tower.json`에 적힌 이 저장소의 체크아웃(의존성은 `plugins/proxmox`에서 `npm ci`)에서 직접 실행합니다. 그래서 proxmox 도구를 쓰려면 `tower` 플러그인과 실행 중인 관제 서버가 필요합니다. 도구 이름은 `mcp__plugin_tower_tower__proxmox_<도구>`(예: `mcp__plugin_tower_tower__proxmox_cluster_overview`)이며, 일반 형태는 `mcp__plugin_tower_tower__<업스트림>_<도구>`입니다. 권한 와일드카드 `mcp__plugin_tower_tower__*`는 프로젝트 설정이 아니라 사용자 설정(`~/.claude/settings.json`)에 둡니다.
 
 ## 배포 방식
 
@@ -182,15 +179,20 @@ rm ~/.config/proxmox-mcp/token
 
    통합 브랜치는 `git merge --no-ff`로 병합합니다. 그래야 병합 전체가 `main`의 merge 커밋 하나가 되고, `git revert -m 1` 한 번으로 병합 전 트리로 정확히 돌아갑니다. fast-forward로 넣으면 브랜치의 마지막 merge 커밋이 `main`의 끝이 되어 그 merge 하나만 되돌아갑니다.
 
-2. 기다릴 수 없는 머신에서 바로 반영합니다. auto-update를 켠 머신은 다음 세션에서 따라옵니다.
+2. 기다릴 수 없는 머신에서 바로 반영합니다. 스킬은 플러그인으로, 서버 코드는 tower의 전용 체크아웃으로 갱신합니다. 서버는 플러그인 설치본이 아니라 이 체크아웃에서 돌기 때문에 `plugin update`는 서버 코드를 바꾸지 못합니다. auto-update를 켠 머신은 스킬만 다음 세션에서 따라옵니다.
 
    ```sh
    claude plugin marketplace update sagae && claude plugin update proxmox@sagae
+   cd ~/.local/share/tower/checkouts/sagae-claude-plugins
+   git fetch
+   git checkout --detach <되돌린 뒤의 커밋>
+   (cd plugins/proxmox && npm ci --ignore-scripts --omit=dev)
+   tower restart proxmox
    ```
 
-   세션 안에서는 이어서 `/reload-plugins`를 실행합니다.
+   세션 안에서는 이어서 `/reload-plugins`를 실행합니다. `tower restart proxmox`로 서버 자식이 새 코드로 다시 뜹니다.
 
-3. 그동안 멈춰야 하면 `claude plugin disable proxmox@sagae`로 차단하고, 복구한 뒤 `claude plugin enable proxmox@sagae`를 실행합니다.
+3. 그동안 서버를 멈춰야 하면 `~/.config/tower/tower.json`의 `proxmox` 업스트림에 `"enabled": false`를 넣고 저장합니다. tower가 저장을 보고 그 업스트림을 종료하고 목록에서 뺍니다(tower 설계의 핫 리로드 기준이며 이 절차는 실행해 보지 않았습니다). 복구한 뒤 `"enabled": true`로 되돌립니다. `claude plugin disable proxmox@sagae`는 스킬만 끄고 서버는 멈추지 않습니다.
 4. doctor 3번으로 설치 커밋을 확인합니다.
 
 ### 토큰 정기 교체
@@ -257,18 +259,16 @@ CA를 바꾸면 노드 인증서를 교체한 때부터 새 CA가 머신에 닿�
 
 서버는 API 호출마다 JSON 한 줄을 stderr에 씁니다. 시각, 도구, 호스트, 경로, 소요 시간, 상태, 페일오버 여부가 들어가며 토큰, 응답 본문, 쿼리 값은 넣지 않습니다. 경로는 도구를 부른 쪽이 정하므로 토큰처럼 보이는 경로는 퍼센트 인코딩된 것까지 `<redacted>`로 바꿔 적습니다. 1,024자가 넘는 경로도 같습니다.
 
-Claude Code는 서버 연결이 끝나면 stderr를 더 읽지 않습니다(2.1.316 기준). 그래서 `.mcp.json`이 `PVE_LOG_FILE`을 플러그인 데이터 폴더로 지정해 같은 줄을 파일에도 남깁니다. 기본으로 켜져 있습니다.
+서버는 tower의 업스트림으로 돌기 때문에 stderr는 tower가 받습니다. 같은 줄을 파일에도 남기려면 tower 설정(`~/.config/tower/tower.json`)의 `proxmox` 업스트림 `env`에 `PVE_LOG_FILE`을 지정합니다. 이 플러그인은 더 이상 이 값을 정하지 않으므로 기본으로 켜져 있지 않고, 지정하지 않으면 파일 기록이 없습니다.
 
 ```sh
-tail -n 20 ~/.claude/plugins/data/proxmox-sagae/calls.jsonl
+tail -n 20 "$(jq -r .upstreams.proxmox.env.PVE_LOG_FILE ~/.config/tower/tower.json)"
 ```
 
-- 폴더는 Claude Code가 만들고, 파일 권한은 0600입니다.
+- 폴더는 만들어 두어야 하고, 파일 권한은 0600입니다.
 - 파일이 5MiB에 닿으면 `calls.jsonl.1`로 옮기고 새 파일을 시작합니다. 이전 `.1`은 지워지므로 두 파일을 합쳐 약 10MiB를 넘지 않습니다.
-- 플러그인을 업데이트해도 남습니다. 제거하면 Claude Code가 폴더째 지웁니다. [머신별 재등록](docs/stable-gate.md#머신별-재등록)의 `marketplace remove`도 같습니다.
+- 플러그인 업데이트나 제거와 무관합니다. 파일은 tower 설정이 가리키는 곳에 있고 Claude Code가 지우지 않습니다.
 - 파일을 쓸 수 없거나 그 경로가 일반 파일이 아니면 기록을 건너뜁니다. 도구 호출은 실패하지 않습니다.
-
-Claude Code 2.1.316에서 `claude mcp list`로 서버를 띄워 변수 확장, 폴더 생성, 파일 기록을 확인했습니다. **실제 세션에서 도구를 호출했을 때의 기록은 미검증입니다.** [온보딩 리허설](docs/rehearsals.md#1-깨끗한-머신-온보딩)에서 확인합니다.
 
 ## 작업 폴더
 
@@ -284,7 +284,7 @@ Claude Code 2.1.316에서 `claude mcp list`로 서버를 띄워 변수 확장, �
 | 비밀값 검사 | merge 커밋을 포함한 모든 커밋, 커밋 메시지, 최신 트리의 토큰과 키 | `.github/scripts/gitleaks.sh` |
 | 단위 테스트 | 동작 회귀, 쓰기 경로 추가, `version` 고정, 액션과 CLI의 버전 미고정, `stable` 게이트 규칙 위반 | `npm test` |
 | 변이 검사 | 테스트 약화. 복사본의 코드를 일부러 망가뜨리고 그 보증을 맡은 테스트가 실패하는지 확인 | `node test/mutation.mjs` |
-| 기동 스모크 | 문법 오류, import 오류, 의존성 누락. 운영 의존성만 설치한 복사본을 `.mcp.json`의 명령으로 실행해 도구 6개를 확인 | `node test/smoke/boot.mjs` |
+| 기동 스모크 | 문법 오류, import 오류, 의존성 누락. 운영 의존성만 설치한 복사본을 tower가 업스트림을 띄우는 방식(`node server/index.mjs`)으로 실행해 도구 6개를 확인 | `node test/smoke/boot.mjs` |
 
 `live-smoke` 잡은 Proxmox의 러너 LXC에서 도구 6개를 실제 클러스터에 호출합니다. 러너가 준비될 때까지 꺼져 있어 건너뜁니다. 켜면 `main` push마다, 그리고 매주 월요일 06:00 KST에 실행됩니다. 켜는 절차, 실패 표시 `INFRA`와 `PLUGIN`, `skip_smoke`는 [docs/live-smoke.md](docs/live-smoke.md)에 있습니다.
 

@@ -6,7 +6,7 @@
     {
       "name": "proxmox",
       "source": "./plugins/proxmox",
-      "description": "Read-only MCP server and skill for the sagae internal Proxmox cluster"
+      "description": "Read-only skill and server code for the sagae internal Proxmox cluster; the MCP tools are served through the tower plugin"
     },
     {
       "name": "tower",

@@ -1,28 +1,24 @@
-// How Claude Code starts the server. Every other test starts index.mjs with an environment of its own,
-// so without this nothing would stand between a line in .mcp.json and every machine.
+// How tower starts the server: `node server/index.mjs` with PVE_LOG_FILE in the upstream's env (the
+// proxmox plugin no longer registers it). Every other test starts index.mjs with an environment of its
+// own, so without this nothing would run the server the way a session reaches it.
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import fs, { existsSync, mkdirSync, readFileSync, readdirSync, statSync, truncateSync, writeFileSync } from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
 import { join } from "node:path";
 import { test } from "node:test";
-import { fileURLToPath } from "node:url";
 import { createCa } from "./helpers/certs.mjs";
 import { startEntryPoint } from "./helpers/entry-point.mjs";
 import { LOOPBACK, startFakePve, tempDir } from "./helpers/fake-pve.mjs";
-
-const { mcpServers } = JSON.parse(readFileSync(fileURLToPath(new URL("../.mcp.json", import.meta.url)), "utf8"));
 
 const TOKEN = "tester@pve!unit=not-a-real-secret";
 const LOG_LIMIT_BYTES = 5 * 1024 * 1024;
 
 const ca = createCa("launch test CA");
 
-// The env Claude Code hands a plugin's stdio server, with its path variable expanded.
-const shippedEnv = (dataDir) =>
-  Object.fromEntries(
-    Object.entries(mcpServers.proxmox.env).map(([name, value]) => [name, value.replaceAll("${CLAUDE_PLUGIN_DATA}", dataDir)]),
-  );
+// The env tower's proxmox upstream sets (tower.json), with the log in a directory of the test's own.
+// It is the whole list: anything else added here reaches the server on every machine.
+const towerEnv = (dataDir) => ({ PVE_LOG_FILE: join(dataDir, "calls.jsonl") });
 
 function caFileIn(t) {
   const caFile = join(tempDir(t), "ca.pem");
@@ -32,26 +28,13 @@ function caFileIn(t) {
 
 async function callOnce(t, dataDir, extraEnv = { PVE_CA_FILE: caFileIn(t) }) {
   const server = await startFakePve(t, ca.issue(LOOPBACK));
-  const { client } = await startEntryPoint(t, { token: TOKEN, port: server.port, env: { ...shippedEnv(dataDir), ...extraEnv } });
+  const { client } = await startEntryPoint(t, { token: TOKEN, port: server.port, env: { ...towerEnv(dataDir), ...extraEnv } });
   return { server, result: await client.callTool({ name: "api_get", arguments: { path: "/version" } }) };
 }
 
 const logLines = (file) => readFileSync(file, "utf8").trim().split("\n");
 
-// Spelled out, so that anything added here has to be argued for. An env entry reaches the server on
-// every machine: NODE_TLS_REJECT_UNAUTHORIZED, NODE_OPTIONS or PVE_CA_FILE would undo the CA pin, and
-// PVE_API_TOKEN or PVE_HOSTS would send a token somewhere else.
-test("the plugin starts one server, by this exact command and environment", () => {
-  assert.deepEqual(mcpServers, {
-    proxmox: {
-      command: "node",
-      args: ["${CLAUDE_PLUGIN_ROOT}/server/index.mjs"],
-      env: { PVE_LOG_FILE: "${CLAUDE_PLUGIN_DATA}/calls.jsonl" },
-    },
-  });
-});
-
-test("started as shipped, the server still sends a host outside the repository CA nothing", async (t) => {
+test("started as tower starts it, the server still sends a host outside the repository CA nothing", async (t) => {
   const dataDir = tempDir(t);
   const { server, result } = await callOnce(t, dataDir, {});
 
@@ -60,7 +43,7 @@ test("started as shipped, the server still sends a host outside the repository C
   assert.deepEqual(server.requests, []);
 });
 
-test("started as shipped, every call lands in the plugin's data directory, for this user alone", async (t) => {
+test("started as tower starts it, every call lands in the file PVE_LOG_FILE names, for this user alone", async (t) => {
   const dataDir = tempDir(t);
   const { result } = await callOnce(t, dataDir);
 
@@ -139,4 +122,24 @@ test("a log under its limit stays where it is", async (t) => {
 
   assert.equal(existsSync(`${log}.1`), false);
   assert.ok(statSync(log).size > LOG_LIMIT_BYTES - 1);
+});
+
+test("started with no PVE_LOG_FILE, the call logs to stderr and writes no log file anywhere it could", async (t) => {
+  const server = await startFakePve(t, ca.issue(LOOPBACK));
+  const stateHome = tempDir(t);
+  const { client, home, stderr } = await startEntryPoint(t, {
+    token: TOKEN,
+    port: server.port,
+    env: { PVE_CA_FILE: caFileIn(t), XDG_STATE_HOME: stateHome },
+  });
+  // HOME is the server's own throwaway home, so a default log path under it would show up in this tree.
+  const tree = () => readdirSync(home, { recursive: true }).sort();
+  const before = tree();
+
+  const result = await client.callTool({ name: "api_get", arguments: { path: "/version" } });
+
+  assert.equal(result.isError, undefined);
+  assert.equal(JSON.parse(stderr().trim().split("\n").at(-1)).path, "/version");
+  assert.deepEqual(readdirSync(stateHome), []);
+  assert.deepEqual(tree(), before);
 });

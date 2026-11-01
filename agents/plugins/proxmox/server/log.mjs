@@ -4,8 +4,8 @@ import { appendFileSync, renameSync, statSync } from "node:fs";
 
 const currentTool = new AsyncLocalStorage();
 
-// Claude Code stops reading a server's stderr once it has connected, so in a session only this file
-// keeps the log. .mcp.json points it at the plugin's data directory, which Claude Code creates.
+// Off unless set. tower's proxmox upstream env sets it to keep a file next to stderr; the directory
+// must already exist.
 const logFile = process.env.PVE_LOG_FILE;
 
 // At about 130 bytes a line, this is some 40,000 calls. One older file stays next to the log, so the

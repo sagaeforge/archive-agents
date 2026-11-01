@@ -1,9 +1,9 @@
 // Starts the server the way a new machine gets it: a fresh copy with production dependencies only,
-// launched by the exact command in .mcp.json, with no token to find and no cluster to reach. It
+// launched the way tower starts it (node server/index.mjs), with no token to find and no cluster to reach. It
 // needs the registry for that install, so it stays out of npm test.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -36,10 +36,10 @@ try {
   const home = join(root, "home");
   mkdirSync(home);
 
-  const { command, args } = JSON.parse(readFileSync(join(plugin, ".mcp.json"), "utf8")).mcpServers.proxmox;
   const transport = new StdioClientTransport({
-    command,
-    args: args.map((arg) => arg.replaceAll("${CLAUDE_PLUGIN_ROOT}", plugin)),
+    // The way tower starts its proxmox upstream: node, with the path of the server.
+    command: process.execPath,
+    args: [join(plugin, "server", "index.mjs")],
     cwd: home, // The server must not depend on where it is started from.
     env: { HOME: home, USERPROFILE: home, PVE_HOSTS: NO_CLUSTER },
     stderr: "pipe",

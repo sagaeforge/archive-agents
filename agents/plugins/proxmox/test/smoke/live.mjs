@@ -1,9 +1,9 @@
-// Calls all six tools on the real cluster, through the server started the way .mcp.json starts it.
+// Calls all six tools on the real cluster, through the server started the way tower starts it.
 // CI runs this on the runner LXC. It needs a token and the cluster, so it stays out of npm test.
 //
 // GitHub keeps Actions logs, so nothing from a response reaches the output. Every line is made of
 // hosts, counts, names written in this file, and error codes. See docs/live-smoke.md.
-import { appendFileSync, readFileSync } from "node:fs";
+import { appendFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -122,7 +122,6 @@ const CHECKS = {
 };
 
 async function runChecks() {
-  const { command, args } = JSON.parse(readFileSync(join(PLUGIN_ROOT, ".mcp.json"), "utf8")).mcpServers.proxmox;
   const client = new Client({ name: "live-smoke", version: "0.0.0" });
   let failed = 0;
 
@@ -136,8 +135,8 @@ async function runChecks() {
   try {
     await client.connect(
       new StdioClientTransport({
-        command,
-        args: args.map((arg) => arg.replaceAll("${CLAUDE_PLUGIN_ROOT}", PLUGIN_ROOT)),
+        command: process.execPath, // The way tower starts its proxmox upstream.
+        args: [join(PLUGIN_ROOT, "server", "index.mjs")],
         env: process.env,
         stderr: "ignore", // The default hands it to this process, and so to the Actions log.
       }),

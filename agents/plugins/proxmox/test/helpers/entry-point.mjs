@@ -38,6 +38,7 @@ export async function startEntryPoint(t, options) {
   await client.connect(transport);
   return {
     client,
+    home: spawned.env.HOME,
     stderr: () => Buffer.concat(stderr).toString("utf8"),
     httpsRequests: () =>
       readFileSync(requestLog, "utf8")
