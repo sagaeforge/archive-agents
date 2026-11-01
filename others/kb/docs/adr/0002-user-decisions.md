@@ -120,3 +120,7 @@
 
 - 실행 D의 정지 뒤 사용자가 AskUserQuestion에 직접 "프롬프트와 정규식 수정 (Recommended)"로 답했다.
 - 적용: 값/부정 정규식 수정, 프롬프트 `extract-2`, `done_carry`, `gate@3`. Sol 재개는 리드가 한다.
+
+## 타이머 켜고 소진 시작 (2026-11-01)
+
+- 사용자가 AskUserQuestion에 직접 "타이머 켜고 소진 시작 (Recommended)"로 답했다. 실행 E(100창, 통과 0.920) 뒤이고, 리드가 `kb-agent.timer` 하나를 켰다(`install-units.sh` 아님).
