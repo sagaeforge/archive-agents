@@ -38,7 +38,7 @@ def test_extractor_format_and_same_gate_for_all_backends(ent, monkeypatch):
         gv = {r[0] for r in con.execute("SELECT gate_version FROM evidence")}
     finally:
         con.close()
-    assert gv == {"gate@1"}                                             # 게이트 판본은 evidence.gate_version
+    assert gv == {"gate@2"}                                             # 게이트 판본은 evidence.gate_version
     # 경로별 철회
     from kb.cli import main
     assert main(["claim", "retract", "--extractor", "l2:claude:haiku:extract-1"]) == 0

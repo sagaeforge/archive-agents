@@ -48,6 +48,16 @@ def _dlq(it: dict, err: str, kind: str = QUEUE) -> None:
         c.close()
 
 
+def _seen_spans(proc, w) -> list:
+    """모델이 본 원문 구간. 창 문단과 본문이 같은 문단(para_sha 동일)은 창 구성이 한 번만 보냈어도 같은 문장이므로 함께 넣는다.
+    그래야 반복 문단의 인용구가 첫 사본으로 조용히 정해지지 않고 E_QUOTE_AMBIGUOUS로 남는다."""
+    shas = set(w.para_shas)
+    info = proc.text_of(proc.snapshot_info(w.snapshot))
+    out = {(a, b) for a, b in w.spans}
+    out.update((x.start_cp, x.end_cp) for x in info.paras if x.para_sha in shas)
+    return sorted(out)
+
+
 def retry_or_dlq(it: dict, err: str, kind: str = QUEUE) -> None:
     """실패한 항목: 재시도 2회 뒤 DLQ, 그 전에는 10분 뒤로 미룬다."""
     if it.get("attempts", 1) >= int(settings.get("max_attempts", 3)):
@@ -337,7 +347,7 @@ class Run:
         acc = nr = rej = 0
         ids_new, existing = set(), []
         if its:
-            rep = ingest.submit(itm.bundle(w.sha, its, doms), fetch=False)
+            rep = ingest.submit(itm.bundle(w.sha, its, doms), fetch=False, windows={w.snapshot: _seen_spans(proc, w)})
             for ln in rep.lines:
                 if ln["result"] == "accepted":
                     acc += 1
@@ -352,7 +362,9 @@ class Run:
                     if wb.get("existing"):
                         existing.append((cid, wb.get("verification")))
         self._revive(w, existing, extractor)
-        route.apply("gate_pass_drop", key=route.model_key(cand.backend, cand.model), passed=acc, total=max(1, len(claims)))
+        route.apply("low_yield", key=route.model_key(cand.backend, cand.model), empty=not claims)   # 모든 창. 빈 응답만 내는 모델을 끈다
+        if claims:         # 주장이 없는 창(표지, 목차, 차트 표)은 게이트를 지나지 않았으므로 통과율 이력에 넣지 않는다. total=max(1, 0)은 실패 [0,1]로 남았다
+            route.apply("gate_pass_drop", key=route.model_key(cand.backend, cand.model), passed=acc, total=len(claims))
         if self.reextract or state.get(REEXTRACT + w.snapshot):
             self._retract_old(w, extractor, ids_new)
         cache.mark_done(w.para_shas, w.sha)

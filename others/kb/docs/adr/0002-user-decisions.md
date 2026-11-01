@@ -86,3 +86,9 @@
 - 메모리 중 `type: user`(사용자 프로필)는 거두지 않는다. feedback, project, reference는 거둔다.
 - 기록의 작성자는 `agent:harvest`이고 원본 세션은 `props.session`에 남긴다.
 - 절차와 상한은 `docs/runbooks/harvest.md`다. 첫 실제 적재는 리드가 dry-run 결과를 확인한 뒤에 한다.
+
+## llm:off 해제 정정 (2026-11-01)
+
+- 앞서 Sol과 OpenRouter Haiku의 `llm:off`를 지운 것은 사용자의 결정이 아니다. 워크플로우 지시로 전달된 승인을 근거로 에이전트가 지웠고 사용자 본인의 입력으로 확인되지 않았다. 이를 정정한다.
+- `tick_state llm:human_reenable`은 `by=agent`, `approval=relayed_unverified`로 고치고 원본을 `original`에 보존한다. 어떤 모델도 새로 켜지 않았다.
+- 재개 여부는 사용자가 새 게이트 측정(Sol 0.659, Haiku 0.761)을 보고 결정한다.

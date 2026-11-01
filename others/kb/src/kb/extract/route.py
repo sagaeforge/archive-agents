@@ -1,5 +1,5 @@
 """라우팅과 전환 규칙(ADR-0003 2, 5장). 라우터는 후보 순서만 정한다. 호출, 재시도, 지출 판단은 하지 않는다.
-전환 신호는 SWITCH_TABLE 12행이고 apply()가 상태(tick_state의 llm:off:*, llm:stop)에 반영한다.
+전환 신호는 SWITCH_TABLE 13행이고 apply()가 상태(tick_state의 llm:off:*, llm:stop)에 반영한다.
 일일 밸브 도달 뒤에는 다른 경로로 넘기지 않는다(버그가 구독으로 번지면 안 된다)."""
 from __future__ import annotations
 
@@ -38,9 +38,9 @@ class Verdict:
     detail: str = ""
 
 
-# 신호 -> (판정 설명, 조치, 복귀). 시험은 이 12행을 전부 돈다.
+# 신호 -> (판정 설명, 조치, 복귀). 시험은 이 13행을 전부 돈다.
 SWITCH_TABLE = ("balance_exhausted", "key_invalid", "daily_valve", "cost_exceeded", "claude_five_hour", "claude_seven_day",
-                "claude_overage", "claude_daily_windows", "codex_limit", "error_rate", "gate_pass_drop", "all_down")
+                "claude_overage", "claude_daily_windows", "codex_limit", "error_rate", "gate_pass_drop", "low_yield", "all_down")
 
 
 def off_key(target: str) -> str:
@@ -166,6 +166,15 @@ def apply(signal: str, **ctx) -> Verdict:
             set_off(key, "gate_pass_drop", None, human=True)
             _record_drop(backend_of(key), "gate_pass_drop")
             return Verdict(signal, "off", key, None, detail="회고 확인 뒤 사람이 켠다")
+    elif signal == "low_yield":
+        # 주장이 없는 창은 gate_pass_drop에 넣지 않으므로(통과율 분모가 아니다) 빈 응답만 내는 모델은 여기서 잡는다.
+        key, n = ctx["key"], int(S("switch.yield_window", 50))
+        h = ((state.get("llm:yield:" + key) or []) + [1 if ctx["empty"] else 0])[-n:]
+        state.put("llm:yield:" + key, h)
+        if len(h) >= n and sum(h) / len(h) >= float(S("switch.yield_empty_ratio", 0.6)):
+            set_off(key, "low_yield", None, human=True)
+            _record_drop(backend_of(key), "low_yield")
+            return Verdict(signal, "off", key, None, detail="회고 확인 뒤 사람이 켠다")
     elif signal == "all_down":
         if _record_drop(ctx["backend"], ctx.get("why", "down")):
             return Verdict(signal, "stop", "l2", None, fallthrough=False, detail="전환하지 않고 L2 정지")
@@ -223,10 +232,11 @@ class Router:
         return True, ""
 
     def _claude_ok(self, support: bool = False) -> tuple:
-        if is_off("claude"):
-            e = state.get(off_key("claude")) or {}
-            if e.get("retry") != "next_run":
-                return False, e.get("reason") or "off"
+        for t in ("claude", model_key("claude", str(settings.get("claude.model", "haiku")))):   # gate_pass_drop, low_yield는 claude:<모델> 키에 쓴다
+            if is_off(t):
+                e = state.get(off_key(t)) or {}
+                if e.get("retry") != "next_run":
+                    return False, e.get("reason") or "off"
         if support:
             if budget.windows_today("claude", support=True) >= int(settings.get("claude.support_daily", 100)):
                 return False, "support_daily"

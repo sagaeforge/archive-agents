@@ -117,8 +117,8 @@ def _persist(p: Processor, out: Outcome, rep: Report) -> None:
         f()
 
 
-def _run(header: dict, items: list, *, fetch: bool, write: bool, profile: str | None) -> Report:
-    p = Processor(header, fetch=fetch, write=write, profile=profile)
+def _run(header: dict, items: list, *, fetch: bool, write: bool, profile: str | None, windows: dict | None = None) -> Report:
+    p = Processor(header, fetch=fetch, write=write, profile=profile, windows=windows)
     rep = Report(header)
     try:
         for line, it in items:
@@ -147,10 +147,11 @@ def validate(items, *, fetch: bool = True, profile: str | None = None) -> Report
     return _run(header, rows, fetch=fetch, write=False, profile=profile)
 
 
-def submit(items, *, fetch: bool = True, profile: str | None = None) -> Report:
-    """게이트를 지나 쓴다. 멱등: 같은 묶음을 다시 내면 새 이벤트가 0건이다."""
+def submit(items, *, fetch: bool = True, profile: str | None = None, windows: dict | None = None) -> Report:
+    """게이트를 지나 쓴다. 멱등: 같은 묶음을 다시 내면 새 이벤트가 0건이다.
+    windows: {스냅샷 ID: [(시작, 끝)]} L2만 넘긴다. 모델이 본 구간 안에서만 여러 곳 인용구를 좁힌다(ADR 10.6 3단계)."""
     header, rows = _norm(items)
-    return _run(header, rows, fetch=fetch, write=True, profile=profile)
+    return _run(header, rows, fetch=fetch, write=True, profile=profile, windows=windows)
 
 
 def _norm(items):

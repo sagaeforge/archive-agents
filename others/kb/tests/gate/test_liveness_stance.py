@@ -192,3 +192,16 @@ def test_real_parser_second_snapshot_stays_held(env):
 
 def test_stage_is_registered_for_tick(env):
     assert tick_stage.STAGES[0][:2] == (4.5, "gate_l1")
+
+
+def test_unknown_liveness_stays_held_across_ticks_with_new_snapshots(env):
+    """새 스냅샷 재파싱이 몇 번 되풀이돼도 생존 미상 G 주어의 주장은 매 틱 다시 묶이고 끝 상태는 needs_review다."""
+    s = "e:repo:acme-t"
+    put_entity(s, "Repo", "acme/t")
+    cid = _det_claim(s, "t1")
+    assert tick_stage.run().detail["held"] == 1
+    for i in (2, 3, 4):
+        _reassert(s, cid, f"t{i}")
+        assert tick_stage.run().detail["held"] == 1
+        assert _verification(cid) == "needs_review"
+    assert queue_rows("live") == [s]

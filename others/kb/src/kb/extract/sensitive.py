@@ -8,6 +8,7 @@ import json
 from kb.core import canon, cas, ids, opsdb
 from kb.extract import cache, guard, prompt, runner, schema, settings, windows
 from kb.extract.types import Job, Window
+from kb.gate.model import GATE_VERSION
 
 QUEUE = "l2s"
 SENS = {"public": 0, "internal": 1, "private": 2, "secret": 3}
@@ -192,7 +193,7 @@ def _window(run, proc, plan, be, ext, pv, rid, text, paras, sens, chunk, cap, ca
                "extractor": ext, "sensitivity_floor": inherited(sens),
                "evidence": [{"snapshot": rid, "selector_kind": "text_quote", "exact": g.exact, "start_cp": g.start_cp,
                              "end_cp": g.end_cp, "prefix": text[max(0, g.start_cp - 24):g.start_cp],
-                             "suffix": text[g.end_cp:g.end_cp + 24], "text_sha": text_sha, "gate_version": "gate@1"}]}
+                             "suffix": text[g.end_cp:g.end_cp + 24], "text_sha": text_sha, "gate_version": GATE_VERSION}]}
         if g.speaker:
             pay["speaker"] = g.speaker
         evs.append({"kind": "claim.assert", "actor": "agent:l2", "origin": "system", "subject": cl["subject"],

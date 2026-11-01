@@ -47,7 +47,7 @@ ADR-0003 4장의 자동 정지 문턱은 7일 0.80이다. 0.70은 이 패키지�
 1. `kb agent run --max-windows 100 --json`을 1회 돈다.
 2. 게이트 통과율 = `accepted ÷ (accepted + needs_review + rejected)`. 출력의 `claims`는 accepted + needs_review이므로 `accepted = claims - needs_review`다(`runner.py` 338행).
 3. 0.70 미만이면 멈춘다. 더 돌리지 않고 고정 심판 80건을 1회 돈다(`~/.cache/sagae-kb/llm-eval` 하니스, ADR-0003 4장). 심판은 `claude -p`라 7일 활용률이 정지 문턱(0.80) 이상이면 대기다. 원인을 확인하기 전에 큐를 소진하지 않는다.
-   `gate_pass_drop`이 모델을 끄면(`llm:off:*`, `human=true`) 그 모델은 사람이 켤 때까지 안 돈다. 끈 값을 손으로 지우지 않는다.
+   `gate_pass_drop`이 모델을 끄면(`llm:off:*`, `human=true`) 그 모델은 사람이 켤 때까지 안 돈다. 켜는 길은 `kb llm reenable --model <키> --by user --basis <근거> [--apply]` 하나뿐이다(기본 시험 실행, 사용자 본인의 해제만 받는다). `llm:gatepass:<키>` 이력을 `llm:gatepass:archive:<키>:<ts>`로 옮기고(지우지 않는다) `llm:off:<키>`를 지우며 `llm:reenable_log`에 덧붙인다. `low_yield`(최근 50창 중 빈 창 ≥ 60%, `llm:yield:<키>`)로 꺼진 모델도 같은 길로 켜고, 그 이력도 `llm:yield:archive:<키>:<ts>`로 옮긴다. `--by user`는 운영자 주장이지 인증이 아니므로 사용자 본인이 직접 답한 해제만 넘긴다(전달받은 지시는 안 된다). 주장이 없는 창은 `llm:gatepass`에 쌓지 않는다. 끈 값이나 이력을 손으로 지우지 않는다. 운영 KB_HOME에서 `--apply`는 `KB_LIVE=1`이 있어야 한다. 에이전트가 사용자 지시를 전해 받아 지운 과거 기록은 `kb llm correct-reenable-record --apply`로 고친다(`llm:human_reenable`만 고친다).
 4. 0.70 이상이면 일일 창 수 공식대로 잇는다.
 
 ## 수동 kb jobs run 절차
@@ -117,10 +117,14 @@ Document 2,410, Snapshot 1,539, Claim 1,186, Tool 744, Series 282, Model 250, Fe
 
 ## 알려진 결함
 
-1. 게이트 통과율 미달과 모델 정지. 아래 "재개 결과 2". Sol, OpenRouter Haiku 둘 다 `human=true`로 꺼져 있다. 재개에는 원인 수정과 사용자의 해제가 필요하다.
+1. 게이트 통과율 미달과 모델 정지. 아래 "재개 결과 3". Sol, OpenRouter Haiku 둘 다 `human=true`로 꺼져 있다. 새 게이트 기준 Sol 0.659는 문턱 0.70 미만이다(CI가 0.70을 포함). 재개에는 사용자의 해제 결정이 필요하다. 이전 `llm:off` 해제는 사용자 결정이 아니었고 정정했다.
 2. `ops/bin/deploy`의 옛 휠 문제는 `--reinstall-package sagae-kb`로 고쳐졌다. 위 "배포 확인"의 diff는 그대로 돈다(2026-11-01 출력 0줄).
 3. `kb live run`의 GraphQL 저장소 신호는 스냅샷이 없어 `E_NO_EVIDENCE`로 거부된다(`src/kb/commands/live.py`가 `repos/x/y`로 소유 소스를 찾지만 소유 소스가 없다). 근거 없음 12건이 사람 대기열에 들어갔다.
 4. 피드 항목 문서 약 470건은 레지스트리 소유가 아니라 생존 판정이 닿지 않는다.
+5. `low_yield` 잔여: 빈 창과 유효 창이 번갈아 나오면 빈 비율이 문턱 0.6에 닿지 않아 작동하지 않는다. 일일 밸브 상한이 한도다.
+6. 통과율 측정 표본은 11개 스냅샷뿐이고, 큐의 91.2%는 측정 자료가 없는 층이다.
+7. `llm:off` 해제 승인은 사용자 본인 입력으로 확인되지 않았다. `kb llm correct-reenable-record`로 기록을 정정한다.
+8. 시험 순서 의존: `tests/first_batch/test_dead_seed.py` 12건이 전체 실행에서만 실패한다(`KB_HOME=<임시 경로> ops/bin/dev pytest -q`, HEAD d2c26fa에서도 같은 12건 실패, 2026-11-01 측정). 단독 실행과 `tests/first_batch` 디렉터리 실행은 skip 또는 통과한다. 앞선 시험이 임시 KB_HOME에 부분 gold를 만들어 skip 조건이 풀리는 것으로 추정한다(미확인). 시험은 수정하지 않았다.
 
 ## 해결한 결함 (2026-11-01 재시도)
 
@@ -131,7 +135,7 @@ Document 2,410, Snapshot 1,539, Claim 1,186, Tool 744, Series 282, Model 250, Fe
 ## 재개 결과 (2026-11-01, 게이트 수정 뒤)
 
 - 배포 24b0966934cb, 소스와 diff 없음(`uv sync --reinstall-package` 우회), `kb rebuild gold`, `schema sync`, `sources sync`, `verify all` ok.
-- 사람 해제(주의: 워크플로우 지시로 전달된 승인을 근거로 에이전트가 지웠다. 사용자 본인의 해제로 확인되지 않았다): Sol과 OpenRouter Haiku의 `llm:off`를 지웠다. 옛 게이트 기준 `llm:gatepass` 이력도 지웠다(남기면 첫 창에서 재정지). `tick_state llm:human_reenable`과 incidents.ndjson에 기록.
+- 사람 해제(정정: 사용자의 결정이 아니다. 워크플로우 지시로 전달된 승인을 근거로 에이전트가 지웠고 사용자 본인의 해제로 확인되지 않았다. 기록은 2026-11-01 "재개 결과 3"에서 `by=agent`, `approval=relayed_unverified`로 정정했다. 이 절의 0.908도 미확인이다): Sol과 OpenRouter Haiku의 `llm:off`를 지웠다. 옛 게이트 기준 `llm:gatepass` 이력도 지웠다(남기면 첫 창에서 재정지). `tick_state llm:human_reenable`과 incidents.ndjson에 기록.
 - 해제 뒤 31창: 저장 주장 99, rejected 32, needs_review 30, 비용 $0.312(창당 약 $0.0104). 최근 20창 통과율 Sol 49/101=0.485(다시 `gate_pass_drop`, human), Haiku 20/29=0.69. 0.70 미만이라 L2를 멈췄다. 고정 심판 80건은 이 패키지가 돌리지 않았다. Claude 경로는 `seven_day`로 꺼져 있다.
 - 누적 상태: 스냅샷 1,693, claims_active 1,056, claims_review 540, 엔티티 1,907, 큐 L2 189,681. 도메인별 claims_active A 535, B 125, C 85, D 427, E 37, F 75, G 346. 잔액 $144.63, 예상 미소진액 $142.24, 키 만료까지 29.2일. 열린 사고 0.
 - `kb-first-collect`, 6단계의 에이전트 주어 판정, 표본 감사 50건은 통과율 정지로 돌리지 않았다.
@@ -149,7 +153,7 @@ Document 2,410, Snapshot 1,539, Claim 1,186, Tool 744, Series 282, Model 250, Fe
 
 - OpenRouter Haiku 10창: 저장 31, needs_review 7, rejected 7, 통과 24/38 = 0.63, $0.013204. 70창을 요청했으나 10창째에 Haiku도 `gate_pass_drop`(human)으로 꺼졌다. 최근 20창 44/70 = 0.629, 문턱 0.633(0.745 × 0.85).
 - 배포 게이트 기준 누적 40창(Sol 20, Haiku 20): 통과 90/157 = 0.573. 0.70 미만이고 100창에 못 미쳐 멈췄다.
-- 재생 0.908과 운영값의 차이 중 확인된 것: 앞 30창의 `E_QUOTE_AMBIGUOUS` 거부 23건(문서 안 두 곳 일치. 모델이 prefix, suffix를 안 낸다), needs_review 30건.
+- 재생 0.908은 재현되지 않았다(미확인, "재개 결과 3" 참고). 운영값과의 차이 중 확인된 것: 앞 30창의 `E_QUOTE_AMBIGUOUS` 거부 23건(문서 안 두 곳 일치. 모델이 prefix, suffix를 안 낸다), needs_review 30건.
 - 비용: 오늘 합계 약 $0.586. 창당 Sol $0.01335, Haiku $0.00118. 잔액 $144.615, 예상 미소진액 $142.16, 키 만료까지 29.2일.
 
 ### kb-first-collect
@@ -175,6 +179,20 @@ Document 2,410, Snapshot 1,539, Claim 1,186, Tool 744, Series 282, Model 250, Fe
 - 스냅샷 1,868, 엔티티 1,924, 노드 8,817, 엣지 3,995, claims_active 863, claims_review 765.
 - 도메인별 claims_active(snapshots): A 541(60), B 124(44), C 85(149), D 427(181), E 37(134), F 90(124), G 131(1,415). 도메인 A의 값은 자동완성과 Trends 주장이다.
 - `claims_active`가 1,056에서 863으로 줄었다. 배치 tick이 G 주어의 결정적 주장을 새 버전으로 다시 내고 `gate_l1`이 생존 미판정으로 218건을 보류했다. 값은 삭제되지 않고 `needs_review`에 있다.
+- 원인 분석(2026-11-01, 원장 사본 읽기 전용): 결함이 아니라 9단계 정책의 뒤늦은 적용이다. seq 20646 전에는 재보류 키가 첫 보류 키와 같아 중복 제거되어, 재파싱으로 `parser_derived`가 된 주장이 생존 미상 주어에도 활성으로 남았다(예: `c-hc7wrf6vc7ri` assert 5회, 보류 2회, 보류 seq 3768과 20646). `_hold_key`의 seq 접미(seq 20646부터, 접미 보류 325건)가 이를 막아 218건이 한꺼번에 묶였다. gate_l1 보류 1,240건은 주장 915건이고 그중 현재 활성 `needs_review` 689건이다. 이 689건의 주어 620개에 생존 판정(`survival.verdict`)이 하나도 없고 gold `liveness`도 비어 있다(Document 340, Feature 193, Repo 138, Package 18). 잘못 묶인 주장은 0건이다. 접미 보류도 기본 키 이력으로 `kb.live.effects.release_held`가 풀고(`test_claim_reheld_over_ticks_...`), 판정 한 번이면 3틱 재보류분도 풀린다.
+- 복구는 생존 미상 주어를 판정하는 것뿐이다. Document 340건은 피드 항목(status.openai.com 102, lmstudio.ai 65, ollama.com 63, news.hada.io 63 등)이라 레지스트리가 소유하지 않아 `no_source`로 닿지 않는다(결함 4). 이 주어를 G 단위에서 뺄지는 ADR 결정이고 이 작업의 범위 밖이다.
 - 타입별 count: Document 2,531, Claim 1,886, Snapshot 1,875, Tool 751, Keyword 474, Series 322, Model 250, Feature 206, Source 122, Learning 97, Video 84, Repo 76, Product 40, Artifact 38, Ticket 24, Package 18, Concept 12, Metric 10, note 6, decision 5, Platform 1, Person 1, Decision 1, Channel 1.
 - 소스별 본문 문자 수: 앞 결과 절의 값 이후 다시 재지 않았다.
 - `kb api '/v1/overview?limit=10000&edge_limit=50000'`: `truncated=false`, 노드 1,729, 엣지 684. WP-03 조정 요청 없음.
+
+## 재개 결과 3 (2026-11-01)
+
+근거: 원장 사본 읽기 전용 재측정(`extract.run` 80건, 11개 스냅샷)과 R1 검토. 모델 호출 없음.
+
+- 새 게이트(`window=_seen_spans`) 통과율: Sol 0.659 [0.504, 0.801], Haiku 0.761 [0.655, 0.851], 합산 0.701. 스냅샷 군집 합산 구간 [0.541, 0.858]. 80창이 11개 스냅샷에서 나와 이 구간이 정직한 값이다.
+- 옛 게이트 재생 보정 오차는 1점 미만이다. 재생 0.908은 재현되지 않았다(미확인). 가장 가까운 값은 0.822이고, 재생을 실제 운영 상태로 되돌리면 0.451로 내려간다.
+- 측정 자료가 없는 층이 큐 항목의 91.2%다. `--scope public`의 "A-F 우선"은 약 11.3k 항목이고 그중 95%가 pypi-meta(패키지 메타데이터 JSON)다.
+- G 활성 주장 346에서 131로 준 것은 seq 20646의 1회성 정정이다. 346이 부풀려진 값이었다. 보류 692건 중 잘못 보류된 것은 0건이다.
+- 이벤트 주장 343건은 사용자 결정 대기다.
+- `low_yield` 잔여: 빈 창과 유효 창이 번갈아 나오면 작동하지 않는다. 일일 밸브가 상한이다.
+- 이전 "재개 결과"의 `llm:off` 해제는 사용자 결정이 아니었다. 기록을 `by=agent`, `approval=relayed_unverified`로 정정한다.

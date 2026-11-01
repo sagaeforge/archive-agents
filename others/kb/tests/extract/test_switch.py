@@ -21,8 +21,8 @@ def incidents():
         c.close()
 
 
-def test_table_has_12_rows():
-    assert len(route.SWITCH_TABLE) == 12 and len(set(route.SWITCH_TABLE)) == 12
+def test_table_has_13_rows():
+    assert len(route.SWITCH_TABLE) == 13 and len(set(route.SWITCH_TABLE)) == 13
 
 
 def test_01_balance_exhausted(env):

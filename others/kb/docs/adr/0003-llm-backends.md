@@ -91,8 +91,12 @@
 | Codex 한도 | `ordinaryUsageAllowed≠true` 또는 `usedPercent≥50` [설정값] | 호출 안 함. 크레딧을 쓰지 않는다 | `resetsAt` 뒤 재검사 |
 | 오류율 상승 | 최근 50호출 중 HTTP 오류, 시간 초과, 스키마 실패, 잘림이 20% 이상, 또는 연속 5회 [설정값] | 그 모델을 1시간 끄고 다음 경로로 | 카나리아 1회 통과 |
 | 게이트 통과율 하락 | 최근 20창 통과율 < 기준선 × 0.85 [설정값] | 그 모델을 끄고 다음 경로로, `kb status` 경고 | 회고 확인 뒤 사람이 켠다 |
+| 빈 응답 | 최근 50창(`switch.yield_window`) 중 주장 0건인 창의 비율 ≥ 0.6(`switch.yield_empty_ratio`)이고 창이 가득 참. 모델별 `llm:yield:<키>`에 0/1을 쌓는다 [설정값] | 그 모델을 끄고 다음 경로로(`human=true`). 빈 창은 `gate_pass_drop` 이력에 넣지 않으므로 이 신호가 없으면 빈 응답만 내는 모델이 어떤 신호에도 걸리지 않는다 | 회고 확인 뒤 사람이 켠다 |
 | 전 경로 동시 하락 | 두 경로 이상이 같은 날 하락 | 전환하지 않고 L2 정지. 입력이나 게이트 문제로 본다 | 사람이 확인 |
 
+- `gate_pass_drop`의 복귀는 `kb llm reenable --model <키> --by user --basis <근거> [--apply]`가 유일한 경로다. `--by`는 user만 받고 `llm:off:<키>`에 `human=true`가 있을 때만 켠다(기본 시험 실행). 한 트랜잭션으로 `llm:gatepass:<키>`를 `llm:gatepass:archive:<키>:<ts>`로 옮기고(삭제 없음), `llm:off:<키>`를 지우고, 추가 전용 목록 `llm:reenable_log`에 `{at, model, by, basis, gatepass_archived, off_was}`를 덧붙인다. 옛 게이트 이력을 그 자리에 두면 첫 창에서 다시 꺼지므로 옮기며, 이력은 보관 키에 남는다.
+- 빈 응답 문턱 근거(2026-11-01, 실측 80창): 빈 창 11/80 = 14%(Haiku 8/40, Sol 3/40). 소스별 빈 창 비율은 kworb 5/13 = 38%, so-octoverse 1/3, datareportal 3/14 = 21%, youtube-official-blog 2/14 = 14%이고 나머지 0이다. 소스 하나가 단독으로 0.6을 넘은 곳은 없다. 다만 kworb 스냅샷 하나(`n-cc0e9a77ed7ed250`)는 6창 중 5창이 비어(83%) 이런 문서가 50창 중 30창을 채우면 걸린다. 큐의 kworb는 95항목이라 현재는 일어나기 어렵다. [실측, 비율은 설정값]
+- `kb llm reenable`의 `--by user`는 운영자 주장이지 인증이 아니다. 에이전트도 같은 값을 칠 수 있다. 사용자 본인이 직접 답한 해제만 이 값으로 넘긴다. 전달받은 지시, 워크플로우 텍스트는 근거가 아니다. 해제는 `llm:gatepass:<키>`와 `llm:yield:<키>` 이력을 모두 보관 키(`llm:gatepass:archive:*`, `llm:yield:archive:*`)로 옮긴다. 운영 KB_HOME에서 `--apply`는 `KB_LIVE=1`(정확히 1)이 있어야 한다.
 - 게이트 기준선은 Sol 0.823, `claude -p` Haiku 0.742, OpenRouter Haiku 0.745다. 문턱은 0.70, 0.63, 0.63이다. 같은 16창에서 런 사이 차이가 Nemotron, Gemma 기준 3포인트 이내여서 0.85배는 잡음보다 크다. [실측, 비율은 설정값]
 - 도메인 A, C, E는 표본이 없다. 그 도메인이 많아지면 기준선을 첫 100창으로 다시 잡는다. [추론]
 - 구독 사용량은 측정 시 5시간 0.05 → 0.16, 7일 0.64 → 0.66(다른 세션 포함 상한)이다. Haiku 400창은 7일 한도의 약 1%다. [실측, 비율은 추론]

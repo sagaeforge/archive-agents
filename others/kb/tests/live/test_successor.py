@@ -96,3 +96,40 @@ def test_liveness_unknown_claim_is_released_after_verdict(env):
     finally:
         c.close()
     assert n == 1 and at and at > NOW
+
+
+def _reassert_det(subject, cid, key):
+    snap = capture("https://t.example/" + key, f"# T\n\nlatest 1.0 {key}\n".encode())
+    commit([ev("claim.assert", {"id": cid, "subject": subject, "predicate": "latest_version", "value": "1.0", "statement": "latest 1.0",
+                                "kind": "state", "stance": "stated", "method": "deterministic", "verification": "parser_derived",
+                                "evidence": [{"snapshot": snap, "selector_kind": "text_quote", "exact": "latest 1.0"}]},
+                  subject, key=f"claim:{cid}:{snap}")])
+
+
+def test_claim_reheld_over_ticks_is_released_by_one_verdict_and_stays_released(env):
+    """보류 뒤 새 스냅샷 재파싱으로 3틱 연속 다시 묶인 주장도(seq 접미 키) 판정 한 번에 풀리고, 이후 재파싱에서는 다시 묶이지 않는다."""
+    from kb.gate import tick_stage
+    source()
+    s = "e:repo:acme-m"
+    put_entity(s, "Repo", "acme/m", props={"repo": "acme/m"})
+    cid = det_claim(s, "m1")
+    assert tick_stage.run().detail["held"] == 1
+    for i in (2, 3):
+        _reassert_det(s, cid, f"m{i}")
+        assert tick_stage.run().detail["held"] == 1
+    assert node(cid)["verification"] == "needs_review"
+    body = {"full_name": "acme/m", "archived": False, "pushed_at": "2027-01-10T00:00:00Z"}
+    snap = capture("https://api.github.com/repos/acme/m", json.dumps(body).encode())
+    fx = probe.OfflineFetcher({"https://api.github.com/repos/acme/m": {"status": 200, "snapshot": snap, "source": "src:prim", "body": body}})
+    con = gold()
+    try:
+        out = runner.run([runner._target({"id": s, "type": "Repo", "label": "acme/m", "liveness": None, "props": {"repo": "acme/m"}})],
+                         fx, now=NOW, con=con)
+    finally:
+        con.close()
+    assert out["released"] == 1, out
+    assert node(cid)["verification"] == "parser_derived"
+    for i in (4, 5):                                           # 판정 뒤 재파싱은 묶이지 않는다
+        _reassert_det(s, cid, f"m{i}")
+        assert tick_stage.run().detail["held"] == 0
+        assert node(cid)["verification"] == "parser_derived"

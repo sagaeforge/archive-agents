@@ -23,9 +23,10 @@ def _attr(o, k, default=None):
     return getattr(o, k, None) if hasattr(o, k) else (o.get(k, default) if isinstance(o, dict) else default)
 
 
-def check_claim(claim: dict, text: str, paras, ctx: GateCtx) -> GateResult:
+def check_claim(claim: dict, text: str, paras, ctx: GateCtx, window=None) -> GateResult:
     """claim: statement, quote(없으면 evidence[0].exact), prefix, suffix, kind, stance, speaker.
-    text: 표시 본문, paras: kb.parse.paragraphs.Para 목록, ctx: GateCtx."""
+    text: 표시 본문, paras: kb.parse.paragraphs.Para 목록, ctx: GateCtx.
+    window: L2가 모델에 보인 원문 구간 [(시작, 끝)]. 인용구가 문서에 여러 곳일 때만 창 안으로 좁힌다(textmatch.locate)."""
     st = claim.get("statement") or ""
     ev0 = (claim.get("evidence") or [{}])[0] if isinstance(claim.get("evidence"), list) else (claim.get("evidence") or {})
     quote = claim.get("quote") or ev0.get("quote") or ev0.get("exact") or ""
@@ -37,7 +38,7 @@ def check_claim(claim: dict, text: str, paras, ctx: GateCtx) -> GateResult:
     if why:
         return GateResult("rejected", "E_INJECTION", why, ["E_INJECTION"], quarantine=True)
     try:
-        loc = locate(text, quote, prefix, suffix)                                      # 3
+        loc = locate(text, quote, prefix, suffix, window)                                      # 3
     except QuoteError as e:
         return GateResult("rejected", e.code, e.detail, [e.code])
     exact = text[loc.start:loc.end]

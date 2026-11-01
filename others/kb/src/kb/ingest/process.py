@@ -64,7 +64,8 @@ def _types() -> dict:
 
 class Processor:
     def __init__(self, header: dict, *, fetch: bool = True, write: bool = False, profile: str | None = None,
-                 now: int | None = None):
+                 now: int | None = None, windows: dict | None = None):
+        self.windows = windows or {}      # 스냅샷 ID -> 모델이 본 원문 구간. 대역 밖 입력이다(묶음 안의 값은 믿지 않는다)
         self.h, self.fetch, self.write, self.profile = header, fetch, write, profile
         self.producer = header["producer"]
         self.domain = list(header.get("domain") or [])
@@ -569,7 +570,8 @@ class Processor:
         new_aliases = None
         pre_loc = None
         try:
-            pre_loc = locate(info.text, ev["quote"], ev.get("prefix", ""), ev.get("suffix", ""))
+            pre_loc = locate(info.text, ev["quote"], ev.get("prefix", ""), ev.get("suffix", ""),
+                             self.windows.get(info.id))
         except QuoteError:
             pass
         if existing is not None:
@@ -609,7 +611,7 @@ class Processor:
                       publisher=info.publisher, source_names=self._source_names(info), liveness=self._liveness_fn(sid))
         res = check_claim({"statement": it["statement"], "kind": kind, "stance": it["stance"], "speaker": it.get("speaker"),
                            "quote": ev["quote"], "prefix": ev.get("prefix", ""), "suffix": ev.get("suffix", "")},
-                          info.text, info.paras, ctx)
+                          info.text, info.paras, ctx, self.windows.get(info.id))
         if res.rejected:
             out = Outcome("rejected", res.code, res.detail)
             if self.write:

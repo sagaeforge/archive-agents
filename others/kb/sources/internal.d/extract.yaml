@@ -77,6 +77,8 @@ settings:
     off_s: 3600
     gate_window: 20
     gate_ratio: 0.85
+    yield_window: 50              # 모델별 최근 창 수. 가득 찼을 때만 판정한다
+    yield_empty_ratio: 0.6        # 이 창에서 주장 0건인 창의 비율이 이상이면 끈다(human=true). 실측 빈 창 11/80=14%
     baselines: {"openai/gpt-6.1-sol": 0.823, "claude:haiku": 0.742, "anthropic/claude-haiku-5.5": 0.745}
   reconfirm:
     vanish_ratio: 0.30
