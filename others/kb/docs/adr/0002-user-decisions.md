@@ -98,3 +98,9 @@
 - 사용자가 AskUserQuestion에 "event는 보류 제외"로 직접 답했다. `kind=event` 주장은 생존 미상 주어여도 `gate_l1`이 보류하지 않는다. `state`와 `howto`는 계속 보류한다.
 - 이미 보류된 event 주장은 `kb live release-events --apply`로 푼다.
 - 같은 날 사용자가 Sol 재개를 직접 승인했다(`kb llm reenable`). 첫 실행은 통과율 0.658로 `gate_pass_drop` 정지했고, 일일 밸브와 `kb-agent.timer`는 바꾸지 않았다.
+
+## 기준선 재설정 후 소진 (2026-11-01)
+
+- 사용자가 리드의 AskUserQuestion에 직접 "기준선 재설정 후 소진"으로 답했다.
+- Sol 게이트 기준선 0.784(82창 실행 134/171), 정지 문턱 0.666(= 0.784 × 0.85), `gate_ratio` 0.85 유지. OpenRouter 일일 밸브 $60. kb-agent 타이머만 쓴다.
+- 이유: 옛 기준선 0.823의 표본에는 도메인 A, C, E 창이 없었다. 상세는 ADR-0003 4, 5장.

@@ -33,7 +33,14 @@ def test_avg_price_follows_actual_spend(env):
     assert abs(budget.avg_price() - 0.04) < 1e-9
 
 
-def test_valve_and_kst_midnight_reset(env, monkeypatch):
+@pytest.fixture
+def valve30():
+    """밸브 기계 동작 시험은 출하 값이 아니라 30.0에 고정한다."""
+    with settings.override(**{"openrouter.daily_valve_usd": 30.0}):
+        yield
+
+
+def test_valve_and_kst_midnight_reset(env, valve30, monkeypatch):
     budget.set_balance(500.0)
     monkeypatch.setenv("KB_EXTRACT_NOW", at("2026-11-02T23:30:00+09:00"))
     r = budget.reserve(29.9)

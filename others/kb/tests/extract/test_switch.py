@@ -1,6 +1,8 @@
 """ADR-0003 5장 전환 표 12행: 신호 -> 판정과 조치 -> 복귀. 일일 밸브 도달 뒤 다른 경로 호출 0. 호출당 비용 초과는 배치 정지와 사고 기록. 전 경로 동시 하락은 전환 없이 L2 정지."""
 import datetime as dt
 
+import pytest
+
 from kb.core import opsdb
 from kb.extract import budget, guard, route, runner, settings, state
 
@@ -46,7 +48,14 @@ def test_02_key_missing_expired_401(envk):
     assert plan_names()[0][0] == "openrouter"                       # 새 키
 
 
-def test_03_daily_valve_no_fallthrough(ent, monkeypatch):
+@pytest.fixture
+def valve30():
+    """밸브 기계 동작 시험은 출하 값이 아니라 30.0에 고정한다."""
+    with settings.override(**{"openrouter.daily_valve_usd": 30.0}):
+        yield
+
+
+def test_03_daily_valve_no_fallthrough(ent, valve30, monkeypatch):
     budget.set_balance(500.0)
     H.ingest_doc()
     v = route.apply("daily_valve", spent=29.99, reserve=0.054)
@@ -60,7 +69,7 @@ def test_03_daily_valve_no_fallthrough(ent, monkeypatch):
     assert plan_names()[0][0] == "openrouter"
 
 
-def test_03b_valve_reached_by_spend(ent):
+def test_03b_valve_reached_by_spend(ent, valve30):
     budget.set_balance(500.0)
     H.ingest_doc()
     r = budget.reserve(29.97)

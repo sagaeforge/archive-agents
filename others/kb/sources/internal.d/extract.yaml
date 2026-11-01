@@ -45,7 +45,7 @@ settings:
     reserve_usd: 0.054            # 요청 크기를 모를 때(가짜 어댑터 등)만 쓰는 바닥값. 실제 예약은 요청의 토큰 상한과 모델 가격에서 구한다
     max_input_tokens: 32000       # 입력 토큰 상한(요청 바이트 수로 보수적으로 잰다). 넘으면 보내지 않는다
     reserve_margin: 1.10          # 플랫폼 수수료 여유
-    daily_valve_usd: 30.0
+    daily_valve_usd: 60.0
     min_balance_usd: 0.10
     timeout_s: 300
     key_expires_at: "2026-11-30T19:41:00+09:00"
@@ -79,7 +79,7 @@ settings:
     gate_ratio: 0.85
     yield_window: 50              # 모델별 최근 창 수. 가득 찼을 때만 판정한다
     yield_empty_ratio: 0.6        # 이 창에서 주장 0건인 창의 비율이 이상이면 끈다(human=true). 실측 빈 창 11/80=14%
-    baselines: {"openai/gpt-6.1-sol": 0.823, "claude:haiku": 0.742, "anthropic/claude-haiku-5.5": 0.745}
+    baselines: {"openai/gpt-6.1-sol": 0.784, "claude:haiku": 0.742, "anthropic/claude-haiku-5.5": 0.745}
   reconfirm:
     vanish_ratio: 0.30
     moving_classes: ["feed", "short"]

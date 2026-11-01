@@ -338,8 +338,14 @@ def _close_valve():
     state.put(budget.day_key(), d)
 
 
+@pytest.fixture
+def valve30():
+    with settings.override(**{"openrouter.daily_valve_usd": 30.0}):
+        yield
+
+
 @pytest.mark.parametrize("purpose", ["support", "cross"])
-def test_item7_plan_after_valve_trip_has_no_claude_or_codex(envk, ent, purpose):
+def test_item7_plan_after_valve_trip_has_no_claude_or_codex(envk, ent, valve30, purpose):
     _close_valve()
     with settings.override(**{"openrouter.support_calibrated": True, "codex.enabled": True, "claude.daily_windows": 400}):
         budget.set_balance(100.0)
