@@ -124,6 +124,8 @@ Document 2,410, Snapshot 1,539, Claim 1,186, Tool 744, Series 282, Model 250, Fe
 5. `low_yield` 잔여: 빈 창과 유효 창이 번갈아 나오면 빈 비율이 문턱 0.6에 닿지 않아 작동하지 않는다. 일일 밸브 상한이 한도다.
 6. 통과율 측정 표본은 11개 스냅샷뿐이고, 큐의 91.2%는 측정 자료가 없는 층이다.
 7. `llm:off` 해제 승인은 사용자 본인 입력으로 확인되지 않았다. `kb llm correct-reenable-record`로 기록을 정정한다.
+9. 열린 결함, `slugify`의 한글 충돌: `kb.parse.model.slugify`가 한글을 지워 'YouTube 홈페이지', 'YouTube 주제별 페이지'가 모두 `e:feature:youtube`가 된다. 읽기 전용 사본(원장 23724건까지) 측정: 한글이 든 라벨의 엔티티 중 id에 해시가 없는 것 489개(전체 3,480개 중). L2 `__new__` 항목 259건 중 한글 라벨이 이미 있던 다른 라벨의 id로 떨어진 것 10건, id 6개(`e:feature:youtube`, `e:feature:youtube-shorts`, `e:concept:ott`, `e:concept:awareness-and-consideration` 등). 첫 29창에서는 7건이 이 때문에 `R_SUBJECT_CONTEXT`로 막혔고 수락된 충돌은 없었다. 고치지 않았다(기존 id가 바뀐다).
+10. 2026-11-01 수정: L2 변환이 허용 목록(값 `25년`/`25년도` + 인용구 `(25년)`/`25년도` + 스냅샷 연도 이하)만 연도로 바꾼다(`normalized_fields`). 나머지 시각 값은 그대로 `E_SCHEMA`다. 값 검사는 문장 중간의 `No. 2`를 부정으로 보지 않는다. `kb agent run --json`에 `codes`(사유별 건수, 코드가 둘인 항목은 각 코드에 센다)가 있다. 재생: 첫 29창 Sol 48/73 = 0.658 → 56/73 = 0.767, 앞의 80창(보류 표본) Sol 0.665 → 0.713, Haiku 0.761 변화 없음.
 8. 시험 순서 의존: `tests/first_batch/test_dead_seed.py` 12건이 전체 실행에서만 실패한다(`KB_HOME=<임시 경로> ops/bin/dev pytest -q`, HEAD d2c26fa에서도 같은 12건 실패, 2026-11-01 측정). 단독 실행과 `tests/first_batch` 디렉터리 실행은 skip 또는 통과한다. 앞선 시험이 임시 KB_HOME에 부분 gold를 만들어 skip 조건이 풀리는 것으로 추정한다(미확인). 시험은 수정하지 않았다.
 
 ## 해결한 결함 (2026-11-01 재시도)
@@ -199,3 +201,6 @@ Document 2,410, Snapshot 1,539, Claim 1,186, Tool 744, Series 282, Model 250, Fe
 - 이전 "재개 결과"의 `llm:off` 해제는 사용자 결정이 아니었다. 기록을 `by=agent`, `approval=relayed_unverified`로 정정한다.
 - Sol 재개: 사용자의 직접 승인으로 `kb llm reenable`을 돌렸다. 첫 실행은 29창에서 `gate_pass_drop`으로 멈췄다. 수락 48, needs_review 16, rejected 9, 통과 48/73 = 0.658, 비용 $0.2636, 잔액 $144.35.
 - 0.70 미만이라 일일 밸브는 $30으로 두었고 `kb-agent.timer`는 켜지 않았다. 고정 심판은 Claude 7일 활용률이 풀릴 때까지 대기한다. rejected 항목의 코드는 저장되지 않는다.
+- Sol 29창 비수락 25건 분석: 데이터 문제 12, 모델 오류 7, 게이트 오탐(false negative) 6.
+- 수정: 숫자나 `%` 뒤의 `(25년)`과 `25년도`를 2025로 본다. 그 밖은 바뀌지 않는다. 재생 결과 Sol은 29창에서 56/73 = 0.767, 보류 표본(holdout)에서 119/167 = 0.713이고 Haiku는 변함없다.
+- 열린 결함: `slugify`가 한글을 지운다. 한글 라벨 엔티티 3,480건 중 489건의 id에 해시가 없다. L2 `__new__` 항목 259건 중 10건이 충돌했다.

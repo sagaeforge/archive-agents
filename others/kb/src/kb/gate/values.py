@@ -60,6 +60,19 @@ NEGW = [re.compile(p, re.I) for p in (
     r"\bunable\b", r"\bunbound\b", r"\bunset\b", r"\bunavailable\b")]
 # 부정이 아닌 가산 구문: "A뿐 아니라 B", "not only/just". 부정어 검사 전에 지운다.
 _ADDITIVE = re.compile(r"뿐(?:만)?\s*아니라|\bnot\s+(?:only|just|merely)\b", re.I)
+# 순번 표기 "No. 2"의 No.는 부정어가 아니다. 같은 줄에서 숫자가 뒤따르고 문장 첫머리가 아닐 때만 지운다.
+# 문장 첫머리(글 시작, . ! ? : ; 줄바꿈 뒤)의 "No. 3"은 질문에 대한 답 "No."와 구별되지 않으므로 부정으로 둔다(의심이면 검사가 걸린다).
+_ORDINAL_NO = re.compile(r"\bno\.[ \t]*\d", re.I)
+_SENT_START = ".!?:;\n\"\u201c\u2018(\u2014\u2013"
+
+
+def _drop_ordinal_no(s: str) -> str:
+    def f(m):
+        pre = s[:m.start()].rstrip(" \t")
+        return m.group(0) if not pre or pre[-1] in _SENT_START else " "
+    return _ORDINAL_NO.sub(f, s)
+
+
 _YEAR_ST = re.compile(r"(?<!\d)((?:19|20)\d{2})\s*년")
 _ISO_DATE = re.compile(r"(?<!\d)(?:19|20)\d{2}-\d{2}-\d{2}")
 _ISO_TIME = re.compile(r"(?<!\d)\d{1,2}:\d{2}")
@@ -82,7 +95,7 @@ def quote_concepts(q: str) -> set:
 
 
 def has_neg(s: str) -> bool:
-    s = _ADDITIVE.sub(" ", s.replace("\u2019", "'"))
+    s = _drop_ordinal_no(_ADDITIVE.sub(" ", s.replace("\u2019", "'")))
     return any(p.search(s) for p in NEGW)
 
 

@@ -58,6 +58,16 @@ def _seen_spans(proc, w) -> list:
     return sorted(out)
 
 
+def _snapshot_year(proc, sid: str) -> int | None:
+    """스냅샷을 받은 해(UTC). 두 자리 연도 정규화의 미래 연도 검사에 쓴다. 모르면 None(정규화하지 않는다)."""
+    import datetime
+    try:
+        ms = proc.snapshot_info(sid).props.get("fetched_at")
+        return datetime.datetime.fromtimestamp(int(ms) / 1000, datetime.timezone.utc).year if ms else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def retry_or_dlq(it: dict, err: str, kind: str = QUEUE) -> None:
     """실패한 항목: 재시도 2회 뒤 DLQ, 그 전에는 10분 뒤로 미룬다."""
     if it.get("attempts", 1) >= int(settings.get("max_attempts", 3)):
@@ -109,7 +119,7 @@ class Run:
         self.scope, self.backends, self.max_windows, self.reextract = scope, backends, max_windows, reextract
         self.router = route.Router(backends)
         self.out = {"windows": 0, "claims": 0, "rejected": 0, "queue_left": 0, "is_error": False, "scope": scope,
-                    "by_backend": {}, "needs_review": 0, "cache_hits": 0, "guarded": 0, "failed": 0, "reason": None,
+                    "by_backend": {}, "codes": {}, "normalized_fields": {}, "needs_review": 0, "cache_hits": 0, "guarded": 0, "failed": 0, "reason": None,
                     "support": {}, "spent_usd": 0.0}
         self.pf: dict = {}
         self.claude_calls = 0
@@ -343,7 +353,8 @@ class Run:
                      "idem_key": f"extract.run:{w.sha}:{extractor}", "payload": payload}], "l2", timeout=60.0)
         doms = _domains_of(proc, w.snapshot)
         claims = obj["claims"]
-        its = itm.to_items(w, claims, extractor, doms)
+        its = itm.to_items(w, claims, extractor, doms, year_max=_snapshot_year(proc, w.snapshot),
+                           normalized=self.out["normalized_fields"])
         acc = nr = rej = 0
         ids_new, existing = set(), []
         if its:
@@ -355,6 +366,9 @@ class Run:
                     nr += 1
                 elif ln["result"] == "rejected":
                     rej += 1
+                if ln["result"] in ("needs_review", "rejected"):          # 사유별 건수. 원장에는 R_ 코드와 E_SCHEMA가 남지 않는다
+                    for cd in (ln.get("would_be") or {}).get("codes") or [ln.get("code") or "UNKNOWN"]:
+                        self.out["codes"][cd] = self.out["codes"].get(cd, 0) + 1
                 wb = ln.get("would_be") or {}
                 cid = wb.get("id")
                 if cid and ln["result"] in ("accepted", "needs_review"):
@@ -375,6 +389,8 @@ class Run:
         o["claims"] += acc + nr
         o["needs_review"] += nr
         o["rejected"] += rej + max(0, len(claims) - len(its))
+        if len(claims) > len(its):
+            o["codes"]["L2_NO_SUBJECT_LABEL"] = o["codes"].get("L2_NO_SUBJECT_LABEL", 0) + len(claims) - len(its)
         o["by_backend"][cand.backend] = o["by_backend"].get(cand.backend, 0) + 1
         o["spent_usd"] = round(o["spent_usd"] + (res.cost_usd or 0.0 if cand.backend == "openrouter" else 0.0), 6)
 

@@ -188,3 +188,32 @@ def test_window_cap_does_not_change_legit_result():
         locate(text, "같은 인용구 문장입니다", window=[(0, len(text))])
     loc = locate(text, "같은 인용구 문장입니다", window=[(a, a + len("같은 인용구 문장입니다"))])
     assert loc.start == a
+
+
+def test_ordinal_no_is_not_a_negation_but_real_negations_stay():
+    from kb.gate.values import has_neg
+    assert not has_neg("Disney Returns to No. 2 Among Media Distributors")
+    assert not has_neg("ranked no.1 overall") and not has_neg("Disney는 미디어 배급사 가운데 2위다.")
+    assert not value_issues("Disney는 미디어 배급사 가운데 2위다", "Disney Returns to No. 2 Among Media Distributors") or \
+        "neg" not in value_issues("Disney는 미디어 배급사 가운데 2위다", "Disney Returns to No. 2 Among Media Distributors")
+    for real in ("No ETA has been set", "no longer supported", "There is no limit", "it is not supported", "지원하지 않는다", "제한이 없다",
+                 "No. 2 is not supported", "never reads it", "cannot be used"):
+        assert has_neg(real), real
+    # 'No ETA' 규칙: 인용구에만 No가 있고 문장에 부정이 없으면 여전히 neg다(이번 변경은 'No.' 다음 숫자만 푼다)
+    assert "neg" in value_issues("개발 중이다", "Status: In development. No ETA has been set.")
+
+
+def test_ordinal_no_edge_cases_and_undecidable_remainder():
+    from kb.gate.values import has_neg
+    # 질문 뒤 문장 첫머리의 답 "No."는 부정으로 남는다(순번과 구별되지 않으면 걸린다)
+    assert has_neg("Is the free tier still available? No. 3 paid plans replaced it")
+    assert has_neg("Does sign-in work with SSO?\nNo.\n2 steps are required")
+    assert has_neg("무료 플랜 유지 여부: No. 3개 플랜으로 대체")
+    assert has_neg("No. 2 plans remain")                                              # 글 첫머리: 구별 불가, 의심이면 걸린다
+    # 문장 중간의 순번은 부정이 아니다
+    assert not has_neg("Disney Returns to No. 2 Among Media Distributors") and not has_neg("It ranks No. 1 in sales")
+    # 숫자가 뒤따르지 않는 No, 줄바꿈으로 갈라진 No.는 그대로 부정이다
+    assert has_neg("No. of users is 5") and has_neg("no 2 version") and has_neg("ranked No.\n2")
+    # 구별할 수 없는 채로 남는 것: 첫머리의 "No. 2 Among ..." 헤드라인은 부정으로 본다(검사가 걸려 needs_review가 된다)
+    assert has_neg("No. 2 Among Media Distributors")
+    assert has_neg("공지 — No. 3 plans replaced it")                                   # 대시 뒤는 문장 첫머리로 본다

@@ -22,7 +22,11 @@
     "support": {"type": "object"},
     "cross": {"type": "object"},
     "retracted": {"type": "integer"},
-    "requeued": {"type": "integer"}
+    "requeued": {"type": "integer"},
+    "codes": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0},
+              "description": "needs_review, rejected 항목의 사유 코드별 건수(R_*, E_*). 코드가 둘인 항목은 각 코드에 한 번씩 센다(합계가 항목 수보다 클 수 있다). 원장에는 남지 않는다"},
+    "normalized_fields": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0},
+                          "description": "두 자리 연도('25년', '25년도')를 인용구의 '(25년)', '25년도' 근거로 연도('2025')로 바꾼 선택 시각 필드 건수"}
   },
   "additionalProperties": true
 }
