@@ -1,6 +1,6 @@
 # ADR 0001: tower와 loupe 두 도구 구조
 
-- 상태: 채택. tower는 구현과 검증을 마쳤고 설치되어 127.0.0.1:4800에서 돈다(`docs/design/tower.md`). proxmox 업스트림은 전용 체크아웃에서 실행되고 병합 경유로 확인했다. 플러그인의 proxmox `.mcp.json` 제거는 플러그인 저장소의 통합이 들어올 때까지 미룬다. 그때까지 proxmox 등록이 둘 공존한다. loupe(`docs/design/loupe.md`)는 Phase 0과 1이 구현되어 헤드리스로 검증됐고 사용자의 IA 판단을 기다린다. 실제 Orca 탭에서 돈 적은 없다. KB 계약은 0.3.1이다(`data-interface-v0.md` sha256 `c9acda54…`, `openapi.yaml` `335908db…`). `openapi.yaml`이 나와 loupe의 표본 스펙은 지웠다. 세션 구분, 세션 종료 전송, 며칠 사는 자식, 커서, 민감도 상한, `tools/list` 새로고침은 KB의 답으로 닫혔다(5절). 실제 KB로 돌린 것은 없다. loupe는 kb-mock만 읽었다.
+- 상태: 채택. tower는 구현과 검증을 마쳤고 설치되어 127.0.0.1:4800에서 돈다(`docs/design/tower.md`). 업스트림은 proxmox와 kb이고 kb는 tower에 등록됐다. proxmox 업스트림은 전용 체크아웃에서 실행되고 병합 경유로 확인했다. 플러그인의 proxmox `.mcp.json` 제거는 sagae-claude-plugins의 PR #2로 올라가 있고 병합을 기다린다. 병합 전까지 proxmox 등록이 둘 공존한다. loupe(`docs/design/loupe.md`)는 Phase 0과 1이 구현되어 헤드리스로 검증됐고 Phase 1의 IA는 2026-11-01에 사용자가 수락했다. 같은 날 실제 KB를 코드 변경 없이 읽었다. 실제 Orca 탭에서 돈 적은 없다. KB 계약은 0.3.2다(`data-interface-v0.md` sha256 `35a4fa86a8c2…`, `openapi.yaml` `66f420e10386…`). `openapi.yaml`이 나와 loupe의 표본 스펙은 지웠다. 세션 구분, 세션 종료 전송, 며칠 사는 자식, 커서, 민감도 상한, `tools/list` 새로고침은 KB의 답으로 닫혔다(5절).
 - 기준일: 2026-11-01.
 - 근거 표기: `spike-results.md`의 S1~S5는 이 머신에서 잰 스파이크, "적대적 리뷰"는 그 재현과 반박이다. 둘이 다르면 리뷰가 우선한다. S5는 리뷰를 거치지 않았다. 번호 X1~X14는 `brief.md`의 충돌 목록이다.
 
