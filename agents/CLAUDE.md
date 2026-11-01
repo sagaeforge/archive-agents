@@ -13,6 +13,7 @@ Private Claude Code plugin marketplace (`sagae`). While the `stable` gate is off
 ```sh
 claude plugin validate . && claude plugin validate plugins/proxmox
 (cd plugins/proxmox && npm test)
+sh tests/project-hooks/run.sh
 ```
 
 ## Rules
