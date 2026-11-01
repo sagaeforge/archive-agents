@@ -1,0 +1,246 @@
+{
+ "meta": {
+  "name": "today",
+  "dockerSource": false,
+  "tiers": [
+   [
+    "외부",
+    "WAN 출처 없음 · GW 1 추정"
+   ],
+   [
+    "노드",
+    "3 관측 · 브리지 3 · 저장소 6"
+   ],
+   [
+    "게스트",
+    "QEMU 1 · LXC 0 관측"
+   ],
+   [
+    "Docker",
+    "출처 없음"
+   ]
+  ],
+  "panel": {
+   "title": "VM 100",
+   "sub": "QEMU · 노드 가",
+   "rows": [
+    [
+     "상태",
+     "실행 중",
+     "observed",
+     "12초 전"
+    ],
+    [
+     "vCPU, 메모리",
+     "4 vCPU · 16 GiB",
+     "observed",
+     "12초 전"
+    ],
+    [
+     "NIC",
+     "net0 → vmbr0, VLAN 없음",
+     "observed",
+     "4분 전"
+    ],
+    [
+     "IP 주소",
+     "미확인",
+     "unknown",
+     "guest agent 응답 없음"
+    ],
+    [
+     "OS",
+     "미확인",
+     "unknown",
+     "guest agent 응답 없음"
+    ],
+    [
+     "Docker",
+     "미확인",
+     "unknown",
+     "출처 없음"
+    ],
+    [
+     "방화벽 규칙",
+     "0건",
+     "observed",
+     "4분 전"
+    ],
+    [
+     "태그",
+     "없음",
+     "observed",
+     "12초 전"
+    ]
+   ]
+  }
+ },
+ "nodes": [
+  {
+   "id": "wan",
+   "kind": "wan",
+   "title": "WAN 미확인",
+   "basis": "unknown",
+   "state": "unknown"
+  },
+  {
+   "id": "gw",
+   "kind": "gateway",
+   "title": "게이트웨이 192.0.2.1",
+   "basis": "derived",
+   "state": "unknown"
+  },
+  {
+   "id": "seg",
+   "kind": "segment",
+   "title": "192.0.2.0/24",
+   "basis": "derived",
+   "state": "ok"
+  },
+  {
+   "id": "node-가",
+   "kind": "node",
+   "title": "노드 가",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "node-가-br",
+   "kind": "bridge",
+   "parent": "node-가",
+   "title": "vmbr0",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "node-가-s1",
+   "kind": "storage",
+   "parent": "node-가",
+   "title": "local",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "vm-100",
+   "kind": "vm",
+   "parent": "node-가",
+   "title": "VM 100",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "node-가-s2",
+   "kind": "storage",
+   "parent": "node-가",
+   "title": "local-lvm",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "node-나",
+   "kind": "node",
+   "title": "노드 나",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "node-나-br",
+   "kind": "bridge",
+   "parent": "node-나",
+   "title": "vmbr0",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "node-나-s1",
+   "kind": "storage",
+   "parent": "node-나",
+   "title": "local",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "node-나-s2",
+   "kind": "storage",
+   "parent": "node-나",
+   "title": "local-lvm",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "node-다",
+   "kind": "node",
+   "title": "노드 다",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "node-다-br",
+   "kind": "bridge",
+   "parent": "node-다",
+   "title": "vmbr0",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "node-다-s1",
+   "kind": "storage",
+   "parent": "node-다",
+   "title": "local",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "node-다-s2",
+   "kind": "storage",
+   "parent": "node-다",
+   "title": "local-lvm",
+   "basis": "observed",
+   "state": "ok"
+  }
+ ],
+ "edges": [
+  {
+   "id": "e-wan",
+   "source": "wan",
+   "target": "gw",
+   "kind": "wan",
+   "basis": "unknown"
+  },
+  {
+   "id": "e-gw",
+   "source": "gw",
+   "target": "seg",
+   "kind": "route",
+   "basis": "derived"
+  },
+  {
+   "id": "e-node-가",
+   "source": "seg",
+   "target": "node-가",
+   "kind": "uplink",
+   "basis": "observed"
+  },
+  {
+   "id": "e-node-나",
+   "source": "seg",
+   "target": "node-나",
+   "kind": "uplink",
+   "basis": "observed"
+  },
+  {
+   "id": "e-node-다",
+   "source": "seg",
+   "target": "node-다",
+   "kind": "uplink",
+   "basis": "observed"
+  },
+  {
+   "id": "e-vm",
+   "source": "node-가-br",
+   "target": "vm-100",
+   "kind": "attached",
+   "basis": "observed"
+  }
+ ]
+}
