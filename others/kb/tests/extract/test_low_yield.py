@@ -2,6 +2,8 @@
 최근 switch.yield_window 창 중 빈 창 비율이 switch.yield_empty_ratio 이상이면 human=true로 끈다."""
 import json
 
+import pytest
+
 from kb.cli import main
 from kb.extract import budget, route, runner, settings, state
 
@@ -39,7 +41,14 @@ def test_empty_responses_turn_model_off_with_human_and_stop_calls(ent):
     assert state.get("llm:gatepass:" + SOL) is None       # 빈 창은 gate_pass_drop 이력에 안 쌓인다
 
 
-def test_normal_mix_never_trips_and_gate_pass_drop_unchanged(env):
+@pytest.fixture
+def gate20():
+    """gate_window의 운영값은 50이다(2026-11-01). 이 시험은 20창 동작을 단언하므로 시험에서만 20으로 덮는다."""
+    with settings.override(**{"switch.gate_window": 20}):
+        yield
+
+
+def test_normal_mix_never_trips_and_gate_pass_drop_unchanged(env, gate20):
     budget.set_balance(100.0)
     with settings.override(**{"switch.yield_window": 50}):
         for cycle in range(6):                            # 50창 중 7개 빈 창(14%)을 여러 바퀴

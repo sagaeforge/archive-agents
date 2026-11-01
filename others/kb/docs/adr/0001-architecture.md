@@ -949,7 +949,7 @@ env -i HOME="$HOME" PATH="<고정>" LANG=C.UTF-8 DISABLE_AUTOUPDATER=1 RTK_DISAB
 | 2 | 소스 정책, 호스트 정책, 미승인 `requires_decision`, 에이전트 묶음의 `record` | `E_POLICY` |
 | 3 | 인용구가 표시 본문에 있음. NFC와 공백 접기만 허용. 8자 이상. 여러 곳이면 `prefix`, `suffix`로 좁히고 그래도 여럿이면 거부. L2만 모델이 본 창 구간을 대역 밖으로 넘기며(`ingest.submit(windows=)`, 묶음 안의 값은 무시), 문서에서 여러 곳이고 `prefix`, `suffix`로도 못 가른 경우에만 창 안 적중으로 좁힌다. 창 안 정확히 1곳이면 그곳, 2곳 이상이거나 0곳이면 `E_QUOTE_AMBIGUOUS`이고 첫 적중을 고르지 않는다. 창 구간은 모델이 받은 문단과 본문이 같은 문단의 다른 사본, 사이가 공백뿐인 인접 문단의 합이다. 문서에서 1곳이거나 `prefix`, `suffix`로 1곳이 되는 경우는 창과 무관하게 이전과 같다. 프롬프트와 `prompt_version`은 바꾸지 않는다 | `E_QUOTE_*` |
 | 4 | 값 토큰: 숫자는 인용구 안에서만 찾는다. 숫자 + 단위 쌍, 비교어(이상, 이하, 미만, 까지, 부터), 부정어 동등성 | `needs_review` |
-| 5 | 주어 문맥: 주어 별칭이 인용구, 같은 문단, 표 머리, 절 제목, 문서 제목 중 하나에 있음. 문장에 나온 등록 엔티티 별칭은 `subject`의 별칭이거나 인용구·문맥에 있어야 한다 | `needs_review` |
+| 5 | 주어 문맥: 주어 별칭이 인용구, 같은 문단, 표 머리, 절 제목, 문서 제목 중 하나에 있음. 문장에 나온 등록 엔티티 별칭은 `subject`의 별칭이거나 인용구·문맥에 있어야 한다(`R_ALIAS_MISMATCH`). 비교 대상에서 빠지는 별칭은 하나뿐이다: 현재 노드가 `Concept`이고, `props.provisional`이 참이고, 현재 버전의 `author`(ledger actor)가 `agent:l2`이고, 별칭에 한글이 있는 경우. 라틴 문자 별칭과 다른 타입은 항상 검사한다. `producer=agent:l2`는 대역 밖 `windows=`가 없는 경로(MCP, `kb ingest`)에서 `E_POLICY`로 거부하고, `entity` 항목의 `props.provisional`은 버리므로 묶음이 이 출처를 주장할 수 없다. L2 밖의 주체가 같은 ID에 쓰면 확정이다(0003 5장) | `needs_review` |
 | 6 | 엔티티, 술어 해석: 닫힌 후보. 새 값은 후보 큐 | 주장은 유지 |
 | 7 | 판단어(R6): `해야 한다`, `추천`, `권장`, `should`, `must`, `recommend`, `best practice`, 명령형 문장 | `attributed` + `speaker`가 없으면 소스 발행처로 화자를 확정해 `attributed`로 바꾼다. 확정할 수 없으면 `E_JUDGEMENT` |
 | 8 | 주입 패턴, 제어 문자 | `E_INJECTION`, 격리 |

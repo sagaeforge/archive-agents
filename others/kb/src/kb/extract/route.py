@@ -189,15 +189,35 @@ def model_key(backend: str, model: str) -> str:
     return model if backend == "openrouter" else f"{backend}:{model}"
 
 
+CANARY_FAIL_KEY = "claude:canary_fail"
+
+
+def _canary_waiting() -> bool:
+    """카나리아가 실패한 뒤 물러나 있는 중인가. 그 뒤로 성공한 카나리아가 있으면 끝난다."""
+    f, c = state.get(CANARY_FAIL_KEY) or {}, state.get("claude:canary") or {}
+    return settings.now_s() < float(f.get("until") or 0) and not (c.get("ok") and (c.get("at") or 0) > (f.get("at") or 0))
+
+
+def _canary_failed() -> None:
+    """실패 때마다 대기를 두 배로 늘린다. 시작은 rate_recheck_s, 상한은 canary_ttl_s다. 시간당 타이머가 매번 호출하지 않게 한다."""
+    n, now = int((state.get(CANARY_FAIL_KEY) or {}).get("n") or 0) + 1, settings.now_s()
+    wait = min(float(settings.get("claude.rate_recheck_s", 3600)) * 2 ** (n - 1), float(settings.get("claude.canary_ttl_s", 86400)))
+    state.put(CANARY_FAIL_KEY, {"n": n, "at": now, "until": now + wait})
+
+
 def claude_rate(pf, be) -> dict:
-    """가장 새로운 활용률. 저장값이 낡고 카나리아도 그보다 오래되면 카나리아를 1회 다시 돈다."""
+    """가장 새로운 활용률. 저장값이 낡고 카나리아도 그보다 오래되면 카나리아를 1회 다시 돈다. 실패한 뒤에는 물러나 있는 동안 값 없음으로 닫는다."""
     stored, canary = state.get("claude:rate") or {}, pf.info or {}
-    if stored.get("at") and settings.now_s() - stored["at"] > float(settings.get("claude.rate_recheck_s", 3600)) \
-            and (canary.get("at") or 0) <= stored["at"]:
+    newest = max(stored.get("at") or 0, canary.get("at") or 0)     # 저장값이 없어도 하루 묵은 카나리아 값을 그대로 쓰지 않는다
+    if newest and settings.now_s() - newest > float(settings.get("claude.rate_recheck_s", 3600)):
+        if _canary_waiting():
+            return {}
         fresh = be.canary()
         rate = (fresh.info or {}).get("rate") or {}
         if not fresh.ok or not rate:
+            _canary_failed()
             return {}
+        state.delete(CANARY_FAIL_KEY)
         state.put("claude:rate", dict(rate, at=settings.now_s()))
         return rate
     if not stored or (canary.get("at") or 0) > (stored.get("at") or 0):
@@ -205,12 +225,61 @@ def claude_rate(pf, be) -> dict:
     return stored
 
 
-def claude_gate(pf, be, *, start: bool = True) -> bool:
-    """Claude 호출 전 활용률 검사. 추출과 함의 판정이 같은 문턱을 쓴다. 값이 없거나 문턱을 넘으면 False."""
-    r = claude_rate(pf, be)
+def _rate_reason(r: dict, start: bool) -> str | None:
+    """활용률 값 하나에 5시간, 7일 신호를 적용한다. 문턱을 넘거나 값이 없으면 사유 이름, 아니면 None.
+    five_hour는 7일 경고 구간에 빠질 수 있지만 seven_day가 없으면 7일 문턱을 잴 수 없으므로 닫는다."""
     v1 = apply("claude_five_hour", five_hour=r.get("five_hour"), seven_day=r.get("seven_day"), start=start)
     v2 = apply("claude_seven_day", seven_day=r.get("seven_day"))
-    return v1.action == "none" and v2.action == "none"
+    if v1.action != "none":
+        return "rate_unavailable" if r.get("five_hour") is None and r.get("seven_day") is None else "five_hour"
+    if r.get("seven_day") is None:
+        return "rate_unavailable"
+    return "seven_day" if v2.action != "none" else None
+
+
+def claude_gate(pf, be, *, start: bool = True) -> bool:
+    """Claude 호출 전 활용률 검사. 추출과 함의 판정이 같은 문턱을 쓴다. 값이 없거나 문턱을 넘으면 False."""
+    return _rate_reason(claude_rate(pf, be), start) is None
+
+
+def claude_hold() -> str | None:
+    """사람이 풀어야 하는 정지: llm:stop, HALT, 자동 복귀가 없는 llm:off:claude. 지금 활용률이 깨끗해도 Claude를 부르지 않는다."""
+    st = stopped() or ("halted" if guard.halted() else None)
+    if st:
+        return st
+    e = state.get(off_key("claude")) or {}
+    if e and e.get("until") is None and e.get("retry") != "next_run":
+        return e.get("reason") or "off"
+    return None
+
+
+def claude_job_gate(be=None) -> str | None:
+    """에이전트 작업(kb-agent-run, kb retro)이 claude -p를 부르기 전 검사. 시작해도 되면 None, 아니면 건너뛸 사유.
+    사람이 풀어야 하는 정지(claude_hold)를 먼저 보고, 추출과 같은 claude_rate, 같은 5시간(시작 >0.5, 값 없음)과 7일(>=0.80, 값 없음)
+    문턱을 쓰고 초과 과금(ADR-0003 5장)도 본다. 작업마다 부른다(jobs.run_due).
+    비용: 카나리아가 하루(claude.canary_ttl_s) 안이고 저장된 활용률이 1시간(claude.rate_recheck_s) 안이면 호출 0회.
+    아니면 카나리아 claude -p 1회(haiku, 한 문장 입력, --max-budget-usd 0.02 상한, 실측 $0.00059)와 `claude auth status`(토큰 0)다.
+    한 번 돌린 카나리아는 저장되므로 같은 시간대 다른 작업의 검사는 호출 0회다. 카나리아가 실패하면 물러나 있는 동안 호출 없이 닫는다."""
+    hold = claude_hold()
+    if hold:
+        return "hold_" + hold
+    if _canary_waiting():
+        return "canary_backoff"
+    if be is None:
+        from kb.extract.backends.claude import Claude
+        be = Claude()
+    pf = be.preflight()
+    if not pf.ok:
+        if pf.reason in ("canary_failed", "no_rate_value"):
+            _canary_failed()
+        return "preflight_" + (pf.reason or "failed")
+    if (pf.info or {}).get("canary_sha"):
+        state.delete(CANARY_FAIL_KEY)
+    r = claude_rate(pf, be)
+    if r.get("isUsingOverage"):
+        apply("claude_overage", isUsingOverage=True)
+        return "overage"
+    return _rate_reason(r, True)
 
 
 class Router:

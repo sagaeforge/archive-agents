@@ -14,6 +14,16 @@ DAY_MS = 86400_000
 REUSE_MS = DAY_MS
 
 
+# R_ALIAS_MISMATCH의 known에서 빠지는 별칭: 네 조건을 모두 채울 때만 뺀다(ADR-0001 10.6 5단계).
+# 1. 현재 노드의 type이 Concept이다. 2. props.provisional이 참이다. 3. 현재 버전을 쓴 ledger actor(author)가 L2다.
+# 4. 별칭에 한글이 있다. 라틴 문자 별칭과 Concept이 아닌 타입은 항상 남는다: 'Disney'는 어떤 타입이든 검사한다.
+# author는 묶음이 정할 수 없다: producer=agent:l2는 ingest._run이 L2 경로(windows=) 밖에서 거부하고, entity 항목의
+# props.provisional은 process._i_entity가 버린다. 표시는 __new__ 주어 경로 한 곳에서만 붙는다.
+# L2 밖의 주체가 같은 ID에 쓰면 author가 바뀌거나 표시가 빠져 확정이 된다(apply.h_entity_put이 같은 내용의 재등록도 새 버전으로 쓴다).
+GENERIC_L2_SQL = "(n.type='Concept' AND n.author=? AND COALESCE(json_extract(CAST(n.props AS TEXT),'$.provisional'),0)=1)"
+HANGUL = re.compile("[가-힣]")
+
+
 def jl(b):
     return None if b is None else json.loads(b)
 
@@ -25,6 +35,7 @@ class Gold:
         self.con = None
         self.path = None
         self._alias_cache = None
+        self._alias_cache_trusted = None
 
     def conn(self):
         from kb.core.conn import connect_ro
@@ -68,18 +79,24 @@ class Gold:
             return []
         return [n["label"], *[x[0] for x in c.execute("SELECT norm FROM alias WHERE node_id=?", (nid,))]]
 
-    def all_aliases(self) -> dict:
-        """정규화 별칭 -> 엔티티 ID. 처리 한 번에 한 번만 읽는다. 너무 짧은 별칭은 뺀다."""
-        if self._alias_cache is None:
+    def all_aliases(self, *, trusted_only: bool = False) -> dict:
+        """정규화 별칭 -> 엔티티 ID. 처리 한 번에 한 번만 읽는다. 너무 짧은 별칭은 뺀다.
+        trusted_only이면 L2가 등록한 한글 Concept 별칭을 뺀다(GENERIC_L2_SQL 참고)."""
+        attr = "_alias_cache_trusted" if trusted_only else "_alias_cache"
+        if getattr(self, attr) is None:
             c = self.conn()
             out: dict = {}
             if c is not None:
-                for norm, nid in c.execute("SELECT a.norm, a.node_id FROM alias a JOIN node n ON n.id=a.node_id "
-                                           "AND n.expired_at IS NULL AND n.type NOT IN ('Claim','Snapshot','Document','Record')"):
-                    if len(norm) >= 3 or re.search("[가-힣]", norm) and len(norm) >= 2:
+                from kb.extract.items import PRODUCER
+                for norm, nid, generic in c.execute(f"SELECT a.norm, a.node_id, {GENERIC_L2_SQL} FROM alias a JOIN node n ON n.id=a.node_id "
+                                                    "AND n.expired_at IS NULL AND n.type NOT IN ('Claim','Snapshot','Document','Record')",
+                                                    (PRODUCER,)):
+                    if trusted_only and generic and HANGUL.search(norm):
+                        continue
+                    if len(norm) >= 3 or HANGUL.search(norm) and len(norm) >= 2:
                         out.setdefault(norm, nid)
-            self._alias_cache = out
-        return self._alias_cache
+            setattr(self, attr, out)
+        return getattr(self, attr)
 
     def snapshots_of_url(self, url: str) -> list:
         """URL의 스냅샷 노드 props 목록(fetched_at 내림차순)."""

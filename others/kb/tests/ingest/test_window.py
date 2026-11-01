@@ -24,7 +24,7 @@ def test_submit_with_window_resolves_unique_hit(env, snap):
 
 
 def test_submit_without_window_still_ambiguous(env, snap):
-    rep = ingest.submit(bundle(_items(snap), producer="agent:l2"), fetch=False)
+    rep = ingest.submit(bundle(_items(snap), producer="agent:kb-collector"), fetch=False)
     assert res(rep, "c1")["code"] == "E_QUOTE_AMBIGUOUS"
 
 

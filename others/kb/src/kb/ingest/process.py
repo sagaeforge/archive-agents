@@ -15,7 +15,7 @@ from kb.gate.liveness import is_g_unit, liveness_stance
 from kb.gate.model import G_UNIT_TYPES
 from kb.gate.textmatch import QuoteError, locate
 from kb.ingest import bundle, rules
-from kb.ingest.store import REUSE_MS, Gold, SnapInfo, load_text, now_ms
+from kb.ingest.store import HANGUL, REUSE_MS, Gold, SnapInfo, load_text, now_ms
 from kb.write.errors import IdemConflict, WriteRejected
 
 VERDICT = {"active": "alive", "renamed": "renamed", "scheduled_removal": "scheduled_removal", "removed": "removed",
@@ -361,6 +361,7 @@ class Processor:
         old = self.entity_info(nid)
         props = dict((old or {}).get("props") or {})
         props.update(it.get("props") or {})
+        props.pop("provisional", None)      # 표시는 __new__ 주어 경로만 붙인다. entity 항목은 묶음의 값을 받지 않고, 이어받은 표시도 지워 확정한다
         label = old["label"] if old else it["label"]
         lv = it.get("liveness")
         blk = None
@@ -601,12 +602,17 @@ class Processor:
                                        "props": ep["props"], "liveness": None, "recorded_at": self.now})
         elif existing is None:
             raise ItemError("E_REF", f"엔티티가 없다: {sid}")
-        known = dict(self.gold.all_aliases())
+        # alias_conflicts의 비교 대상에서 L2가 등록한 한글 Concept 별칭만 뺀다(store.GENERIC_L2_SQL). 스스로 등록한 한국어 일반어가
+        # 영어 근거의 뒤 문장을 막는 것을 끊는다. 라틴 문자 별칭과 다른 타입, 다른 주체의 별칭은 그대로 검사한다
+        known = dict(self.gold.all_aliases(trusted_only=True))
+        from kb.extract.items import PRODUCER as _L2
+        from kb.gate.context import norm
         for eid, e in self.ents.items():
+            generic = self.producer == _L2 and e.get("type") == "Concept" and (e.get("props") or {}).get("provisional")
             for a in e.get("aliases") or []:
-                from kb.gate.context import norm
-                if len(norm(a)) >= 2:
-                    known.setdefault(norm(a), eid)
+                n = norm(a)
+                if len(n) >= 2 and not (generic and HANGUL.search(n)):      # 같은 L2 묶음의 앞 항목이 방금 만든 일반어도 같다
+                    known.setdefault(n, eid)
         ctx = GateCtx(subject=sid, subject_aliases=tuple(forms), known_aliases=known, doc_title=info.title,
                       publisher=info.publisher, source_names=self._source_names(info), liveness=self._liveness_fn(sid))
         res = check_claim({"statement": it["statement"], "kind": kind, "stance": it["stance"], "speaker": it.get("speaker"),

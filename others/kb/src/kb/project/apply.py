@@ -408,6 +408,14 @@ def h_record_redact(c: Ctx, p: dict) -> None:
     add_change(c, rid, row["version"], row["type"], 3)
 
 
+L2_ACTOR = "agent:l2"           # extract.items.PRODUCER. 투영은 추출 층을 가져오지 않는다(시험이 값이 같은지 본다)
+
+
+def confirms_l2(prev: dict | None, actor: str) -> bool:
+    """L2가 provisional로 만든 노드에 L2 밖의 주체가 쓰면 내용이 같아도 새 버전이다. author가 바뀌어 별칭 게이트가 확정으로 본다(ADR-0001 10.6 5단계)."""
+    return bool(prev) and prev["author"] == L2_ACTOR and actor != L2_ACTOR and bool((jl(prev["props"]) or {}).get("provisional"))
+
+
 def h_entity_put(c: Ctx, p: dict) -> None:
     g, e = c.g, c.e
     nid = p["id"]
@@ -426,7 +434,8 @@ def h_entity_put(c: Ctx, p: dict) -> None:
     add_alias(g, nid, p["label"], p.get("lang"))
     for a in p.get("aliases") or []:
         add_alias(g, nid, a, p.get("lang"))
-    if prev and (prev["type"], prev["label"], prev["props"], prev["lang"], prev["liveness"], prev["status"]) == want:
+    if prev and (prev["type"], prev["label"], prev["props"], prev["lang"], prev["liveness"], prev["status"]) == want \
+            and not confirms_l2(prev, e["actor"]):
         return add_change(c, nid, prev["version"], prev["type"], prev["sensitivity"])
     eff = status if status in DEAD and not (prev and prev["merged_into"]) else ("superseded" if prev and prev["merged_into"] else "active")
     row = node_new(c, nid, prev, type=p["type"], origin=e["origin"], status=status, eff_status=eff, liveness=liveness,

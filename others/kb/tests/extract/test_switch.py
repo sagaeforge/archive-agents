@@ -5,6 +5,7 @@ import pytest
 
 from kb.core import opsdb
 from kb.extract import budget, guard, route, runner, settings, state
+from kb.extract.types import Preflight
 
 from . import helpers as H
 
@@ -145,7 +146,14 @@ def test_10_error_rate(env):
     assert route.is_off(ORH)
 
 
-def test_11_gate_pass_drop(env):
+@pytest.fixture
+def gate20():
+    """gate_window의 운영값은 50이다(2026-11-01). 이 시험은 20창 동작을 단언하므로 시험에서만 20으로 덮는다."""
+    with settings.override(**{"switch.gate_window": 20}):
+        yield
+
+
+def test_11_gate_pass_drop(env, gate20):
     budget.set_balance(100.0)
     key = SOL
     v = None
@@ -173,3 +181,47 @@ def test_12_all_paths_down_stops_without_switching(ent):
     out = runner.run_agent("public", backends=f, do_support=False)
     assert out["windows"] == 0 and out["reason"] == "all_paths_down"
     assert not f["openrouter"].calls and not f["claude"].calls                 # 전환하지 않고 L2 정지
+
+
+def test_gate_window_shipped_value_is_50(env):
+    """운영값 50: 낮은 49창까지는 안 꺼지고 50번째에 꺼진다(문턱, 비율, 기준선은 그대로)."""
+    budget.set_balance(100.0)
+    assert settings.get("switch.gate_window") == 50 and settings.get("switch.gate_ratio") == 0.85
+    assert settings.get("switch.baselines")[SOL] == 0.784
+    state.delete("llm:gatepass:" + SOL)
+    for _ in range(49):
+        assert route.apply("gate_pass_drop", key=SOL, passed=5, total=10).action == "none"
+    assert route.apply("gate_pass_drop", key=SOL, passed=5, total=10).action == "off"
+
+
+class FailingCanary:
+    def __init__(self):
+        self.n, self.ok = 0, False
+
+    def canary(self):
+        self.n += 1
+        rate = {"five_hour": 0.1, "seven_day": 0.5}
+        state.put("claude:canary", {"bin": "x", "ok": self.ok, "at": settings.now_s(), "rate": rate if self.ok else {}})
+        return Preflight(True, "", info={"rate": rate}) if self.ok else Preflight(False, "canary_failed", "x")
+
+
+def test_failing_canary_backs_off_within_and_across_runs(env):
+    """저장값이 없고 카나리아가 낡았을 때 실패하면 창마다 다시 부르지 않고 값 없음으로 닫는다. 성공하면 기록을 지운다."""
+    be = FailingCanary()
+    pf = Preflight(True, "", info={"rate": {"five_hour": 0.1, "seven_day": 0.5}, "at": settings.now_s() - 7200})
+    assert {route.claude_gate(pf, be) for _ in range(24)} == {False} and be.n == 1
+    f = state.get(route.CANARY_FAIL_KEY)
+    state.put(route.CANARY_FAIL_KEY, dict(f, until=settings.now_s() - 1))
+    assert route.claude_gate(pf, be) is False and be.n == 2 and state.get(route.CANARY_FAIL_KEY)["n"] == 2
+    f = state.get(route.CANARY_FAIL_KEY)
+    state.put(route.CANARY_FAIL_KEY, dict(f, until=settings.now_s() - 1))
+    be.ok = True
+    assert route.claude_gate(pf, be) is True and be.n == 3 and state.get(route.CANARY_FAIL_KEY) is None
+
+
+def test_claude_gate_closes_without_seven_day(env):
+    """7일 경고 구간에는 five_hour가 빠질 수 있지만 seven_day가 없으면 7일 문턱을 잴 수 없다."""
+    pf = Preflight(True, "", info={"rate": {"five_hour": 0.1, "seven_day": None}, "at": settings.now_s()})
+    assert route.claude_gate(pf, None) is False
+    pf = Preflight(True, "", info={"rate": {"five_hour": None, "seven_day": 0.5}, "at": settings.now_s()})
+    assert route.claude_gate(pf, None) is True

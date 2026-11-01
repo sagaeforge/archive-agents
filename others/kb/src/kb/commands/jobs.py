@@ -1,4 +1,5 @@
 """kb jobs run [--dry-run] [--json]: sources/internal.d/*.yaml의 kind=agent 작업 중 만기를 순서대로 부른다(WP-17).
+claude -p를 부르는 작업(kb-agent-run, kb retro)은 작업마다 부르기 직전에 ADR-0003 5장 활용률 규칙과 사람의 정지를 지나야 하고, 못 지나면 사유를 남기고 건너뛴다(실패 아님, 다음 회차에 재시도).
 순서: kb agent run, kb-agent-run kb-fulfill, kb-agent-run kb-liveness-review, kb retro, 나머지는 id 순.
 실제 claude 호출이라 결정 11 승인 전에는 아무것도 부르지 않는다."""
 from __future__ import annotations
@@ -48,6 +49,22 @@ def resolve(cmd: str) -> list[str]:
     return t
 
 
+def calls_claude(cmd: str) -> bool:
+    """이 작업이 claude -p를 직접 부르는가: kb-agent-run <작업>과 kb retro. kb agent run(L2)은 자체 라우터와 claude_gate가 있다."""
+    t = shlex.split(cmd)
+    return bool(t) and (t[0] == "kb-agent-run" or t[:2] == ["kb", "retro"])
+
+
+def _claude_gate() -> str | None:
+    """ADR-0003 5장 활용률 규칙(extract.route.claude_job_gate). 시작해도 되면 None, 아니면 건너뛸 사유.
+    검사 자체가 실패하면 닫는다(사유에 남기고 다음 회차에 재시도)."""
+    try:
+        from kb.extract import route
+        return route.claude_job_gate()
+    except Exception as e:  # noqa: BLE001
+        return f"gate_error:{type(e).__name__}"
+
+
 def _condition(j: dict) -> bool:
     """when 조건. 판정 수단이 실패하면 만기 작업은 돈다(조용히 안 도는 쪽이 더 나쁘다)."""
     w = j.get("when")
@@ -67,6 +84,14 @@ def _condition(j: dict) -> bool:
     except Exception:  # noqa: BLE001
         return True
     return True
+
+
+def _record_skip(job_id: str, reason: str) -> None:
+    try:
+        from kb.extract import state
+        state.metric("agentjob.skipped", 1, {"job": job_id, "reason": reason})
+    except Exception:  # noqa: BLE001
+        pass                                          # 기록 실패가 건너뜀을 호출로 바꾸지 않는다
 
 
 def run_due(dry_run: bool = False) -> dict:
@@ -89,6 +114,11 @@ def run_due(dry_run: bool = False) -> dict:
         argv = resolve(str(j["cmd"]))
         if dry_run:
             out["ran"].append({"id": j["id"], "argv": argv, "dry_run": True})
+            continue
+        why = _claude_gate() if calls_claude(str(j["cmd"])) else None    # 앞 작업이 한 시간을 쓸 수 있으므로 작업마다 다시 본다
+        if why:                                       # 실패가 아니다: not_due 기록을 남기지 않아 다음 회차에 다시 만기다
+            out["skipped"][j["id"]] = "claude_" + why
+            _record_skip(j["id"], why)
             continue
         out["calls"] += 1
         try:

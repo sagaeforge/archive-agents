@@ -35,6 +35,8 @@ def fakes(home, monkeypatch):
     log = home / "calls.log"
     monkeypatch.setenv("KB_BIN", script(home / "fake-kb", f'echo "kb $*" >> "{log}"\n'))
     monkeypatch.setenv("KB_AGENT_RUN", script(home / "fake-agent-run", f'echo "agent-run $*" >> "{log}"\n'))
+    from kb.commands import jobs
+    monkeypatch.setattr(jobs, "_claude_gate", lambda: None)   # 활용률 검사는 test_job_gate.py가 본다
     return log
 
 

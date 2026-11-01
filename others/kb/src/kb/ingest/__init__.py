@@ -120,9 +120,11 @@ def _persist(p: Processor, out: Outcome, rep: Report) -> None:
 def _run(header: dict, items: list, *, fetch: bool, write: bool, profile: str | None, windows: dict | None = None) -> Report:
     p = Processor(header, fetch=fetch, write=write, profile=profile, windows=windows)
     rep = Report(header)
+    from kb.extract.items import PRODUCER as L2
+    forged = header["producer"] == L2 and windows is None       # windows는 대역 밖 입력이고 runner만 넘긴다. MCP, kb ingest는 넘길 수 없다
     try:
         for line, it in items:
-            out = p.handle(line, it)
+            out = Outcome("rejected", "E_POLICY", f"producer={L2}는 L2 경로만 쓴다") if forged else p.handle(line, it)
             if write and (out.events or out.record is not None):
                 _persist(p, out, rep)
             elif not write and out.result == "rejected":
@@ -149,7 +151,8 @@ def validate(items, *, fetch: bool = True, profile: str | None = None) -> Report
 
 def submit(items, *, fetch: bool = True, profile: str | None = None, windows: dict | None = None) -> Report:
     """게이트를 지나 쓴다. 멱등: 같은 묶음을 다시 내면 새 이벤트가 0건이다.
-    windows: {스냅샷 ID: [(시작, 끝)]} L2만 넘긴다. 모델이 본 구간 안에서만 여러 곳 인용구를 좁힌다(ADR 10.6 3단계)."""
+    windows: {스냅샷 ID: [(시작, 끝)]} L2만 넘긴다. 모델이 본 구간 안에서만 여러 곳 인용구를 좁힌다(ADR 10.6 3단계).
+    이 값이 없으면 producer=agent:l2 묶음은 항목마다 E_POLICY로 거부된다: 그 actor는 별칭 게이트의 신뢰 근거다(ADR 10.6 5단계)."""
     header, rows = _norm(items)
     return _run(header, rows, fetch=fetch, write=True, profile=profile, windows=windows)
 

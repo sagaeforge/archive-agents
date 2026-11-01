@@ -11,6 +11,13 @@ SOL = "openai/gpt-6.1-sol"
 KEY = "llm:reenable_log"
 
 
+@pytest.fixture(autouse=True)
+def gate20():
+    """gate_window의 운영값은 50이다(2026-11-01). 이 시험은 20창 동작을 단언하므로 시험에서만 20으로 덮는다."""
+    with settings.override(**{"switch.gate_window": 20}):
+        yield
+
+
 def _trip(key=SOL):
     state.delete("llm:gatepass:" + key)
     for _ in range(20):
