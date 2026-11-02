@@ -10,7 +10,7 @@ const reliefApi = (): Plugin => ({
   configureServer(server) {
     const api = getRequestListener(createApi().fetch);
     server.middlewares.use((req, res, next) => {
-      const r = guard((n) => { const v = req.headers[n]; return Array.isArray(v) ? v[0] : v; });
+      const r = guard((n) => { const v = req.headers[n]; return Array.isArray(v) ? v[0] : v; }, req.url ?? '/');
       if (r) { res.statusCode = r.status; res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ error: r.code, message: r.message })); return; }
       if (req.url?.startsWith('/api/')) { void api(req, res); return; }
       next();

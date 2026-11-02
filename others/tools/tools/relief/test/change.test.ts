@@ -171,15 +171,34 @@ describe('coming up, through the API', () => {
     expect((await api.request('http://127.0.0.1:4815/api/snapshot', { headers: { ...hdr, 'if-none-match': etag } })).status).toBe(200);
     expect((await api.request('http://127.0.0.1:4815/api/snapshot?fixture=large', { headers: hdr })).status).toBe(404);
   });
-  it('metrics are read only while the overlay asks', async () => {
+  it('metrics are read only while someone looks: the overlay or a viewer on the map', async () => {
     const r = await rig();
     const a = r.live as unknown as { metricsAdapter(): { read(s: AbortSignal): Promise<unknown> } };
     const sig = new AbortController().signal;
-    expect(await a.metricsAdapter().read(sig)).toBeNull();
+    expect(await a.metricsAdapter().read(sig)).toBe('off');
     expect(r.mock.calls).toEqual([]);
     r.live.viewMetrics();
-    expect(await a.metricsAdapter().read(sig)).toMatchObject({ 'pve:node:node-1': { cpu: 0.05, mem: 0.25 } });
+    expect(await a.metricsAdapter().read(sig)).toMatchObject({ values: { 'pve:node:node-1': { cpu: 0.05, mem: 0.25 } } });
     expect(r.mock.calls.map((c) => c.args.path)).toEqual(['/cluster/metrics/export']);
+    r.reopen();
+    const b = r.live as unknown as typeof a;
+    expect(await b.metricsAdapter().read(sig)).toBe('off');
+    r.live.touch();
+    expect(await b.metricsAdapter().read(sig)).not.toBe('off');
+  });
+  it('metrics stop when nobody has looked for the full time, not before', async () => {
+    let now = Date.now();
+    const r = await rig({ now: () => now });
+    const a = r.live as unknown as { metricsAdapter(): { read(s: AbortSignal): Promise<unknown> } };
+    const sig = new AbortController().signal;
+    r.live.viewMetrics(); now += PERIOD.overlayGoneS * 1000;
+    expect(await a.metricsAdapter().read(sig)).not.toBe('off');
+    now += 1;
+    expect(await a.metricsAdapter().read(sig)).toBe('off');
+    r.live.touch(); now += PERIOD.viewerGoneS * 1000;
+    expect(await a.metricsAdapter().read(sig)).not.toBe('off');
+    now += 1;
+    expect(await a.metricsAdapter().read(sig)).toBe('off');
   });
 });
 

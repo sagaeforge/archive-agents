@@ -16,7 +16,10 @@ import { loadConfig, publicIpUrl, resolvePaths } from '../server/config.ts';
 import { overlayEdge, type External } from '../server/model/edgemap.ts';
 import { reviewPassed, staleIds, validateSnapshot, type Entity, type Relation, type Snapshot } from '../server/model/fact.ts';
 import { checkNoFake, inRange } from '../server/model/rules.ts';
+import { layoutSnapshot } from '../server/layout/elk.ts';
+import { measuredLinks } from '../src/scene/flow.ts';
 import { holes, tierCards } from '../src/model.ts';
+import { today } from '../dev/fixtures/gen.ts';
 import { startLive } from '../server/serve.ts';
 import { closeRigs, rig, TOKEN, type Rig } from './support/rig.ts';
 
@@ -246,7 +249,7 @@ describe('the map', () => {
     const m = map(ok(e), {}, [gwGuess()]);
     const link = m.edges.filter((r) => r.target === 'host:workstation');
     expect(link).toMatchObject([{ source: 'net:gw:192.0.2.1', kind: 'lan', basis: 'declared' }]);
-    expect(m.get('host:workstation')!.facts.link).toMatchObject({ basis: 'declared', value: '유선 · 라우터' });
+    expect(m.get('host:workstation')!.facts.link).toMatchObject({ basis: 'declared', value: '유선 · 라우터' }); // No segment here to stand on.
   });
   it('a workstation on a switch takes that link and no second one', () => {
     const m = map(ok(example()), {}, [gwGuess()]);
@@ -535,6 +538,86 @@ describe('the file through a live map', () => {
     expect(src(r, 'wan-ip')).toMatchObject({ state: 'failing', why: '공인 IP 응답 없음' });
     expect(nodeOf(r, 'wan')!.facts.publicIp).toMatchObject({ value: '203.0.113.99', at });
     await w.close();
+  });
+});
+
+describe('a wired PC sits on the LAN segment', () => {
+  const noSwitch = () => { const e = JSON.parse(readFileSync(new URL('../fixtures/edge.example.json', import.meta.url), 'utf8')) as Record<string, unknown>; delete e.switches; return e; };
+  const on = async (edge: Record<string, unknown>, status?: unknown) => {
+    const r = await rig();
+    if (status) r.mock.state.over.set('/cluster/status', status as never);
+    const edgePath = join(r.dir, 'edge.json');
+    writeFileSync(edgePath, JSON.stringify(edge));
+    r.reopen({ edgePath });
+    await r.live.collectOnce();
+    return r;
+  };
+  const linkOf = (r: Rig) => r.snap().edges.find((e) => e.id === 'e-lan-workstation')!;
+  const hostsOf = (e: Record<string, unknown>) => e.hosts as { key: string; lease?: { address: string; seenAt: string } }[];
+  it('an address in the segment links there, not to the router, as derived', async () => {
+    const r = await on(noSwitch());
+    expect(linkOf(r)).toMatchObject({ source: 'net:seg:192.0.2.0/24', target: 'host:workstation', kind: 'lan', basis: 'derived' }); // Nobody declared this cable: the address implies it.
+    expect(r.entity('host:workstation')!.facts.link).toMatchObject({ basis: 'derived', source: 'rule:lan-address', value: '유선 · LAN' });
+    expect(checkNoFake(r.snap())).toEqual([]);
+    expect(r.snap().edges.some((e) => e.target === 'host:workstation' && e.source.startsWith('decl:gateway'))).toBe(false);
+    expect(r.snap().edges.some((e) => e.target === 'host:workstation' && e.source.startsWith('net:gw'))).toBe(false);
+    expect(r.snap().routes['e-lan-workstation']!.length).toBeGreaterThanOrEqual(2);
+  });
+  it('no address and a lone segment: that segment', async () => {
+    const e = noSwitch(); delete hostsOf(e).find((h) => h.key === 'workstation')!.lease;
+    expect(linkOf(await on(e)).source).toBe('net:seg:192.0.2.0/24');
+  });
+  it('an address outside every segment stays on the router and says so', async () => {
+    const e = noSwitch(); const router = e.router as Record<string, unknown>; delete router.lanCidr; delete router.dhcpRange;
+    hostsOf(e).find((h) => h.key === 'workstation')!.lease = { address: '198.51.100.7', seenAt: '2026-11-01' };
+    const r = await on(e);
+    expect(linkOf(r).source.startsWith('net:seg')).toBe(false);
+    expect(r.entity('host:workstation')!.facts.link).toMatchObject({ value: '유선 · 라우터', basis: 'declared' });
+    expect(linkOf(r).basis).toBe('declared');
+  });
+  it('a declared switch still wins: no second link', async () => {
+    const e = JSON.parse(readFileSync(new URL('../fixtures/edge.example.json', import.meta.url), 'utf8')) as Record<string, unknown>;
+    const r = await on(e);
+    expect(linkOf(r)).toBeUndefined();
+    expect(r.snap().edges.find((x) => x.id === 'e-lan-rack-workstation')).toBeDefined();
+  });
+  it('moves nothing else: every other object stays where it stood with the router link', async () => {
+    const r = await on(noSwitch());
+    const s = r.snap();
+    const old = { nodes: s.nodes, edges: s.edges.map((e) => (e.id === 'e-lan-workstation' ? { ...e, source: s.nodes.find((n) => n.kind === 'gateway')!.id } : e)) };
+    const before = await layoutSnapshot(old); const after = await layoutSnapshot(s);
+    const movedIds = Object.entries(before.layout).filter(([id, p]) => { const q = after.layout[id]!; return id !== 'host:workstation' && Math.hypot(p.x - q.x, p.y - q.y) > 0.5; }).map(([id]) => id);
+    expect(movedIds).toEqual([]);
+    expect(after.layout['host:workstation']).toEqual(before.layout['host:workstation']);
+  });
+  it('its cable leaves the segment and reaches the PC along the iso axes, clear of what stands between', async () => {
+    const r = await on(noSwitch());
+    const s = r.snap(); const route = s.routes['e-lan-workstation']!;
+    const seg = s.layout['net:seg:192.0.2.0/24']!; const pc = s.layout['host:workstation']!;
+    expect(route[0]![0]).toBe(seg.x + seg.w); expect(route.at(-1)![0]).toBe(pc.x + pc.w);
+    for (let i = 1; i < route.length; i++) expect(route[i]![0] === route[i - 1]![0] || route[i]![1] === route[i - 1]![1]).toBe(true);
+    const lane = route[1]![0];
+    for (const [id, b] of Object.entries(s.layout)) if (b.z === 0 && id !== 'net:seg:192.0.2.0/24' && id !== 'host:workstation' && !id.startsWith('pve:node')) expect(b.x + b.w <= lane || b.x >= lane || b.y + b.h <= Math.min(route[1]![1], route[2]![1]) || b.y >= Math.max(route[1]![1], route[2]![1]), id).toBe(true);
+  });
+  it('no measurement, no packet; a measured PC carries them on this link', async () => {
+    const r = await on(noSwitch());
+    const s = r.snap();
+    expect(measuredLinks(s, Date.now()).has('e-lan-workstation')).toBe(false);
+    const f = { value: 5000, basis: 'observed' as const, source: 'local:proc', at: new Date().toISOString(), ttlS: 45 };
+    const measured = { ...s, nodes: s.nodes.map((n) => (n.id === 'host:workstation' ? { ...n, facts: { ...n.facts, netIn: f, netOut: f } } : n)) };
+    expect(measuredLinks(measured, Date.now()).get('e-lan-workstation')).toEqual({ in: 5000, out: 5000 });
+  });
+});
+
+describe('wan-ip before its first read', () => {
+  it('is pending, not failing', async () => {
+    const r = await rig();
+    const fresh = r.reopen({ wanUrl: 'http://127.0.0.1:9/ip' }) as unknown as { wan: { status: { state: string } } };
+    expect(fresh.wan.status.state).toBe('pending');
+    const snap = today();
+    snap.sources.push({ id: 'wan-ip', state: 'pending', count: null, at: null, why: '첫 수집 대기' });
+    expect(tierCards(snap, Date.now())[0]!.text).toContain('첫 수집 대기');
+    expect(tierCards(snap, Date.now())[0]!.text).not.toContain('수집 실패');
   });
 });
 

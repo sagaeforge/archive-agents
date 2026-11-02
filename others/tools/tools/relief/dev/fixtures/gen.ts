@@ -1,6 +1,9 @@
 // Synthetic snapshots. Every name and address is invented; addresses come from the RFC 5737 documentation ranges only.
 // `fixtures/*.json` are written from here by scripts/build-fixtures.ts. Tests call the generator directly to vary the shape.
-import type { Basis, Entity, Fact, Kind, Relation, Snapshot, SourceStatus, State } from '../../server/model/fact.ts';
+import type { Timeframe } from '../../server/collect/allowlist.ts';
+import type { Trend } from '../../server/collect/trend.ts';
+import type { Basis, Entity, Fact, Kind, Relation, ServiceCheck, Snapshot, SourceStatus, State } from '../../server/model/fact.ts';
+import { applyChecks, DEFAULT_LIMITS, Samples } from '../../server/model/threshold.ts';
 
 /** The fixture clock. The dev server shifts every timestamp so the data looks 12 seconds old whenever it is served. */
 export const T0 = '2026-11-01T09:00:00.000Z';
@@ -109,6 +112,7 @@ export function generate(o: GenOptions): Snapshot {
     if (!large && i === 0) {
       ent('pve:qemu:100', 'vm', 'VM 100', 'observed', 'running', {
         state: obs('running', 'pve:/cluster/resources', 12), ...metrics(12, 0.1, 0.3),
+        disk: unknown('pve:/cluster/resources', 'QEMU 게스트의 사용량은 PVE가 주지 않는다'), // As on the real cluster: a 0 there says nothing.
         nic: obs('net0 → vmbr0, VLAN 없음', 'pve:/nodes/qemu/config', 240, 900),
         ip: unknown('pve:/nodes/qemu/agent/network-get-interfaces', 'guest agent 응답 없음'),
         os: unknown('pve:/nodes/qemu/agent/get-osinfo', 'guest agent 응답 없음'),
@@ -129,6 +133,7 @@ export function generate(o: GenOptions): Snapshot {
         state: obs(state, 'pve:/cluster/resources', age), ...metrics(age),
         ip: unknown('pve:/nodes/qemu/agent/network-get-interfaces', 'guest agent 응답 없음'), tags: obs([], 'pve:/cluster/resources', age),
       }, id);
+      rel(`e-attach-${vmid}`, `pve:br:${n}:vmbr0`, gid, 'attached', 'observed'); // Every guest hangs off a bridge, as on a real node: the flow budget is measured on these.
       guests++; vmid++;
       if (isDocker) {
         hosts++;
@@ -152,12 +157,51 @@ export function generate(o: GenOptions): Snapshot {
   }
 
   const count = (k: Kind) => nodes.filter((n) => n.kind === k).length;
+  const showsHealth = large && edge && pve;
   const sources: SourceStatus[] = [
     pve ? { id: 'pve', state: 'ok', count: count('node') + count('vm') + count('lxc'), at: at(12) } : { id: 'pve', state: 'none', count: null, at: null, why: '출처 없음' },
     edge ? { id: 'edge', state: 'ok', count: nodes.filter((n) => n.basis === 'declared').length, at: '2026-11-01' } : { id: 'edge', state: 'none', count: null, at: null, why: '출처 없음' },
     docker ? { id: 'docker', state: 'ok', count: containers, at: at(12) } : { id: 'docker', state: 'none', count: null, at: null, why: '출처 없음' },
+    showsHealth ? { id: 'health', state: 'ok', count: 2, at: at(12) } : { id: 'health', state: 'none', count: null, at: null, why: '출처 없음' },
   ];
-  return { schema: 1, seq: 1, takenAt: T0, nodes, edges, sources, layout: {}, routes: {} };
+  // The same rule the live side runs, over four identical samples. Whatever crosses a limit here reads as a held warning.
+  const samples = new Samples();
+  for (let i = 3; i >= 0; i--) samples.push(nodes, at((i * DEFAULT_LIMITS.sustainS) / 3), 45);
+  const checked = withRates(applyChecks(nodes, samples, DEFAULT_LIMITS, Date.parse(T0)));
+  return { schema: 1, seq: 1, takenAt: T0, nodes: showsHealth ? withServices(checked) : checked, edges, sources, layout: {}, routes: {}, limits: DEFAULT_LIMITS };
+}
+
+/** Rates spread over five orders of magnitude, from the id, so the packets have something to show. A stale node keeps old ones, as a live one would. */
+function withRates(nodes: Entity[]): Entity[] {
+  const of = (id: string, salt: number) => { let h = salt; for (const c of id) h = (h * 31 + c.charCodeAt(0)) % 99991; return Math.round(10 ** (2 + (h % 500) / 100)); };
+  return nodes.map((n) => {
+    if (n.kind !== 'node' && n.kind !== 'vm' && n.kind !== 'lxc') return n;
+    if (n.state === 'stopped') return n;
+    const age = n.id === 'pve:node:node-4' || n.parent === 'pve:node:node-4' ? 180 : 12;
+    return { ...n, facts: { ...n.facts, netIn: obs(of(n.id, 3), 'pve:/cluster/metrics/export', age), netOut: obs(of(n.id, 7), 'pve:/cluster/metrics/export', age) } };
+  });
+}
+
+/** One service that answers and one that does not, on node 1 of the large map. */
+function withServices(nodes: Entity[]): Entity[] {
+  const status = (value: 'up' | 'down', why?: string): Fact<'up' | 'down'> => ({ value, basis: 'observed', source: 'health:tcp', at: at(12), ttlS: 180, ...(why ? { why } : {}) });
+  const services: ServiceCheck[] = [{ title: '관리 화면', port: 8006, latencyMs: 3, status: status('up') }, { title: '백업 수신', port: 8007, latencyMs: null, status: status('down', '연결 거부') }];
+  return nodes.map((n) => (n.id === 'pve:node:node-1' ? { ...n, services, alerts: [...(n.alerts ?? []), { level: 'problem', text: '서비스 응답 없음 · 백업 수신' }] } : n));
+}
+
+/** A synthetic history for the fixture screens: smooth, seeded by the id, and never served by the live map. */
+export function fixtureTrend(id: string, tf: Timeframe, nowMs: number): Trend {
+  let seed = 7; for (const c of id) seed = (seed * 31 + c.charCodeAt(0)) % 9973;
+  const r = seeded(seed);
+  const step = tf === 'hour' ? 60 : 720;
+  const wave = (i: number, base: number, amp: number, p: number) => Math.min(1, Math.max(0, base + amp * Math.sin(i / p + seed) + amp * 0.3 * (r() - 0.5)));
+  const end = Math.floor(nowMs / 1000);
+  const guest = !id.startsWith('pve:node:');
+  const points = Array.from({ length: 70 }, (_, i) => ({
+    t: end - (69 - i) * step, cpu: wave(i, 0.22, 0.14, 6), mem: wave(i, 0.54, 0.05, 17), disk: id.startsWith('pve:qemu:') ? null : wave(i, 0.41, 0.01, 30),
+    netIn: Math.round(wave(i, 0.3, 0.2, 5) * (guest ? 4e5 : 2e6)), netOut: Math.round(wave(i, 0.16, 0.12, 7) * (guest ? 4e5 : 2e6)),
+  }));
+  return { id, tf, at: new Date(nowMs).toISOString(), points };
 }
 
 export const today = (over: Partial<GenOptions> = {}) => generate({ name: 'today', ...over });

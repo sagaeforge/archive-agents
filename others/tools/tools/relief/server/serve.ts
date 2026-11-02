@@ -8,7 +8,7 @@ import { createApi } from './app.ts';
 import { readLocal } from './collect/local.ts';
 import { createReader } from './collect/mcp.ts';
 import { DEFAULT_PORT, loadConfig, readToken, resolvePaths } from './config.ts';
-import { APP_CSP } from './guard.ts';
+import { SAFE_HEADERS } from './guard.ts';
 import { Live, type LiveOptions } from './live.ts';
 
 const DIST = fileURLToPath(new URL('../dist', import.meta.url));
@@ -28,10 +28,10 @@ export async function startLive(o: ServeOptions = {}) {
   const paths = resolvePaths(env);
   const cfg = loadConfig(paths);
   const reader = createReader({ url: cfg.towerUrl, token: () => readToken(paths.tokenFile) });
-  const live = new Live({ reader, stateDir: paths.stateDir, period: o.period, fault: cfg.error, edgePath: paths.edgeJson, wanUrl: cfg.publicIpUrl, wanFault: cfg.publicIpError, local: readLocal });
+  const live = new Live({ reader, stateDir: paths.stateDir, fault: cfg.error, edgePath: paths.edgeJson, wanUrl: cfg.publicIpUrl, wanFault: cfg.publicIpError, local: readLocal, limits: cfg.thresholds, period: { ...o.period, ...(cfg.healthS ? { healthS: cfg.healthS } : {}) } });
   await live.start();
   const app = new Hono();
-  app.use('*', async (c, next) => { await next(); c.header('Content-Security-Policy', APP_CSP); c.header('X-Content-Type-Options', 'nosniff'); });
+  app.use('*', async (c, next) => { await next(); for (const [k, v] of Object.entries(SAFE_HEADERS)) c.header(k, v); });
   app.route('/', createApi({ live }));
   app.use('*', serveStatic({ root: o.dist ?? DIST }));
   const server = createAdaptorServer({ fetch: app.fetch }) as Server;

@@ -30,8 +30,12 @@ test('547 objects: element count, clean labels, and a pan frame time', async ({ 
   await page.mouse.up();
   const frames = (await sampler).slice(5);
   const sorted = [...frames].sort((x, y) => x - y);
-  const p = (q: number) => Math.round(sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))]!);
-  const result = { objects: a.objects, svgElements: a.elements, labels: a.labels, loadMs, panFrameMs: { p50: p(0.5), p95: p(0.95) }, note: 'headless Chromium, software raster, N=1' };
+  const p = (q: number) => Math.round(sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))]! * 10) / 10;
+  const flowing = await page.evaluate(() => document.getAnimations().filter((x) => (x as CSSAnimation).animationName === 'packet' && x.playState === 'running').length);
+  expect(flowing).toBeGreaterThan(100); // The number below is with the packets on.
+  expect(flowing).toBeLessThanOrEqual(200);
+  const result = { objects: a.objects, svgElements: a.elements, labels: a.labels, loadMs, packets: flowing, panFrameMs: { p50: p(0.5), p95: p(0.95) }, note: 'headless Chromium, software raster, N=1' };
   console.log(JSON.stringify(result));
   writeFileSync(path.join(shotDir, 'measure-547.json'), JSON.stringify(result, null, 1) + '\n');
+  expect(result.panFrameMs.p95).toBeLessThanOrEqual(17); // Design 13: one frame at 60 Hz. The interval between frames cannot read lower than that.
 });

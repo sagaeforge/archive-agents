@@ -18,15 +18,20 @@ test('3D to 2D and back keeps the selection and the overlay', async ({ page }) =
   await clickObject(page, 'pve:node:node-2');
   await expect(page.getByTestId('object')).toContainText('노드 2');
   expect(await sel(page)).toBe('pve:node:node-2');
+  await page.keyboard.press('Escape'); // The details are a modal now, and it holds the page until it closes.
   await page.getByTestId('mode-2d').click();
   await expect(page.getByTestId('mode-2d')).toHaveAttribute('aria-pressed', 'true');
   expect(await selected(page)).toBe('pve:node:node-2');
+  await page.getByTestId('map').focus();
+  await page.keyboard.press('Enter');
   await expect(page.getByTestId('object')).toContainText('노드 2');
+  await page.keyboard.press('Escape');
   expect(await hash(page)).toContain('overlay=basis');
   await page.keyboard.press('2');                       // the key does the same as the button
   await expect(page.getByTestId('mode-iso')).toHaveAttribute('aria-pressed', 'true');
   expect(await selected(page)).toBe('pve:node:node-2');
   expect(await hash(page)).toContain('sel=pve:node:node-2');
+  await page.keyboard.press('Enter');
   expect(await hash(page)).toContain('open=1');
 });
 
@@ -80,17 +85,17 @@ test('keyboard table', async ({ page }) => {
   await page.keyboard.press('-');
   expect(await vb()).toBe(fit);                          // already at the widest view: the zoom floor is the fit
   // / and Ctrl+K focus search; Esc leaves it
-  await page.keyboard.press('/'); await expect(page.getByTestId('search')).toBeFocused();
-  await page.keyboard.press('Escape'); await expect(page.getByTestId('search')).not.toBeFocused();
-  await page.keyboard.press('Control+k'); await expect(page.getByTestId('search')).toBeFocused();
-  // typing in the search box does not trigger the shortcuts
+  await page.keyboard.press('/'); await expect(page.getByTestId('palette-input')).toBeFocused();
+  await page.keyboard.press('Escape'); await expect(page.getByTestId('palette-input')).toHaveCount(0);
+  await page.keyboard.press('Control+k'); await expect(page.getByTestId('palette-input')).toBeFocused();
+  // typing in the palette does not trigger the shortcuts
   await page.keyboard.type('2'); await expect(page.getByTestId('mode-iso')).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('Tab moves between the bar, the map and the panel', async ({ page }) => {
   await open(page, '#/?fx=today');
   const order: string[] = [];
-  for (let i = 0; i < 14; i++) {
+  for (let i = 0; i < 18; i++) { // The bar has grown: page tabs, panel and theme. The map and the panel still follow it in that order.
     await page.keyboard.press('Tab');
     order.push(await page.evaluate(() => { const a = document.activeElement as HTMLElement; return a.closest('header') ? 'bar' : a.closest('main') ? 'map' : a.closest('aside') ? 'panel' : a.tagName; }));
   }
@@ -100,17 +105,20 @@ test('Tab moves between the bar, the map and the panel', async ({ page }) => {
 
 test('search dims what does not match, in the map and in the list', async ({ page }) => {
   await open(page, '#/?fx=large');
-  await page.getByTestId('search').fill('결제');
+  await page.getByTestId('tab-list').click();
+  await page.keyboard.press('Control+k');
+  await page.getByTestId('palette-input').fill('결제');
   await page.waitForTimeout(400);
   expect(await hash(page)).toContain('q=');
   const ops = await page.evaluate(() => [...document.querySelectorAll('svg.scene g[data-id]')].map((g) => Number(g.getAttribute('opacity'))));
   expect(ops.filter((o) => o <= 0.25).length).toBeGreaterThan(100);
   expect(ops.some((o) => o === 1)).toBe(true);
-  await page.getByTestId('tab-list').click();
   const items = await page.getByRole('treeitem').count();
   expect(items).toBeGreaterThan(0); expect(items).toBeLessThan(120);
-  await page.getByRole('treeitem').first().click();
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('palette')).toHaveCount(0);
   expect(await sel(page)).toMatch(/^pve:/);
+  await expect.poll(() => hash(page)).not.toContain('q=');
 });
 
 test('the list is the whole snapshot as a tree, each item with a name, state and basis', async ({ page }) => {

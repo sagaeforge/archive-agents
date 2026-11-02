@@ -40,8 +40,10 @@ const Shape = z.strictObject({
   clients: z.array(z.strictObject({ key, title, via: key.optional(), presence: z.enum(['intermittent', 'steady']), devices: z.array(z.strictObject({ key, title, kind: z.enum(['phone', 'tablet', 'other']) })).max(64).optional() })).max(16).optional(),
   switches: z.array(z.strictObject({ key, title, model: text().optional(), ports: z.number().int().min(1).max(256).optional(), uplink: key, hosts: z.array(key).max(128).optional() })).max(32).optional(),
   proxies: z.array(z.strictObject({ key, title, address: ipv4.optional() })).max(16).optional(),
+  // TCP connect checks (design 7.3). A declared host and a port: no address here, so the target stays one the file already declares.
+  services: z.array(z.strictObject({ title, host: key, protocol: z.literal('tcp'), port })).max(32).optional(),
   // Only the login name for the copy-only SSH button (design 7.1). No key, no password, no port: the strict object refuses them.
-  guests: z.array(z.strictObject({ key, vmid: z.number().int().min(1).max(999999999), sshUser: z.string().regex(SSH_USER) })).max(256).optional(),
+  guests: z.array(z.strictObject({ key, vmid: z.number().int().min(1).max(999999999), sshUser: z.string().regex(SSH_USER).optional(), expected: z.enum(['running', 'stopped']).optional() })).max(256).optional(),
 });
 export type EdgeFile = z.infer<typeof Shape>;
 
@@ -72,6 +74,12 @@ function references(f: EdgeFile, ctx: z.RefinementCtx) {
   f.switches?.forEach((s, i) => {
     need(s.uplink === f.router?.key || switches.has(s.uplink), ['switches', i, 'uplink']);
     s.hosts?.forEach((h, j) => need(hosts.has(h), ['switches', i, 'hosts', j]));
+  });
+  const ports = new Set<string>();
+  f.services?.forEach((s, i) => {
+    need(hosts.has(s.host), ['services', i, 'host']);
+    if (ports.has(`${s.host}:${s.port}`)) bad(['services', i, 'port'], 'duplicate host and port');
+    ports.add(`${s.host}:${s.port}`);
   });
   f.addressPlan?.forEach((p, i) => { if (v4(p.from)! > v4(p.to)!) bad(['addressPlan', i], 'range runs backwards'); });
   const lan = f.router?.lanCidr ? networkOf(f.router.lanCidr) : null;

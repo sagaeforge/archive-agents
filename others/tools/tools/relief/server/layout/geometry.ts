@@ -6,8 +6,8 @@ export const SIZE: Record<Kind, [number, number]> = {
   segment: [44, 150], node: [0, 0], workstation: [96, 80], bmc: [20, 20], bridge: [30, 30], storage: [30, 30], vm: [52, 52], lxc: [38, 38], container: [20, 20],
 };
 export const HEIGHT: Record<Kind | 'dockerhost', number> = {
-  wan: 34, modem: 26, domain: 28, gateway: 34, tunnel: 26, proxy: 30, switch: 22, wifi: 22, clients: 18, segment: 8, node: 14, workstation: 10,
-  bmc: 6, bridge: 4, storage: 12, vm: 30, lxc: 20, container: 12, dockerhost: 8,
+  wan: 46, modem: 34, domain: 44, gateway: 42, tunnel: 34, proxy: 38, switch: 26, wifi: 48, clients: 30, segment: 8, node: 18, workstation: 10,
+  bmc: 8, bridge: 6, storage: 21, vm: 32, lxc: 22, container: 12, dockerhost: 8,
 };
 /** Bridges and storage hold a column on the slab's west edge, where uplinks arrive. */
 export const INFRA: ReadonlySet<Kind> = new Set<Kind>(['bridge', 'storage']);

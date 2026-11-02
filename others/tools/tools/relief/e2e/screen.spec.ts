@@ -72,8 +72,9 @@ test('today shows honest blanks: no source, not zero, and no invented objects', 
   await clickObject(page, 'pve:qemu:100');
   const panel = page.getByTestId('object');
   await expect(panel).toContainText('VM 100');
-  await expect(panel.locator('[data-fact="ip"]')).toContainText('미확인 · guest agent 응답 없음');
-  await expect(panel.locator('[data-fact="state"]')).toContainText('관측 · ');
+  await expect(panel.locator('[data-fact="ip"]')).toContainText('미확인');
+  await expect(panel.locator('[data-fact="ip"] .bm')).toHaveAttribute('title', '미확인 · guest agent 응답 없음'); // Source and age moved to the mark's hover.
+  await expect(panel.locator('[data-fact="state"] .bm')).toHaveAttribute('title', /^관측 · /);
   await page.screenshot({ path: path.join(shotDir, 'today-vm100-panel.png') });
 });
 
@@ -92,7 +93,7 @@ test('the Docker plane: absent while the layer is empty, the layer stays in the 
   await open(page, '#/?fx=today');
   expect(await page.locator('svg.scene [data-id="plane-docker"], svg.scene .plane').count()).toBe(0);
   await expect(page.getByTestId('tiers')).toContainText('출처 없음');
-  expect(await page.getByTestId('holes').innerText()).toContain('Docker');
+  expect(await page.getByTestId('holes').innerText()).not.toContain('Docker'); // An optional source is not a gap in what is known.
   // large has Docker hosts: their pads and containers are drawn, and still no empty-layer plane
   await open(page, '#/?fx=large');
   expect(await page.locator('svg.scene [data-kind="container"]').count()).toBe(188);

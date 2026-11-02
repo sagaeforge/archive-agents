@@ -101,6 +101,41 @@
      "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 61660,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 204,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    }
   },
@@ -148,6 +183,13 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
     }
    },
    "parent": "pve:node:node-1"
@@ -172,6 +214,13 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
     }
    },
    "parent": "pve:node:node-1"
@@ -205,11 +254,12 @@
      "ttlS": 45
     },
     "disk": {
-     "value": 0.1,
-     "basis": "observed",
-     "source": "pve:/cluster/metrics/export",
-     "at": "2026-11-01T08:59:48.000Z",
-     "ttlS": 45
+     "value": null,
+     "basis": "unknown",
+     "source": "pve:/cluster/resources",
+     "at": null,
+     "ttlS": null,
+     "why": "QEMU 게스트의 사용량은 PVE가 주지 않는다"
     },
     "nic": {
      "value": "net0 → vmbr0, VLAN 없음",
@@ -255,6 +305,42 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": null,
+     "basis": "unknown",
+     "source": "rule:threshold",
+     "at": null,
+     "ttlS": null,
+     "why": "비교 불가 · QEMU 게스트의 사용량은 PVE가 주지 않는다"
+    },
+    "netIn": {
+     "value": 2570396,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 724,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-1"
@@ -296,6 +382,41 @@
     },
     "disk": {
      "value": 0.2,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 63096,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 209,
      "basis": "observed",
      "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
@@ -347,6 +468,13 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
     }
    },
    "parent": "pve:node:node-2"
@@ -371,6 +499,13 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
     }
    },
    "parent": "pve:node:node-2"
@@ -412,6 +547,41 @@
     },
     "disk": {
      "value": 0.25,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 64565,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 214,
      "basis": "observed",
      "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
@@ -463,6 +633,13 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
     }
    },
    "parent": "pve:node:node-3"
@@ -487,6 +664,13 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
     }
    },
    "parent": "pve:node:node-3"
@@ -586,8 +770,21 @@
    "count": null,
    "at": null,
    "why": "출처 없음"
+  },
+  {
+   "id": "health",
+   "state": "none",
+   "count": null,
+   "at": null,
+   "why": "출처 없음"
   }
  ],
  "layout": {},
- "routes": {}
+ "routes": {},
+ "limits": {
+  "cpu": 0.9,
+  "mem": 0.9,
+  "disk": 0.85,
+  "sustainS": 45
+ }
 }

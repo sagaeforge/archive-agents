@@ -4,8 +4,11 @@ const hostnameOf = (hostHeader: string) => { try { return new URL(`http://${host
 
 export type Rejection = { status: 403; code: string; message: string };
 
-/** @param header lower-case header lookup */
-export function guard(header: (name: string) => string | undefined): Rejection | null {
+/**
+ * @param header lower-case header lookup
+ * @param path the request path. A foreign page may send a person to the map, in a tab of its own, and no further: not in a frame, and never at the API, where a GET can cost a read of PVE.
+ */
+export function guard(header: (name: string) => string | undefined, path = '/'): Rejection | null {
   const host = header('host');
   if (!host || !LOCAL_HOSTS.has(hostnameOf(host))) return { status: 403, code: 'host_rejected', message: 'Host is not a local name' };
   const origin = header('origin');
@@ -13,8 +16,10 @@ export function guard(header: (name: string) => string | undefined): Rejection |
     return { status: 403, code: 'origin_rejected', message: 'Origin is not local' };
   }
   const site = header('sec-fetch-site');
-  if ((site === 'cross-site' || site === 'same-site') && header('sec-fetch-mode') !== 'navigate') {
-    return { status: 403, code: 'cross_site_rejected', message: 'Cross-site request' };
+  if (site === 'cross-site' || site === 'same-site') {
+    const dest = header('sec-fetch-dest');
+    const topLevel = header('sec-fetch-mode') === 'navigate' && (dest === undefined || dest === 'document');
+    if (!topLevel || path.startsWith('/api/')) return { status: 403, code: 'cross_site_rejected', message: 'Cross-site request' };
   }
   return null;
 }
@@ -27,3 +32,5 @@ const POLICY = [
 /** For the <meta> tag, where a browser ignores frame-ancestors and logs an error for it. */
 export const META_CSP = POLICY.join('; ');
 export const APP_CSP = [...POLICY, "frame-ancestors 'none'"].join('; ');
+/** Sent with everything: the policy's frame rule, its old name, and what no other origin may embed. */
+export const SAFE_HEADERS = { 'Content-Security-Policy': APP_CSP, 'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY', 'Cross-Origin-Resource-Policy': 'same-origin' } as const;

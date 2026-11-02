@@ -174,8 +174,76 @@
      "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 61660,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 204,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
-   }
+   },
+   "services": [
+    {
+     "title": "관리 화면",
+     "port": 8006,
+     "latencyMs": 3,
+     "status": {
+      "value": "up",
+      "basis": "observed",
+      "source": "health:tcp",
+      "at": "2026-11-01T08:59:48.000Z",
+      "ttlS": 180
+     }
+    },
+    {
+     "title": "백업 수신",
+     "port": 8007,
+     "latencyMs": null,
+     "status": {
+      "value": "down",
+      "basis": "observed",
+      "source": "health:tcp",
+      "at": "2026-11-01T08:59:48.000Z",
+      "ttlS": 180,
+      "why": "연결 거부"
+     }
+    }
+   ],
+   "alerts": [
+    {
+     "level": "problem",
+     "text": "서비스 응답 없음 · 백업 수신"
+    }
+   ]
   },
   {
    "id": "pve:br:node-1:vmbr0",
@@ -221,6 +289,13 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
     }
    },
    "parent": "pve:node:node-1"
@@ -269,6 +344,13 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
     }
    },
    "parent": "pve:node:node-1"
@@ -320,6 +402,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 2570396,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 724,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
     }
@@ -735,6 +852,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 2630268,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 741,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-1"
@@ -788,6 +940,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 190546,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 1148,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-1"
@@ -839,6 +1026,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 2754229,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 776,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
     }
@@ -1278,6 +1500,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 199526,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 1202,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-1"
@@ -1331,6 +1588,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 204174,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 1230,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-1"
@@ -1382,6 +1674,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 2951209,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 832,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
     }
@@ -1773,6 +2100,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 213796,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 1288,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-1"
@@ -1826,6 +2188,30 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": null,
+     "basis": "unknown",
+     "source": "rule:threshold",
+     "at": null,
+     "ttlS": null,
+     "why": "비교 불가 · 실행 중이 아니다"
+    },
+    "checkMem": {
+     "value": null,
+     "basis": "unknown",
+     "source": "rule:threshold",
+     "at": null,
+     "ttlS": null,
+     "why": "비교 불가 · 실행 중이 아니다"
+    },
+    "checkDisk": {
+     "value": null,
+     "basis": "unknown",
+     "source": "rule:threshold",
+     "at": null,
+     "ttlS": null,
+     "why": "비교 불가 · 실행 중이 아니다"
     }
    },
    "parent": "pve:node:node-1"
@@ -1877,6 +2263,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 3162278,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 891,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
     }
@@ -2316,6 +2737,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 5248075,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 1479,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-1"
@@ -2369,6 +2825,44 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": null,
+     "basis": "unknown",
+     "source": "rule:threshold",
+     "at": null,
+     "ttlS": null,
+     "why": "비교 불가 · 상태를 모른다"
+    },
+    "checkMem": {
+     "value": null,
+     "basis": "unknown",
+     "source": "rule:threshold",
+     "at": null,
+     "ttlS": null,
+     "why": "비교 불가 · 상태를 모른다"
+    },
+    "checkDisk": {
+     "value": null,
+     "basis": "unknown",
+     "source": "rule:threshold",
+     "at": null,
+     "ttlS": null,
+     "why": "비교 불가 · 상태를 모른다"
+    },
+    "netIn": {
+     "value": 380189,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 2291,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-1"
@@ -2420,6 +2914,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 5495409,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 1549,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
     }
@@ -2787,6 +3316,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 5623413,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 1585,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-1"
@@ -2840,6 +3404,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 407380,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 2455,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-1"
@@ -2891,6 +3490,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 5888437,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 1660,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
     }
@@ -3274,6 +3908,41 @@
      "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 63096,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 209,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    }
   },
@@ -3321,6 +3990,13 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
     }
    },
    "parent": "pve:node:node-2"
@@ -3369,6 +4045,13 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
     }
    },
    "parent": "pve:node:node-2"
@@ -3420,6 +4103,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 6025596,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 1698,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
     }
@@ -3859,6 +4577,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 6165950,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 1738,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-2"
@@ -3912,6 +4665,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 446684,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 2692,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-2"
@@ -3963,6 +4751,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 6456542,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 1820,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
     }
@@ -4234,6 +5057,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 107,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 3020,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-2"
@@ -4287,6 +5145,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 776247,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 4677,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-2"
@@ -4338,6 +5231,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 112,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 3162,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
     }
@@ -4729,6 +5657,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 115,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 3236,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-2"
@@ -4782,6 +5745,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 831764,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 5012,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-2"
@@ -4833,6 +5831,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 120,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 3388,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
     }
@@ -5200,6 +6233,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 870964,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 5248,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-2"
@@ -5253,6 +6321,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 891251,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 5370,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-2"
@@ -5304,6 +6407,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 129,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 3631,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
     }
@@ -5623,6 +6761,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 933254,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 5623,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-2"
@@ -5676,6 +6849,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 219,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 6166,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-2"
@@ -5727,6 +6935,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 224,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 6310,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
     }
@@ -6062,6 +7305,41 @@
      "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 64565,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 214,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    }
   },
@@ -6109,9 +7387,22 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkDisk": {
+     "value": "임계 초과 · 85% · 45초 지속",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
     }
    },
-   "parent": "pve:node:node-3"
+   "parent": "pve:node:node-3",
+   "alerts": [
+    {
+     "level": "warn",
+     "text": "디스크 임계 초과"
+    }
+   ]
   },
   {
    "id": "pve:br:node-3:vmbr1",
@@ -6157,6 +7448,13 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
     }
    },
    "parent": "pve:node:node-3"
@@ -6208,6 +7506,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 229,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 6457,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
     }
@@ -6575,6 +7908,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 234,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 6607,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-3"
@@ -6628,6 +7996,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 240,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 6761,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-3"
@@ -6679,6 +8082,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 245,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 6918,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
     }
@@ -7022,6 +8460,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 251,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 7079,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-3"
@@ -7073,6 +8546,44 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": null,
+     "basis": "unknown",
+     "source": "rule:threshold",
+     "at": null,
+     "ttlS": null,
+     "why": "비교 불가 · 상태를 모른다"
+    },
+    "checkMem": {
+     "value": null,
+     "basis": "unknown",
+     "source": "rule:threshold",
+     "at": null,
+     "ttlS": null,
+     "why": "비교 불가 · 상태를 모른다"
+    },
+    "checkDisk": {
+     "value": null,
+     "basis": "unknown",
+     "source": "rule:threshold",
+     "at": null,
+     "ttlS": null,
+     "why": "비교 불가 · 상태를 모른다"
+    },
+    "netIn": {
+     "value": 1819701,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 10965,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
     }
@@ -7128,6 +8639,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 1862087,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 11220,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-3"
@@ -7179,6 +8725,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 269,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 7586,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
     }
@@ -7234,6 +8815,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 3162278,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 19055,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-3"
@@ -7285,6 +8901,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 457,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 12882,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
     }
@@ -7340,6 +8991,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 3311311,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 19953,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-3"
@@ -7391,6 +9077,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 479,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 13490,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
     }
@@ -7446,6 +9167,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 490,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 13804,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-3"
@@ -7497,6 +9253,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 501,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 14125,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
     }
@@ -7552,6 +9343,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 513,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 14454,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-3"
@@ -7605,6 +9431,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 3715352,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 22387,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-3"
@@ -7646,6 +9507,41 @@
     },
     "disk": {
      "value": 0.2,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 66069,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 219,
      "basis": "observed",
      "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:57:00.000Z",
@@ -7697,6 +9593,13 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:57:00.000Z",
      "ttlS": 45
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
     }
    },
    "parent": "pve:node:node-4"
@@ -7745,6 +9648,13 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:57:00.000Z",
      "ttlS": 45
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
     }
    },
    "parent": "pve:node:node-4"
@@ -7796,6 +9706,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 3801894,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 22909,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:57:00.000Z",
      "ttlS": 45
     }
@@ -7851,6 +9796,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:57:00.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 550,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 15488,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-4"
@@ -7902,6 +9882,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 912,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 25704,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:57:00.000Z",
      "ttlS": 45
     }
@@ -7957,6 +9972,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:57:00.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 6606934,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 39811,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-4"
@@ -8008,6 +10058,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 955,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 26915,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:57:00.000Z",
      "ttlS": 45
     }
@@ -8063,6 +10148,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:57:00.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 977,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 27542,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-4"
@@ -8114,6 +10234,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 1000,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 28184,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:57:00.000Z",
      "ttlS": 45
     }
@@ -8169,6 +10324,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:57:00.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 7244360,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 43652,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-4"
@@ -8220,6 +10410,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 7413102,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 44668,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:57:00.000Z",
      "ttlS": 45
     }
@@ -8275,6 +10500,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:57:00.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 7585776,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 45709,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-4"
@@ -8326,6 +10586,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 1096,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 30903,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:57:00.000Z",
      "ttlS": 45
     }
@@ -8381,6 +10676,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:57:00.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 7943282,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 47863,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-4"
@@ -8432,6 +10762,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 1862,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 52481,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:57:00.000Z",
      "ttlS": 45
     }
@@ -8487,6 +10852,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:57:00.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 135,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 81283,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-4"
@@ -8538,6 +10938,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 1950,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 54954,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:57:00.000Z",
      "ttlS": 45
     }
@@ -8593,6 +11028,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:57:00.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 1995,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 56234,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:57:00.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-4"
@@ -8634,6 +11104,41 @@
     },
     "disk": {
      "value": 0.4,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 67608,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 224,
      "basis": "observed",
      "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
@@ -8685,6 +11190,13 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
     }
    },
    "parent": "pve:node:node-5"
@@ -8733,6 +11245,13 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
     }
    },
    "parent": "pve:node:node-5"
@@ -8784,6 +11303,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 145,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 87096,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
     }
@@ -8839,6 +11393,30 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": null,
+     "basis": "unknown",
+     "source": "rule:threshold",
+     "at": null,
+     "ttlS": null,
+     "why": "비교 불가 · 실행 중이 아니다"
+    },
+    "checkMem": {
+     "value": null,
+     "basis": "unknown",
+     "source": "rule:threshold",
+     "at": null,
+     "ttlS": null,
+     "why": "비교 불가 · 실행 중이 아니다"
+    },
+    "checkDisk": {
+     "value": null,
+     "basis": "unknown",
+     "source": "rule:threshold",
+     "at": null,
+     "ttlS": null,
+     "why": "비교 불가 · 실행 중이 아니다"
     }
    },
    "parent": "pve:node:node-5"
@@ -8890,6 +11468,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 151,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 91201,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
     }
@@ -8945,6 +11558,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 155,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 93325,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-5"
@@ -8996,6 +11644,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 2239,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 63096,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
     }
@@ -9051,6 +11734,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 2291,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 64565,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-5"
@@ -9102,6 +11820,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 3802,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 107152,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
     }
@@ -9157,6 +11910,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 3890,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 109648,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-5"
@@ -9208,6 +11996,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 3981,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 112202,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
     }
@@ -9263,6 +12086,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 4074,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 114815,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-5"
@@ -9314,6 +12172,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 295,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 177828,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
     }
@@ -9369,6 +12262,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 302,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 181970,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-5"
@@ -9420,6 +12348,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 309,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 186209,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
     }
@@ -9475,6 +12438,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 4467,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 125893,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-5"
@@ -9528,6 +12526,41 @@
      "source": "pve:/cluster/resources",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 4571,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 128825,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
     }
    },
    "parent": "pve:node:node-5"
@@ -9579,6 +12612,41 @@
      "value": [],
      "basis": "observed",
      "source": "pve:/cluster/resources",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "checkCpu": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkMem": {
+     "value": "임계 미만 · 90%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "checkDisk": {
+     "value": "임계 미만 · 85%",
+     "basis": "derived",
+     "source": "rule:threshold",
+     "at": "2026-11-01T09:00:00.000Z",
+     "ttlS": null
+    },
+    "netIn": {
+     "value": 331,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
+     "at": "2026-11-01T08:59:48.000Z",
+     "ttlS": 45
+    },
+    "netOut": {
+     "value": 199526,
+     "basis": "observed",
+     "source": "pve:/cluster/metrics/export",
      "at": "2026-11-01T08:59:48.000Z",
      "ttlS": 45
     }
@@ -9660,6 +12728,134 @@
    }
   },
   {
+   "id": "e-attach-100",
+   "source": "pve:br:node-1:vmbr0",
+   "target": "pve:qemu:100",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-101",
+   "source": "pve:br:node-1:vmbr0",
+   "target": "pve:qemu:101",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-102",
+   "source": "pve:br:node-1:vmbr0",
+   "target": "pve:lxc:102",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-103",
+   "source": "pve:br:node-1:vmbr0",
+   "target": "pve:qemu:103",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-104",
+   "source": "pve:br:node-1:vmbr0",
+   "target": "pve:lxc:104",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-105",
+   "source": "pve:br:node-1:vmbr0",
+   "target": "pve:lxc:105",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-106",
+   "source": "pve:br:node-1:vmbr0",
+   "target": "pve:qemu:106",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-107",
+   "source": "pve:br:node-1:vmbr0",
+   "target": "pve:lxc:107",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-108",
+   "source": "pve:br:node-1:vmbr0",
+   "target": "pve:lxc:108",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-109",
+   "source": "pve:br:node-1:vmbr0",
+   "target": "pve:qemu:109",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-110",
+   "source": "pve:br:node-1:vmbr0",
+   "target": "pve:qemu:110",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-111",
+   "source": "pve:br:node-1:vmbr0",
+   "target": "pve:lxc:111",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-112",
+   "source": "pve:br:node-1:vmbr0",
+   "target": "pve:qemu:112",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-113",
+   "source": "pve:br:node-1:vmbr0",
+   "target": "pve:qemu:113",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-114",
+   "source": "pve:br:node-1:vmbr0",
+   "target": "pve:lxc:114",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-115",
+   "source": "pve:br:node-1:vmbr0",
+   "target": "pve:qemu:115",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
    "id": "e-up-node-2-0",
    "source": "net:seg:192.0.2.0/24",
    "target": "pve:node:node-2",
@@ -9690,6 +12886,134 @@
      "ttlS": 45
     }
    }
+  },
+  {
+   "id": "e-attach-116",
+   "source": "pve:br:node-2:vmbr0",
+   "target": "pve:qemu:116",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-117",
+   "source": "pve:br:node-2:vmbr0",
+   "target": "pve:qemu:117",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-118",
+   "source": "pve:br:node-2:vmbr0",
+   "target": "pve:lxc:118",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-119",
+   "source": "pve:br:node-2:vmbr0",
+   "target": "pve:qemu:119",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-120",
+   "source": "pve:br:node-2:vmbr0",
+   "target": "pve:qemu:120",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-121",
+   "source": "pve:br:node-2:vmbr0",
+   "target": "pve:lxc:121",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-122",
+   "source": "pve:br:node-2:vmbr0",
+   "target": "pve:qemu:122",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-123",
+   "source": "pve:br:node-2:vmbr0",
+   "target": "pve:qemu:123",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-124",
+   "source": "pve:br:node-2:vmbr0",
+   "target": "pve:lxc:124",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-125",
+   "source": "pve:br:node-2:vmbr0",
+   "target": "pve:qemu:125",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-126",
+   "source": "pve:br:node-2:vmbr0",
+   "target": "pve:lxc:126",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-127",
+   "source": "pve:br:node-2:vmbr0",
+   "target": "pve:lxc:127",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-128",
+   "source": "pve:br:node-2:vmbr0",
+   "target": "pve:qemu:128",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-129",
+   "source": "pve:br:node-2:vmbr0",
+   "target": "pve:lxc:129",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-130",
+   "source": "pve:br:node-2:vmbr0",
+   "target": "pve:qemu:130",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-131",
+   "source": "pve:br:node-2:vmbr0",
+   "target": "pve:qemu:131",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
   },
   {
    "id": "e-up-node-3-0",
@@ -9724,6 +13048,134 @@
    }
   },
   {
+   "id": "e-attach-132",
+   "source": "pve:br:node-3:vmbr0",
+   "target": "pve:qemu:132",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-133",
+   "source": "pve:br:node-3:vmbr0",
+   "target": "pve:qemu:133",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-134",
+   "source": "pve:br:node-3:vmbr0",
+   "target": "pve:qemu:134",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-135",
+   "source": "pve:br:node-3:vmbr0",
+   "target": "pve:qemu:135",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-136",
+   "source": "pve:br:node-3:vmbr0",
+   "target": "pve:qemu:136",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-137",
+   "source": "pve:br:node-3:vmbr0",
+   "target": "pve:lxc:137",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-138",
+   "source": "pve:br:node-3:vmbr0",
+   "target": "pve:lxc:138",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-139",
+   "source": "pve:br:node-3:vmbr0",
+   "target": "pve:qemu:139",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-140",
+   "source": "pve:br:node-3:vmbr0",
+   "target": "pve:lxc:140",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-141",
+   "source": "pve:br:node-3:vmbr0",
+   "target": "pve:qemu:141",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-142",
+   "source": "pve:br:node-3:vmbr0",
+   "target": "pve:lxc:142",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-143",
+   "source": "pve:br:node-3:vmbr0",
+   "target": "pve:qemu:143",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-144",
+   "source": "pve:br:node-3:vmbr0",
+   "target": "pve:qemu:144",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-145",
+   "source": "pve:br:node-3:vmbr0",
+   "target": "pve:qemu:145",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-146",
+   "source": "pve:br:node-3:vmbr0",
+   "target": "pve:qemu:146",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-147",
+   "source": "pve:br:node-3:vmbr0",
+   "target": "pve:lxc:147",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
    "id": "e-up-node-4-0",
    "source": "net:seg:192.0.2.0/24",
    "target": "pve:node:node-4",
@@ -9756,6 +13208,134 @@
    }
   },
   {
+   "id": "e-attach-148",
+   "source": "pve:br:node-4:vmbr0",
+   "target": "pve:lxc:148",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-149",
+   "source": "pve:br:node-4:vmbr0",
+   "target": "pve:qemu:149",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-150",
+   "source": "pve:br:node-4:vmbr0",
+   "target": "pve:qemu:150",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-151",
+   "source": "pve:br:node-4:vmbr0",
+   "target": "pve:lxc:151",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-152",
+   "source": "pve:br:node-4:vmbr0",
+   "target": "pve:qemu:152",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-153",
+   "source": "pve:br:node-4:vmbr0",
+   "target": "pve:qemu:153",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-154",
+   "source": "pve:br:node-4:vmbr0",
+   "target": "pve:qemu:154",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-155",
+   "source": "pve:br:node-4:vmbr0",
+   "target": "pve:lxc:155",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-156",
+   "source": "pve:br:node-4:vmbr0",
+   "target": "pve:lxc:156",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-157",
+   "source": "pve:br:node-4:vmbr0",
+   "target": "pve:lxc:157",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-158",
+   "source": "pve:br:node-4:vmbr0",
+   "target": "pve:qemu:158",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-159",
+   "source": "pve:br:node-4:vmbr0",
+   "target": "pve:lxc:159",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-160",
+   "source": "pve:br:node-4:vmbr0",
+   "target": "pve:qemu:160",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-161",
+   "source": "pve:br:node-4:vmbr0",
+   "target": "pve:lxc:161",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-162",
+   "source": "pve:br:node-4:vmbr0",
+   "target": "pve:qemu:162",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-163",
+   "source": "pve:br:node-4:vmbr0",
+   "target": "pve:qemu:163",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
    "id": "e-up-node-5-0",
    "source": "net:seg:192.0.2.0/24",
    "target": "pve:node:node-5",
@@ -9786,6 +13366,134 @@
      "ttlS": 45
     }
    }
+  },
+  {
+   "id": "e-attach-164",
+   "source": "pve:br:node-5:vmbr0",
+   "target": "pve:lxc:164",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-165",
+   "source": "pve:br:node-5:vmbr0",
+   "target": "pve:qemu:165",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-166",
+   "source": "pve:br:node-5:vmbr0",
+   "target": "pve:lxc:166",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-167",
+   "source": "pve:br:node-5:vmbr0",
+   "target": "pve:lxc:167",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-168",
+   "source": "pve:br:node-5:vmbr0",
+   "target": "pve:qemu:168",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-169",
+   "source": "pve:br:node-5:vmbr0",
+   "target": "pve:qemu:169",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-170",
+   "source": "pve:br:node-5:vmbr0",
+   "target": "pve:qemu:170",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-171",
+   "source": "pve:br:node-5:vmbr0",
+   "target": "pve:qemu:171",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-172",
+   "source": "pve:br:node-5:vmbr0",
+   "target": "pve:qemu:172",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-173",
+   "source": "pve:br:node-5:vmbr0",
+   "target": "pve:qemu:173",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-174",
+   "source": "pve:br:node-5:vmbr0",
+   "target": "pve:lxc:174",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-175",
+   "source": "pve:br:node-5:vmbr0",
+   "target": "pve:lxc:175",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-176",
+   "source": "pve:br:node-5:vmbr0",
+   "target": "pve:lxc:176",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-177",
+   "source": "pve:br:node-5:vmbr0",
+   "target": "pve:qemu:177",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-178",
+   "source": "pve:br:node-5:vmbr0",
+   "target": "pve:qemu:178",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
+  },
+  {
+   "id": "e-attach-179",
+   "source": "pve:br:node-5:vmbr0",
+   "target": "pve:lxc:179",
+   "kind": "attached",
+   "basis": "observed",
+   "facts": {}
   }
  ],
  "sources": [
@@ -9806,8 +13514,20 @@
    "state": "ok",
    "count": 188,
    "at": "2026-11-01T08:59:48.000Z"
+  },
+  {
+   "id": "health",
+   "state": "ok",
+   "count": 2,
+   "at": "2026-11-01T08:59:48.000Z"
   }
  ],
  "layout": {},
- "routes": {}
+ "routes": {},
+ "limits": {
+  "cpu": 0.9,
+  "mem": 0.9,
+  "disk": 0.85,
+  "sustainS": 45
+ }
 }

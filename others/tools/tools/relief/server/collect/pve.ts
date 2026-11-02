@@ -1,6 +1,7 @@
 // Reads of the Proxmox source (design 6.4, 8). Each read keeps the chosen fields and drops the rest here, so nothing else reaches the snapshot.
 import { z } from 'zod';
 import { guestText, parseIps, type AgentIps } from '../model/guest.ts';
+import type { Counter } from '../model/rate.ts';
 import { validId, validNode, type Target } from './allowlist.ts';
 import { ReadError, type Reader } from './mcp.ts';
 
@@ -34,7 +35,7 @@ const toBridges = (rows: z.infer<typeof Iface>[]): Bridge[] => rows.filter((r) =
 const Dns = z.object({ dns1: str, dns2: str, dns3: str, search: str });
 const Rows = z.array(z.unknown());
 
-const Metric = z.object({ data: z.array(z.object({ id: z.string(), metric: z.string(), value: z.number() })) });
+const Metric = z.object({ data: z.array(z.object({ id: z.string(), metric: z.string(), value: z.number(), timestamp: z.number().optional() })) });
 
 const AgentIfaces = z.object({ result: z.array(z.object({ name: z.string(), 'ip-addresses': z.array(z.object({ 'ip-address': z.unknown().optional() })).optional() })) });
 const AgentOs = z.object({ result: z.object({ 'pretty-name': z.unknown().optional(), name: z.unknown().optional() }) });
@@ -140,10 +141,13 @@ const entityOf = (id: string): string | null => {
   return null;
 };
 
-export async function readMetrics(r: Reader, signal: AbortSignal): Promise<MetricValues> {
+export type MetricRead = { values: MetricValues; counters: Record<string, Counter> };
+
+export async function readMetrics(r: Reader, signal: AbortSignal): Promise<MetricRead> {
   const rows = parse(Metric, await r.read({ tool: 'proxmox_api_get', path: '/cluster/metrics/export' }, signal)).data;
   const raw = new Map<string, Record<string, number>>();
-  for (const x of rows) { const id = entityOf(x.id); if (id) (raw.get(id) ?? raw.set(id, {}).get(id)!)[x.metric] = x.value; }
+  const stamp = new Map<string, number>();
+  for (const x of rows) { const id = entityOf(x.id); if (id) { (raw.get(id) ?? raw.set(id, {}).get(id)!)[x.metric] = x.value; if (x.metric === 'net_in' && x.timestamp !== undefined) stamp.set(id, x.timestamp); } }
   const frac = (a?: number, b?: number) => (a !== undefined && b ? Math.round((a / b) * 1e4) / 1e4 : undefined);
   const out: MetricValues = {};
   for (const [id, m] of raw) {
@@ -152,7 +156,9 @@ export async function readMetrics(r: Reader, signal: AbortSignal): Promise<Metri
     const v = { cpu: m.cpu_current, mem: frac(m.mem_used, m.mem_total), disk: blank ? undefined : frac(m.disk_used, m.disk_total) };
     out[id] = Object.fromEntries(Object.entries(v).filter(([, x]) => x !== undefined));
   }
-  return out;
+  const counters: MetricRead['counters'] = {};
+  for (const [id, t] of stamp) { const m = raw.get(id)!; if (m.net_in !== undefined && m.net_out !== undefined) counters[id] = { in: m.net_in, out: m.net_out, t }; }
+  return { values: out, counters };
 }
 
 export { validId, validNode };

@@ -3,6 +3,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { z } from 'zod';
+import type { Limits } from './model/fact.ts';
+import { DEFAULT_LIMITS } from './model/threshold.ts';
 
 export const DEFAULT_TOWER_URL = 'http://127.0.0.1:4800/mcp';
 export const DEFAULT_PORT = 4815;
@@ -51,18 +53,44 @@ export function publicIpUrl(raw: string): string {
   return u.href;
 }
 
-const ReliefJson = z.strictObject({ towerUrl: z.string().optional(), publicIpUrl: z.unknown().optional() });
+const ReliefJson = z.strictObject({ towerUrl: z.string().optional(), publicIpUrl: z.unknown().optional(), thresholds: z.unknown().optional(), healthIntervalS: z.unknown().optional() });
+
+const percent = z.number().gt(0).max(100);
+/** Percent, as a person writes it. `sustainS` is a length of time: 15 s is one period of the fast loop, so anything shorter is the spike the rule exists to ignore. */
+const ThresholdsJson = z.strictObject({ cpu: percent.optional(), mem: percent.optional(), disk: percent.optional(), sustainS: z.number().int().min(15).max(900).optional() });
+const HealthS = z.number().int().min(10).max(3600);
+
+export type Config = { towerUrl: string; publicIpUrl?: string; publicIpError?: string; error?: string; thresholds?: Limits; thresholdsError?: string; healthS?: number; healthError?: string };
+
+/** A bad value here costs its own feature its setting and nothing else: the defaults hold, and `relief check` says so. */
+function extras(cfg: z.infer<typeof ReliefJson>): Pick<Config, 'thresholds' | 'thresholdsError' | 'healthS' | 'healthError'> {
+  const out: ReturnType<typeof extras> = {};
+  if (cfg.thresholds !== undefined) {
+    const t = ThresholdsJson.safeParse(cfg.thresholds);
+    if (!t.success) out.thresholdsError = 'thresholds 설정 오류';
+    else {
+      const frac = (v: number | undefined, d: number) => (v === undefined ? d : v / 100);
+      out.thresholds = { cpu: frac(t.data.cpu, DEFAULT_LIMITS.cpu), mem: frac(t.data.mem, DEFAULT_LIMITS.mem), disk: frac(t.data.disk, DEFAULT_LIMITS.disk), sustainS: t.data.sustainS ?? DEFAULT_LIMITS.sustainS };
+    }
+  }
+  if (cfg.healthIntervalS !== undefined) {
+    const h = HealthS.safeParse(cfg.healthIntervalS);
+    if (h.success) out.healthS = h.data; else out.healthError = 'healthIntervalS 설정 오류';
+  }
+  return out;
+}
 
 /** relief.json is optional. A bad file is an error to report, never a reason not to start. */
-export function loadConfig(p: Paths): { towerUrl: string; publicIpUrl?: string; publicIpError?: string; error?: string } {
+export function loadConfig(p: Paths): Config {
   let raw: string;
   try { raw = readFileSync(p.reliefJson, 'utf8'); } catch { return { towerUrl: DEFAULT_TOWER_URL }; }
   try {
     const cfg = ReliefJson.parse(JSON.parse(raw));
     const towerUrl = loopbackUrl(cfg.towerUrl ?? DEFAULT_TOWER_URL).href;
-    if (cfg.publicIpUrl === undefined) return { towerUrl };
+    const more = extras(cfg);
+    if (cfg.publicIpUrl === undefined) return { towerUrl, ...more };
     // Its own verdict: this field reaches one optional source, and must not stop the reads that have nothing to do with it.
-    try { if (typeof cfg.publicIpUrl !== 'string') throw new Error('not text'); return { towerUrl, publicIpUrl: publicIpUrl(cfg.publicIpUrl) }; } catch { return { towerUrl, publicIpError: 'publicIpUrl 설정 오류' }; }
+    try { if (typeof cfg.publicIpUrl !== 'string') throw new Error('not text'); return { towerUrl, publicIpUrl: publicIpUrl(cfg.publicIpUrl), ...more }; } catch { return { towerUrl, publicIpError: 'publicIpUrl 설정 오류', ...more }; }
   } catch (e) {
     return { towerUrl: DEFAULT_TOWER_URL, error: e instanceof z.ZodError ? 'relief.json has an unknown or malformed field' : String((e as Error).message).slice(0, 200) };
   }

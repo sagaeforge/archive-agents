@@ -1,6 +1,6 @@
 // Serves a fixture as a snapshot: lays it out once, and shifts its clock so the data always looks as fresh as when it was recorded.
 import { readFileSync } from 'node:fs';
-import type { Fact, Snapshot } from './model/fact.ts';
+import type { Fact, ServiceCheck, Snapshot } from './model/fact.ts';
 import { validateSnapshot } from './model/fact.ts';
 import { layoutSnapshot } from './layout/elk.ts';
 import { large } from '../dev/fixtures/gen.ts';
@@ -34,7 +34,7 @@ export function rebase(s: Snapshot, nowMs: number): Snapshot {
   return {
     ...s,
     takenAt: new Date(nowMs).toISOString(),
-    nodes: s.nodes.map((n) => ({ ...n, facts: facts(n.facts) })),
+    nodes: s.nodes.map((n) => ({ ...n, facts: facts(n.facts), ...(n.services ? { services: n.services.map((c) => ({ ...c, status: fact(c.status) as ServiceCheck['status'] })) } : {}) })),
     edges: s.edges.map((e) => ({ ...e, facts: facts(e.facts) })),
     sources: s.sources.map((x) => (isTime(x.at) ? { ...x, at: shiftIso(x.at, ms) } : x)),
   };

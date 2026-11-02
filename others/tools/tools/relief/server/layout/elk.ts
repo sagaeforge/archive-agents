@@ -31,13 +31,21 @@ export async function layoutSnapshot(s: Pick<Snapshot, 'nodes' | 'edges'>): Prom
   const rootIds = new Set(roots.map((n) => n.id));
   const parentOf = new Map(s.nodes.map((n) => [n.id, n.parent]));
   const edges: ElkExtendedEdge[] = [];
+  // A PC on a LAN segment takes its place from the router above the segment, beside the segment: a cable from the segment itself would push it a layer on and shift every object. Its cable is drawn below.
+  const lanHolder = new Map<string, string>();
+  const byNode = new Map(s.nodes.map((n) => [n.id, n]));
+  for (const e of s.edges) {
+    if (e.kind !== 'lan' || byNode.get(e.source)?.kind !== 'segment' || byNode.get(e.target)?.kind !== 'workstation') continue;
+    const up = s.edges.find((x) => x.kind === 'route' && x.target === e.source);
+    if (up) lanHolder.set(e.id, up.source);
+  }
   for (const e of s.edges) {
     if (e.kind === 'attached') continue;
     const via = e.facts.via?.value;
     const target = typeof via === 'string' && portOf.has(via) ? via : e.target;
     const target0 = parentOf.get(target) ?? target;
     if (!rootIds.has(e.source) || !rootIds.has(target0)) continue;
-    edges.push({ id: e.id, sources: [e.source], targets: [target] });
+    edges.push({ id: e.id, sources: [lanHolder.get(e.id) ?? e.source], targets: [target] });
   }
   const graph: ElkNode = {
     id: 'root',
@@ -73,7 +81,20 @@ export async function layoutSnapshot(s: Pick<Snapshot, 'nodes' | 'edges'>): Prom
     const sec = (e as ElkExtendedEdge).sections?.[0];
     if (sec) routes[e.id] = [sec.startPoint, ...(sec.bendPoints ?? []), sec.endPoint].map((p) => [round(p.x), round(p.y)] as [number, number]);
   }
+  for (const [id] of lanHolder) {
+    const e = s.edges.find((x) => x.id === id)!;
+    routes[id] = lanRoute(layout[e.source]!, layout[e.target]!, roots.filter((n) => n.kind !== 'node').map((n) => layout[n.id]!));
+  }
   return { layout, routes, ms };
+}
+
+/** Out of the segment's side, along the free lane between its layer and the slabs, and into the PC: the iso axes, and clear of what stands in the column. */
+function lanRoute(seg: Box, pc: Box, floor: Box[]): [number, number][] {
+  const top = Math.min(seg.y, pc.y); const bottom = Math.max(seg.y + seg.h, pc.y + pc.h);
+  const inColumn = floor.filter((b) => b.y < bottom && b.y + b.h > top && b.x < Math.max(seg.x + seg.w, pc.x + pc.w));
+  const lane = round(Math.max(...inColumn.map((b) => b.x + b.w), seg.x + seg.w, pc.x + pc.w) + 24);
+  const ya = round(seg.y + seg.h / 2); const yb = round(pc.y + pc.h / 2);
+  return [[round(seg.x + seg.w), ya], [lane, ya], [lane, yb], [round(pc.x + pc.w), yb]];
 }
 
 const round = (v: number) => Math.round(v * 10) / 10;

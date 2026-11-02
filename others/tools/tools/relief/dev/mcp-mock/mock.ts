@@ -19,6 +19,8 @@ export type Answer = { json: unknown } | { isError: string } | { text: string } 
 export type MockState = {
   http: number | null; hang: boolean; tools: ReturnType<typeof DEFAULT_TOOLS>;
   guests: Guest[]; tasks: Record<string, unknown>[]; cpu: number;
+  /** Byte counters of every node and guest: both at `value`, read at PVE time `t`. Each metrics read adds `step` seconds at `rate` bytes a second. */
+  net: { value: number; t: number; step: number; rate: number };
   /** Replaces the answer for one tool or api path. */
   over: Map<string, Answer>;
   /** What every read answers, ahead of `over`. */
@@ -26,7 +28,7 @@ export type MockState = {
 };
 
 export const freshState = (): MockState => ({
-  http: null, hang: false, tools: DEFAULT_TOOLS(), cpu: 0.05, over: new Map(), all: null,
+  http: null, hang: false, tools: DEFAULT_TOOLS(), cpu: 0.05, over: new Map(), all: null, net: { value: 1e6, t: 1790000000, step: 15, rate: 2000 },
   guests: [{ vmid: 100, node: 'node-1', name: 'guest-a', status: 'running', type: 'qemu', uptime: 7200, agent: true }],
   // A console session its node lost: no status, no endtime, days old. The live cluster has one of these.
   tasks: [
@@ -49,7 +51,11 @@ const addr = (n: string) => `192.0.2.${10 + NODES.indexOf(n)}`;
 function apiGet(s: MockState, path: string): Answer {
   let m: RegExpExecArray | null;
   if (path === '/cluster/status') return { json: [{ type: 'cluster', id: 'cluster', name: 'example-cluster', nodes: 3, quorate: 1, version: 3 }, ...NODES.map((n, i) => ({ type: 'node', id: `node/${n}`, name: n, ip: addr(n), online: 1, local: 0, level: '', nodeid: i + 1 }))] };
-  if (path === '/cluster/metrics/export') return { json: { data: NODES.flatMap((n) => [{ id: `node/${n}`, metric: 'cpu_current', value: s.cpu, timestamp: 1, type: 'gauge' }, { id: `node/${n}`, metric: 'mem_used', value: 2 ** 32, timestamp: 1, type: 'gauge' }, { id: `node/${n}`, metric: 'mem_total', value: 2 ** 34, timestamp: 1, type: 'gauge' }]) } };
+  if (path === '/cluster/metrics/export') {
+    s.net.t += s.net.step; s.net.value += s.net.rate * s.net.step;
+    const net = (id: string) => [{ id, metric: 'net_in', value: s.net.value, timestamp: s.net.t, type: 'derive' }, { id, metric: 'net_out', value: s.net.value / 2, timestamp: s.net.t, type: 'derive' }];
+    return { json: { data: [...NODES.flatMap((n) => [{ id: `node/${n}`, metric: 'cpu_current', value: s.cpu, timestamp: s.net.t, type: 'gauge' }, { id: `node/${n}`, metric: 'mem_used', value: 2 ** 32, timestamp: s.net.t, type: 'gauge' }, { id: `node/${n}`, metric: 'mem_total', value: 2 ** 34, timestamp: s.net.t, type: 'gauge' }, ...net(`node/${n}`)]), ...s.guests.filter((g) => g.status === 'running').flatMap((g) => net(`${g.type}/${g.vmid}`))] } };
+  }
   if (['/cluster/sdn/zones', '/cluster/sdn/vnets', '/cluster/firewall/rules'].includes(path)) return { json: [] };
   if ((m = /^\/nodes\/([^/]+)\/network$/.exec(path))) return { json: [{ iface: 'vmbr0', type: 'bridge', active: 1, autostart: 1, method: 'static', method6: 'manual', cidr: `${addr(m[1]!)}/24`, address: addr(m[1]!), netmask: '24', gateway: '192.0.2.1', bridge_ports: 'nic1', families: ['inet'], priority: 4 }, { iface: 'nic1', type: 'eth', active: 1, method: 'manual', exists: 1, altnames: ['enp1s0'] }] };
   if (/^\/nodes\/[^/]+\/dns$/.test(path)) return { json: { dns1: '198.51.100.53', search: 'example.com' } };
@@ -61,7 +67,11 @@ function apiGet(s: MockState, path: string): Answer {
     if (m[2] === 'get-osinfo') return { json: { result: { name: 'Example', 'pretty-name': 'Example OS 1.0', id: 'example', machine: 'x86_64', 'kernel-release': '1.0' } } };
     return { json: { result: [{ name: 'lo', 'hardware-address': '00:00:00:00:00:00', 'ip-addresses': [{ 'ip-address': '127.0.0.1', 'ip-address-type': 'ipv4', prefix: 8 }] }, { name: 'eth0', 'hardware-address': '02:00:00:00:00:01', 'ip-addresses': [{ 'ip-address': '192.0.2.50', 'ip-address-type': 'ipv4', prefix: 24 }, { 'ip-address': 'fe80::1', 'ip-address-type': 'ipv6', prefix: 64 }] }] } };
   }
-  if (path.endsWith('/rrddata')) return { json: Array.from({ length: 70 }, (_, i) => ({ time: 1790000000 + i * 60, cpu: 0.01, memused: 1 })) };
+  // Field names as PVE sends them, extra ones included: relief must keep only what it names.
+  if (path.endsWith('/rrddata')) {
+    const guest = /\/(qemu|lxc)\//.test(path);
+    return { json: Array.from({ length: 70 }, (_, i) => ({ time: 1790000000 + i * 60, cpu: 0.01 + i / 1000, maxcpu: 4, netin: 1000 + i, netout: 500, pressurecpusome: 0, ...(guest ? { mem: 2 ** 31, maxmem: 2 ** 32, disk: 0, maxdisk: 2 ** 35, diskread: 7 } : { memused: 2 ** 32, memtotal: 2 ** 34, rootused: 2 ** 32, roottotal: 2 ** 36, loadavg: 0.1 }) })) };
+  }
   return { isError: `PVE API 404: no such path` };
 }
 

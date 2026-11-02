@@ -17,7 +17,7 @@ describe('547 objects', () => {
     const b = sceneBounds(full, 'iso'); const S = Math.min(1100 / (b[2] - b[0] + 48), 800 / (b[3] - b[1] + 88)) * 0.96;
     const sc = buildScene(full, { mode: 'iso', S, overlay: 'state', metric: 'cpu', nowMs: Date.now(), sel: null, dim: null, dense: true });
     const { placed } = placeLabels(sc.labels, sc.shapes, { x: -2000, y: -2000, w: 4000, h: 4000 }, { leaf: false, container: false }, estimateWidth);
-    const elements = sc.prims.reduce((n, p) => n + (p.t === 'obj' ? 1 + p.faces.length + 1 : 1), 0) + placed.length * 3;
+    const elements = sc.prims.reduce((n, p) => n + (p.t === 'obj' ? 1 + p.faces.length + (p.detail ? 1 : 0) + (p.halo ? 1 : 0) : 1), 0) + placed.length * 3;
     console.log(`svg elements (estimate): ${elements}`);
     expect(elements).toBeLessThan(3000);
   });

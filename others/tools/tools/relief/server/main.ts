@@ -3,11 +3,11 @@ import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import { createApi } from './app.ts';
-import { APP_CSP } from './guard.ts';
+import { SAFE_HEADERS } from './guard.ts';
 
 export async function startServer(port: number, dist = 'dist') {
   const app = new Hono();
-  app.use('*', async (c, next) => { await next(); c.header('Content-Security-Policy', APP_CSP); c.header('X-Content-Type-Options', 'nosniff'); });
+  app.use('*', async (c, next) => { await next(); for (const [k, v] of Object.entries(SAFE_HEADERS)) c.header(k, v); });
   app.route('/', createApi());
   app.use('*', serveStatic({ root: dist }));
   return new Promise<{ close: () => Promise<void> }>((resolve) => {

@@ -39,16 +39,7 @@ test('a VM start shows as starting within 20 s of idle, at real periods, in the 
     page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
     await page.goto(URL_);
     await expect(obj(page, 'pve:qemu:101')).toHaveAttribute('aria-label', /중지/, { timeout: 25_000 });
-    await expect(page.getByTestId('live')).toHaveText('실제 클러스터');
-    await page.locator('header').screenshot({ path: join(shotDir, 'live-header.png') });
-    // The badge's text stands clear of its border: `.seg` clips what overflows it.
-    const gap = await page.getByTestId('live').evaluate((el) => {
-      const range = document.createRange(); range.selectNodeContents(el);
-      const t = range.getBoundingClientRect(); const b = el.getBoundingClientRect();
-      return { left: t.left - b.left, right: b.right - t.right, top: t.top - b.top, bottom: b.bottom - t.bottom, clipped: el.scrollWidth > el.clientWidth };
-    });
-    expect(gap.clipped).toBe(false);
-    for (const side of [gap.left, gap.right, gap.top, gap.bottom]) expect(side).toBeGreaterThanOrEqual(2);
+    await expect(page.getByTestId('live')).toHaveCount(0); // The real map carries no badge: only synthetic data is marked.
     await expect(page.getByText('합성 fixture')).toHaveCount(0);
     // Right after a read is the worst moment: the next one is a whole period away.
     const n = reads(mock);

@@ -4,7 +4,12 @@ export type Tool = (typeof TOOLS)[number];
 
 export const TASK_LIMIT = 50;
 
-/** `{n}` is a node name, `{id}` a positive integer, `{qemu|lxc}` one of the two. rrddata takes timeframe=hour and nothing else. */
+/** The windows a trend may ask for (design 6.3, 9.8). Anything longer is more than the panel draws. */
+export const TIMEFRAMES = ['hour', 'day'] as const;
+export type Timeframe = (typeof TIMEFRAMES)[number];
+export const isTimeframe = (v: unknown): v is Timeframe => (TIMEFRAMES as readonly unknown[]).includes(v);
+
+/** `{n}` is a node name, `{id}` a positive integer, `{qemu|lxc}` one of the two. rrddata takes exactly one parameter, `timeframe`, from `TIMEFRAMES`. */
 export const PATHS = [
   '/cluster/status', '/cluster/metrics/export',
   '/cluster/sdn/zones', '/cluster/sdn/vnets', '/cluster/firewall/rules',
@@ -51,9 +56,9 @@ export function callOf(t: Target): Call {
       const hit = typeof t.path === 'string' ? COMPILED.find((c) => c.re.test(t.path)) : undefined;
       if (!hit) throw new NotAllowed(`path ${String(t.path)}`);
       const keys = Object.keys(t.params ?? {});
-      const hourOnly = keys.length === 1 && t.params?.timeframe === 'hour';
-      if (hit.rrd ? !hourOnly : keys.length > 0) throw new NotAllowed(`params of ${hit.t}`);
-      return { name: t.tool, args: { path: t.path, ...(keys.length ? { params: { timeframe: 'hour' } } : {}) }, label: `${t.tool} ${hit.t}` };
+      const timeframe = keys.length === 1 ? t.params?.timeframe : undefined;
+      if (hit.rrd ? !isTimeframe(timeframe) : keys.length > 0) throw new NotAllowed(`params of ${hit.t}`);
+      return { name: t.tool, args: { path: t.path, ...(isTimeframe(timeframe) ? { params: { timeframe } } : {}) }, label: `${t.tool} ${hit.t}` };
     }
   }
 }

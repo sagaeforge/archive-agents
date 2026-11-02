@@ -2,8 +2,10 @@
 import type { Mode } from './scene/project.ts';
 import type { Metric, Overlay } from './scene/style.ts';
 
-export type View = { mode: Mode; overlay: Overlay; metric: Metric; sel: string | null; open: boolean; fx: 'today' | 'large' | 'scale'; q: string };
-export const DEFAULT_VIEW: View = { mode: 'iso', overlay: 'state', metric: 'cpu', sel: null, open: false, fx: 'today', q: '' };
+export type View = { mode: Mode; overlay: Overlay; metric: Metric; sel: string | null; open: boolean; fx: 'today' | 'large' | 'scale'; q: string; theme: Theme; page: Page; panel: boolean };
+export type Page = 'map' | 'history';
+export type Theme = 'dark' | 'light';
+export const DEFAULT_VIEW: View = { mode: 'iso', overlay: 'state', metric: 'cpu', sel: null, open: false, fx: 'today', q: '', theme: 'dark', page: 'map', panel: true };
 
 const pick = <T extends string>(v: string | null, all: readonly T[], d: T): T => (v !== null && (all as readonly string[]).includes(v) ? (v as T) : d);
 
@@ -19,6 +21,9 @@ export function parseHash(hash: string): View {
     open: p.get('open') === '1' && !!sel,
     fx: pick(p.get('fx'), ['today', 'large', 'scale'], DEFAULT_VIEW.fx),
     q: (p.get('q') ?? '').slice(0, 80).normalize('NFC'),
+    theme: pick(p.get('theme'), ['dark', 'light'], DEFAULT_VIEW.theme),
+    page: pick(p.get('page'), ['map', 'history'], DEFAULT_VIEW.page),
+    panel: p.get('panel') !== '0',
   };
 }
 
@@ -32,6 +37,9 @@ export function formatHash(v: View): string {
   if (v.sel && v.open) p.set('open', '1');
   if (v.fx !== DEFAULT_VIEW.fx) p.set('fx', v.fx);
   if (v.q) p.set('q', v.q);
+  if (v.theme !== DEFAULT_VIEW.theme) p.set('theme', v.theme);
+  if (v.page !== DEFAULT_VIEW.page) p.set('page', v.page);
+  if (!v.panel) p.set('panel', '0');
   const s = p.toString().replace(/%3A/gi, ':').replace(/%2F/gi, '/');
   return `#/${s ? `?${s}` : ''}`;
 }

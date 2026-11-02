@@ -93,7 +93,7 @@ describe('copy only', () => {
   it('registers no route that is not GET, and the catch-all answers 404', async () => {
     for (const f of server) expect(readFileSync(f, 'utf8'), f).not.toMatch(/\b(app|api|router|hono|server)\.(post|put|patch|delete|options|on)\s*\(/);
     const gets = [...readFileSync(join(root, 'server/app.ts'), 'utf8').matchAll(/app\.get\('([^']+)'/g)].map((m) => m[1]);
-    expect(gets).toEqual(['/api/snapshot', '/api/metrics', '/api/status']);
+    expect(gets).toEqual(['/api/snapshot', '/api/metrics', '/api/trend', '/api/changes', '/api/status']);
     const app = createApi();
     for (const m of ['POST', 'PUT', 'PATCH', 'DELETE']) expect((await app.request('/api/ssh', { method: m, headers: { host: '127.0.0.1:4815' } })).status).not.toBe(200);
   });

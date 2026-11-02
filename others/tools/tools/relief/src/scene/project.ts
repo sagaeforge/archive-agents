@@ -24,8 +24,3 @@ export function paintOrder<T extends Rect>(list: T[]): T[] {
   }
   return done;
 }
-
-const hex = (h: string, i: number) => parseInt(h.slice(i, i + 2), 16);
-const out = (r: number, g: number, b: number) => '#' + [r, g, b].map((v) => Math.round(v).toString(16).padStart(2, '0')).join('');
-export const shade = (h: string, f: number) => out(hex(h, 1) * f, hex(h, 3) * f, hex(h, 5) * f);
-export const tint = (h: string, f: number) => out(...([1, 3, 5].map((i) => hex(h, i) + (255 - hex(h, i)) * f) as [number, number, number]));

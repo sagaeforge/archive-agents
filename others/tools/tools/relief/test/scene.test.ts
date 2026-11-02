@@ -5,7 +5,7 @@ import type { Snapshot } from '../server/model/fact.ts';
 import { estimateWidth, inPolygon, PILL_H, placeLabels } from '../src/scene/labels.ts';
 import { buildScene, sceneBounds, type SceneOpts } from '../src/scene/paint.ts';
 import { paintOrder, project } from '../src/scene/project.ts';
-import { loadColor } from '../src/scene/style.ts';
+import { HOLLOW, loadColor } from '../src/scene/style.ts';
 
 const NOW = Date.parse('2026-11-01T09:00:00.000Z');
 const laid = async (s: Snapshot): Promise<Snapshot> => ({ ...s, ...(await layoutSnapshot(s)) });
@@ -61,7 +61,7 @@ describe('scene', () => {
     expect(stale?.t === 'obj' && stale.opacity).toBe(0.5); expect(fresh?.t === 'obj' && fresh.opacity).toBe(1);
     const t = buildScene(await laid(today()), opts(1));
     const wan = t.prims.find((p) => p.t === 'obj' && p.kind === 'wan');
-    expect(wan?.t === 'obj' && wan.faces.every((f) => f.fill === '#ffffff' && f.dash)).toBe(true);
+    expect(wan?.t === 'obj' && wan.faces.every((f) => f.fill === HOLLOW && f.dash)).toBe(true);
   });
   it('draws no Docker plane for an empty layer', async () => {
     for (const s of [today(), large()]) {
@@ -121,7 +121,7 @@ describe('a gone object (design 4)', () => {
     const marked = { ...s, nodes: s.nodes.map((n) => (n.id === id ? { ...n, gone: true } : n)) };
     const o = buildScene(marked, opts(1));
     const prim = o.prims.find((p) => p.t === 'obj' && p.id === id);
-    expect(prim?.t === 'obj' && prim.faces.every((f) => f.fill === '#ffffff' && f.dash)).toBe(true);
+    expect(prim?.t === 'obj' && prim.faces.every((f) => f.fill === HOLLOW && f.dash)).toBe(true);
     expect(o.labels.find((l) => l.id === id)?.text).toBe('VM 100 · 사라짐');
   });
   it('a guest being created is labelled', async () => {

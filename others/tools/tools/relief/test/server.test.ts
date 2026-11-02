@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createApi } from '../server/app.ts';
-import { APP_CSP, guard, META_CSP } from '../server/guard.ts';
+import { APP_CSP, guard, META_CSP, SAFE_HEADERS } from '../server/guard.ts';
 import { loadFixture, rebase } from '../server/snapshot.ts';
 import { freshness, staleIds, type Snapshot } from '../server/model/fact.ts';
 
@@ -29,6 +29,24 @@ describe('Host, Origin and Fetch Metadata', () => {
   });
 });
 
+describe('a foreign page', () => {
+  const cross = { host: '127.0.0.1:4815', 'sec-fetch-site': 'cross-site', 'sec-fetch-mode': 'navigate' };
+  it.each(['iframe', 'frame', 'embed', 'object'])('cannot load relief in an %s', (dest) => {
+    expect(guard(h({ ...cross, 'sec-fetch-dest': dest }))?.code).toBe('cross_site_rejected');
+  });
+  it('may send a person to the map in a tab of its own', () => { expect(guard(h({ ...cross, 'sec-fetch-dest': 'document' }))).toBeNull(); });
+  it('cannot navigate at the API, where a GET can cost a read of PVE', async () => {
+    expect(guard(h({ ...cross, 'sec-fetch-dest': 'document' }), '/api/trend')?.code).toBe('cross_site_rejected');
+    expect((await get('/api/trend?id=x', { ...cross, 'sec-fetch-dest': 'iframe' })).status).toBe(403);
+    expect((await get('/api/snapshot', { ...cross, 'sec-fetch-dest': 'document' })).status).toBe(403);
+  });
+  it('a same-origin page is untouched', () => { expect(guard(h({ host: '127.0.0.1:4815', 'sec-fetch-site': 'same-origin', 'sec-fetch-mode': 'cors' }), '/api/trend')).toBeNull(); });
+  it('every response forbids framing', () => {
+    expect(SAFE_HEADERS['X-Frame-Options']).toBe('DENY'); expect(SAFE_HEADERS['Content-Security-Policy']).toContain("frame-ancestors 'none'");
+    expect(SAFE_HEADERS['Cross-Origin-Resource-Policy']).toBe('same-origin');
+  });
+});
+
 describe('content security policy', () => {
   it('no page may frame relief, and the <meta> copy leaves out what a meta tag cannot carry', () => {
     expect(APP_CSP).toContain("frame-ancestors 'none'");
@@ -54,6 +72,10 @@ describe('/api/snapshot', () => {
   it('rejects a foreign Host before any work', async () => {
     expect((await get('/api/snapshot', { host: 'evil.example.com' })).status).toBe(403);
     expect((await get('/api/snapshot', { host: '127.0.0.1:4816', origin: 'http://evil.example.com' })).status).toBe(403);
+  });
+  it('stays inside the size budget of design 13: 300 KB at 300 objects', async () => {
+    const t = await (await get('/api/snapshot?fixture=large')).text();
+    expect(Buffer.byteLength(t)).toBeLessThanOrEqual(300 * 1024);
   });
   it('carries no local path, home directory or secret-looking field', async () => {
     const t = await (await get('/api/snapshot?fixture=large')).text();

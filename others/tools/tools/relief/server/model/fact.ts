@@ -34,7 +34,18 @@ export type Entity = {
   gone?: boolean;
   /** Drift between two values (design 7.1). A warning on the object: its source stays `ok`. */
   warnings?: string[];
+  /** Computed at publish time (design 7.3, 9.8), so a latency or a percentage never counts as a change of the object. */
+  alerts?: Alert[];
+  services?: ServiceCheck[];
 };
+
+/** warn: a threshold held for its samples. problem: a declared service does not answer. */
+export type Alert = { level: 'warn' | 'problem'; text: string };
+/** One TCP check on a host. `status` is an honest blank until a connect says otherwise. */
+export type ServiceCheck = { title: string; port: number; latencyMs: number | null; status: Fact<'up' | 'down'> };
+
+/** Fractions of 1, and how many seconds a value must hold before it is a warning. */
+export type Limits = { cpu: number; mem: number; disk: number; sustainS: number };
 
 export type Relation = {
   id: string;
@@ -45,9 +56,10 @@ export type Relation = {
   facts: Record<string, Fact<unknown>>;
 };
 
-/** none: no configuration. ok: read (an empty list is "0 observed"). failing: configured and failing. */
-export type SourceState = 'none' | 'ok' | 'failing';
-export type SourceStatus = { id: string; state: SourceState; count: number | null; at: string | null; why?: string; counts?: Record<string, number> };
+/** none: no configuration. pending: configured, first read not done. ok: read (an empty list is "0 observed"). failing: configured and failing. */
+export type SourceState = 'none' | 'pending' | 'ok' | 'failing';
+/** `partial`: the source answers, and a read it needs does not. */
+export type SourceStatus = { id: string; state: SourceState; count: number | null; at: string | null; why?: string; counts?: Record<string, number>; partial?: { name: string; why: string }[] };
 
 export type Box = { x: number; y: number; w: number; h: number; z: number; zh: number };
 
@@ -64,6 +76,12 @@ export type Snapshot = {
   layout: Record<string, Box>;
   /** Floor routes of edges, from the layout step. Not in the design's type: ELK returns them and the browser has no ELK. */
   routes: Record<string, [number, number][]>;
+  /** The limits the check facts were computed with. Absent on an old stored snapshot. */
+  limits?: Limits;
+  /** Objects a good read no longer lists, from the inventory relief remembers. */
+  missing?: { id: string; kind: string; title: string; since: string }[];
+  /** Service checks on a host the map has no object for, and no router to hang them on. */
+  unplaced?: ServiceCheck[];
 };
 
 export const BASES: readonly Basis[] = ['observed', 'derived', 'declared', 'unknown'];

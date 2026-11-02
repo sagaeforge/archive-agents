@@ -3,18 +3,35 @@ import { appendFileSync, chmodSync, mkdirSync, readFileSync, renameSync, writeFi
 import { join } from 'node:path';
 import { runLoop, type Loop, type ReadAdapter } from './collect/adapter.ts';
 import { readEdge, type EdgeFile, type EdgeRead } from './collect/edge.ts';
+import { applyServices, runChecks, targetsOf, tcpProbe, unplacedServices, type Probe, type Reading, type Target } from './collect/health.ts';
 import type { Reader } from './collect/mcp.ts';
-import { isSource, readFast, readGuest, readMetrics, readSlow, validId, validNode, whyOf, type FastRead, type GuestRead, type GuestRef, type MetricValues, type SlowRead, type Tried } from './collect/pve.ts';
+import { isSource, readFast, readGuest, readMetrics, readSlow, validId, validNode, whyOf, type FastRead, type GuestRead, type GuestRef, type MetricRead, type MetricValues, type SlowRead, type Tried } from './collect/pve.ts';
+import { readTrend, type Trend, type TrendRef } from './collect/trend.ts';
 import { readPublicIp } from './collect/wanip.ts';
+import { readChanges, type ChangePage, type ChangeQuery } from './changes.ts';
+import type { Timeframe } from './collect/allowlist.ts';
 import { layoutSnapshot } from './layout/elk.ts';
 import { diff, hashesOf, isEmpty, type Hashes, type StateMap } from './model/diff.ts';
-import type { Entity, Relation, Snapshot, SourceStatus } from './model/fact.ts';
+import type { Entity, Limits, Relation, Snapshot, SourceStatus } from './model/fact.ts';
+import { applyRates, Rates } from './model/rate.ts';
+import { advance, applyWatch, emptyWatch, forget, parseWatch, type Watch } from './model/watch.ts';
+import { consumeRequests, type Reply } from './forget.ts';
+import { applyChecks, DEFAULT_LIMITS, Samples, type Verdicts } from './model/threshold.ts';
 import type { LocalRead } from './collect/local.ts';
 import type { WanRead } from './model/edgemap.ts';
 import { activeTask, emptyRaw, guestKey, isGuest, normalize, type Part, type Raw } from './model/normalize.ts';
 
 // activeS + the browser's 5 s must stay inside the 10 s budget of design 13.
-export const PERIOD = { fastS: 15, activeS: 4, idleS: 60, largeS: 30, slowS: 300, guestS: 600, guestFailS: 1800, guestTickS: 20, metricsS: 15, viewerGoneS: 120, overlayGoneS: 30, minTtlS: 45, edgeS: 10, wanS: 600 };
+export const PERIOD = { fastS: 15, activeS: 4, idleS: 60, largeS: 30, slowS: 300, guestS: 600, guestFailS: 1800, guestTickS: 20, metricsS: 15, viewerGoneS: 120, overlayGoneS: 30, minTtlS: 45, edgeS: 10, wanS: 600, healthS: 60, forgetS: 2 };
+/** How long a damaged memory stays on the status bar. Long enough to be seen: it cannot be repaired, only rebuilt. */
+export const WATCH_LOST_S = 600;
+const WATCH_LOST = '기억 손상 · 버리고 다시 쌓는 중';
+/** A trend is read when a panel asks, then held this long (design 8). */
+export const TREND_CACHE_S: Record<Timeframe, number> = { hour: 60, day: 300 };
+const TREND_KEEP = 32;
+/** One open page must not be able to hammer PVE (design 8): reads a minute across all panels, reads at once, and how long a failed object rests. */
+export const TREND_LIMIT = { perMin: 12, inFlight: 2, backoffS: 30, backoffMaxS: 300 };
+const BUSY = '요청이 많다 · 잠시 뒤 다시';
 export const CHANGES_MAX = 5000;
 const WAITING = '첫 수집 대기';
 const GUEST_CONCURRENCY = 2;
@@ -32,16 +49,21 @@ export type LiveOptions = {
   wanFault?: string | undefined;
   local?: (nowMs: number) => LocalRead | null;
   now?: () => number;
+  /** The limits of `relief.json`, or the defaults. */
+  limits?: Limits | undefined;
+  /** Tests stand in here. Nothing is called while edge.json lists no services. */
+  probe?: Probe;
 };
 
 export type Served = { snapshot: Snapshot; etag: string };
-export type LiveStatus = { seq: number; sources: SourceStatus[]; calls: Reader['record']; lastRead: string | null };
+export type LiveStatus = { seq: number; sources: SourceStatus[]; calls: Reader['record']; lastRead: string | null; missing: { id: string; title: string; since: string }[] };
 
-type Persisted = { schema: 1; seq: number; raw: Raw; slots: Record<string, number>; nextSlot: number; wan?: WanRead | null };
+type Persisted = { schema: 1; seq: number; raw: Raw; slots: Record<string, number>; nextSlot: number; wan?: WanRead | null; watch?: unknown };
 
 export class Live {
   private o: LiveOptions;
   private p: typeof PERIOD;
+  private limits: Limits;
   private now: () => number;
   private raw: Raw = emptyRaw();
   private seq = 0;
@@ -54,13 +76,14 @@ export class Live {
   private states: StateMap = {};
   private layout: Pick<Snapshot, 'layout' | 'routes'> = { layout: {}, routes: {} };
   private topology = '';
-  private source: SourceStatus = { id: 'pve', state: 'failing', count: null, at: null, why: WAITING };
+  private source: SourceStatus = { id: 'pve', state: 'pending', count: null, at: null, why: WAITING };
   private served: Snapshot | null = null;
   private metrics: { at: string | null; values: MetricValues } = { at: null, values: {} };
   private loops: Loop[] = [];
   private fastLoop: Loop | null = null;
   private guestLoop: Loop | null = null;
   private slowLoop: Loop | null = null;
+  private metricsLoop: Loop | null = null;
   private baseline = true;
   private restored = false;
   private prepared = false;
@@ -71,19 +94,32 @@ export class Live {
   private savedAt = 0;
   private dirty = false;
   private changeLines = 0;
+  private lineNo = 0;
   private commits: Promise<void> = Promise.resolve();
   private storeFault = false;
   private edge: { file: EdgeFile | null; body: string; status: SourceStatus } = { file: null, body: '', status: { id: 'edge', state: 'none', count: null, at: null, why: '출처 없음' } };
   private wan: { read: WanRead | null; status: SourceStatus } = { read: null, status: { id: 'wan-ip', state: 'none', count: null, at: null, why: '출처 없음' } };
   private wanWasFresh = false;
   private lastBody = '';
+  private samples = new Samples();
+  private over = new Map<string, boolean>();
+  private readings = new Map<string, Reading>();
+  private health: SourceStatus = { id: 'health', state: 'none', count: null, at: null, why: '출처 없음' };
+  private trends = new Map<string, { until: number; value: Promise<Trend> }>();
+  private trendCalls: number[] = [];
+  private trendFlying = 0;
+  private trendRest = new Map<string, { until: number; fails: number; why: string }>();
+  private rates = new Rates();
+  private watch: Watch = emptyWatch();
+  private watchLostUntil = 0;
+  private partial: { name: string; why: string }[] = [];
 
   constructor(o: LiveOptions) {
-    this.o = o; this.p = { ...PERIOD, ...o.period }; this.now = o.now ?? Date.now;
+    this.o = o; this.p = { ...PERIOD, ...o.period }; this.now = o.now ?? Date.now; this.limits = o.limits ?? DEFAULT_LIMITS;
     if (o.wanFault) this.wan.status = { id: 'wan-ip', state: 'failing', count: null, at: null, why: o.wanFault };
-    else if (o.wanUrl) this.wan.status = { id: 'wan-ip', state: 'failing', count: null, at: null, why: WAITING };
+    else if (o.wanUrl) this.wan.status = { id: 'wan-ip', state: 'pending', count: null, at: null, why: WAITING };
     this.write(() => {});
-    try { this.changeLines = readFileSync(this.file('changes.jsonl'), 'utf8').split('\n').length - 1; } catch { /* no history yet */ }
+    try { const text = readFileSync(this.file('changes.jsonl'), 'utf8'); this.changeLines = text.split('\n').length - 1; this.lineNo = lastLine(text); } catch { /* no history yet */ }
     this.restore();
   }
 
@@ -96,11 +132,22 @@ export class Live {
       const s = JSON.parse(readFileSync(this.file('state.json'), 'utf8')) as Persisted;
       if (s.schema !== 1) return;
       this.seq = s.seq; this.raw = s.raw; this.slots = s.slots; this.nextSlot = s.nextSlot;
+      this.restoreWatch(s.watch);
       this.source.at = s.raw.fast?.at ?? null;
       this.restored = true;
       // The last public address comes back with its old time, or every restart would "change" what it compares.
       if (this.o.wanUrl && s.wan) { this.wan.read = s.wan; this.wan.status = { ...this.wan.status, at: s.wan.at }; this.wanWasFresh = this.wanFresh(); }
     } catch { /* no snapshot: a first start */ }
+  }
+
+  /** A file from before the memory has none, and that is fine. One that fails the check costs the memory alone: the rest of the state comes back. */
+  private restoreWatch(saved: unknown) {
+    if (saved === undefined) return;
+    const w = parseWatch(saved);
+    if (w) { this.watch = w; return; }
+    this.watchLostUntil = this.now() + WATCH_LOST_S * 1000;
+    this.dirty = true;
+    this.log({ at: this.iso(), seq: this.seq, source: 'watch', state: 'failing', why: WATCH_LOST });
   }
 
   /** A disk problem must not stop the map. It shows as a source of its own and clears with the next write that works. */
@@ -117,7 +164,7 @@ export class Live {
     if (!force && this.now() - this.savedAt < 60_000) return;
     this.write(() => {
       const tmp = this.file(`state.json.${process.pid}`);
-      const body: Persisted = { schema: 1, seq: this.seq, raw: this.raw, slots: this.slots, nextSlot: this.nextSlot, wan: this.wan.read };
+      const body: Persisted = { schema: 1, seq: this.seq, raw: this.raw, slots: this.slots, nextSlot: this.nextSlot, wan: this.wan.read, watch: this.watch };
       writeFileSync(tmp, JSON.stringify(body), { mode: 0o600 });
       renameSync(tmp, this.file('state.json'));
       this.savedAt = this.now(); this.dirty = false;
@@ -127,7 +174,8 @@ export class Live {
   private log(rec: object) {
     this.write(() => {
       const f = this.file('changes.jsonl');
-      appendFileSync(f, `${JSON.stringify(rec)}\n`, { mode: 0o600 });
+      // A number of its own, in order: the history's cursor. Time cannot be one, two lines share a millisecond and rotation can split them.
+      appendFileSync(f, `${JSON.stringify({ n: ++this.lineNo, ...rec })}\n`, { mode: 0o600 });
       this.changeLines += 1;
       if (this.changeLines > CHANGES_MAX * 1.1) {
         const tail = readFileSync(f, 'utf8').trimEnd().split('\n').slice(-CHANGES_MAX);
@@ -181,8 +229,30 @@ export class Live {
       this.seq += 1; this.dirty = true;
       if (!empty) this.log({ at: this.iso(), seq: this.seq, ...change });
     }
+    if (inventory && this.raw.fast) this.watch = advance(this.watch, next.nodes, this.raw.tasks?.items ?? [], this.iso());
+    if (inventory && this.raw.fast) this.samples.push(this.nodes, this.raw.fast.at, this.raw.fast.ttlS);
     this.save();
     this.publish();
+  }
+
+  private unplaced() { return unplacedServices(this.targets(), this.readings, this.ttlS(this.p.healthS)); }
+
+  private targets(): Target[] { return this.edge.file ? targetsOf(this.edge.file, this.nodes) : []; }
+
+  /** The computed layer: limits and service checks. Added here and not in `build`, so a percentage or a latency never counts as a change of the object. */
+  private computed(): Entity[] {
+    const verdicts: Verdicts = new Map();
+    const expected = new Map((this.edge.file?.guests ?? []).flatMap((g) => (g.expected ? [[String(g.vmid), g.expected] as const] : [])));
+    const checked = applyChecks(applyWatch(this.nodes, this.watch, expected), this.samples, this.limits, this.now(), verdicts);
+    const nodes = applyRates(applyServices(checked, this.targets(), this.readings, this.ttlS(this.p.healthS)), this.rates, this.ttlS(this.p.metricsS), this.now());
+    const alerts = [...verdicts].flatMap(([k, on]) => {
+      const was = this.over.get(k); this.over.set(k, on);
+      if (was === undefined ? !on : was === on) return [];
+      const [id, metric] = k.split('|') as [string, string];
+      return [{ id, text: `${metric} 임계 초과`, on }];
+    });
+    if (alerts.length) this.log({ at: this.iso(), seq: this.seq, alerts });
+    return nodes;
   }
 
   private publish() {
@@ -193,12 +263,16 @@ export class Live {
     const counts = Object.fromEntries(Object.entries(nums).filter(([, v]) => v !== null)) as Record<string, number>;
     this.served = {
       schema: 1, seq: this.seq, takenAt: this.iso(), origin: 'live',
-      nodes: this.nodes, edges: this.edges,
+      nodes: this.computed(), edges: this.edges, limits: this.limits,
+      ...(Object.keys(this.watch.missing).length ? { missing: Object.values(this.watch.missing) } : {}),
+      ...(this.unplaced().length ? { unplaced: this.unplaced() } : {}),
       sources: [
-        { ...this.source, count: this.raw.fast ? count : null, ...(Object.keys(counts).length ? { counts } : {}) },
+        { ...this.source, count: this.raw.fast ? count : null, ...(Object.keys(counts).length ? { counts } : {}), ...(this.partial.length ? { partial: this.partial } : {}) },
         { ...this.edge.status, count: this.edge.status.state === 'none' ? null : this.nodes.filter((n) => n.basis === 'declared' && !n.gone).length },
         { id: 'docker', state: 'none', count: null, at: null, why: '출처 없음' },
         this.wan.status,
+        this.health,
+        ...(this.now() < this.watchLostUntil ? [{ id: 'watch', state: 'failing' as const, count: null, at: null, why: WATCH_LOST }] : []),
         ...(this.storeFault ? [{ id: 'store', state: 'failing' as const, count: null, at: null, why: '상태 저장 실패' }] : []),
       ],
       ...this.layout,
@@ -214,7 +288,7 @@ export class Live {
   private recovered(at: string) {
     const was = this.source;
     this.source = { id: 'pve', state: 'ok', count: was.count, at };
-    if (was.state === 'failing' && was.why !== WAITING) this.log({ at, seq: this.seq, source: 'pve', state: 'ok' }); // Starting up is no recovery.
+    if (was.state === 'failing') this.log({ at, seq: this.seq, source: 'pve', state: 'ok' }); // Starting up is no recovery.
   }
 
   // --- applying reads
@@ -230,14 +304,15 @@ export class Live {
 
   private async applyFast(r: FastRead) {
     const bad = [r.resources, r.status, r.tasks].find((x) => !x.ok && isSource(x.error));
-    if (bad && !bad.ok) { this.failing(whyOf(bad.error)); return; }
-    if (!r.resources.ok) { this.failing(whyOf(r.resources.error)); return; } // The inventory itself: without it nothing can be said, and a bad shape is no empty list.
+    if (bad && !bad.ok) { this.samples.gap(); this.rates.gap(); this.failing(whyOf(bad.error)); return; }
+    if (!r.resources.ok) { this.samples.gap(); this.rates.gap(); this.failing(whyOf(r.resources.error)); return; } // The inventory itself: without it nothing can be said, and a bad shape is no empty list.
     const at = this.iso();
     const ttlS = this.ttlS(this.fastPeriodS());
     this.raw.fast = { at, ttlS, resources: r.resources.value };
     if (r.status.ok) this.raw.status = { at, ttlS, rows: r.status.value };
     if (r.tasks.ok) this.raw.tasks = { at, ttlS, items: r.tasks.value };
     if (r.status.ok) delete this.raw.statusWhy; else this.raw.statusWhy = whyOf(r.status.error);
+    this.partial = [...(r.tasks.ok ? [] : [{ name: '태스크', why: whyOf(r.tasks.error) }]), ...(r.status.ok ? [] : [{ name: '클러스터 상태', why: whyOf(r.status.error) }])];
     this.recovered(at);
     this.dirty = true;
     this.noteGuests();
@@ -327,6 +402,23 @@ export class Live {
     if (r.kind === 'none') this.edge = { file: null, body: '', status: { id: 'edge', state: 'none', count: null, at: null, why: '출처 없음' } };
     else if (r.kind === 'bad') this.edge = { ...this.edge, status: { id: 'edge', state: 'failing', count: null, at: declaredAt, why: `edge.json 오류 · ${r.why}` } };
     else this.edge = { file: r.file, body: JSON.stringify(r.file), status: { id: 'edge', state: 'ok', count: null, at: r.file.declaredAt } };
+    // A list that has not been probed yet is waiting, not off.
+    if (this.edge.file?.services?.length && this.health.state === 'none' && this.health.why === '출처 없음') this.health = { id: 'health', state: 'pending', count: null, at: null, why: WAITING };
+  }
+
+  /** Requests from `relief forget`. Only this process writes state.json, so it is the one to act on them. */
+  takeForgets() {
+    const done = consumeRequests(this.o.stateDir, (id) => this.forgetOne(id), this.now());
+    if (done) { this.save(true); this.publish(); }
+    return done;
+  }
+
+  private forgetOne(id: string): Reply {
+    const here = new Set(this.nodes.filter((n) => !n.gone).map((n) => n.id));
+    const { watch, reply } = forget(this.watch, id, here);
+    this.watch = watch;
+    if (reply.result === 'removed') { this.dirty = true; this.log({ at: this.iso(), seq: this.seq, removed: [id] }); }
+    return reply;
   }
 
   private async applyEdge(r: EdgeRead) {
@@ -353,6 +445,26 @@ export class Live {
     }
   }
 
+  /** A list that is missing turns the source off. `[]` is "none declared": read, and nothing to do. */
+  private async applyHealth(next: Map<string, Reading> | null) {
+    const list = this.edge.file?.services;
+    if (next === null || list === undefined) {
+      if (this.health.state !== 'none') { this.readings.clear(); this.health = { id: 'health', state: 'none', count: null, at: null, why: '출처 없음' }; this.publish(); }
+      return;
+    }
+    const at = this.iso();
+    const moved = this.targets().flatMap((t) => {
+      const b = next.get(t.id)?.result; const a = this.readings.get(t.id)?.result;
+      // The object's id and the new answer: what edge.json says about a service stays out of the log (design 7.1).
+      return b && a && a.up !== b.up ? [{ id: t.entity ?? 'health', to: b.up ? '응답' : '응답 없음' }] : [];
+    });
+    this.readings = next;
+    if (moved.length) this.log({ at, seq: this.seq, services: moved });
+    // `ok` claims a check ran. With nothing to probe nothing ran, whatever the file says.
+    this.health = next.size ? { id: 'health', state: 'ok', count: next.size, at } : { id: 'health', state: 'none', count: 0, at: null, why: list.length ? '검사할 대상 없음' : '0개 선언' };
+    this.publish();
+  }
+
   // --- adapters
 
   private fastAdapter(): ReadAdapter<FastRead> { return { id: 'pve-fast', periodS: () => this.fastPeriodS(), read: (s) => readFast(this.o.reader, s) }; }
@@ -374,10 +486,28 @@ export class Live {
   private wanAdapter(url: string): ReadAdapter<Tried<string>> {
     return { id: 'wan-ip', periodS: () => this.p.wanS, read: (s) => readPublicIp(url, s).then((value) => ({ ok: true as const, value }), (error: unknown) => ({ ok: false as const, error })) };
   }
-  private metricsAdapter(): ReadAdapter<MetricValues | null> {
+  private healthAdapter(): ReadAdapter<Map<string, Reading> | null> {
+    return {
+      id: 'health', periodS: () => this.p.healthS,
+      read: async (s) => (this.edge.file?.services ? runChecks(this.targets(), this.o.probe ?? tcpProbe, () => this.iso(), s) : null),
+    };
+  }
+  /** The only source of a node's byte counters, so a viewer on the map keeps it running; with nobody looking it stops (design 8). */
+  private wantsMetrics() { return this.now() - this.lastOverlay <= this.p.overlayGoneS * 1000 || this.now() - this.lastViewer <= this.p.viewerGoneS * 1000; }
+
+  private applyMetrics(m: MetricRead | null) {
+    if (!m) { this.rates.gap(); return; }
+    this.metrics = { at: this.iso(), values: m.values };
+    const at = this.iso();
+    for (const [id, c] of Object.entries(m.counters)) this.rates.push(id, c, at);
+    this.rates.keep(new Set(Object.keys(m.counters)));
+    this.publish();
+  }
+
+  private metricsAdapter(): ReadAdapter<MetricRead | 'off' | null> {
     return {
       id: 'pve-metrics', periodS: () => this.p.metricsS,
-      read: async (s) => (this.now() - this.lastOverlay > this.p.overlayGoneS * 1000 ? null : readMetrics(this.o.reader, s).catch((e: unknown) => { if (isSource(e)) this.failing(whyOf(e)); return null; })),
+      read: async (s) => (!this.wantsMetrics() ? 'off' : readMetrics(this.o.reader, s).catch((e: unknown) => { if (isSource(e)) this.failing(whyOf(e)); return null; })),
     };
   }
 
@@ -393,15 +523,18 @@ export class Live {
 
   async start() {
     await this.prepare();
+    this.takeForgets(); // A request left while the service was down.
+    this.loops.push(runLoop({ id: 'forget', periodS: () => this.p.forgetS, read: async () => this.takeForgets() }, () => {}));
     const after = <R>(f: (r: R) => Promise<void>) => (r: R) => void f(r).catch((e: unknown) => console.error(`relief: apply: ${String((e as Error).name)}`));
     // Neither needs tower, so a Proxmox fault stops neither (design 1, criterion 5).
-    if (this.o.edgePath) this.loops.push(runLoop(this.edgeAdapter(this.o.edgePath), after((r) => this.applyEdge(r))));
+    if (this.o.edgePath) this.loops.push(runLoop(this.edgeAdapter(this.o.edgePath), after((r) => this.applyEdge(r))), runLoop(this.healthAdapter(), after((r) => this.applyHealth(r))));
     if (this.o.wanUrl) this.loops.push(runLoop(this.wanAdapter(this.o.wanUrl), after((r) => this.applyWan(r))));
     if (this.o.fault) { this.failing(this.o.fault); return; }
     this.fastLoop = runLoop(this.fastAdapter(), after((r) => this.applyFast(r)));
     this.guestLoop = runLoop(this.guestAdapter(), after((r) => this.applyGuest(r)));
     this.slowLoop = runLoop(this.slowAdapter(), after((r) => this.applySlow(r)));
-    this.loops.push(this.fastLoop, this.guestLoop, this.slowLoop, runLoop(this.metricsAdapter(), (m) => { if (m) this.metrics = { at: this.iso(), values: m }; }));
+    this.metricsLoop = runLoop(this.metricsAdapter(), (m) => { if (m !== 'off') this.applyMetrics(m); });
+    this.loops.push(this.fastLoop, this.guestLoop, this.slowLoop, this.metricsLoop);
   }
 
   async stop() {
@@ -419,6 +552,7 @@ export class Live {
     await this.applyFast(await this.fastAdapter().read(signal));
     await this.applySlow(await this.slowAdapter().read(signal));
     await this.applyGuest(await this.guestAdapter().read(signal));
+    await this.applyHealth(await this.healthAdapter().read(signal));
   }
 
   // --- the API's view
@@ -427,16 +561,70 @@ export class Live {
   touch() {
     const idle = this.now() - this.lastViewer > this.p.viewerGoneS * 1000;
     this.lastViewer = this.now();
-    if (idle) this.fastLoop?.kick();
+    if (idle) {
+      // Nobody read the counters while nobody looked. What is left of the rates is old, and a viewer coming back must see them waiting, not stale.
+      this.rates.gap();
+      if (this.served) this.publish();
+      this.fastLoop?.kick(); this.metricsLoop?.kick();
+    }
   }
 
   /** `seq` alone would hide a new `at` from the browser, and the map would go stale while reads succeed. `rev` moves with each published read. */
   view(): Served { return { snapshot: this.served!, etag: `"${this.seq}.${this.rev}"` }; }
 
+  /** Only an object on the map can be asked for, and its path comes from the last inventory, never from the request. Null: no such object. */
+  private trendRef(id: string): TrendRef | 'bad' | null {
+    for (const r of this.raw.fast?.resources ?? []) {
+      if (r.type === 'node' && `pve:node:${r.node}` === id) return validNode(r.node) ? { kind: 'node', node: r.node } : 'bad';
+      if (isGuest(r) && `pve:${r.type}:${String(r.vmid)}` === id) return validNode(r.node) && validId(r.vmid) ? { kind: r.type as 'qemu' | 'lxc', node: r.node, vmid: r.vmid } : 'bad';
+    }
+    return null;
+  }
+
+  /** One metrics read outside the loop. A full collection leaves it out: it is the viewer's, not the inventory's. */
+  async collectMetrics(signal = new AbortController().signal) { const m = await this.metricsAdapter().read(signal); if (m !== 'off') this.applyMetrics(m); }
+
+  /** A read may start: fewer than `perMin` in the last minute and fewer than `inFlight` running. */
+  private trendSlot() {
+    const now = this.now();
+    this.trendCalls = this.trendCalls.filter((t) => now - t < 60_000);
+    return this.trendCalls.length < TREND_LIMIT.perMin && this.trendFlying < TREND_LIMIT.inFlight;
+  }
+
+  /** On demand, once per object and window while the cache holds. Over the limits nothing is sent; a failed read rests that object, longer each time. */
+  trend(id: string, tf: Timeframe): Promise<Trend> | null {
+    const ref = this.trendRef(id);
+    if (ref === null) return null;
+    if (ref === 'bad') return Promise.resolve({ id, tf, at: null, points: [], why: '이름이 경로 규칙에 맞지 않아 읽지 않았다' });
+    const key = `${id}|${tf}`;
+    const hit = this.trends.get(key);
+    if (hit && hit.until > this.now()) return hit.value;
+    const rest = this.trendRest.get(key);
+    if (rest && rest.until > this.now()) return Promise.resolve({ id, tf, at: null, points: [], why: rest.why });
+    if (!this.trendSlot()) return Promise.resolve({ id, tf, at: null, points: [], why: BUSY });
+    const until = this.now() + TREND_CACHE_S[tf] * 1000;
+    this.trendCalls.push(this.now()); this.trendFlying += 1;
+    const value = readTrend(this.o.reader, ref, tf).then(
+      (points): Trend => { this.trendRest.delete(key); return { id, tf, at: this.iso(), points }; },
+      (e: unknown): Trend => {
+        this.trends.delete(key);
+        const why = whyOf(e); const fails = (this.trendRest.get(key)?.fails ?? 0) + 1;
+        this.trendRest.set(key, { fails, why, until: this.now() + Math.min(TREND_LIMIT.backoffMaxS, TREND_LIMIT.backoffS * 2 ** (fails - 1)) * 1000 });
+        return { id, tf, at: null, points: [], why };
+      },
+    ).finally(() => { this.trendFlying -= 1; });
+    this.trends.delete(key); this.trends.set(key, { until, value });
+    for (const k of this.trends.keys()) { if (this.trends.size <= TREND_KEEP) break; this.trends.delete(k); }
+    return value;
+  }
+
+  changes(q: ChangeQuery): ChangePage { return readChanges(this.file('changes.jsonl'), q); }
+
   viewMetrics() { this.lastOverlay = this.now(); return this.metrics; }
 
-  status(): LiveStatus { return { seq: this.seq, sources: this.served?.sources ?? [this.source], calls: this.o.reader.record, lastRead: this.source.at }; }
+  status(): LiveStatus { return { seq: this.seq, sources: this.served?.sources ?? [this.source], calls: this.o.reader.record, lastRead: this.source.at, missing: Object.values(this.watch.missing).map(({ id, title, since }) => ({ id, title, since })) }; }
 }
 
+const lastLine = (text: string) => { try { return (JSON.parse(text.trimEnd().split('\n').at(-1) ?? '{}') as { n?: number }).n ?? 0; } catch { return 0; } };
 const sum = (a?: Part<number>, b?: Part<number>) => (a?.value == null || b?.value == null ? null : a.value + b.value);
 const agentWhy = (why: string) => (why.startsWith('PVE API 5') ? 'guest agent 응답 없음' : why);

@@ -44,8 +44,9 @@ const BACKING: [RegExp, string][] = [
   [/^pve:/, 'pve'],
   [/^edge\.json/, 'edge'],
   [/^wan-ip:/, 'wan-ip'],
-  [/^rule:(a-record|address-plan|nat-layers)$/, 'edge'],
+  [/^rule:(a-record|address-plan|nat-layers|lan-address)$/, 'edge'],
   [/^docker:/, 'docker'],
+  [/^rule:threshold$/, 'pve'],
 ];
 
 /** @returns problems; empty means no entity stands on a missing source. */
@@ -69,6 +70,8 @@ export function checkNoFake(s: Snapshot): string[] {
     }
     if (n.basis === 'observed' && !Object.values(n.facts).some((f) => f.basis === 'observed')) bad.push(`${n.id}: observed without an observed fact`);
     if (n.parent && !ids.has(n.parent)) bad.push(`${n.id}: orphan`);
+    // A check result stands on the `health` source like any other value.
+    if (n.services?.some((c) => c.status.basis === 'observed') && (state.get('health') ?? 'none') === 'none') bad.push(`${n.id}: service check without health source`);
   }
   // A source with status none cannot have entities of its layer.
   if (state.get('docker') !== 'ok' && s.nodes.some((n) => n.kind === 'container')) bad.push('container without docker source');

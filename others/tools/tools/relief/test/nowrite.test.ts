@@ -32,6 +32,18 @@ describe('a full collection', () => {
   });
 });
 
+describe('a panel reading a trend', () => {
+  it('passes the allowlist again, with write tools still advertised and never called', async () => {
+    const r = await rig();
+    await r.live.collectOnce();
+    r.mock.calls.length = 0;
+    await r.live.trend('pve:node:node-1', 'hour'); await r.live.trend('pve:qemu:100', 'day');
+    expect(r.mock.calls.map((c) => c.name)).toEqual(['proxmox_api_get', 'proxmox_api_get']);
+    for (const c of r.mock.calls) expect(() => callOf({ tool: c.name, ...c.args } as unknown as Target)).not.toThrow();
+    expect(r.live.status().calls.refused).toBe(0);
+  });
+});
+
 describe('readOnlyHint', () => {
   it.each(TOOLS)('without it on %s nothing is called and the source fails', async (name) => {
     const r = await rig();

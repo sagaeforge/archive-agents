@@ -27,6 +27,11 @@ for (const [name, port, objects] of [['built', PORT.built, 16], ['dev', PORT.dev
     test('a cross-site fetch is refused', async () => {
       expect((await raw(port, '/api/snapshot', { host: `127.0.0.1:${port}`, 'sec-fetch-site': 'cross-site', 'sec-fetch-mode': 'cors' })).status).toBe(403);
     });
+    test('a cross-site frame cannot load the page, and a cross-site navigation cannot reach the API', async () => {
+      const frame = { host: `127.0.0.1:${port}`, 'sec-fetch-site': 'cross-site', 'sec-fetch-mode': 'navigate', 'sec-fetch-dest': 'iframe' };
+      expect((await raw(port, '/', frame)).status).toBe(403);
+      expect((await raw(port, '/api/snapshot', { ...frame, 'sec-fetch-dest': 'document' })).status).toBe(403);
+    });
     test('no write verb answers', async () => {
       for (const m of ['POST', 'PUT', 'DELETE']) expect((await raw(port, '/api/snapshot', { host: `127.0.0.1:${port}` }, m)).status, m).toBe(404);
     });
@@ -52,6 +57,8 @@ for (const port of [PORT.built, PORT.serve]) test(`the page on ${port} carries a
   const csp = r!.headers()['content-security-policy'] ?? '';
   expect(csp).toContain("default-src 'none'"); expect(csp).toContain("script-src 'self'"); expect(csp).toContain("connect-src 'self'"); expect(csp).toContain("frame-ancestors 'none'");
   expect(r!.headers()['x-content-type-options']).toBe('nosniff');
+  expect(r!.headers()['x-frame-options']).toBe('DENY');
+  expect(r!.headers()['cross-origin-resource-policy']).toBe('same-origin');
   const violations: string[] = [];
   page.on('console', (m) => { if (/Content Security Policy/i.test(m.text())) violations.push(m.text()); });
   await page.waitForSelector('svg.scene g[data-id]');

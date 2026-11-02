@@ -11,7 +11,7 @@ export const FONT_PX = 12;
 export const PILL_H = FONT_PX + 7;
 
 export type Measure = (text: string) => number;
-export type Placed = { id: string; text: string; x: number; y: number; w: number; h: number; at: Pt; anchor: Pt | null; color?: string; lead: boolean };
+export type Placed = { id: string; text: string; x: number; y: number; w: number; h: number; at: Pt; anchor: Pt | null; color?: string; lead: boolean; alert?: boolean };
 export type LabelLod = { leaf: boolean; container: boolean };
 
 /** Width estimate for tests and for the first paint before a canvas exists: Hangul and CJK are full width. */
@@ -69,7 +69,7 @@ export function placeLabels(cands: LabelCand[], shapes: Shape[], view: Rect, lod
     placed: placed.map(({ x, y, w, h, l }) => {
       const at: Pt = [x + w / 2, y + h / 2];
       const lead = !!l.anchor && (l.onOwn ? !inPolygon(at, l.top) : Math.hypot(l.anchor[0] - at[0], l.anchor[1] - at[1]) > 18);
-      return { id: l.id, text: l.text, x, y, w, h, at, anchor: l.anchor, ...(l.color ? { color: l.color } : {}), lead };
+      return { id: l.id, text: l.text, x, y, w, h, at, anchor: l.anchor, ...(l.color ? { color: l.color } : {}), ...(l.alert ? { alert: true } : {}), lead };
     }),
   };
 }

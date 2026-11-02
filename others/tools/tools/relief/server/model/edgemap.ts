@@ -16,7 +16,7 @@ const drv = (value: string, rule: string, at: string | null): Fact<string> => ({
 function warn(e: Entity, text: string) { e.warnings = [...(e.warnings ?? []), text]; }
 
 /** Current address of a host: observed first, unless a person saw a newer one after the observation went quiet. */
-const currentOf = (e: Entity | undefined, lease: { address: string; seenAt: string } | undefined) => {
+export const currentOf = (e: Entity | undefined, lease: { address: string; seenAt: string } | undefined) => {
   const seen = e?.facts.address;
   if (seen?.basis !== 'observed' || typeof seen.value !== 'string') return lease?.address;
   return lease && seen.at && Date.parse(lease.seenAt) > Date.parse(seen.at) ? lease.address : seen.value;
@@ -150,7 +150,8 @@ export function overlayEdge(out: { nodes: Entity[]; edges: Relation[] }, x: Exte
   // The login name of a guest, for the copy-only SSH button. It sits on the observed guest; a guest nobody sees gets nothing.
   f.guests?.forEach((g, i) => {
     const e = nodes.find((n) => (n.kind === 'vm' || n.kind === 'lxc') && n.basis === 'observed' && n.id.split(':')[2] === String(g.vmid));
-    if (e) e.facts.sshUser = d(g.sshUser, `/guests/${i}`);
+    if (e && g.sshUser) e.facts.sshUser = d(g.sshUser, `/guests/${i}`);
+    if (e && g.expected) e.facts.expected = d(g.expected, `/guests/${i}`);
   });
   if (gw && unmatched.length) gw.facts.unmatchedHosts = d(unmatched, '/hosts');
 
@@ -212,12 +213,18 @@ export function overlayEdge(out: { nodes: Entity[]; edges: Relation[] }, x: Exte
     if (up) rel(`e-lan-${s.key}`, up, id, 'lan', 'declared');
     for (const h of s.hosts ?? []) { const t = hostEntity.get(h); if (t) rel(`e-lan-${s.key}-${h}`, id, t.id, 'lan', 'declared'); }
   });
-  // A workstation no switch names hangs off the router itself (design 7.1). A node needs none of this: its uplink is observed.
+  // A wired PC no switch names sits on the LAN segment, as the nodes do: its address says which, and with no address a lone segment is the only one it can be on.
+  // With no segment to stand on, or an address outside them all, it hangs off the router (design 7.1). A node needs none of this: its uplink is observed.
   f.hosts?.forEach((h, i) => {
     const t = hostEntity.get(h.key);
     if (!t || t.kind !== 'workstation' || !gw) return;
     const onSwitch = f.switches?.some((s) => s.hosts?.includes(h.key)) ?? false;
-    t.facts.link = d(onSwitch ? '유선 · 스위치' : '유선 · 라우터', `/hosts/${i}`);
-    if (!onSwitch) rel(`e-lan-${h.key}`, gw.id, t.id, 'lan', 'declared');
+    const segments = nodes.filter((n) => n.kind === 'segment');
+    const addr = currentOf(t, h.lease)?.split('/')[0];
+    const segment = addr === undefined ? (segments.length === 1 ? segments[0] : undefined) : segments.find((n) => typeof n.facts.cidr?.value === 'string' && inNetwork(addr, n.facts.cidr.value));
+    // Nobody declared this cable: the address implies it, so it reads as derived, with the rule's name.
+    const onSegment = !onSwitch && !!segment;
+    t.facts.link = onSegment ? drv('유선 · LAN', 'lan-address', f.declaredAt) : d(onSwitch ? '유선 · 스위치' : '유선 · 라우터', `/hosts/${i}`);
+    if (!onSwitch) rel(`e-lan-${h.key}`, (segment ?? gw).id, t.id, 'lan', onSegment ? 'derived' : 'declared');
   });
 }

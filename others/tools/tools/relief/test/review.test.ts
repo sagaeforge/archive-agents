@@ -72,7 +72,7 @@ describe('a QEMU disk stays unknown', () => {
     const r = await rig();
     r.live.viewMetrics();
     r.mock.state.over.set('/cluster/metrics/export', metrics(0));
-    const v = await internals(r).metricsAdapter().read(new AbortController().signal) as Record<string, { cpu?: number; disk?: number }>;
+    const { values: v } = await internals(r).metricsAdapter().read(new AbortController().signal) as { values: Record<string, { cpu?: number; disk?: number }> };
     expect(v['pve:qemu:100']).toEqual({ cpu: 0.5 });
     expect(v['pve:lxc:101']).toEqual({ disk: 0 }); // An LXC reports its real use, and 0 is a value there.
   });
@@ -80,7 +80,7 @@ describe('a QEMU disk stays unknown', () => {
     const r = await rig();
     r.live.viewMetrics();
     r.mock.state.over.set('/cluster/metrics/export', metrics(25));
-    const v = await internals(r).metricsAdapter().read(new AbortController().signal) as Record<string, { disk?: number }>;
+    const { values: v } = await internals(r).metricsAdapter().read(new AbortController().signal) as { values: Record<string, { disk?: number }> };
     expect(v['pve:qemu:100']!.disk).toBe(0.25);
   });
 });
