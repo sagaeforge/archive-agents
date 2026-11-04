@@ -58,8 +58,9 @@ Superpowers 6.4.2는 [ADR-0006](docs/adr/0006-dev-workflow-superpowers.md)에 �
 - 리드는 관제만 한다. task마다 `sp-implementer`(Codex `medium`, 실패 시 `high`, TDD) → `sp-test-runner`(샌드박스 밖 Claude `haiku`/`low`) → `sp-committer`(Claude `haiku`/`low`) → `sp-reviewer`(구현자와 다른 Codex 세션, `high`) 순서다. 검토는 `review-package`의 커밋된 `BASE..HEAD`를 읽고, 수정은 구현자에게 돌려 같은 순서를 거친다. 같은 결과의 회사 간 중복 검토는 판정 충돌 때만 한다.
 - 시험은 task에 명시한 좁은 디렉터리·파일과 명령만 실행한다. 전체 스위트, `tests/mcp/test_claude_real.py` 읽기·수정·실행, `KB_LIVE` 사용은 금지한다. `verification-before-completion`과 `systematic-debugging`을 유지하고 종료 코드로 판정한다. 같은 원인 실패가 두 번이면 멈추고 공통 지침 0·6대로 분석한다.
 - 이 흐름의 단계별 로컬 커밋은 이미 승인됐다. `sp-committer`만 현재 브랜치에서 지정 경로를 커밋한다. `finishing-a-development-branch`는 브랜치·워크트리 유지와 결과 보고로 고정한다. push·PR·merge는 사용자 요청이 있을 때 별도 처리한다. amend·reset은 이 흐름에 포함하지 않는다.
+- 실행 동작을 바꾸지 않는 문서·설정 변경은 `DocsPacket`(목적·관측 결과, 승인 경로, brief·제약, 완료 기준 2~5개, 정확한 정적 명령, 커밋 메시지)을 받는다. 리드는 신뢰할 수 있는 맥락·워커 근거에서 브랜치·expected HEAD/BASE·검증 manifest와 명령별 종료 코드·helper 위치·패키지 OUTFILE을 채워 커밋·검토 전에 인계한다. 영속 brief를 `PLAN_FILE`로 쓰고 최초 시도 재시도 횟수는 0, 해당 없으면 구현 보고는 `none`, 시험 경로·`KB_HOME`은 `N/A—static checks only`로 둔다. 검토 결과는 최종 메시지이며 검토 보고서 파일 경로는 요구하지 않는다. OUTFILE은 디렉터리가 아닌 파일 경로다. 커밋 승인·snapshot 동일성·불변 검토 범위·구현/검토 세션 분리는 유지하며 안전 근거가 없으면 `NEEDS_CONTEXT`다.
 - worktree는 기본으로 만들지 않는다. 병렬 구현자가 같은 파일을 건드려야 할 때만 Claude `haiku`/`low` 워커가 격리한다. 병렬 작업은 읽기 전용 또는 서로 다른 파일만 허용한다. visual companion은 끄고 필요한 설계 렌더링은 공통 지침 7에 따라 Claude 워커에게 맡긴다.
-- `writing-skills`·`diagnosing-superpowers`는 프로젝트 범위에만 쓴다. 이 환경의 Codex는 `.git` 읽기 전용, 소켓 차단, Claude scratchpad 쓰기 불가, 기본 600초 제한이 있다. 긴 작업은 `AGENT_TIMEOUT`을 명시하고 후속 지시는 `[session]`을 `AGENT_RESUME`으로 재개한다. 임시 파일은 `$TMPDIR`에 둔다.
+- `writing-skills`·`diagnosing-superpowers`는 프로젝트 범위에만 쓴다. `writing-skills`의 자동 하위 에이전트/API 압력 시험·micro-test 반복과 미검증 skill 수정 삭제 지시는 적용하지 않는다. 수정은 보존하고 행동 검증은 미검증으로 보고하며 필요한 평가는 리드에게 돌린다. 긴 작업은 `AGENT_TIMEOUT`을 명시하고 후속 지시는 `[session]`을 `AGENT_RESUME`으로 재개한다. 새 검토는 구현자와 세션을 분리한다. 임시 파일은 `$TMPDIR`에 둔다.
 - 효과는 세션별 사용자 정정 횟수(`agent-retro status`)로 확인한다. 정정을 줄이지 못한 추가 규칙은 제거한다.
 
 ## 저장 범위

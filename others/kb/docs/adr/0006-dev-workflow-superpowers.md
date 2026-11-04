@@ -64,6 +64,21 @@
 
 추가 실행 필드는 `{plan_ref, spec_ref, task_base, expected_head, branch, allowed_test_paths, commands, snapshot_manifest_ref, report_ref, implementer_session_id, reviewer_session_id, tier, model, timeout_s}`다. 각 manifest는 검증 대상 파일별 경로·상태·SHA-256을 담고 삭제는 상태로 표시한다. 다음 역할은 이전 반환의 근거 파일을 읽으며 변경·해시 불일치나 커밋 사이의 예상 밖 HEAD 이동을 통과시키지 않는다. 입력 누락은 `NEEDS_CONTEXT`, 권한·환경 제한은 `BLOCKED`, 낮은 확신은 `DONE_WITH_CONCERNS`로 반환한다. 완료 기준별 결과, 명령별 종료 코드, 재시도 횟수, 미해결·사고를 포함한다. 긴 보고는 파일에 두고 인계 메시지는 4,000자 이내다.
 
+### 문서·설정 전용 DocsPacket
+
+실행 동작을 바꾸지 않는 문서·설정 변경에는 `DocsPacket`을 받는다. 필수 입력은 목적·관측 결과, 승인 경로, task brief·제약, 완료 기준 2~5개, 정확한 정적 검증 명령, 커밋 메시지다. 이 경우 아래 규칙이 동작 변경용 `CommitPacket`·`ReviewPacket`·시험 역할의 입력 중 해당 없는 항목보다 우선한다. 설정이 실행 동작을 바꾸면 이 경로를 쓰지 않는다.
+
+- 리드는 신뢰할 수 있는 맥락과 워커 근거에서 브랜치, expected HEAD/BASE, 검증 manifest와 실제 명령별 종료 코드, helper 위치, 패키지 OUTFILE을 도출한다. 정적 검증은 `sp-test-runner`가 수정 후 파일을 고정해 manifest를 생성하고 모든 정적 명령의 종료 코드를 기록한다. 그 결과를 받아 커밋·검토 배치 전에 인계를 완성한다. 구현자에게 사전 manifest나 실행하지 않은 종료 코드를 요구하지 않는다.
+- 영속 brief를 `PLAN_FILE`로 사용한다. 최초 시도 재시도 횟수는 0이고 수정 회차는 실제 횟수를 유지한다. 해당 없으면 구현 보고는 `none`, 시험 경로·`KB_HOME`은 `N/A—static checks only`로 적는다. 문서 작업에 가짜 시험 디렉터리·개발 환경을 만들지 않고 정적 명령은 KB runner 없이 실행할 수 있다. 구현 보고 `none`은 검증 manifest·종료 코드가 없어도 된다는 뜻이 아니다.
+- 검토 출력은 최종 메시지이며 검토 보고서 파일 경로는 요구하지 않는다. 리드가 필요한 보관을 배치한다. 검토자는 구현자와 다른 세션에서 실제 생성된 불변 `BASE..HEAD` 패키지와 정적 검증 근거를 읽는다.
+- 커밋 승인, 검증 snapshot과 커밋 내용의 동일성, 불변 검토 범위, 구현/검토 세션 분리는 그대로 유지한다. 안전 근거가 실제로 없으면 `NEEDS_CONTEXT`를 반환한다. 신뢰할 수 있는 근거로 채운 필드나 명시적인 해당 없음 값을 다시 누락으로 취급하지 않는다.
+
+`review-package`의 네 번째 인자 OUTFILE은 디렉터리가 아닌 **파일 경로**다. 부모 디렉터리만 준비하고 그 안의 고유 파일명을 지정한다. 전달된 OUTFILE이 디렉터리면 커밋 전에 리드에게 경로 보완을 요청하며 디렉터리를 그대로 helper에 넘기지 않는다.
+
+### writing-skills 평가 지시의 예외
+
+`writing-skills`의 자동 하위 에이전트/API 압력 시험과 micro-test 반복, 미검증 skill 수정을 삭제하라는 지시는 이 프로젝트에서 적용하지 않는다(`P/skills/writing-skills/SKILL.md:376`, `:558`, `:577`). 수정은 보존하고 허용된 정적 확인만 수행한다. 행동 검증은 미검증으로 보고하며 추가 평가 요구는 리드에게 돌린다. 정적 확인 성공을 행동 평가 통과로 바꾸지 않는다. 이 예외는 skill·프롬프트·에이전트·지침 문서를 고칠 때도 적용하며 일반 동작 변경의 TDD를 면제하지 않는다.
+
 ### relay 실행 계약
 
 `~/.claude/agents/codex.md`는 읽기만 하여 패턴을 확인했다. 프로젝트 relay는 task 원문을 따옴표로 감싼 heredoc으로 `agent-run codex <tier> <cwd> <sandbox> <model>`에 전달한다. 구현은 `workspace-write`, 검토는 `read-only`다. relay는 코드를 직접 읽거나 작업을 대신 수행하지 않는다. 고정 역할 제약은 task 원문 앞에 전달하되 원문은 다시 쓰지 않는다.
@@ -84,7 +99,7 @@
    bash "$SUPERPOWERS_ROOT/skills/subagent-driven-development/scripts/review-package" "$PLAN_FILE" "$BASE" "$HEAD" "$REVIEW_PACKAGE"
    ```
 
-   변수는 리드가 검증된 설치 루트·plan·SHA·plan 전용 출력 파일로 채운다. `SUPERPOWERS_ROOT`는 이 명령을 위한 셸 변수이며 플러그인 설정 API가 아니다. 명시적 출력 경로의 부모는 준비되어 있어야 한다. 패키지는 커밋 목록·통계·문맥 포함 diff만 담고 미커밋 변경은 담지 않는다(`P/skills/subagent-driven-development/scripts/review-package:30`, `:40`).
+   변수는 리드가 검증된 설치 루트·plan·SHA·plan 전용 출력 파일로 채운다. `SUPERPOWERS_ROOT`는 이 명령을 위한 셸 변수이며 플러그인 설정 API가 아니다. 명시적 OUTFILE은 파일 경로이고 부모 디렉터리만 준비되어 있어야 한다. 패키지는 커밋 목록·통계·문맥 포함 diff만 담고 미커밋 변경은 담지 않는다(`P/skills/subagent-driven-development/scripts/review-package:30`, `:40`).
 6. 리드가 `sp-reviewer`를 구현자와 다른 새 Codex 세션으로 실행한다. 검토자는 패키지를 먼저 읽고 요구 충족·품질을 한 번에 검토한다. 같은 파일을 다시 전부 읽거나 시험을 재실행하지 않는다. 이름 붙인 위험을 판단할 근거가 부족할 때만 좁은 추가 읽기를 하고 위치를 보고한다. 추가 시험이 필요하면 명령을 제안하고 리드가 시험 실행자에게 맡긴다.
 7. Critical/Important 또는 실제 요구 누락은 구현자에게 돌린다. 이전 검토 HEAD를 `FIX_BASE`로 기록하고 수정 → 좁은 시험 → 새 로컬 커밋 → `FIX_BASE..HEAD` 재검토를 거친다. 재검토는 기존 지적 해결 여부와 수정이 만든 새 결함만 본다. 원래 task `BASE`도 보존한다. Minor는 ledger에 근거·영향을 기록한다. 첫 실패·낮은 확신은 Codex `high`로 올린다. 같은 원인 두 번이면 반복을 멈추고 판단 수준 워커가 원인을 분석하며 리드는 증거를 직접 본다. 플러그인 5회 한도까지 강행하지 않는다.
 8. 요구 충족·좁은 시험·검토가 닫힌 뒤에만 task 완료로 기록한다. 여러 task의 계획을 마치면 시작 시 기록한 전체 작업 기준 SHA부터 최종 HEAD까지 패키지를 만들어 별도 Codex `high` 세션의 통합 검토를 한 번 받는다. 이는 task 검토와 다른 통합 범위이며 다른 회사에 같은 결과를 재검토시키지 않는다. 단일 Bounded task는 이미 검토한 동일 범위를 다시 검토하지 않는다. 수정도 동일한 시험·커밋·범위 검토 순서를 따른다. 미해결 중요한 결함을 완료로 표시하지 않는다.
@@ -108,6 +123,7 @@
 | 3회 실패 뒤 논의·5회 수정 루프: `P/skills/systematic-debugging/SKILL.md:191`; `P/skills/subagent-driven-development/SKILL.md:373`, `:427` | 첫 실패 상향, 같은 원인 두 번이면 분석. 승인 없이 중요한 결함을 parked 처리해 통과시키지 않는다. |
 | HTTP/WebSocket companion: `P/skills/brainstorming/visual-companion.md:70`; 소켓 listen: `P/skills/brainstorming/scripts/server.cjs:703` | companion 비활성. 샌드박스 밖 Claude 워커가 필요한 설계 자료만 렌더링하며 host/foreground 변경으로 소켓 차단을 우회하지 않는다. |
 | home 경로 skill·diagnostic 쓰기: `P/skills/writing-skills/SKILL.md:12`; `P/skills/diagnosing-superpowers/SKILL.md:33`; Codex 전역 설정: `P/skills/using-superpowers/references/codex-tools.md:70` | 프로젝트 파일 또는 `$TMPDIR`만 사용한다. 전역 설정·설치 캐시를 수정하지 않으며 별도 경로 env가 존재한다고 주장하지 않는다. 진단의 기본 7명 분석자(`P/skills/diagnosing-superpowers/SKILL.md:74`)도 자동 실행하지 않는다. |
+| skill 변경의 선행 시험·삭제·압력 시나리오·API micro-test: `P/skills/writing-skills/SKILL.md:376`, `:558`, `:577` | 자동 평가 반복과 미검증 수정 삭제를 override한다. 수정은 보존하고 행동 검증 미검증·평가 요구를 리드에게 보고한다. 허용된 정적 확인만 실행한다. |
 | nested orchestrator: `P/skills/using-superpowers/references/claude-code-tools.md:14`; leaf 계약: `P/skills/subagent-driven-development/implementer-prompt.md:50`, `P/skills/subagent-driven-development/task-reviewer-prompt.md:55` | 리드가 직접 역할들을 배치한다. Codex relay 안의 워커는 leaf이며 중첩 위임을 하지 않는다. |
 | plugin 모델 선택·더 싼 재검토: `P/skills/subagent-driven-development/SKILL.md:184`; reviewer 칭찬 요구: `P/skills/subagent-driven-development/task-reviewer-prompt.md:158` | 승인된 구현 medium/검토 high와 relay haiku/low를 명시한다. 사용자 보고는 한국어, 에이전트 인계는 영어, 불필요한 칭찬 없이 판정·근거·우려만 남긴다. |
 | reviewer의 추가 시험 허용: `P/skills/subagent-driven-development/task-reviewer-prompt.md:73` | 검토자는 읽기 전용으로 근거를 검토한다. 필요한 추가 실행은 시험 역할에 돌리며 같은 검증을 반복하지 않는다. |

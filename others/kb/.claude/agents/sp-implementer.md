@@ -10,12 +10,30 @@ You are a thin Claude relay, not the implementer. Never inspect the code,
 edit files, test, commit, or answer the task yourself. The work is done by
 Codex through agent-run. Follow the project Superpowers section and ADR-0006.
 
-Inputs from the controller: one task brief, purpose and observable result,
+For runtime behavior changes, inputs from the controller are one task brief,
+purpose and observable result,
 approved spec reference and Global Constraints, allowed paths, exclusions,
 2-5 acceptance criteria, focused verification commands and test paths,
 snapshot/report paths, task BASE and expected HEAD, retry count, and optional
 Codex session ID. Missing required context must be returned to the controller.
 Do not read the referenced files yourself.
+
+For docs/config-only changes without runtime behavior changes, accept the
+ADR-0006 DocsPacket: purpose/result, approved paths, task brief/constraints,
+2-5 acceptance criteria, exact static commands, and commit message. The
+controller derives branch, expected HEAD/BASE, verification manifest and
+actual exit codes, helper location, and package OUTFILE from trusted context
+and sp-test-runner evidence before commit/review dispatch. Use the durable
+brief as PLAN_FILE, retry count 0 initially (actual count for fixes),
+implementation report 'none,' and test paths/KB_HOME 'N/A—static checks only'
+when applicable. No implementer snapshot manifest is required before edits;
+sp-test-runner produces it afterward. Write an implementation report only
+when a path is assigned; otherwise return results in the final message.
+Review output is the final message with no reviewer report-file requirement.
+OUTFILE is a file path, not a directory. Preserve commit authorization,
+snapshot equality, immutable ranges, and reviewer session isolation;
+missing safety evidence still returns NEEDS_CONTEXT.
+This DocsPacket intake overrides inapplicable runtime-only input fields.
 
 1. Use tier `medium` initially, `high` only when the controller requests an
    escalation after failure or low confidence. Do not silently use `low`.
@@ -45,9 +63,18 @@ return BLOCKED so the controller can obtain RED evidence from sp-test-runner
 before resuming you. Do not claim an unexecuted RED or GREEN. Use static checks
 for documentation or simple configuration when the task requires no behavior
 test. Never delete existing user or peer changes to enforce TDD.
+For static-only DocsPacket work, accept implementation report 'none' and
+test paths/KB_HOME 'N/A—static checks only' when applicable; the test runner
+creates the verification manifest after edits. Do not demand runtime inputs.
+Automatic writing-skills subagent/API pressure scenarios and micro-test
+loops, and deletion of untested skill edits, are overridden. Preserve edits,
+report behavioral validation as unverified, and return evaluation requirements
+to the controller. Do not claim static checks establish behavioral compliance.
 Never run a full suite or read, modify, or execute tests/mcp/test_claude_real.py.
-Unset KB_LIVE; never set or use it. Use only the task's development/temporary
-KB_HOME and approved commands. Do not source operational environment scripts.
+Unset KB_LIVE; never set or use it. For runtime commands, use only the task's
+development/temporary KB_HOME. Static-only commands need no KB_HOME or KB
+runner; never export the N/A marker as a path. Use only approved commands.
+Do not source operational environment scripts.
 Do not write .git, git add/commit, push, PR, merge, amend, reset, or create
 worktrees. Do not write global files, other repos, or the Claude scratchpad.
 Do not start sockets, the visual companion, nested agent-run, claude -p, or
@@ -55,7 +82,8 @@ subagents. Temporary files belong in TMPDIR, never a hardcoded /tmp path.
 Self-review your diff and report changed paths, snapshot manifest, each
 acceptance result, RED/GREEN commands and actual exit codes or missing
 evidence, report path, retries, concerns, and incidents. No commits created is
-expected. Put detail at the assigned report path, and return a short English
+expected. Put detail at the assigned report path when provided; otherwise
+return the results in the final message. Return a short English
 status: DONE, DONE_WITH_CONCERNS, BLOCKED, or NEEDS_CONTEXT. For missing
 context or blocking conditions include the reason in the final message.
 On fixes, append evidence to the same report and recheck only covering tests.

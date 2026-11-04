@@ -11,18 +11,33 @@ Codex sandbox. Follow the project Superpowers section and ADR-0006. The user
 approved staged local commits on 2026-11-04 for this workflow. This grants
 no push, PR, merge, branch change, amend, reset, branch/worktree deletion, or deployment.
 
-Require a CommitPacket containing purpose and observable result, cwd,
+For runtime behavior changes, require a CommitPacket containing purpose and observable result, cwd,
 task/plan references, 2-5 acceptance criteria, exact allowed file list,
 expected current branch and HEAD, original task BASE (or FIX_BASE for a
 fix), verified snapshot manifest, successful focused/static verification
 report with commands and exit codes, commit message, verified installed
-review-package script path, package output path, and retry count. The packet
+review-package script path, package OUTFILE (a file path, not a directory), and retry count. The packet
 must identify the already approved local-commit scope. If any input is
 missing, return NEEDS_CONTEXT; do not ask for previously granted approval.
 For a Bounded task without a formal plan, the packet may use the durable
 approved task brief as PLAN_FILE with an explicit package output path;
 review-package only requires that file to exist. Do not create a formal
 plan or invoke the task-brief extraction helper to satisfy this input.
+
+For docs/config-only changes without runtime behavior changes, accept a
+DocsPacket containing purpose/result, approved paths, task brief/constraints,
+2-5 acceptance criteria, exact static commands, and commit message. Before
+dispatch to commit/review, the controller derives branch, expected HEAD/BASE,
+verification manifest and actual exit codes, helper location, and package
+OUTFILE from trusted context and sp-test-runner evidence. Use the durable
+brief as PLAN_FILE, retry count 0 for an initial attempt (preserve the actual
+count for fixes), implementation report 'none,' and test paths/KB_HOME
+'N/A—static checks only' when applicable. Review output is the final message;
+no reviewer report-file path is required. This intake overrides inapplicable
+runtime-only fields, not commit authorization, snapshot equality, immutable
+review ranges, or reviewer session isolation. Missing safety evidence still
+returns NEEDS_CONTEXT. Never require placeholder tests or KB_HOME for static
+commands, and never treat absent behavioral evaluation as a static-check pass.
 
 Perform these steps serially; stop on the first unexpected state:
 
@@ -31,6 +46,9 @@ Perform these steps serially; stop on the first unexpected state:
    the index is empty. If any staged content already exists, report BLOCKED
    without touching it. Unrelated unstaged changes may remain untouched;
    if an approved file also contains changes of uncertain ownership, stop.
+   Validate before committing that the package OUTFILE is a file path, not
+   an existing directory, and that its parent can be prepared. If OUTFILE is
+   a directory or ambiguous, request a concrete file path from the controller.
 2. Check every allowed path and its content/deletion state against the
    exact manifest verified by sp-test-runner. Confirm all required acceptance
    commands exited 0 (static checks suffice for documents). RED evidence
@@ -62,8 +80,9 @@ Perform these steps serially; stop on the first unexpected state:
    ```
 
    Values are packet data passed as quoted arguments, not executable shell
-   fragments. Prepare only the assigned plan-local output directory (or
-   TMPDIR); never use a hardcoded /tmp path. Use the immutable SHA values,
+   fragments. The fourth helper argument is an OUTFILE file path, never a
+   directory. Prepare only its assigned parent directory under the plan-local
+   workspace or TMPDIR; never use a hardcoded /tmp path. Use immutable SHA values,
    not HEAD~1. Never modify the script or bypass its ancestor/nonempty-range
    guards. Capture its exit code and returned path. If package generation
    fails, preserve the commit, report PACKAGE_FAILED and its SHA, and do not
