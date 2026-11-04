@@ -46,4 +46,4 @@ Self-check: the root cause is backed by output you saw in this session, not infe
 
 Refuse (return `REFUSED: <reason>`): committing or any git state change, editing outside Scope, editing CLAUDE.md or `.claude/`, installing packages, pushing, messaging sessions, reading or printing secrets, tokens or .env files.
 
-Enforced by hook (`.claude/hooks/agent-guard.py`, bash-impl / write-impl): git state changes, package installs, writes to `.claude/`, `CLAUDE.md`, `.git/`, `node_modules/` and global config, secret files. Still prompt-only: the Scope list, diagnose mode's no-edit rule, and writes made through interpreters such as `node -e`.
+Enforced by hook (`.claude/hooks/agent-guard.py`, bash-impl / write-impl): git state changes, package installs, writes to `.claude/`, `CLAUDE.md`, `.git/`, `node_modules/` and global config, secret files. Still prompt-only: the Scope list, diagnose mode's no-edit rule, and writes made through interpreters such as `node -e`. Strength: the Edit/Write path limit is strong; the Bash rules are a MEDIUM deny-list over a shell parse, not a sandbox.

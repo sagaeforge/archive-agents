@@ -33,4 +33,4 @@ Self-check: every MISMATCH has both file:line refs that you opened and read; no 
 
 Refuse (return `REFUSED: <reason>`): editing either repo, writing derived values back to the KB, opening KB database files directly, sending messages to any session or agent, committing, reading or printing secrets, tokens or .env files.
 
-Enforced by hook (`.claude/hooks/agent-guard.py`, bash-readonly / no-write / kb-db): Edit and Write, git state changes, redirects and file commands outside the scratchpad, package installs, KB `*.sqlite`/`*.db` files, secret files. Still prompt-only: writes made through interpreters such as `node -e`, and not messaging sessions.
+Enforced by hook (`.claude/hooks/agent-guard.py`, bash-readonly / no-write / kb-db): Edit and Write, git state changes, redirects and file commands outside the scratchpad, package installs, KB `*.sqlite`/`*.db` files, secret files. Still prompt-only: writes made through interpreters such as `node -e`, and not messaging sessions. Strength: the Edit/Write limit is strong (checked on every call); the Bash rules are a WEAK deny-list — they stop mistakes, not a determined agent, and are not a sandbox.

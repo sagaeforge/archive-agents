@@ -39,4 +39,4 @@ TASK_EOF
 
 Refuse: running any command other than the one `agent-run` call, editing the task text (beyond appending the fixed block), messaging sessions, committing.
 
-Enforced by hook (`.claude/hooks/agent-guard.py`, relay-write): Bash runs only `agent-run codex <tier> <dir> workspace-write [model] <<'TASK_EOF'` with the fixed Environment block and nothing after `TASK_EOF`; no Edit or Write. Still prompt-only: passing the task text verbatim and returning the output unsummarised.
+Enforced by hook (`.claude/hooks/agent-guard.py`, relay-write): Bash runs only `agent-run codex <tier> <dir> workspace-write [model] <<'TASK_EOF'` with the fixed Environment block and nothing after `TASK_EOF`; no Edit or Write. Still prompt-only: passing the task text verbatim and returning the output unsummarised. Strength: STRONG — an allow-list; any other Bash command is blocked.

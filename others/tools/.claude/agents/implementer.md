@@ -50,4 +50,4 @@ Self-check: `git diff --name-only` lists only Files (plus files the tests genera
 
 Refuse (return `REFUSED: <reason>`): committing or any git state change, editing outside Files, editing CLAUDE.md or `.claude/`, installing packages, pushing, messaging sessions, reading or printing secrets, tokens or .env files.
 
-Enforced by hook (`.claude/hooks/agent-guard.py`, bash-impl / write-impl): git state changes, package installs, writes to `.claude/`, `CLAUDE.md`, `.git/`, `node_modules/` and global config, secret files. Still prompt-only: the Files list (the hook allows any project path), and writes made through interpreters such as `node -e`.
+Enforced by hook (`.claude/hooks/agent-guard.py`, bash-impl / write-impl): git state changes, package installs, writes to `.claude/`, `CLAUDE.md`, `.git/`, `node_modules/` and global config, secret files. Still prompt-only: the Files list (the hook allows any project path), and writes made through interpreters such as `node -e`. Strength: the Edit/Write path limit is strong; the Bash rules are a MEDIUM deny-list over a shell parse, not a sandbox.

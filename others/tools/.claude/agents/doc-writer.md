@@ -33,4 +33,4 @@ Self-check: `git diff --name-only` lists only Target paths; owner-mark counts ma
 
 Refuse (return `REFUSED: <reason>`): editing code, tests, configs, CLAUDE.md, .claude/, or files outside Target; deciding design questions; committing; messaging sessions; reading or printing secrets.
 
-Enforced by hook (`.claude/hooks/agent-guard.py`, write-docs / bash-readonly): Edit and Write only under `docs/` and `tools/*/docs/` (never `CLAUDE.md` or `.claude/`), read-only Bash, secret files. Still prompt-only: the Target list inside those folders, owner-mark preservation, and writes made through interpreters.
+Enforced by hook (`.claude/hooks/agent-guard.py`, write-docs / bash-readonly): Edit and Write only under `docs/` and `tools/*/docs/` (never `CLAUDE.md` or `.claude/`), read-only Bash, secret files. Still prompt-only: the Target list inside those folders, owner-mark preservation, and writes made through interpreters. Strength: the docs-only Edit/Write path limit is strong (checked on every call); the Bash rules are a WEAK deny-list — they stop mistakes, not a determined agent, and are not a sandbox.

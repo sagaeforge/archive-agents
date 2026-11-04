@@ -5,6 +5,12 @@ Usage (from an agent's frontmatter hook):
     python3 -I "${CLAUDE_PROJECT_DIR}/.claude/hooks/agent-guard.py" \
         --bash <bash-policy> --write <write-policy> [--kb-db]
 
+Fallback (from .claude/settings.json, for teammates whose frontmatter hooks do
+not attach):
+    python3 -I "${CLAUDE_PROJECT_DIR}/.claude/hooks/agent-guard.py" --by-agent-type
+The hook input's `agent_type` picks the policy from AGENT_POLICIES. No
+agent_type (the lead) or an unknown type passes unchanged.
+
 Reads the hook input JSON on stdin. Exit 0 lets the call run; exit 2 blocks it
 and the stderr text reaches the agent as the reason.
 
@@ -68,6 +74,23 @@ SEGMENT_OPS = {";", ";;", "&&", "||", "|", "&", "|&", "(", ")", "!"}
 KEYWORDS = {"{", "}", "do", "then", "else", "elif", "fi", "done", "if", "while", "until", "for", "case", "esac", "function", "time"}
 KNOWN_PUNCT = sorted(SEGMENT_OPS | {">", ">>", ">|", "&>", "&>>", "<>", ">&", ">>&", "<", "<<", "<<<", "<&"}, key=len, reverse=True)
 REDIRECT_OPS = {">", ">>", ">|", "&>", "&>>", "<>"}
+
+
+# Same arguments as each .claude/agents/<name>.md frontmatter hook. test_agent_guard.py
+# compares this table with the frontmatter so the two cannot drift apart.
+AGENT_POLICIES = {
+    "code-reviewer": ["--bash", "bash-readonly", "--write", "no-write"],
+    "committer": ["--bash", "bash-commit", "--write", "no-write"],
+    "contract-liaison": ["--bash", "bash-readonly", "--write", "no-write", "--kb-db"],
+    "debugger": ["--bash", "bash-impl", "--write", "write-impl"],
+    "doc-writer": ["--bash", "bash-readonly", "--write", "write-docs"],
+    "implementer-codex": ["--bash", "relay-write", "--write", "no-write"],
+    "implementer": ["--bash", "bash-impl", "--write", "write-impl"],
+    "security-reviewer-codex": ["--bash", "relay-read", "--write", "no-write"],
+    "test-runner": ["--bash", "bash-test", "--write", "no-write"],
+    "ux-designer": ["--bash", "bash-readonly", "--write", "write-scratch"],
+    "visual-verifier": ["--bash", "bash-readonly", "--write", "no-write", "--net-local"],
+}
 
 
 class Block(Exception):
@@ -415,8 +438,7 @@ def check_relay(policy, cmd):
         block(f"the fixed relay block ({marker}) is missing")
 
 
-def main(argv):
-    pol = {"bash": None, "write": None}
+def parse_args(argv, pol):
     kb_db = net_local = False
     i = 0
     while i < len(argv):
@@ -432,10 +454,22 @@ def main(argv):
         else:
             block(f"unknown argument {a!r}")
         i += 1
-    known_bash = {"bash-readonly", "bash-test", "bash-commit", "bash-impl", "relay-write", "relay-read", None}
-    known_write = {"no-write", "write-docs", "write-scratch", "write-impl", None}
-    if pol["bash"] not in known_bash or pol["write"] not in known_write:
-        block("unknown policy")
+    return kb_db, net_local
+
+
+def main(argv):
+    pol = {"bash": None, "write": None}
+    by_type = "--by-agent-type" in argv
+    if by_type:
+        if len(argv) != 1:
+            block("--by-agent-type takes no other argument")
+        kb_db = net_local = False
+    else:
+        kb_db, net_local = parse_args(argv, pol)
+        known_bash = {"bash-readonly", "bash-test", "bash-commit", "bash-impl", "relay-write", "relay-read", None}
+        known_write = {"no-write", "write-docs", "write-scratch", "write-impl", None}
+        if pol["bash"] not in known_bash or pol["write"] not in known_write:
+            block("unknown policy")
 
     raw = sys.stdin.read()
     try:
@@ -444,6 +478,13 @@ def main(argv):
         block("hook input is not JSON")
     if not isinstance(data, dict):
         block("hook input is not an object")
+
+    if by_type:
+        agent_type = data.get("agent_type")
+        if not isinstance(agent_type, str) or agent_type not in AGENT_POLICIES:
+            return  # the lead, or a subagent type this table does not govern
+        kb_db, net_local = parse_args(AGENT_POLICIES[agent_type], pol)
+
     data["_net_local_only"] = net_local
     tool = data.get("tool_name") or ""
     ti = data.get("tool_input") or {}

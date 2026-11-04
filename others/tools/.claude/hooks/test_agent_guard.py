@@ -147,6 +147,74 @@ CASES = [
 ]
 
 
+BY_TYPE = ["--by-agent-type"]
+
+
+def typed(inp, agent_type):
+    out = dict(inp)
+    out["agent_type"] = agent_type
+    out["agent_id"] = "a1"
+    return out
+
+
+CASES += [
+    # fallback path: policy chosen from agent_type in the hook input
+    ("type: lead (no agent_type) passes a write", BY_TYPE, tool("Write", f"{PROJ}/README-x.md"), 0),
+    ("type: lead passes git push", BY_TYPE, bash("git push origin HEAD"), 0),
+    ("type: unknown agent type passes", BY_TYPE, typed(tool("Write", f"{PROJ}/README-x.md"), "Explore"), 0),
+    ("type: non-string agent_type passes", BY_TYPE, typed(tool("Write", f"{PROJ}/README-x.md"), 7), 0),
+    ("type: test-runner Write blocked", BY_TYPE, typed(tool("Write", f"{PROJ}/guard-probe-write.txt"), "test-runner"), 2),
+    ("type: test-runner bash redirect blocked", BY_TYPE, typed(bash("echo x > guard-probe-bash.txt"), "test-runner"), 2),
+    ("type: test-runner test run allowed", BY_TYPE, typed(bash("npm test"), "test-runner"), 0),
+    ("type: test-runner --update-snapshots blocked", BY_TYPE, typed(bash("npx vitest run -u"), "test-runner"), 2),
+    ("type: code-reviewer git commit blocked", BY_TYPE, typed(bash("git commit -m x"), "code-reviewer"), 2),
+    ("type: committer push blocked", BY_TYPE, typed(bash("git push"), "committer"), 2),
+    ("type: committer add explicit allowed", BY_TYPE, typed(bash("git add -- a.txt"), "committer"), 0),
+    ("type: implementer edits source", BY_TYPE, typed(tool("Edit", f"{PROJ}/tools/relief/src/a.ts"), "implementer"), 0),
+    ("type: implementer edit .claude blocked", BY_TYPE, typed(tool("Edit", f"{PROJ}/.claude/settings.json"), "implementer"), 2),
+    ("type: debugger commit blocked", BY_TYPE, typed(bash("git commit -m x"), "debugger"), 2),
+    ("type: doc-writer docs allowed", BY_TYPE, typed(tool("Write", f"{PROJ}/docs/a.md"), "doc-writer"), 0),
+    ("type: doc-writer code blocked", BY_TYPE, typed(tool("Write", f"{PROJ}/tools/a.ts"), "doc-writer"), 2),
+    ("type: ux-designer repo blocked", BY_TYPE, typed(tool("Write", f"{PROJ}/docs/x.html"), "ux-designer"), 2),
+    ("type: contract-liaison KB db blocked", BY_TYPE, typed(tool("Read", str(Path.home() / "sagae-knowloge-base/data/kb.sqlite")), "contract-liaison"), 2),
+    ("type: visual-verifier external curl blocked", BY_TYPE, typed(bash("curl -s https://example.com/"), "visual-verifier"), 2),
+    ("type: implementer-codex relay allowed", BY_TYPE, typed(bash(RELAY_W), "implementer-codex"), 0),
+    ("type: implementer-codex other bash blocked", BY_TYPE, typed(bash("ls"), "implementer-codex"), 2),
+    ("type: security-reviewer-codex relay-read allowed", BY_TYPE, typed(bash(RELAY_R), "security-reviewer-codex"), 0),
+    ("type: security-reviewer-codex write-sandbox blocked", BY_TYPE, typed(bash(RELAY_W), "security-reviewer-codex"), 2),
+    ("type: bad JSON blocked", BY_TYPE, "not json", 2),
+    ("type: extra argument blocked", BY_TYPE + ["--bash", "bash-impl"], bash("ls"), 2),
+]
+
+
+def check_table_matches_frontmatter():
+    """AGENT_POLICIES must equal the guard arguments in each agent's frontmatter hook."""
+    import importlib.util
+    import re
+    spec = importlib.util.spec_from_file_location("agent_guard", GUARD)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    bad = 0
+    seen = set()
+    for md in sorted((PROJ / ".claude" / "agents").glob("*.md")):
+        text = md.read_text()
+        front = text.split("---", 2)[1] if text.startswith("---") else ""
+        m = re.search(r"agent-guard\.py\\?\"\s+(.*?)\"?\s*$", front, re.M)
+        name = re.search(r"^name:\s*(\S+)", front, re.M)
+        if not m or not name:
+            continue  # an agent without the guard hook is not governed
+        seen.add(name.group(1))
+        want = m.group(1).replace('\\"', "").split()
+        if mod.AGENT_POLICIES.get(name.group(1)) != want:
+            bad += 1
+            print(f"FAIL table drift for {name.group(1)}: table={mod.AGENT_POLICIES.get(name.group(1))} frontmatter={want}")
+    for extra in set(mod.AGENT_POLICIES) - seen:
+        bad += 1
+        print(f"FAIL table entry without a guarded agent file: {extra}")
+    print(f"table vs frontmatter: {len(seen)} agents, {bad} drift")
+    return bad
+
+
 def main():
     fails = 0
     for name, args, inp, want in CASES:
@@ -157,6 +225,7 @@ def main():
             fails += 1
             print(f"FAIL {name}: exit {r.returncode}, want {want}; stderr: {r.stderr.strip()[:200]}")
     print(f"{len(CASES) - fails}/{len(CASES)} passed")
+    fails += check_table_matches_frontmatter()
     return 1 if fails else 0
 
 

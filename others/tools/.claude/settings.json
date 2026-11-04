@@ -10,6 +10,16 @@
             "timeout": 5
           }
         ]
+      },
+      {
+        "matcher": "Bash|Write|Edit|MultiEdit|NotebookEdit|Read|Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -I \"$CLAUDE_PROJECT_DIR/.claude/hooks/agent-guard.py\" --by-agent-type",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [

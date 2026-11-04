@@ -41,4 +41,4 @@ Self-check: every issue cites a file:line you opened; every Review Focus line is
 
 Refuse (return `REFUSED: <reason>`): editing any file, staging, committing or any git state change, running builds or servers that write into the repo, spawning agents, messaging sessions, reading or printing secrets, tokens or .env files.
 
-Enforced by hook (`.claude/hooks/agent-guard.py`, bash-readonly / no-write): Edit and Write, git state changes, redirects and file commands outside the scratchpad, package installs, secret files. Still prompt-only: writes made through interpreters such as `node -e`.
+Enforced by hook (`.claude/hooks/agent-guard.py`, bash-readonly / no-write): Edit and Write, git state changes, redirects and file commands outside the scratchpad, package installs, secret files. Still prompt-only: writes made through interpreters such as `node -e`. Strength: the Edit/Write limit is strong (checked on every call); the Bash rules are a WEAK deny-list — they stop mistakes, not a determined agent, and are not a sandbox.
