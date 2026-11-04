@@ -33,7 +33,7 @@ def clean_session(s: str | None) -> str | None:
         return None
     s = str(s).strip()
     if not _SESSION_RE.fullmatch(s):
-        raise WriteRejected("bad_session", f"세션 이름 형식 위반: {s!r}")
+        raise WriteRejected("bad_session", "세션 이름 형식 위반")   # 값은 비밀일 수 있어 되돌려 주지 않는다
     return s
 
 
@@ -45,7 +45,7 @@ def process_session() -> str:
 
 def resolve(transport: str, session: str | None = None, *, tty: bool | None = None) -> Author:
     if transport not in TRANSPORTS:
-        raise WriteRejected("bad_transport", f"알 수 없는 전송: {transport!r}")
+        raise WriteRejected("bad_transport", "알 수 없는 전송(mcp|inbox|cli|intake)")
     if transport == "mcp":
         return Author(f"agent:{clean_session(session) or process_session()}", USER)
     if transport == "inbox":

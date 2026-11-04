@@ -24,6 +24,38 @@ SENS = ("public", "internal", "private", "secret")
 SENS_RANK = {s: i for i, s in enumerate(SENS)}
 WIKILINK = re.compile(r"\[\[([^\[\]\n]+?)\]\]")
 MAX_KEY = 256
+_NAME_OK = re.compile(r"[A-Za-z][A-Za-z_]{0,31}")
+
+
+def _name(s) -> str:
+    """오류 문구에 넣어도 되는 이름만 돌려준다. 호출자가 보낸 값이 비밀일 수 있어 짧은 식별자 꼴만 남긴다."""
+    return s if isinstance(s, str) and _NAME_OK.fullmatch(s) else "<표시 안 함>"
+
+
+# 이 전송의 키는 서버 안의 쓰는 쪽(intake/core.py, harvest/core.py)만 만들고 마지막 칸이 언제나 내용 해시다
+_DIGEST_TAIL_TRANSPORTS = frozenset({"intake"})
+
+
+def reject_secret_key(field: str, value, *, digest_tail: bool = False) -> None:
+    """원장에 그대로 남는 식별자(멱등 키, ID, 타입, 삭제 사유)에 비밀이 있으면 거부한다. 규칙 ID만 알린다.
+
+    이 값들은 격리할 수 없는 메타데이터라서(이벤트 머리, 목록, 오류에 보인다) 격리하지 않고 거부한다.
+    digest_tail=True는 쓰는 쪽이 키의 마지막 칸을 내용 해시로 직접 붙였다는 뜻이다(secrets_scan.scan_key).
+    """
+    hits = secrets_scan.scan_key(value, digest_tail=digest_tail)
+    if hits:
+        raise WriteRejected("secret_detected", f"{field}에 비밀로 보이는 값이 있다(규칙: {','.join(hits)}). 값은 어디에도 남기지 않았다")
+
+
+def _prop_names(obj):
+    """props 안의 모든 객체 키(중첩 포함). 이름은 값과 달리 격리할 수 없는 메타데이터다."""
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            yield str(k)
+            yield from _prop_names(v)
+    elif isinstance(obj, (list, tuple)):
+        for v in obj:
+            yield from _prop_names(v)
 
 
 def derive_id(idem_key: str) -> str:
@@ -47,9 +79,9 @@ def _check_shape(rec: dict) -> None:
     for k in ("source_url", "quote"):
         if k in rec:
             raise WriteRejected("schema_invalid", f"{k}: 외부 사실은 kb_request의 url로 보낸다")
-    extra = sorted(set(rec) - ALLOWED)
+    extra = sorted(set(rec) - ALLOWED, key=str)
     if extra:
-        raise WriteRejected("schema_invalid", f"허용하지 않는 필드: {extra}")  # author, actor, origin 포함
+        raise WriteRejected("schema_invalid", f"허용하지 않는 필드: {[_name(k) for k in extra]}")  # author, actor, origin 포함
     for k in ("title", "body", "type", "id"):
         if k in rec and not isinstance(rec[k], str):
             raise WriteRejected("schema_invalid", f"{k}는 문자열")
@@ -64,6 +96,7 @@ def _check_shape(rec: dict) -> None:
 
 def _links(rec: dict, warnings: list[str]) -> list[dict]:
     seen: dict[tuple[str, str], dict] = {}
+    not_id = 0
     for ln in rec.get("links") or []:
         if not isinstance(ln, dict) or not isinstance(ln.get("rtype"), str) or not isinstance(ln.get("dst"), str) \
                 or not ln["rtype"] or not ln["dst"]:
@@ -73,10 +106,11 @@ def _links(rec: dict, warnings: list[str]) -> list[dict]:
         try:
             check_public_id(t)
         except ValueError:
-            if f"link_not_id:{t}" not in warnings:
-                warnings.append(f"link_not_id:{t}")
+            not_id += 1       # 본문의 글자를 경고에 되돌려 주지 않는다(비밀이 로그에 남을 수 있다)
             continue
         seen.setdefault(("LINKS_TO", t), {"rtype": "LINKS_TO", "dst": t})
+    if not_id:
+        warnings.append(f"link_not_id:{not_id}")
     return [seen[k] for k in sorted(seen)]
 
 
@@ -89,20 +123,25 @@ def build_payload(rec: dict, rid: str, warnings: list[str], *, scan: bool = True
         raise WriteRejected("schema_invalid", "body 필수")
     typ = rec.get("type") or "Record"
     if not types.TYPE_NAME_RE.fullmatch(typ):
-        raise WriteRejected("schema_invalid", f"type 형식 위반: {typ!r}")
+        raise WriteRejected("schema_invalid", "type 형식 위반")
     sens = rec.get("sensitivity") or "internal"
     if sens not in SENS:
-        raise WriteRejected("schema_invalid", f"sensitivity 오류: {sens!r}")
+        raise WriteRejected("schema_invalid", f"sensitivity는 {'|'.join(SENS)} 중 하나")
     fmt = rec.get("body_format") or "markdown"
     if fmt not in ("markdown", "text"):
-        raise WriteRejected("schema_invalid", f"body_format 오류: {fmt!r}")
+        raise WriteRejected("schema_invalid", "body_format은 markdown|text 중 하나")
     ret = rec.get("retention")
     if ret is not None and ret not in ("permanent", "ttl30", "purgeable"):
-        raise WriteRejected("schema_invalid", f"retention 오류: {ret!r}")
+        raise WriteRejected("schema_invalid", "retention은 permanent|ttl30|purgeable 중 하나")
     try:
         check_public_id(rid)
-    except ValueError as e:
-        raise WriteRejected("schema_invalid", str(e)) from e
+    except ValueError:
+        raise WriteRejected("schema_invalid", "id 형식 위반") from None
+    if scan:
+        reject_secret_key("id", rid)
+        reject_secret_key("type", typ)
+        for k in _prop_names(rec.get("props") or {}):
+            reject_secret_key("props 이름", k)
     p: dict = {"id": rid, "type": typ, "title": title, "body": rec["body"], "body_format": fmt, "sensitivity": sens}
     if ret:
         p["retention"] = ret
@@ -130,15 +169,22 @@ def _expected_check(led, rec: dict, rid: str, supplied_id: bool) -> int | None:
     if head is None:
         return exp
     if supplied_id and exp is None:
-        raise WriteRejected("expected_version_required", f"{rid}: 기존 레코드 갱신에는 expected_version이 필요하다(현재 {head[0]})")
+        raise WriteRejected("expected_version_required", f"기존 레코드 갱신에는 expected_version이 필요하다(현재 {head[0]})")
     return exp
 
 
 def put_record(record: dict, idempotency_key: str, transport: str, session: str | None = None, *,
-               tty: bool | None = None, scan: bool = True) -> WriteResult:
-    """first_party 레코드를 쓴다. transport: mcp | inbox | cli | intake. 귀속은 author.resolve가 정한다."""
+               tty: bool | None = None, scan: bool = True, key_digest_tail: bool | None = None) -> WriteResult:
+    """first_party 레코드를 쓴다. transport: mcp | inbox | cli | intake. 귀속은 author.resolve가 정한다.
+
+    key_digest_tail: 키의 마지막 칸이 쓰는 쪽이 만든 내용 해시인가. 기본값은 transport가 intake일 때 참이다.
+    받은편지함은 True를 넘긴다. 호출자가 키 전체를 정하는 mcp, cli, ingest는 거짓이다.
+    """
     if not isinstance(idempotency_key, str) or not idempotency_key.strip() or len(idempotency_key) > MAX_KEY:
         raise WriteRejected("schema_invalid", "idempotency_key 필수(문자열, 256자 이하)")
+    if scan:
+        tail = transport in _DIGEST_TAIL_TRANSPORTS if key_digest_tail is None else key_digest_tail
+        reject_secret_key("idempotency_key", idempotency_key, digest_tail=tail)
     au = _author.resolve(transport, session, tty=tty)
     _check_shape(record)
     supplied = bool(record.get("id"))
@@ -197,11 +243,14 @@ def tombstone_record(record_id: str, reason: str, idempotency_key: str, transpor
         raise WriteRejected("schema_invalid", "reason 필수")
     if not isinstance(idempotency_key, str) or not idempotency_key.strip():
         raise WriteRejected("schema_invalid", "idempotency_key 필수")
+    reject_secret_key("idempotency_key", idempotency_key)
+    reject_secret_key("reason", reason)
+    reject_secret_key("record_id", record_id)
     au = _author.resolve(transport, session, tty=tty)
     led = ledger.open_ledger()
     try:
         if ledger.record_head(led, record_id) is None:
-            raise WriteRejected("not_found", f"없는 레코드: {record_id}")
+            raise WriteRejected("not_found", "없는 레코드")
     finally:
         led.close()
     ev = {"kind": "record.tombstone", "actor": au.actor, "on_behalf_of": au.on_behalf_of, "origin": "first_party",

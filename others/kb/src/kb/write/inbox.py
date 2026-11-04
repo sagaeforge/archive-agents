@@ -183,8 +183,8 @@ def scan(now: float | None = None, min_age_s: float = MIN_AGE_S) -> ScanResult:
             finally:
                 led.close()
             if head is not None and meta["base_version"] is None:
-                raise VersionConflict(f"{meta['id']}: base_version 없이 기존 레코드(현재 {head[0]})를 갱신하려 했다")
-            r = record.put_record(rec, key, "inbox")
+                raise VersionConflict(f"base_version 없이 기존 레코드(현재 {head[0]})를 갱신하려 했다")
+            r = record.put_record(rec, key, "inbox", key_digest_tail=True)   # 키 끝은 파일 내용 해시
         except (VersionConflict, IdemConflict) as e:
             _dlq("inbox_conflict", p.name, str(e), sha)
             _move(p, root, ".conflict", t, str(e))

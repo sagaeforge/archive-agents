@@ -537,3 +537,16 @@ def test_real_high_entropy_values_still_skip_the_source(world, mode, line):
     rep = core.run(world.cfg())
     assert rep["candidates"] == 0 and rep["skipped"] == {"secret": 1} and "kb-env-high-entropy" in rep["skipped_secret_rules"]
     assert not harvest_events() and b"KEEP-LINE-SENTINEL" not in all_bytes(world.home.parent)
+
+
+def test_harvest_records_pass_the_write_gate_even_under_allowlisted_paths(world, mode):
+    """수확은 서버가 읽은 파일의 경로를 source_path로 붙인다. 이 경로가 검사 허용 목록(node_modules)에 맞아도
+    기록은 정상 저장되고 격리되지 않는다. 검사는 경로를 보지 않고 내용만 본다."""
+    nm = world.home / "node_modules" / "sagae-nm"
+    (nm / ".git").mkdir(parents=True)
+    world.doc("nm.md", "# 의존성 문서\n\n본문 내용이 여기에 있다. 충분히 긴 문장이다.\n", repo=nm)
+    rep = core.run(world.cfg(repos=(str(world.home / "node_modules" / "sagae-*"),)))
+    assert rep["actions"] == {"new": 1} and rep["writes"]["secret_hits"] == 0
+    (e,) = harvest_events()
+    assert "node_modules" in e["payload"]["props"]["source_path"]
+    assert e["payload"]["sensitivity"] == "internal" and "quarantine" not in e["payload"]["props"]

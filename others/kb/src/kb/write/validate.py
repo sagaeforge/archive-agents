@@ -37,6 +37,17 @@ def _validator(root: str, kind: str):
     return cls(s, registry=_registry(root), format_checker=cls.FORMAT_CHECKER)
 
 
+def _why(e) -> str:
+    """검사 오류의 이유. jsonschema의 message는 입력 값을 그대로 담으므로 쓰지 않고, 스키마가 정한 값만 쓴다."""
+    return f"{e.validator} 위반({str(e.validator_value)[:100]})"
+
+
+def _safe_path(e) -> list[str]:
+    """오류 위치. 배열 번호는 그대로 두고 객체 키는 짧은 식별자 꼴만 남긴다."""
+    return [str(x) if isinstance(x, int) or (isinstance(x, str) and len(x) <= 40 and x.replace("_", "").isalnum()) else "<키>"
+            for x in e.path]
+
+
 def validate_event(ev: dict) -> None:
     """envelope 필드와 kind별 payload를 검사한다. 위반이면 WriteRejected(schema_invalid)."""
     if not available():
@@ -51,8 +62,8 @@ def validate_event(ev: dict) -> None:
             continue
         if errs:
             e = errs[0]
-            where = "/".join(str(x) for x in e.path) or "."
-            raise WriteRejected("schema_invalid", f"{ev['kind']} {name}:{where}: {e.message[:200]}")
+            where = "/".join(_safe_path(e)) or "."
+            raise WriteRejected("schema_invalid", f"{ev['kind']} {name}:{where}: {_why(e)}")
 
 
 def validate_props(schema: dict, props: dict, type_name: str) -> None:
@@ -64,4 +75,4 @@ def validate_props(schema: dict, props: dict, type_name: str) -> None:
     errs = sorted(jsonschema.Draft202012Validator(s).iter_errors(props), key=lambda e: list(e.path))
     if errs:
         e = errs[0]
-        raise WriteRejected("schema_invalid", f"{type_name}.props/{'/'.join(str(x) for x in e.path)}: {e.message[:200]}")
+        raise WriteRejected("schema_invalid", f"{type_name}.props/{'/'.join(_safe_path(e))}: {_why(e)}")

@@ -500,6 +500,7 @@ class Processor:
         from kb.write.fpgate import is_open
         if not self.write:
             try:
+                _rec.reject_secret_key("idempotency_key", key)   # 실제 쓰기(put_record)와 같은 검사, 같은 순서
                 _rec._check_shape(rec)
                 rid = rec.get("id") or _rec.derive_id(key)
                 _rec.build_payload(rec, rid, [], scan=True)

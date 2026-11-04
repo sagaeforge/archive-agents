@@ -236,7 +236,7 @@ def _append_one(c: sqlite3.Connection, ev: dict, st: dict, now_ms: int | None) -
         # 코드 판이 올라간 뒤의 재시도가 충돌로 잘못 판정되지 않게 준 경우만 비교한다
         same = row[4:11] == (kind, subject, psha, actor, origin, ev.get("on_behalf_of"), ev.get("generated_by"))
         if not same or ev.get("v") not in (None, row[11]):
-            raise IdemConflict(f"idem_key {idem!r} 에 내용이 다른 이벤트가 있음(seq={row[0]})")
+            raise IdemConflict(f"idem_key에 내용이 다른 이벤트가 있음(seq={row[0]})")
         ver = _record_version(c, subject, row[0]) if kind in RECORD_KINDS else None
         return {"seq": row[0], "event_id": row[1], "hash": row[2], "at": row[3], "replayed": True, "version": ver}
 
@@ -369,9 +369,9 @@ def _redact_txn(c, record_id, reason, actor, idem_key, on_behalf_of, cols):
         if old:
             osub = c.execute("SELECT subject FROM event WHERE idem_key=? AND kind='record.redact'", (key,)).fetchone()
             if osub and osub[0] != record_id:
-                raise IdemConflict(f"idem_key {key!r} 는 다른 레코드({osub[0]})에 쓰였다")
+                raise IdemConflict(f"idem_key는 다른 레코드({osub[0]})에 쓰였다")
             if kill:
-                raise IdemConflict(f"idem_key {key!r} 를 쓴 뒤 지울 본문이 새로 생겼다")
+                raise IdemConflict("idem_key를 쓴 뒤 지울 본문이 새로 생겼다")
             return _redact_replay(c, old, record_id)
         res = _append_one(c, {
             "kind": "record.redact", "actor": actor, "on_behalf_of": on_behalf_of, "origin": "system",
