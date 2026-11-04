@@ -4,6 +4,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 import { makeQueryClient } from './data/queryClient.ts';
 import { router } from './router.tsx';
+import { AuthGate } from './auth/AuthGate.tsx';
 import { isUrlError } from './screens/ErrorScreens.tsx';
 import './index.css';
 
@@ -13,7 +14,9 @@ createRoot(document.getElementById('root') as HTMLElement, {
 }).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <AuthGate>
+        <RouterProvider router={router} />
+      </AuthGate>
     </QueryClientProvider>
   </StrictMode>,
 );

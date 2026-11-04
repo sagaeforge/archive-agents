@@ -12,7 +12,7 @@ const ids = ['e:library:sigma-js', 'e:project:sagae-gateway', 'e:spike:s1-aggreg
 const N = 40;
 const IN_BROWSER = async (urls: string[]) => {
   const ms: number[] = [];
-  for (const u of urls) { const t0 = performance.now(); await (await fetch(u, { cache: 'no-store', credentials: 'omit' })).text(); ms.push(performance.now() - t0); }
+  for (const u of urls) { const t0 = performance.now(); await (await fetch(u, { cache: 'no-store', credentials: 'omit', headers: { authorization: `Bearer ${sessionStorage.getItem('loupe.session')}` } })).text(); ms.push(performance.now() - t0); }
   return ms;
 };
 

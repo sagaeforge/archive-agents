@@ -1,8 +1,8 @@
 // Section 11: remote resources, deep link injection, document navigation, cross-site requests.
 import http from 'node:http';
 import { readFileSync } from 'node:fs';
-import { test, expect, watchPage, expectClean } from './support/test.ts';
-import { accessLog, HOSTILE, PORT, RESEARCH } from './support/ports.ts';
+import { test, expect, watchPage, expectClean, bearerFor } from './support/test.ts';
+import { accessLog, crossSiteUrl, HOSTILE, PORT, RESEARCH } from './support/ports.ts';
 import { settled } from './support/app.ts';
 
 const metaHits = () => readFileSync(accessLog('h'), 'utf8').split('\n').filter((l) => l === 'GET /v1/meta 200').length;
@@ -55,7 +55,7 @@ test.describe('deep link injection', () => {
 test.describe('document navigation', () => {
   const RAW = '/kb/v1/snapshots/n-hostile000000004/raw';
   test('the captured page carries the sandbox CSP, nosniff and attachment', async ({ request }) => {
-    const r = await request.get(`${HOSTILE}${RAW}`);
+    const r = await request.get(`${HOSTILE}${RAW}`, { headers: bearerFor(HOSTILE) });
     expect(r.status()).toBe(200);
     const h = r.headers();
     expect(h['content-type']).toContain('text/html');
@@ -64,19 +64,25 @@ test.describe('document navigation', () => {
     expect(h['x-content-type-options']).toBe('nosniff');
     expect(h['content-disposition']).toBe('attachment');
   });
-  test('going there runs nothing: it is a download', async ({ page, watch }) => {
+  // No watch fixture: Chrome's own JSON viewer logs that the sandbox blocked its script, which is the sandbox working.
+  // A typed address sends Sec-Fetch-Site: none, which v2 6.3 refuses on /kb/* before the session is even looked at (403).
+  test('going there runs nothing: a navigation is refused and carries no session anyway', async ({ page }) => {
     const before = metaHits();
-    await page.goto(`${HOSTILE}${RAW}`).catch(() => undefined);
+    const res = await page.goto(`${HOSTILE}${RAW}`).catch(() => null);
+    if (res) {
+      expect([401, 403]).toContain(res.status());
+      expect(res.headers()['content-security-policy']).toContain('sandbox');
+    }
     await page.waitForTimeout(250);
     expect(metaHits(), 'its fetch never ran').toBe(before);
-    void watch;
   });
   test('with the attachment removed, the sandbox alone still stops the script', async ({ page, context }) => {
     // Stripping Content-Disposition makes the browser render it, so this tests the second line of defence by itself.
     const external: string[] = [];
     await context.route(/evil\.example\.test/, (r) => { external.push(r.request().url()); return r.abort(); });
     await page.route(`${HOSTILE}${RAW}`, async (route) => {
-      const res = await route.fetch();
+      // A navigation carries no session (design v2 6.1); the harness adds it so the second line of defence can be seen alone.
+      const res = await route.fetch({ headers: { ...route.request().headers(), ...bearerFor(HOSTILE) } });
       const headers = { ...res.headers() };
       delete headers['content-disposition'];
       await route.fulfill({ response: res, headers });
@@ -97,14 +103,18 @@ test.describe('document navigation', () => {
     await expect(page.getByTestId('raw-download')).toBeVisible();
     await expect(page.getByTestId('source-text')).not.toContainText('raw capture');
     const [dl] = await Promise.all([page.waitForEvent('download'), page.getByTestId('raw-download').click()]);
-    expect(dl.url()).toContain('/raw');
+    // The bytes come with the session header and leave as an octet-stream Blob (design v2 6.1, design 9).
+    expect(dl.url()).toMatch(/^blob:/);
+    expect(dl.suggestedFilename()).toBe('n-hostile000000004.raw');
+    const saved = await dl.path();
+    expect(readFileSync(saved, 'utf8')).toContain('raw capture');
     void watch;
   });
 });
 
 test.describe('cross-site requests', () => {
   const raw = (headers: Record<string, string>) => new Promise<number>((res, rej) => {
-    const r = http.get({ host: '127.0.0.1', port: PORT.research, path: '/kb/v1/meta', headers }, (m) => { m.resume(); res(m.statusCode!); });
+    const r = http.get({ host: '127.0.0.1', port: PORT.research, path: '/kb/v1/meta', headers: { host: `localhost:${PORT.research}`, ...bearerFor(RESEARCH), ...headers } }, (m) => { m.resume(); res(m.statusCode!); });
     r.on('error', rej);
   });
   test('a foreign Host is 403', async () => { expect(await raw({ Host: 'evil.example' })).toBe(403); });
@@ -112,14 +122,15 @@ test.describe('cross-site requests', () => {
   test('Fetch Metadata headers on the wire', async () => {
     expect(await raw({ 'sec-fetch-site': 'cross-site', 'sec-fetch-mode': 'no-cors' })).toBe(403);
     expect(await raw({ 'sec-fetch-site': 'same-site', 'sec-fetch-mode': 'cors' })).toBe(403);
-    expect(await raw({ 'sec-fetch-site': 'cross-site', 'sec-fetch-mode': 'navigate' })).toBe(200);
+    // v2 6.3: no navigate pass on the data paths, even with a session.
+    expect(await raw({ 'sec-fetch-site': 'cross-site', 'sec-fetch-mode': 'navigate' })).toBe(403);
     expect(await raw({ 'sec-fetch-site': 'same-origin', 'sec-fetch-mode': 'cors' })).toBe(200);
   });
   test('a real page on another site gets 403 from no-cors, and its link still works', async ({ page }) => {
     const statuses: number[] = [];
     page.on('response', (r) => { if (r.url().includes('/kb/v1/meta')) statuses.push(r.status()); });
-    await page.goto(`http://localhost:${PORT.crossSite}/`);
-    // A no-cors GET carries no Origin and `localhost` would pass that check anyway: only Fetch Metadata can refuse this one.
+    await page.goto(crossSiteUrl());
+    // A no-cors GET carries no Origin: only Fetch Metadata can refuse this one.
     await page.evaluate((u) => { void fetch(u, { mode: 'no-cors' }).catch(() => undefined); }, `${RESEARCH}/kb/v1/meta`);
     await expect.poll(() => statuses).toEqual([403]);
     await page.evaluate((u) => { location.href = u; }, `${RESEARCH}/#/node/e%3Alibrary%3Asigma-js`);

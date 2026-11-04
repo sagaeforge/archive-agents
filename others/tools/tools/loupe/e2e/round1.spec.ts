@@ -1,7 +1,7 @@
 // Round 1 of the review fixes: the behaviors that need a browser. Reads that must fail or be slow are made so with page.route,
 // because the fixture KB never does. Each test names the defect it pins.
 import { test, expect } from './support/test.ts';
-import { RESEARCH, PORT } from './support/ports.ts';
+import { RESEARCH, PORT, crossSiteUrl } from './support/ports.ts';
 import { fixture, rewriteKb, settled } from './support/app.ts';
 
 const node = (id: string, q = '') => `${RESEARCH}/#/node/${encodeURIComponent(id)}${q}`;
@@ -442,7 +442,7 @@ test('the Markdown worker is under the same policy as the page (defect: no conne
   const worker = page.workers()[0]!;
   const result = await worker.evaluate(async (target) => {
     try { await fetch(target, { mode: 'no-cors' }); return 'sent'; } catch { return 'blocked'; }
-  }, `http://localhost:${PORT.crossSite}/x`);
+  }, crossSiteUrl('/x'));
   expect(result).toBe('blocked');
   void watch;
 });

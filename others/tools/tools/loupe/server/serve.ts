@@ -9,18 +9,21 @@ import { createZstdDecompress } from 'node:zlib';
 import type { Server } from 'node:http';
 import { APP_CSP_HEADER, KB_CSP_HEADER } from './csp.ts';
 import { DEFAULT_KB_URL, kbRequest, mapFailure, parseKbUrl, readTokenFile, type Target } from './upstream.ts';
+import { createAuth, problem, type AuthOptions } from './auth/index.ts';
+import { configDir } from './auth/files.ts';
+import { check, kindOf, loopbackAlias, originForHost } from './auth/guard.ts';
 
 export type ServeConfig = {
   kb: Target;
   /** Directory with the built SPA. */
   dist: string;
   token?: string | undefined;
-  firstByteMs?: number;
-  connectMs?: number;
+  firstByteMs?: number | undefined;
+  connectMs?: number | undefined;
+  /** The local port. The default origin allowlist is http://localhost:<port>; loupe.json may list more (design v2 6.3). The socket stays on 127.0.0.1. */
+  port: number;
+  auth: Omit<AuthOptions, 'port'>;
 };
-
-const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
-const hostnameOf = (hostHeader: string) => { try { return new URL(`http://${hostHeader}`).hostname; } catch { return ''; } };
 
 // /kb/* paths loupe calls. /v1/ops/* is not in the list on purpose (design 10).
 const SEG = '[^/]+';
@@ -45,25 +48,13 @@ const MIME: Record<string, string> = {
   '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.woff': 'font/woff', '.txt': 'text/plain; charset=utf-8', '.map': 'application/json',
 };
 
-const problem = (status: number, code: string, title: string) =>
-  new Response(JSON.stringify({ type: `https://loupe.local/problems/${code.replace(/_/g, '-')}`, title, status, code }), { status, headers: { 'content-type': 'application/problem+json' } });
-
-// Host, Origin and Fetch Metadata (design 10). A foreign page can make the browser send requests here; none of them may pass.
-function guard(header: (name: string) => string | undefined): Response | null {
-  const h = header('host');
-  if (!h || !LOCAL_HOSTS.has(hostnameOf(h))) return problem(403, 'host_rejected', 'Host is not a local name');
-  const origin = header('origin');
-  if (origin !== undefined && (origin === 'null' || !LOCAL_HOSTS.has(hostnameOf(origin.replace(/^[a-z][a-z0-9+.-]*:\/\//i, ''))))) return problem(403, 'origin_rejected', 'Origin is not local');
-  const site = header('sec-fetch-site');
-  if ((site === 'cross-site' || site === 'same-site') && header('sec-fetch-mode') !== 'navigate') return problem(403, 'cross_site_rejected', 'Cross-site request');
-  return null;
-}
-
 export function createLoupeApp(cfg: ServeConfig): Hono {
   const app = new Hono();
+  const auth = createAuth({ ...cfg.auth, port: cfg.port });
   const firstByteMs = cfg.firstByteMs ?? 7_000, connectMs = cfg.connectMs ?? 1_000;
 
-  // 1. guard() and the security headers wrap the whole app (below), so they also cover a path the router matches to nothing.
+  // 1. The checks of design v2 6.3, the session and the security headers wrap the whole app (below), so they also cover a path the
+  //    router matches to nothing.
 
   app.get('/healthz', () => new Response('ok\n', { headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' } }));
 
@@ -138,9 +129,32 @@ export function createLoupeApp(cfg: ServeConfig): Hono {
   const inner = app.fetch.bind(app);
   app.fetch = async (...args: Parameters<typeof inner>) => {
     const req = args[0];
-    const deny = guard((name) => req.headers.get(name) ?? undefined);
-    const res = deny ?? await inner(...args);
-    return secured(res, rawPath(req.url).startsWith('/kb/'));
+    const p = rawPath(req.url);
+    let decoded = p;
+    try { decoded = decodeURIComponent(p); } catch { /* the static handler answers 404 */ }
+    const kind = kindOf(p, req.method);
+    const data = kind !== 'static';
+    const header = (name: string) => req.headers.get(name) ?? undefined;
+    let res: Response;
+    if (kindOf(decoded, req.method) !== kind) {
+      // `/k%62/…` or `/%61uth/…`: the router would decode it into a data path that the checks above did not classify as one.
+      res = problem(404, 'path_not_allowed', 'Path is not served');
+    } else if (kind === 'static' && (req.method === 'GET' || req.method === 'HEAD') && loopbackAlias(header, auth.origins())) {
+      // sessionStorage and the redirect URI belong to the allowlisted origin, so another loopback name is sent there (6.3).
+      res = new Response(null, { status: 308, headers: { location: loopbackAlias(header, auth.origins())! + req.url.slice(req.url.indexOf('/', req.url.indexOf('//') + 2)) } });
+    } else {
+      const origin = originForHost(header('host'), auth.origins());
+      const deny = check(kind, req.method, header, origin, p);
+      if (deny || !origin) res = problem(deny?.status ?? 403, deny?.code ?? 'host_rejected', deny?.title ?? 'Host is not an allowed origin');
+      else if (p.startsWith('/auth/')) res = await auth.handle(req, p, origin);
+      else if (p === '/kb' || p.startsWith('/kb/') || p === '/kb-write' || p.startsWith('/kb-write/')) {
+        if (!auth.sessionOf(req)) res = problem(401, 'session_required', 'Sign in first');
+        // The write path arrives with M1. Until then it has the checks and the session, and nothing behind them.
+        else if (p.startsWith('/kb-write')) res = problem(404, 'path_not_allowed', 'Path is not served');
+        else res = await inner(...args);
+      } else res = await inner(...args);
+    }
+    return secured(res, data);
   };
   return app;
 }
@@ -148,14 +162,15 @@ export function createLoupeApp(cfg: ServeConfig): Hono {
 /** The path as it was sent, without decoding or normalizing. */
 const rawPath = (url: string) => { const i = url.indexOf('/', url.indexOf('//') + 2); const p = i < 0 ? '/' : url.slice(i); const q = p.search(/[?#]/); return q < 0 ? p : p.slice(0, q); };
 
-function secured(res: Response, kb: boolean): Response {
+function secured(res: Response, data: boolean): Response {
   // A Response from fetch() or Response.error() has immutable headers, so the headers are copied into a new one.
   const headers = new Headers(res.headers);
   headers.set('Referrer-Policy', 'no-referrer');
   headers.set('X-Content-Type-Options', 'nosniff');
-  // Captured text/html must not run script when it is opened as a document: the sandbox CSP is mandatory on /kb/* (design 9).
+  // Captured text/html must not run script when it is opened as a document: the sandbox CSP is mandatory on /kb/* (design 9),
+  // and /auth/* gets it too: none of it is a page.
   // Elsewhere the full app policy is sent as well, because a dedicated worker takes its policy from its own response.
-  headers.set('Content-Security-Policy', kb ? KB_CSP_HEADER : APP_CSP_HEADER);
+  headers.set('Content-Security-Policy', data ? KB_CSP_HEADER : APP_CSP_HEADER);
   return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
 }
 
@@ -167,6 +182,14 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env): ServeConfig
     token,
     firstByteMs: env.LOUPE_FIRST_BYTE_MS ? Number(env.LOUPE_FIRST_BYTE_MS) : undefined,
     connectMs: env.LOUPE_CONNECT_MS ? Number(env.LOUPE_CONNECT_MS) : undefined,
+    port: Number(env.LOUPE_PORT ?? 4812),
+    auth: {
+      dir: configDir(env),
+      // A test provider on this machine (e2e). Unset, it is Google.
+      issuer: env.LOUPE_OIDC_ISSUER || undefined,
+      idleMs: env.LOUPE_SESSION_IDLE_MS ? Number(env.LOUPE_SESSION_IDLE_MS) : undefined,
+      socketActivated: env.LISTEN_PID === String(process.pid) && Number(env.LISTEN_FDS) >= 1,
+    },
   };
 }
 
@@ -186,7 +209,16 @@ export function listen(server: Server, env: NodeJS.ProcessEnv = process.env): Pr
 export async function serve(env: NodeJS.ProcessEnv = process.env) {
   const cfg = configFromEnv(env);
   const server = createAdaptorServer({ fetch: createLoupeApp(cfg).fetch }) as Server;
-  const where = await listen(server, env);
+  let where: string;
+  try { where = await listen(server, env); } catch (e) {
+    // KB ADR-0005 rev 9: a held port is refused, never worked around. Another process on 4812 could receive the Google redirect.
+    // Under socket activation the inherited fd is ours and is not a conflict; this branch is the plain listen.
+    if ((e as NodeJS.ErrnoException).code === 'EADDRINUSE') {
+      console.error(`loupe serve: 127.0.0.1:${env.LOUPE_PORT ?? 4812} is already held by another process. Refusing to start; no other port is tried. Stop that process, or start loupe through loupe.socket.`);
+      process.exit(1);
+    }
+    throw e;
+  }
   console.log(`loupe serve on ${where}, kb ${cfg.kb.kind === 'unix' ? `unix:${cfg.kb.path}` : `${cfg.kb.host}:${cfg.kb.port}`}, dist ${cfg.dist}`);
   const stop = () => { server.close(); server.closeAllConnections(); process.exit(0); };
   process.on('SIGINT', stop);

@@ -2,7 +2,7 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import net from 'node:net';
-import { accessLog, logDir, root, sock, sockDir } from './ports.ts';
+import { accessLog, authDir, IDP, logDir, root, sock, sockDir } from './ports.ts';
 
 export const tcpOpen = (port: number) => new Promise<boolean>((res) => {
   const s = net.connect(port, '127.0.0.1');
@@ -33,7 +33,7 @@ export async function startMock(name: string, fixture: string, extra: Record<str
   return c;
 }
 export async function startServe(name: string, port: number, extra: Record<string, string> = {}): Promise<ChildProcess> {
-  const c = run(['bin/loupe.mjs', 'serve'], { KB_URL: `unix:${sock(name)}`, LOUPE_PORT: String(port), ...extra });
+  const c = run(['bin/loupe.mjs', 'serve'], { KB_URL: `unix:${sock(name)}`, LOUPE_PORT: String(port), LOUPE_CONFIG_DIR: authDir, LOUPE_OIDC_ISSUER: IDP, ...extra });
   await waitFor(() => tcpOpen(port), 8000, `loupe serve ${port}`);
   return c;
 }

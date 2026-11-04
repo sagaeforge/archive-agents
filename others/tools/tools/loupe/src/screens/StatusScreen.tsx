@@ -7,6 +7,7 @@ import { useMetaPoll } from '../data/hooks.ts';
 import { useScreenTitle } from '../app/useScreenTitle.ts';
 import { Button } from '@/components/ui/button';
 import { Instant } from '../components/bits.tsx';
+import { authStore } from '../auth/session.ts';
 
 const Row = ({ k, v, id }: { k: string; v: string; id: string }) => (<><dt>{k}</dt><dd className="id break-all" data-testid={id}>{v}</dd></>);
 
@@ -19,6 +20,8 @@ export function StatusScreen() {
   const verdict = meta ? compareSchemaVersion(meta.schema_version, CONTRACT_STAMP.schemaVersion) : null;
   const err = q.error;
   const counts = q.data?.data.counts;
+  const breakglass = useSyncExternalStore(authStore.subscribe, authStore.breakglass);
+  const socket = useSyncExternalStore(authStore.subscribe, authStore.socketActivated);
   return (
     <main className="page-narrow">
       <h1 className="page-title">연결 상태</h1>
@@ -43,6 +46,12 @@ export function StatusScreen() {
           {env.lastOkAt && <><dt>마지막 성공</dt><dd className="text-sm"><Instant iso={new Date(env.lastOkAt).toISOString()} seconds /></dd></>}
         </dl>
       )}
+      {/* Design v2 6.3 and 6.5: a loupe started without the socket unit leaves the port free between restarts; an open break-glass path is a door. */}
+      <dl className="kv mt-4" data-testid="auth-status">
+        <dt>로그인</dt><dd className="text-sm">Google</dd>
+        <dt>비상 경로</dt><dd className="text-sm" data-testid="auth-breakglass">{breakglass ? '열림 (1시간 안, Google 로그인으로 닫힘)' : '닫힘'}</dd>
+        <dt>포트</dt><dd className="text-sm" data-testid="auth-socket">{socket ? '소켓 유닛이 쥐고 있음' : '소켓 유닛 없이 띄움: 다시 시작하는 사이 다른 프로세스가 포트를 잡을 수 있다'}</dd>
+      </dl>
     </main>
   );
 }

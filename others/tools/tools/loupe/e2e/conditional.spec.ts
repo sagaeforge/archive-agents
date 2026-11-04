@@ -3,7 +3,7 @@ import { chromium } from '@playwright/test';
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { test, expect } from './support/test.ts';
+import { test, expect, useSessions } from './support/test.ts';
 import { accessLog, RESEARCH } from './support/ports.ts';
 import { settled } from './support/app.ts';
 
@@ -15,8 +15,8 @@ test('the overview revalidates: the server answers 304 and the script reads 200 
   await page.goto(`${RESEARCH}/`);
   await page.getByTestId('home-entity').first().waitFor();
   const before = log().length;
-  const first = await page.evaluate(([u, c]) => fetch(u!, { cache: c as RequestCache, credentials: 'omit', referrerPolicy: 'no-referrer' }).then(async (r) => ({ status: r.status, body: await r.text() })), [overviewUrl, 'no-cache']);
-  const second = await page.evaluate(([u, c]) => fetch(u!, { cache: c as RequestCache, credentials: 'omit', referrerPolicy: 'no-referrer' }).then(async (r) => ({ status: r.status, body: await r.text() })), [overviewUrl, 'no-cache']);
+  const first = await page.evaluate(([u, c]) => fetch(u!, { cache: c as RequestCache, credentials: 'omit', referrerPolicy: 'no-referrer', headers: { authorization: `Bearer ${sessionStorage.getItem('loupe.session')}` } }).then(async (r) => ({ status: r.status, body: await r.text() })), [overviewUrl, 'no-cache']);
+  const second = await page.evaluate(([u, c]) => fetch(u!, { cache: c as RequestCache, credentials: 'omit', referrerPolicy: 'no-referrer', headers: { authorization: `Bearer ${sessionStorage.getItem('loupe.session')}` } }).then(async (r) => ({ status: r.status, body: await r.text() })), [overviewUrl, 'no-cache']);
   const seen = log().slice(before).filter((l) => l.includes('/v1/overview'));
   expect(seen).toEqual(['GET /v1/overview 200', 'GET /v1/overview 304']);
   expect(second.status).toBe(200);
@@ -54,13 +54,14 @@ test('the disk cache holds the overview and no body', async () => {
   const dir = mkdtempSync(path.join(os.tmpdir(), 'loupe-profile-'));
   try {
     const ctx = await chromium.launchPersistentContext(dir, { headless: true });
+    await useSessions(ctx);
     const page = await ctx.newPage();
     await page.goto(`${RESEARCH}/#/source/n-198da44f5f7ce10d?claim=c-1e442c5458f5`);
     await page.getByTestId('source-text').waitFor();
     await settled(page);
     await page.goto(`${RESEARCH}/#/node/e%3Alibrary%3Asigma-js`);
     await page.getByTestId('claim-card').first().waitFor();
-    await page.evaluate(([u]) => fetch(u!, { cache: 'no-cache', credentials: 'omit' }).then((r) => r.text()), [overviewUrl]);
+    await page.evaluate(([u]) => fetch(u!, { cache: 'no-cache', credentials: 'omit', headers: { authorization: `Bearer ${sessionStorage.getItem('loupe.session')}` } }).then((r) => r.text()), [overviewUrl]);
     await settled(page);
     await ctx.close();
     const files: string[] = [];

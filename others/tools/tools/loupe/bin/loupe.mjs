@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// loupe CLI. Phase 0: serve and status. `open` (Orca tab) is Phase 5.
+// loupe CLI. serve and status (v1), and the terminal-only login commands of design v2 6.2 and 6.5. `open` (Orca tab) is Phase 5.
 const [cmd = 'help', ...rest] = process.argv.slice(2);
 
 if (cmd === 'serve') {
@@ -20,8 +20,15 @@ if (cmd === 'serve') {
     console.error(`KB unreachable: ${e.code ?? e.message}`);
     process.exit(1);
   }
+} else if (cmd === 'google-setup' || cmd === 'google-enroll' || cmd === 'breakglass') {
+  const { main } = await import('../server/cli.ts');
+  await main(cmd, rest);
+  process.exit(0);
 } else {
-  console.log('usage: loupe serve | loupe status\n  KB_URL (default unix:/home/user/sagae-kb-data/run/read.sock), LOUPE_PORT (default 4812), LOUPE_DIST');
+  console.log([
+    'usage: loupe serve | loupe status | loupe google-setup | loupe google-enroll | loupe breakglass set|open',
+    '  KB_URL (default unix:/home/user/sagae-kb-data/run/read.sock), LOUPE_PORT (default 4812), LOUPE_DIST,',
+    '  LOUPE_CONFIG_DIR (default ~/.config/loupe). google-setup, google-enroll and breakglass need a terminal.',
+  ].join('\n'));
   process.exit(cmd === 'help' ? 0 : 2);
 }
-void rest;

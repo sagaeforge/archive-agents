@@ -2,7 +2,7 @@
 import type { ChildProcess } from 'node:child_process';
 import { mkdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
-import { test, expect, watchPage } from './support/test.ts';
+import { test, expect, signIn, watchPage } from './support/test.ts';
 import { accessLog, base, PORT, shotsDir, sock } from './support/ports.ts';
 import { startMock, startServe, stop, tcpOpen, waitFor } from './support/procs.ts';
 import { settled } from './support/app.ts';
@@ -15,7 +15,8 @@ let mock: ChildProcess, serve: ChildProcess;
 const startAll = async () => { mock = await startMock('o', FIXTURE); serve = await startServe('o', PORT.offline); };
 
 test.describe.configure({ mode: 'serial' });
-test.beforeEach(async () => { rmSync(accessLog('o'), { force: true }); await startAll(); });
+// This server is started per test, so each test logs in to it afresh (a restart of loupe serve is a logout, design v2 6.1).
+test.beforeEach(async ({ page }) => { rmSync(accessLog('o'), { force: true }); await startAll(); await signIn(page, ORIGIN); });
 test.afterEach(async () => { await stop(mock); await stop(serve); rmSync(sock('o'), { force: true }); await waitFor(async () => !(await tcpOpen(PORT.offline)), 3000, 'port free'); });
 
 test('stopping the KB raises the band within the limit, keeps the screen, and restarting it clears the band', async ({ page, watch }) => {

@@ -1,5 +1,6 @@
 // The shared fixture: records KB requests and everything that must never happen, and fails the test if it did.
-import { test as base, expect, type Page, type Response } from '@playwright/test';
+import { test as base, expect, type BrowserContext, type Page, type Response } from '@playwright/test';
+import { login } from './oidc.ts';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -48,7 +49,26 @@ export async function expectClean(page: Page, w: Watch) {
   expect(await w.csp().catch(() => []), 'no CSP violation').toEqual([]);
 }
 
+/** The session global-setup got for an origin by logging in. */
+export const sessionOf = (origin: string): string => {
+  const s = (JSON.parse(process.env.LOUPE_E2E_SESSIONS ?? '{}') as Record<string, string>)[origin];
+  if (!s) throw new Error(`no harness session for ${origin}`);
+  return s;
+};
+export const bearerFor = (origin: string) => ({ authorization: `Bearer ${sessionOf(origin)}` });
+
+/** Puts sessions into each origin's sessionStorage before the app starts, as /#/auth/finish would have. */
+export async function useSessions(target: BrowserContext | Page, sessions: Record<string, string> = JSON.parse(process.env.LOUPE_E2E_SESSIONS ?? '{}')) {
+  await target.addInitScript((m: Record<string, string>) => {
+    const t = m[location.origin];
+    if (t) try { sessionStorage.setItem('loupe.session', t); } catch { /* opaque origin */ }
+  }, sessions);
+}
+/** A fresh login to a server a spec started itself. */
+export async function signIn(target: BrowserContext | Page, origin: string) { await useSessions(target, { [origin]: await login(origin) }); }
+
 export const test = base.extend<{ watch: Watch }>({
+  context: async ({ context }, use) => { await useSessions(context); await use(context); },
   watch: async ({ page }, use) => {
     const w = await watchPage(page);
     await use(w);

@@ -1,6 +1,11 @@
 // The Orval mutator and the adapter seam (design 7.2). The browser always calls the same-origin relative path `kb/`.
 import { envelopeStore } from './envelopeStore.ts';
 import { connection } from './connection.ts';
+import { authStore, getSession } from '../auth/session.ts';
+import { activityHeader } from '../auth/activity.ts';
+
+/** The loupe session as a header (design v2 6.1 step 5). Every /kb request carries it; there is no cookie. */
+export const authHeaders = (): Record<string, string> => { const s = getSession(); return s ? { authorization: `Bearer ${s}`, ...activityHeader() } : {}; };
 
 export type Problem = { type: string; title: string; status: number; detail?: string; code?: string; instance?: string; [k: string]: unknown };
 
@@ -89,7 +94,9 @@ const request = async <T>(url: string, init?: RequestInit): Promise<T> => {
   let res: Response;
   try {
     // String concatenation on purpose: new URL(url, base) drops the mount prefix for paths starting with /v1.
-    res = await kbConfig.fetch(kbConfig.base() + url, { cache: cacheFor(url), ...init, signal, credentials: 'omit', referrerPolicy: 'no-referrer' });
+    const headers = new Headers(init?.headers);
+    for (const [k, v] of Object.entries(authHeaders())) headers.set(k, v);
+    res = await kbConfig.fetch(kbConfig.base() + url, { cache: cacheFor(url), ...init, headers, signal, credentials: 'omit', referrerPolicy: 'no-referrer' });
   } catch (e) {
     if (init?.signal?.aborted) throw e;
     if (timeout.aborted) throw new KbUnavailable('timeout', `KB did not answer within ${timeoutMs} ms`);
@@ -101,7 +108,7 @@ const request = async <T>(url: string, init?: RequestInit): Promise<T> => {
       if (/\bjson\b/i.test(ct)) {
         const body: unknown = await res.json();
         if (looksLikeEnvelope(body)) {
-          if ('applied_seq' in body) envelopeStore.update(body);
+          if ('applied_seq' in body) envelopeStore.update(body, Date.now(), /^\/v1\/meta(\?|$)/.test(url));
           // A KB that ignored an axis would show the present under a past label. That screen must not exist (design 1, criterion 3).
           if (!asOfConfirmed(url, body.as_of)) throw new KbProblem({ type: 'about:blank', title: 'as_of_mismatch', status: 500, code: 'as_of_mismatch' });
         }
@@ -115,6 +122,8 @@ const request = async <T>(url: string, init?: RequestInit): Promise<T> => {
     if (isProblemJson(res)) {
       try { problem = { ...problem, ...(await res.json()) }; } catch { /* keep the synthesized problem */ }
     }
+    // loupe serve's own 401: the session is gone. The KB's 401 (token_required) is a configuration fault and stays an error.
+    if (res.status === 401 && problem.code === 'session_required') authStore.expire();
     if (res.status === 502 || res.status === 504) throw new KbUnavailable('proxy', problem.title, res.status, problem.code);
     throw new KbProblem(problem, Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined);
   } catch (e) {

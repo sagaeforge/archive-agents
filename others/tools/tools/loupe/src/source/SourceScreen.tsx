@@ -12,7 +12,8 @@ import { fallbackLabel, NodeLink } from '../components/NodeLink.tsx';
 import { isUnverified, verificationLabel } from '../entity/claimState.ts';
 import { valueLabel } from '../entity/labels.ts';
 import { useClaim, useFullText, useNodeBrief, useSnapshot, useVerdict } from '../data/hooks.ts';
-import { KbProblem } from '../data/kbFetch.ts';
+import { authHeaders, KbProblem } from '../data/kbFetch.ts';
+import { authStore } from '../auth/session.ts';
 import { describeError } from '../lib/errors.ts';
 import { cpSlice } from '../quote/codepoints.ts';
 import { VERDICT_LABEL, type Verdict } from '../quote/verify.ts';
@@ -41,6 +42,18 @@ const quoteOf = (v: Verdict | undefined) => (v && (v.kind === 'match' || v.kind 
 
 function SourceHead({ snap }: { snap: Snapshot }) {
   const raw = useMemo(() => new URL(`kb/v1/snapshots/${encodeURIComponent(snap.id)}/raw`, document.baseURI).href, [snap.id]);
+  // A plain link cannot carry the session header (design v2 6.1), so the bytes are fetched and handed to the browser as a download.
+  // The Blob is typed application/octet-stream: the browser saves it and never renders it (design 9).
+  const download = async () => {
+    const res = await fetch(raw, { headers: authHeaders(), cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer' });
+    if (res.status === 401) { authStore.expire(); return; }
+    if (!res.ok) return;
+    const href = URL.createObjectURL(new Blob([await res.arrayBuffer()], { type: 'application/octet-stream' }));
+    const a = document.createElement('a');
+    a.href = href; a.download = `${snap.id}.raw`; a.rel = 'noopener';
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(href), 10_000);
+  };
   return (
     <header>
       <p className="eyebrow">
@@ -60,7 +73,7 @@ function SourceHead({ snap }: { snap: Snapshot }) {
         <code className="id" data-testid="node-id">{snap.id}</code>
         <CopyLink />
         {/* The raw bytes are never rendered: download only (design 9). */}
-        <a className="text-action" href={raw} download rel="noopener" data-testid="raw-download"><Download className="size-3.5" aria-hidden />원본 내려받기</a>
+        <button type="button" className="text-action" onClick={() => void download()} data-testid="raw-download"><Download className="size-3.5" aria-hidden />원본 내려받기</button>
       </div>
     </header>
   );

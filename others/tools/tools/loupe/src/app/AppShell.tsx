@@ -2,7 +2,7 @@
 // There is no left rail yet: most rail destinations (table, search, changes, schema) are later phases, and dead links are worse than none.
 import { useEffect, useSyncExternalStore } from 'react';
 import { Link, Outlet } from '@tanstack/react-router';
-import { Search } from 'lucide-react';
+import { Lock, Search } from 'lucide-react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { compareSchemaVersion, isSampleVersion } from '../data/contractVersion.ts';
 import { envelopeStore } from '../data/envelopeStore.ts';
@@ -13,6 +13,16 @@ import { Palette } from '../palette/Palette.tsx';
 import { setPaletteOpen, togglePalette } from '../palette/store.ts';
 import { ContractBlock, HeaderStatus, Notices, OfflineBand } from './Status.tsx';
 import { TimeBand, TimeChip } from './TimeControls.tsx';
+import { lockSession } from '../auth/api.ts';
+import { authStore, setSession } from '../auth/session.ts';
+
+/** Lock (design v2 6.1 step 6): the server forgets the session; the Google session in the browser is the person's and stays. */
+async function lock() {
+  if (authStore.get().kind !== 'signed-in') return;
+  await lockSession();
+  setSession(null);
+  authStore.set({ kind: 'expired', why: 'locked' });
+}
 
 const isEditable = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
 
@@ -20,6 +30,7 @@ function usePaletteKeys() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'k') { e.preventDefault(); togglePalette(); return; }
+      if (e.ctrlKey && e.altKey && !e.metaKey && e.code === 'KeyL') { e.preventDefault(); void lock(); return; }
       if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey && !isEditable(e.target)) { e.preventDefault(); setPaletteOpen(true); }
     };
     window.addEventListener('keydown', onKey);
@@ -35,6 +46,7 @@ export function AppShell() {
   const version = env.meta?.schema_version;
   const verdict = version ? compareSchemaVersion(version, CONTRACT_STAMP.schemaVersion) : null;
   const blocked = verdict === 'major-differs' || verdict === 'unparsable';
+  const auth = useSyncExternalStore(authStore.subscribe, authStore.get);
 
   return (
     <TooltipProvider delay={120}>
@@ -52,6 +64,11 @@ export function AppShell() {
             <div className="ml-auto flex min-w-0 items-center gap-3">
               <HeaderStatus />
               <TimeChip />
+              {auth.kind !== 'none' && (
+                <button type="button" className="text-action" onClick={() => void lock()} title="잠그기 (Ctrl+Alt+L)" aria-label="잠그기" aria-keyshortcuts="Control+Alt+L" data-testid="lock-button">
+                  <Lock className="size-3.5" aria-hidden />
+                </button>
+              )}
             </div>
           </div>
           {past && <TimeBand />}
