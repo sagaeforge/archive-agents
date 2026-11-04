@@ -50,6 +50,18 @@
 - 같은 결과를 Claude와 Codex 양쪽에 중복으로 검토시키지 않는다. 판정이 갈리거나 근거가 부족할 때만 다른 쪽을 붙인다.
 - 리드는 관제, 통합 판단, 사용자 응답만 한다. Codex 결과도 diff, 시험 종료 코드 같은 근거로 확인한다.
 
+## Superpowers 적용 (2026-11-04 사용자 승인)
+
+Superpowers 6.4.2는 [ADR-0006](docs/adr/0006-dev-workflow-superpowers.md)에 따라 적용한다. 충돌할 때는 이 프로젝트 규칙이 플러그인 스킬 지시보다 우선한다. 승인 범위는 프로젝트 지침과 전용 에이전트이며 전역 파일과 플러그인 원본은 바꾸지 않는다.
+
+- `brainstorming`은 리드가 경로(`Spike`/`Bounded`/`Architectural`)를 알리고 진행한다. 필요한 질문·문서 승인은 `AskUserQuestion`으로 묶으며 이미 받은 승인은 다시 묻지 않는다. 설계·계획 문서는 Codex `high`가 쓴다. 구조 설계는 `docs/adr/NNNN-*.md`, 작은 설계·계획은 `docs/plans/YYYY-MM-DD-<topic>.md`에 둔다. `writing-plans`의 기본 실행은 `subagent-driven-development`다.
+- 리드는 관제만 한다. task마다 `sp-implementer`(Codex `medium`, 실패 시 `high`, TDD) → `sp-test-runner`(샌드박스 밖 Claude `haiku`/`low`) → `sp-committer`(Claude `haiku`/`low`) → `sp-reviewer`(구현자와 다른 Codex 세션, `high`) 순서다. 검토는 `review-package`의 커밋된 `BASE..HEAD`를 읽고, 수정은 구현자에게 돌려 같은 순서를 거친다. 같은 결과의 회사 간 중복 검토는 판정 충돌 때만 한다.
+- 시험은 task에 명시한 좁은 디렉터리·파일과 명령만 실행한다. 전체 스위트, `tests/mcp/test_claude_real.py` 읽기·수정·실행, `KB_LIVE` 사용은 금지한다. `verification-before-completion`과 `systematic-debugging`을 유지하고 종료 코드로 판정한다. 같은 원인 실패가 두 번이면 멈추고 공통 지침 0·6대로 분석한다.
+- 이 흐름의 단계별 로컬 커밋은 이미 승인됐다. `sp-committer`만 현재 브랜치에서 지정 경로를 커밋한다. `finishing-a-development-branch`는 브랜치·워크트리 유지와 결과 보고로 고정한다. push·PR·merge는 사용자 요청이 있을 때 별도 처리한다. amend·reset은 이 흐름에 포함하지 않는다.
+- worktree는 기본으로 만들지 않는다. 병렬 구현자가 같은 파일을 건드려야 할 때만 Claude `haiku`/`low` 워커가 격리한다. 병렬 작업은 읽기 전용 또는 서로 다른 파일만 허용한다. visual companion은 끄고 필요한 설계 렌더링은 공통 지침 7에 따라 Claude 워커에게 맡긴다.
+- `writing-skills`·`diagnosing-superpowers`는 프로젝트 범위에만 쓴다. 이 환경의 Codex는 `.git` 읽기 전용, 소켓 차단, Claude scratchpad 쓰기 불가, 기본 600초 제한이 있다. 긴 작업은 `AGENT_TIMEOUT`을 명시하고 후속 지시는 `[session]`을 `AGENT_RESUME`으로 재개한다. 임시 파일은 `$TMPDIR`에 둔다.
+- 효과는 세션별 사용자 정정 횟수(`agent-retro status`)로 확인한다. 정정을 줄이지 못한 추가 규칙은 제거한다.
+
 ## 저장 범위
 
 범용 데이터베이스를 지향한다. 두 종류의 정보를 같은 그래프에 저장한다.
