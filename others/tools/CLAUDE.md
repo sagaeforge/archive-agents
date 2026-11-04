@@ -40,4 +40,21 @@
 
 - 워크플로의 `agent()`는 지정하지 않으면 세션 모델과 effort를 물려받는다. `model`과 `effort`를 항상 적는다.
 - `Agent` 도구의 `fork`는 세션 모델과 effort를 그대로 쓰고 바꿀 수 없다. 판단 업무에만 쓴다.
+- 개발 작업은 `.claude/agents/`의 역할별 에이전트에게 맡기고, 맞는 역할이 없을 때만 `general-purpose`를 쓴다.
 - 처음부터 높게 잡지 않는다. 낮은 수준에서 실패하면 그 단계만 한 칸 올려 다시 돌린다.
+
+## superpowers 플러그인
+
+플러그인 스킬은 쓰되 아래 규칙이 스킬 지시보다 우선한다. 세부와 근거는 `docs/project-tools.md`.
+
+- 산출물: 스펙은 `docs/design/<tool>-<topic>.md`, 계획은 `docs/plans/YYYY-MM-DD-<tool>-<topic>.md`에 한국어로 쓴다. 계획의 Task 제목만 `### Task N: <영어 이름>`으로 둔다. `docs/superpowers/`는 쓰지 않는다.
+- 질문: 한 번에 하나씩 묻지 않는다. 스펙·계획 검토, 실행 방식, 브랜치 마무리 메뉴도 `AskUserQuestion`으로 묶어 묻는다.
+- 커밋: 스펙과 계획은 커밋하지 않는다. 소유자가 계획과 실행 방식을 승인하면 그 계획 범위에서 `committer`가 경로 목록으로 Task별 로컬 커밋을 만든다. push, amend, rebase는 하지 않는다. 병합과 push는 소유자가 그 자리에서 고를 때만 한다.
+- 실행: 리드는 Native(executing-plans)를 쓰지 않는다. 계획은 subagent-driven-development로 실행하고, 작은 계획은 워커 하나에게 executing-plans로 맡긴다. 리드의 탐색은 `Explore`, 재시험은 `test-runner`가 한다.
+- 역할: 구현은 `implementer-codex` 또는 `implementer`, Task·최종 리뷰는 `code-reviewer`, 원인 불명 실패는 `debugger`. 스킬의 cheap/standard/most capable은 위 표로 읽고, 최종 전체 리뷰는 세션 모델 `high`.
+- 워크트리: 공유 체크아웃에서 브랜치를 바꾸지 않는다(relief·tower systemd 유닛이 이 체크아웃에서 돈다). `git worktree add`와 `.worktrees/`는 쓰지 않는다. 격리가 필요하면 Agent의 `isolation: "worktree"`를 쓰고 기준 브랜치를 브리프에 적는다. 의존성은 설치하지 않는다.
+- TDD 예외: 문서, 지침 파일, `.claude/` 설정과 에이전트, systemd 유닛, 스파이크. 기존 시험·빌드·실제 실행으로 검증한다. 지우는 코드는 이번 Task에서 자기가 쓴 것만.
+- 실패: 같은 이유로 2회 실패하면 멈춘다(systematic-debugging의 3회보다 우선).
+- 워커: using-superpowers의 "1%면 호출"을 따르지 않고 브리프와 frontmatter `skills`가 정한 스킬만 쓴다. brainstorming은 리드만 한다. Codex는 `agent-run`이 플러그인을 끄므로 스킬을 못 읽는다. TDD·검증 규칙은 브리프나 중계 고정 블록에 문장으로 넣는다.
+- 쓰지 않음: visual companion(대신 `ux-designer`와 `visual-verifier`). diagnosing-superpowers는 소유자 요청 시에만 쓴다.
+- 역할 에이전트의 쓰기·git·경로 제한은 frontmatter 훅(`.claude/hooks/agent-guard.py`)이 막는다. 훅을 고치면 `python3 -I .claude/hooks/test_agent_guard.py`를 돌린다.

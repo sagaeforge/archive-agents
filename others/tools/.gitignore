@@ -29,3 +29,6 @@ tools/tower/test/regression/results/
 # Trail's local build settings.
 /.graft/
 /.graft
+
+# superpowers plugin scratch: brainstorm mockups and SDD ledgers. See docs/project-tools.md.
+/.superpowers/
