@@ -124,3 +124,21 @@
 ## 타이머 켜고 소진 시작 (2026-11-01)
 
 - 사용자가 AskUserQuestion에 직접 "타이머 켜고 소진 시작 (Recommended)"로 답했다. 실행 E(100창, 통과 0.920) 뒤이고, 리드가 `kb-agent.timer` 하나를 켰다(`install-units.sh` 아님).
+
+## 연구 백엔드 설계 승인과 하위 결정 (2026-11-04)
+
+사용자가 리드의 AskUserQuestion에 직접 답했다. 설계는 ADR-0004다.
+
+- ADR-0004 구현 승인: "승인하고 구현 (Recommended)".
+- 백업 P.5: "A". 라이브는 Proxmox, restic은 쓰기 VM에서 PC의 C:와 E:로(PC가 켜져 있을 때), Proxmox 안 사본 없음. 결정 2는 바뀌지 않는다. 받아들인 위험: PC가 꺼진 동안 RPO가 늘고, 그때 노드 디스크가 고장 나면 그 구간을 잃는다. B(Proxmox 사본 허용)는 기각했다.
+- 자동 등록 경계 T.3: "이 기준이면 자동 (Recommended)". 기존 호스트이고 약관 allowed 또는 no_clause, robots 허용, 프로토콜이 피드·사이트맵·API·JSON-LD이면 사람 없이 등록한다. 새 호스트와 결정이 필요한 소스는 계속 승인한다.
+- Proxmox 배치 P.1: "승인 (Recommended)". VM과 LXC 생성은 이전 시점에 사용자가 다시 확인한다.
+
+같은 날 앞서 정한 것:
+
+- 사고 1은 설계가 배포될 때 닫는다.
+- YouTube 채널 RSS는 결정 1의 예외로 허용한다.
+- Wikidata User-Agent 이름 `sagae-agent`, 연락처 `user@example.com`(사용자가 지정한 프로젝트 연락처).
+- Claude 플랜과 GPT 플랜은 각 $200이고 각각 월 $200의 플랫폼 API 크레딧을 준다.
+- 번역은 추출하지 않는다.
+- loupe first_party 쓰기 작업은 KB가 맡고, 설계를 먼저 한다(ADR-0005).
