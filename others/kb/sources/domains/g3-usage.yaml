@@ -91,6 +91,8 @@ sources:
     type: Tool
     prefix: awesome-cc
     active: Active
+    prose:
+    - Description
   expect:
     content_type:
     - text/plain

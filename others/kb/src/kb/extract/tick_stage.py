@@ -6,7 +6,7 @@ import json
 
 from kb.collect.stage import StageResult
 from kb.core import cas, ledger, opsdb
-from kb.extract import cache, reconfirm, settings, state, windows
+from kb.extract import cache, policy, reconfirm, settings, state
 
 CURSOR = "extract:enq:seq"
 QUEUE, QUEUE_SENSITIVE = "l2", "l2s"
@@ -33,11 +33,12 @@ def enqueue_new(limit: int = BATCH) -> dict:
     prev = state.get("extract:enq:ver")
     if prev not in (None, ver) and not cache.is_carried(str(prev)):
         after = 0                       # 프롬프트나 스키마 판본이 바뀌면 큐 소속이 달라진다: 처음부터 다시 훑는다. done_carry의 옛 판본은 소속이 그대로다
+    tab = policy.table()                # 소스별 L2 정책(ADR-0004 D1). none은 큐에 넣지 않고 declared는 선언 구간, prose는 산문 문단만 넣는다
     led = ledger.open_ledger()
     try:
         evs = ledger.iter_events(led, after, limit)
         caps = {}
-        last, queued, skipped = after, 0, 0
+        last, queued, skipped, skipped_policy, undecided = after, 0, 0, 0, 0
         for e in evs:
             last = max(last, e["seq"])
             if e["kind"] == "snapshot.captured" and e.get("payload"):
@@ -59,22 +60,20 @@ def enqueue_new(limit: int = BATCH) -> dict:
                 cap = json.loads(r[0]) if r and r[0] else {}
             doms = [d for d in (cap.get("domain") or []) if d]
             dom = doms[0] if doms else None
-            done = cache.done_keys([x["para_sha"] for x in paras])
             c = opsdb.connect()
             try:
-                for x in paras:
-                    if x["para_sha"] in done:
-                        skipped += 1
-                        continue
-                    if opsdb.queue_put(c, QUEUE, windows.ref_of(sid, x["para_sha"], x["start_cp"]), domain=dom):
-                        queued += 1
+                r = policy.enqueue_snapshot(c, tab, sid, paras, p, cap, dom)
             finally:
                 c.close()
+            queued += r["queued"]
+            skipped += r["skipped_done"]
+            skipped_policy += r["skipped_policy"]
+            undecided += r["undecided"]
     finally:
         led.close()
     state.put(CURSOR, last)
     state.put("extract:enq:ver", ver)      # 커서 뒤에 쓴다. 사이에서 죽으면 다시 훑을 뿐이고 큐 적재는 멱등이다
-    return {"queued": queued, "skipped_done": skipped, "cursor": last}
+    return {"queued": queued, "skipped_done": skipped, "skipped_policy": skipped_policy, "policy_undecided": undecided, "cursor": last}
 
 
 def run(ctx=None) -> StageResult:
@@ -84,6 +83,11 @@ def run(ctx=None) -> StageResult:
     except Exception as e:  # noqa: BLE001
         res.ok = False
         res.errors.append(f"enqueue: {type(e).__name__}: {e}"[:300])
+    try:
+        res.detail["policy_sweep"] = policy.sweep_if_changed()      # 정책이 바뀐 첫 tick에 기존 행을 맞춘다(skipped_policy 표시와 되돌림)
+    except Exception as e:  # noqa: BLE001
+        res.ok = False
+        res.errors.append(f"policy_sweep: {type(e).__name__}: {e}"[:300])
     try:
         res.detail["reconfirm"] = reconfirm.run_new_snapshots()
     except Exception as e:  # noqa: BLE001

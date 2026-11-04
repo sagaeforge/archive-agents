@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from kb.core import opsdb
-from kb.extract import windows
+from kb.extract import policy, windows
 
 DOMAINS_AF = frozenset("ABCDEF")
 FEED_MARKS = ("rss", "atom")
@@ -62,15 +62,22 @@ def take(proc, c, kind: str, n: int, cache: dict, lease_ms: int | None = None) -
         raw = c.execute("SELECT id, kind, ref, domain, priority, attempts FROM queue "
                         "WHERE kind=? AND state IN ('queued','taken') AND (next_at IS NULL OR next_at<=?) "
                         "ORDER BY priority DESC, enqueued_at, id", (kind, now)).fetchall()
-        rows, dead = [], []
+        rows, dead, nopol = [], [], []
+        tab = cache.get("__l2_policy__")
+        if tab is None:
+            tab = cache["__l2_policy__"] = policy.table()
         for r in raw:
             m = _meta(proc, windows.parse_ref(r[2])[0], cache)
             if m["superseded"]:
                 dead.append(r[0])
+            elif policy.policy_of(tab, m["source"]) == "none":
+                nopol.append(r[0])          # 안전망: sweep 뒤에 되살아난 none 소스 행도 꺼내지 않는다
             else:
                 rows.append((r, _tier(r[3], m), m["source"]))
         for i in dead:
             c.execute("DELETE FROM queue WHERE id=?", (i,))
+        for i in nopol:
+            c.execute("UPDATE queue SET state=? WHERE id=?", (policy.SKIPPED, i))
         picked = pick(rows, n)
         for r in picked:
             c.execute("UPDATE queue SET state='taken', attempts=attempts+1, next_at=? WHERE id=?", (now + lease, r[0]))

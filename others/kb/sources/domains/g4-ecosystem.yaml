@@ -199,7 +199,7 @@ sources:
     owns:
     - ^https://registry\.npmjs\.org/[^?#]+$
     conditional: true
-  parser: raw_file@1
+  parser: npm_meta@1
   expect:
     content_type:
     - application/json

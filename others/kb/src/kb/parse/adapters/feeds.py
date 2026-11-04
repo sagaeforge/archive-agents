@@ -8,7 +8,7 @@ from html import escape
 
 from kb.core import ids
 from kb.parse.adapters import adapter
-from kb.parse.adapters._common import day_points, doc_entity
+from kb.parse.adapters._common import day_points, doc_entity, json_prose
 from kb.parse.model import Claim, Result, Series, quote, slugify
 
 
@@ -73,7 +73,7 @@ def arxiv(ctx) -> Result:
     return feed_result(ctx, "Document", int((ctx.cfg or {}).get("limit", 100)))
 
 
-@adapter("hn_algolia", hint="json")
+@adapter("hn_algolia", hint="json", prose=json_prose("/hits/*/story_text"))      # 산문 선언(D1): 스토리 본문만. 제목은 Document 엔티티다
 def hn_algolia(ctx) -> Result:
     d = ctx.json()
     q = d.get("query") or (ctx.cfg or {}).get("query") or "hn"

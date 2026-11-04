@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 
 from kb.core import canon, cas, gatelock, opsdb
-from kb.extract import budget, cache, guard, items as itm, order, prompt, route, schema, settings, state, support, windows
+from kb.extract import budget, cache, guard, items as itm, order, policy, prompt, route, schema, settings, state, support, windows
 from kb.extract.types import Job
 
 QUEUE = "l2"
@@ -82,7 +82,8 @@ def unattempted(ref: str, kind: str = QUEUE) -> None:
     """호출이 없었던 항목을 큐에 그대로 돌린다. 시도 횟수를 쓰지 않으므로 막힌 동안 DLQ로 가지 않는다."""
     c = opsdb.connect()
     try:
-        c.execute("UPDATE queue SET state='queued', next_at=NULL, attempts=max(attempts-1, 0) WHERE kind=? AND ref=?", (kind, ref))
+        c.execute("UPDATE queue SET state='queued', next_at=NULL, attempts=max(attempts-1, 0) WHERE kind=? AND ref=? "
+                  "AND state<>'skipped_policy'", (kind, ref))
     finally:
         c.close()
 
@@ -103,7 +104,7 @@ def readmit_dlq(kind: str = QUEUE) -> int:
 def queue_left(kind: str = QUEUE) -> int:
     c = opsdb.connect()
     try:
-        return c.execute("SELECT count(*) FROM queue WHERE kind=?", (kind,)).fetchone()[0]
+        return c.execute("SELECT count(*) FROM queue WHERE kind=? AND state<>'skipped_policy'", (kind,)).fetchone()[0]
     finally:
         c.close()
 
@@ -477,20 +478,29 @@ def reextract_enqueue(proc, snapshot: str | None = None) -> int:
     rows = con.execute("SELECT id, props FROM node WHERE type='Snapshot' AND expired_at IS NULL" +
                        (" AND id=?" if snapshot else ""), (snapshot,) if snapshot else ()).fetchall()
     n = 0
+    tab = policy.table()
     for sid, props in rows:
         p = json.loads(props) if props else {}
         if not p.get("paras_sha"):
             continue
+        if policy.policy_of(tab, p.get("source")) == "none":
+            continue                                    # L2 정책 none인 소스는 재추출도 하지 않는다(ADR-0004 D1)
         paras = json.loads(_cas.get(p["paras_sha"]).decode("utf-8"))
-        shas = [x["para_sha"] for x in paras]
-        cache.clear_done(shas)
+        flt = policy.filter_for(tab, p.get("source"), p)    # declared·prose: 정책이 받는 문단만 다시 뽑는다
+        if flt is not None:
+            paras = [x for x in paras if flt.keep(x["para_sha"], x["start_cp"])]
+        cache.clear_done([x["para_sha"] for x in paras])
         state.put(REEXTRACT + sid, {"at": settings.now_s()})   # 상한을 넘겨 다음 회차로 밀려도 철회 규칙을 잇는다
         dom = (_domains_of(proc, sid) or [None])[0]
         c = opsdb.connect()
         try:
             for x in paras:
-                if opsdb.queue_put(c, QUEUE, windows.ref_of(sid, x["para_sha"], x["start_cp"]), domain=dom):
+                ref = windows.ref_of(sid, x["para_sha"], x["start_cp"])
+                if opsdb.queue_put(c, QUEUE, ref, domain=dom):
                     n += 1
+                else:                                       # 옛 정책이 남긴 skipped_policy 행은 INSERT OR IGNORE에 막힌다: 되살린다
+                    n += c.execute("UPDATE queue SET state='queued', next_at=NULL WHERE kind=? AND ref=? AND state=?",
+                                   (QUEUE, ref, policy.SKIPPED)).rowcount
         finally:
             c.close()
     return n
@@ -505,7 +515,7 @@ def _finish_reextract() -> None:
     try:
         for k in keys:
             sid = k[len(REEXTRACT):]
-            if not c.execute("SELECT 1 FROM queue WHERE kind=? AND substr(ref, 1, ?)=? LIMIT 1", (QUEUE, len(sid) + 1, sid + "|")).fetchone():
+            if not c.execute("SELECT 1 FROM queue WHERE kind=? AND state<>'skipped_policy' AND substr(ref, 1, ?)=? LIMIT 1", (QUEUE, len(sid) + 1, sid + "|")).fetchone():
                 c.execute("DELETE FROM tick_state WHERE k=?", (k,))
     finally:
         c.close()

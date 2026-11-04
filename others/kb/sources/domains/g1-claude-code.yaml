@@ -115,6 +115,8 @@ sources:
       - ^https://code\.claude\.com/docs/ko/
     conditional: true
   parser: llms_txt@1
+  l2: none
+  translation_of: src:cc-docs-en
   expect:
     content_type: *id001
   policy:

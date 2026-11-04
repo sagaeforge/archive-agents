@@ -307,7 +307,7 @@ def check_disk(w: W) -> None:
 
 def check_l2(w: W) -> None:
     ph = ",".join("?" * len(L2_KINDS))
-    rows = w.q(f"SELECT count(*), min(enqueued_at) FROM queue WHERE kind IN ({ph})", L2_KINDS)
+    rows = w.q(f"SELECT count(*), min(enqueued_at) FROM queue WHERE state<>'skipped_policy' AND kind IN ({ph})", L2_KINDS)
     n, oldest = (rows[0] if rows else (0, None))
     w.vector["queue_l2"] = n or 0
     on = 11 in w.decisions

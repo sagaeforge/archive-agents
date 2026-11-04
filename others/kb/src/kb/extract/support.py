@@ -106,7 +106,8 @@ STOP_REASONS = ("daily_valve", "cost_exceeded")        # 배치를 멈춘다. �
 def _release(ref: str) -> None:
     c = opsdb.connect()
     try:
-        c.execute("UPDATE queue SET state='queued', next_at=NULL, attempts=max(attempts-1, 0) WHERE kind=? AND ref=?", (QUEUE, ref))
+        c.execute("UPDATE queue SET state='queued', next_at=NULL, attempts=max(attempts-1, 0) WHERE kind=? AND ref=? "
+                  "AND state<>'skipped_policy'", (QUEUE, ref))
     finally:
         c.close()
 

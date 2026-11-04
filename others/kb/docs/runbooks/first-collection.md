@@ -243,3 +243,25 @@ Document 2,410, Snapshot 1,539, Claim 1,186, Tool 744, Series 282, Model 250, Fe
 - 실행 E: `extract-2`, `gate@3`, 빌드 a602514ecab3, 100창, 정지 없음. 수락 183, needs_review 14, rejected 2, 통과 183/199 = 0.920, 비용 $0.7947. 수락 40건 표본 감사(시드 7, 검토자 1명): 근거 확인 31, 사소함 5, 과장 3, 주어 오류 1, 거짓 0. 마지막 50창 중 빈 창 24.
 - 소진 시작: 2026-11-01 23:20 KST에 리드가 사용자 직접 답변으로 `kb-agent.timer`를 켰다. `install-units.sh`가 아니라 그 타이머 하나만 심볼릭 링크로 설치했다. 첫 실행 26분, 마지막 50창 112/134 = 0.836, 빈 창 22/50, 당일 합계 598창과 $4.86, 잔액 $140.34, 활성 주장 1,970, 정지 없음, Sol 켜짐.
 - 아직 실제로 보지 못한 것: 활용률 0.80 초과 시 Claude 작업 건너뜀. 해당 작업이 `not_due`였다.
+
+## L2 적재 정책 `l2: none|declared|prose|all` (ADR-0004 D1, 2026-11-04, 미배포)
+
+- 소스 항목의 `l2` 필드가 새 문단을 L2 큐(`kind=l2`)에 넣을지 정한다. 기본은 `all`이다. 해석 순서: 소스 `l2` > 파서 기본값(`src/kb/extract/policy.py`의 `PARSER_L2`) > `all`. 틀린 값과 등록되지 않은 소스는 `all`이다.
+  - `none`: 넣지 않는다. 산문이 없는 구조 자료 파서(`github_repo_meta`, `hf_models`, `mcp_registry`, `kworb`, `trends_rss`, `codex_features`)와 번역본(`src:cc-docs-ko`, `translation_of: src:cc-docs-en`)이다.
+  - `declared`: 파서가 선언한 산문 구간(어댑터의 `prose`)과 겹치는 문단만 넣는다. `pypi_meta`는 `/info/description`(README), `npm_meta`는 packument `/readme`, `hn_algolia`는 `/hits/*/story_text`, `csv`는 소스 `parse.prose`의 열(`src:awesome-claude-code`는 `Description`)이다.
+    - 구간은 저장하지 않고 표시 본문에서 그때그때 계산한다. 문단 색인(`paras_sha`), `para_sha`, done 키는 바뀌지 않는다.
+    - 구간을 계산하지 못한 스냅샷(판정 불가)은 넣지 않고 보류 표식으로 남긴다. sweep 결과의 `undecided`로 센다.
+    - CSV는 빈 줄이 없어 문단 하나가 여러 행에 걸친다. `awesome-claude-code`는 문단 347개가 모두 설명 칸과 겹쳐 사실상 `all`이다.
+  - `prose`: JSON, 키-값 줄, 글자가 거의 없는 문단은 빼고 산문만 넣는다(휴리스틱). 보기 좋게 찍은 JSON을 산문으로 볼 수 있어 JSON 소스에는 쓰지 않는다. 현재 쓰는 소스는 없다.
+  - 수집(L0)과 파싱(L1)은 정책과 무관하게 계속한다.
+- `src:g4-npm-registry`는 `raw_file@1`에서 `npm_meta@1`로 바꿨다. 전체 packument, 축약 메타, 버전 문서를 모두 읽어 `latest_version`, `license`, `maintained_status`(deprecated)를 jsonpointer 근거로 낸다.
+  - Accept 제약: 축약 메타(`Accept: application/vnd.npm.install-v1+json`)는 응답 content-type도 그 값이다. 소스의 `expect.content_type`이 `application/json`뿐이라 Accept만 바꾸면 수집 기대 검사가 실패한다. 바꿀 때는 `expect.content_type`에 그 값을 더한다. 축약 메타에는 `readme`와 `license`가 없다. 지금은 `Accept: */*`로 전체 packument를 받는다.
+- 기존 행과 되돌리기: tick 5단계가 정책 표가 바뀐 첫 tick에 큐를 정책에 맞춘다(`policy.sweep_if_changed`). 행과 원장은 지우지 않는다.
+  - 정책이 거르는 `queued`, `taken` 행은 `state='skipped_policy'`가 된다.
+  - 정책이 받는 `skipped_policy` 행은 `queued`로 돌아온다(`restored`). 정책을 `all`로 바꾸면 그 소스의 skipped 행이 전부 돌아온다.
+  - 적재 때 걸러 낸 문단은 행을 만들지 않고 URL마다 최신 스냅샷 하나를 보류 표식(`tick_state` `extract:l2policy:held:<소스>|<URL>`)으로 남긴다. 정책이 넓어진 sweep이 그 스냅샷을 다시 적재한다(`held_queued`).
+  - `kb agent run --reextract`도 정책을 따른다. `none`이면 건너뛰고, 그 밖에는 정책이 받는 문단만 다시 넣으며 남아 있는 `skipped_policy` 행을 되살린다.
+  - 꺼내기(`order.take`)와 되돌리기(`queue_done` 재예약, `_release`, `unattempted`)는 `skipped_policy`를 건드리지 않고, `queue_left`, 워치독 `queue_l2`, 지표 `retries`는 세지 않는다.
+- 수동 확인: `kb queue stats --by-source --json`(읽기 전용; 소스별 `category`, `policy`, `rows`, `queued`, `skipped_policy`, `queued_new`)과 `kb queue sweep [--dry-run] [--json]`. `queued_new`는 마지막 sweep 이후 큐에 들어온 `queued`, `taken` 행 수다(`--since <ms>`로 바꾼다).
+  - 배포 전 판정: `kb queue stats --by-source --json | jq -e '[.sources[] | select(.policy=="none") | .queued_new] | (add // 0) == 0'`
+- 사본 측정(2026-11-04, `~/.cache/sagae-kb/s/d1sim`의 복사본, URL별 최신 스냅샷): L2로 가는 문단은 `pypi-meta` 585/10,831, `awesome-claude-code` 347/347, `hn-algolia-g` 45/791, `hn-algolia-f` 0/103, `g4-npm-registry` 8/66,263이다. 판정 불가 0. 첫 sweep은 skipped 997행을 되돌렸고(1.9초), 원장과 done 키 2,732개는 그대로였다.

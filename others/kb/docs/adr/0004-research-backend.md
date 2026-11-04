@@ -683,7 +683,7 @@ host_allow_paths:
 
 | 범주 | 판정 | 전체 행 | 살아 있는 행 | 살아 있는 행 비율 | 창 환산 | Sol 비용 환산 |
 |---|---|---:|---:|---:|---:|---:|
-| S 구조 자료: npm packument, pypi JSON, HF, MCP 레지스트리, HN, kworb, trends, 저장소 메타 | L1로 옮긴다. L2 0 | 84,471 | 81,704 | 27.7% | 32,041 | $280 |
+| S 구조 자료: npm packument, pypi JSON, HF, MCP 레지스트리, HN, kworb, trends, 저장소 메타 | L1로 옮긴다. 파서가 선언한 산문(README, HN `story_text`, CSV 설명)만 L2(`l2: declared`, D1) | 84,471 | 81,704 | 27.7% | 32,041 | $280 |
 | C 변경 로그, 릴리스, 상태, 폐기 표 | 항목 단위 결정적 주장(D2) | 39,695 | 18,755 | 6.4% | 7,355 | $64 |
 | X 번역본 문서(`cc-docs-ko`) | L2에서 뺀다. 스냅샷은 별칭 근거로만 남긴다(3.3, D3) | 60,143 | 36,750 | 12.5% | 14,412 | $126 |
 | P 문서 산문(llms.txt, 사이트맵, page_md, README) | L2 유지 | 234,380 | 146,592 | 49.7% | 57,487 | $502 |
@@ -733,7 +733,7 @@ host_allow_paths:
 | WebSub | W3C 권고. 구독자는 네트워크에서 직접 닿는 콜백 URL이 필요하다[S42] | 없음 | 쓰지 않는다. 이 PC는 공개 콜백이 없다 |
 | 피드 페이징, 보관 RFC 5005 | prev-archive를 이미 처리한 항목까지 따라간다[S48] | 없음 | 과거분 채우기에만 선택적으로 쓴다 |
 | GitHub 릴리스 | REST 비인증 60/h, 인증 5,000/h, 인증한 304는 1차 한도를 쓰지 않는다[S50]. `releases.atom`은 공식 문서에 없지만 동작을 확인했다[S56] | `github_release@1`이 `/releases/latest` 하나만 본다(예: `sources/domains/g2-codex.yaml`) | `/releases` 목록 + ETag로 이력 전체를 받는다(D2) |
-| PyPI | JSON `/pypi/<p>/json`, 프로젝트 RSS `/rss/project/<p>/releases.xml`, 엣지 속도 제한 없음, 순차 요청 요청[S51] | `pypi_meta@1` 있음 | JSON 본문의 L2 적재를 끈다(D1). 릴리스 이력은 RSS로 event 주장을 낸다 |
+| PyPI | JSON `/pypi/<p>/json`, 프로젝트 RSS `/rss/project/<p>/releases.xml`, 엣지 속도 제한 없음, 순차 요청 요청[S51] | `pypi_meta@1` 있음 | JSON 본문의 L2 적재는 파서가 선언한 `/info/description`만 남기고 끈다(`l2: declared`, D1). 릴리스 이력은 RSS로 event 주장을 낸다 |
 | npm | packument, 축약 메타 `Accept: application/vnd.npm.install-v1+json`, 다운로드 API는 일괄 128개[S52] | `npm_meta@1`은 있으나 `g4-npm-registry`는 `raw_file@1` | 파서를 바꾸고 축약 메타를 쓴다. 다운로드 수는 시계열로 받는다(D1) |
 | arXiv | 3초에 1요청, 연결 1개, 메타데이터 CC0, OAI-PMH, 카테고리 RSS는 하루 1회[S53] | `arxiv@1` 있음 | 유지 |
 | Hacker News | Firebase API, "currently no rate limit"[S54]. Algolia 한도 [미확인] | `hn_algolia@1` 있음 | 유지 |
@@ -1792,7 +1792,7 @@ K1(설치형 프로그램, 12장)이 이전의 운반 수단이다. 그래서 �
 
 | WP | 내용 | 인수 조건 | 검증 명령 |
 |---|---|---|---|
-| D1 | 소스, 파서별 L2 적재 정책 `l2: none\|prose\|all`(기본 `all`, S 범주와 번역본 `none`), `g4-npm-registry`를 `npm_meta@1`로, `kb queue stats --by-source --json` | 새 S, X 범주 행 적재 0, 기존 행은 `skipped_policy`, 시험 통과 | `uv run pytest tests/extract tests/parse -q && kb queue stats --by-source --json \| jq -e '[.sources[] \| select(.category=="S" or .category=="X") \| .queued_new] \| add == 0'` |
+| D1 | 소스, 파서별 L2 적재 정책 `l2: none\|declared\|prose\|all`(기본 `all`). 산문 필드를 선언한 S 파서(`pypi_meta` README, `npm_meta` readme, `hn_algolia` `story_text`, `csv` `parse.prose` 열)는 `declared`, 나머지 S와 번역본은 `none`. 정책이 넓어지면 sweep이 `skipped_policy` 행과 보류 스냅샷을 되돌린다(2026-11-04 검토 B1~B3 반영). `g4-npm-registry`를 `npm_meta@1`로, `kb queue stats --by-source --json` | `none` 소스의 새 행 0, `declared` 소스는 선언 구간과 겹치는 문단만, 기존 행은 `skipped_policy`, `all`로 되돌리면 전부 `queued`, 문단 해시와 done 키 불변, 시험 통과 | `uv run pytest tests/extract tests/parse -q && kb queue stats --by-source --json \| jq -e '[.sources[] \| select(.policy=="none") \| .queued_new] \| (add // 0) == 0'` |
 | D2 | 변경 로그, 릴리스, 상태 항목 파서: 항목 줄 → `kind=event` 주장, 주어는 버전 엔티티, 인용은 항목 줄. GitHub `/releases` 목록 + ETag | `cc-changelog-gh` 재생에서 항목 주장 게이트 통과 ≥ 0.98 | `uv run pytest tests/parse -q && kb ingest validate tests/fixtures/changelog/bundle.jsonl --no-fetch --json \| tail -1 \| jq -e '.summary.rejected == 0'` |
 | D3 | 묵은 행 적재 시 정리, 사이트맵 lastmod, llms.txt `.md` 변형 | 묵은 행 비율 < 5% | `kb queue stats --by-source --json \| jq -e '.stale_ratio < 0.05'` |
 | I1 | JSON-LD, Open Graph L1 어댑터(`jsonld@1`), `json_pointer` 근거 | 골든 HTML 30개에서 게이트 통과 1.00, 새 네트워크 요청 0 | `uv run pytest tests/parse -q -k jsonld` |

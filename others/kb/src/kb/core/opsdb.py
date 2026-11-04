@@ -215,7 +215,7 @@ def queue_done(c, kind: str, ref: str, *, requeue_at: int | None = None) -> None
     if requeue_at is None:
         c.execute("DELETE FROM queue WHERE kind=? AND ref=?", (kind, ref))
     else:
-        c.execute("UPDATE queue SET state='queued', next_at=? WHERE kind=? AND ref=?", (requeue_at, kind, ref))
+        c.execute("UPDATE queue SET state='queued', next_at=? WHERE kind=? AND ref=? AND state<>'skipped_policy'", (requeue_at, kind, ref))
 
 
 @_with_conn

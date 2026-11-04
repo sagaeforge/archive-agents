@@ -6,8 +6,8 @@ from urllib.parse import urlsplit
 
 from kb.core import ids
 from kb.parse.adapters import adapter
-from kb.parse.adapters._common import day_points
-from kb.parse.model import Claim, Edge, Entity, Result, Series, pointer, slugify
+from kb.parse.adapters._common import day_points, json_prose
+from kb.parse.model import Claim, Edge, Entity, Result, Series, pointer, ptr_escape, slugify
 
 
 def _repo_of(url: str) -> tuple[str, str] | None:
@@ -91,29 +91,54 @@ def github_repo_meta(ctx) -> Result:
     return res
 
 
-@adapter("npm_meta", hint="json")
+def _npm_latest(d: dict):
+    """(이름, 최신 버전, 버전 문서, 버전 문서의 포인터 접두). 세 모양을 받는다:
+    버전 문서(`/<pkg>/latest`: name, version), 전체 packument(dist-tags, versions, license), 축약 메타(Accept: application/vnd.npm.install-v1+json,
+    license 없음). 모양을 못 알아보면 None."""
+    name = d.get("name")
+    if not isinstance(name, str) or not name:
+        return None
+    if isinstance(d.get("version"), str) and d["version"]:
+        return name, d["version"], d, ""
+    tags = d.get("dist-tags")
+    latest = tags.get("latest") if isinstance(tags, dict) else None
+    if not isinstance(latest, str) or not latest:
+        return None
+    vers = d.get("versions")
+    vdoc = vers.get(latest) if isinstance(vers, dict) else None
+    return name, latest, vdoc if isinstance(vdoc, dict) else {}, f"/versions/{ptr_escape(latest)}"
+
+
+# 산문 선언(ADR-0004 D1): 전체 packument의 `/readme`만 L2로 간다. 버전 문서와 축약 메타에는 readme가 없다.
+# Accept 제약(D1 검토 2026-11-04): 축약 메타는 `Accept: application/vnd.npm.install-v1+json`로 받고 응답 content-type도
+# 그 값이다. 소스의 `expect.content_type`이 application/json뿐이라 지금 Accept만 바꾸면 수집 기대 검사가 실패한다.
+# 형식을 바꿀 때는 expect.content_type에 그 값을 더하고, 축약 메타에는 readme와 license가 없다는 점(산문 0, license 주장 없음)을 감안한다.
+@adapter("npm_meta", hint="json", prose=json_prose("/readme"))
 def npm_meta(ctx) -> Result:
     d = ctx.json()
     res = Result()
-    if not isinstance(d, dict) or not d.get("name") or not d.get("version"):
+    got = _npm_latest(d) if isinstance(d, dict) else None
+    if got is None:
         res.notes.append("no_package")
         return res
-    ent = Entity(ids.entity_id("package", "npm-" + slugify(d["name"])), "Package", d["name"], {"registry": "npm"})
+    name, version, vdoc, vptr = got
+    ent = Entity(ids.entity_id("package", "npm-" + slugify(name)), "Package", name, {"registry": "npm"})
     res.entities.append(ent)
-    res.claims.append(Claim(ent.id, "latest_version", d["version"], f"npm 패키지 {d['name']}의 최신 버전은 {d['version']}이다.",
-                            pointer("/version", d["version"])))
-    lic = d.get("license")
+    vp = "/dist-tags/latest" if vptr else "/version"
+    res.claims.append(Claim(ent.id, "latest_version", version, f"npm 패키지 {name}의 최신 버전은 {version}이다.", pointer(vp, version)))
+    lic, lptr = (d.get("license"), "/license") if isinstance(d.get("license"), str) and d.get("license") else (vdoc.get("license"), vptr + "/license")
     if isinstance(lic, str) and lic:
-        res.claims.append(Claim(ent.id, "license", lic, f"npm 패키지 {d['name']}의 라이선스 표기는 {lic}이다.", pointer("/license", lic)))
-    if d.get("deprecated"):
+        res.claims.append(Claim(ent.id, "license", lic, f"npm 패키지 {name}의 라이선스 표기는 {lic}이다.", pointer(lptr, lic)))
+    dep = vdoc.get("deprecated")
+    if dep:
         res.claims.append(Claim(ent.id, "maintained_status", "deprecated",
-                                f"npm 패키지 {d['name']}의 이 버전은 deprecated로 표시되어 있다.", pointer("/deprecated", d["deprecated"]),
-                                qualifiers={"version": d["version"]}))
+                                f"npm 패키지 {name}의 이 버전은 deprecated로 표시되어 있다.", pointer(vptr + "/deprecated", dep),
+                                qualifiers={"version": version}))
     res.count = 1
     return res
 
 
-@adapter("pypi_meta", hint="json")
+@adapter("pypi_meta", hint="json", prose=json_prose("/info/description"))     # info.description은 README 전문이다
 def pypi_meta(ctx) -> Result:
     d = ctx.json()
     info = d.get("info") if isinstance(d, dict) else None

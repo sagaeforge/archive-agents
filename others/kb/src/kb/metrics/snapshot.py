@@ -107,7 +107,7 @@ def failures(c, t0, t1) -> dict:
     runs = dict(_q(c, "SELECT coalesce(outcome,'running'), count(*) FROM run WHERE started_at>=? AND started_at<? GROUP BY 1", t0, t1))
     return {
         "fetch_errors": by_oc.get("error", 0),
-        "retries": int(_one(c, "SELECT count(*) FROM queue WHERE attempts>1")),
+        "retries": int(_one(c, "SELECT count(*) FROM queue WHERE attempts>1 AND state<>'skipped_policy'")),   # 정책으로 뺀 행은 재시도가 아니다(D1)
         "dlq": {"open": int(_one(c, "SELECT count(*) FROM dlq")),
                 "by_stage": dict(_q(c, "SELECT stage, count(*) FROM dlq GROUP BY stage"))},
         "circuit": {"open": int(_one(c, "SELECT count(*) FROM circuit WHERE state!='closed'")),

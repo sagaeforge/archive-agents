@@ -7,7 +7,7 @@ import re
 
 from kb.core import ids
 from kb.parse.adapters import adapter
-from kb.parse.adapters._common import day_points, doc_entity
+from kb.parse.adapters._common import csv_prose, day_points, doc_entity
 from kb.parse.model import Claim, Edge, Entity, Result, Series, pointer, ptr_escape, quote, slugify
 
 
@@ -19,9 +19,10 @@ def _col(header: list[str], want: str | None, default: int | None) -> int | None
     return default if default is not None and default < len(header) else None
 
 
-@adapter("csv", hint="text")
+@adapter("csv", hint="text", prose=csv_prose)
 def csv_rows(ctx) -> Result:
-    """행마다 엔티티. cfg: label(열 이름), link(열 이름), type(기본 Tool), prefix, active(열 이름, TRUE만)."""
+    """행마다 엔티티. cfg: label(열 이름), link(열 이름), type(기본 Tool), prefix, active(열 이름, TRUE만),
+    prose(산문 열 이름 목록. `l2: declared`일 때 그 칸만 L2로 간다, ADR-0004 D1)."""
     cfg = ctx.cfg or {}
     rows = list(csv.reader(io.StringIO(ctx.text.text)))
     res = Result()
