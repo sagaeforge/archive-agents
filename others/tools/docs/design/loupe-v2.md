@@ -1,6 +1,6 @@
 # loupe v2 설계: 지식 작업 공간
 
-- 상태: UX 설계안. 코드는 없다. 기준일 2026-11-04. 사용자가 D1, D4, D5, D6, D12, D16, D17을 정했다(12절). Codex 교차 검토 결과를 반영했다(부록 B). 구현은 최소 트랙(11.1절)부터이고, 첫 쓰기는 KB의 ADR-0005가 나온 뒤다.
+- 상태: UX 설계안. 코드는 없다. 기준일 2026-11-04. 사용자가 D1, D2, D4, D5, D6, D12, D16, D17을 정했다(12절). Codex 교차 검토 결과를 반영했다(부록 B). 구현은 최소 트랙(11.1절)부터이고, 첫 쓰기는 KB의 ADR-0005가 나온 뒤다.
 - 대상: `tools/loupe`. v1 설계(`docs/design/loupe.md`)의 읽기 화면, 그래프, 시간 여행, 주장 단위 출처, 안전한 렌더링은 그대로 두고 그 위에 로그인, 쓰기, 작업 공간을 더한다.
 - 입력: 사용자 요구 7건과 결정(2026-11-04), v1 설계, KB 계약 0.3.2(`data-interface-v0.md`, `openapi.yaml`), KB 세션의 first_party 쓰기 답(2026-11-04, KB HEAD `9d5c141`), KB ADR-0001과 ADR-0004 T.1·T.7·T.8, `docs/design/relief-v2.md` 1~2절, `docs/design/kms.md`.
 - **쓰기 인터페이스의 주인은 KB다.** KB는 ADR-0005(loupe용 first_party 쓰기 인터페이스)를 쓴다. 그것이 나오기 전까지 경로와 형식은 `[가정-KB]`이고, 쓰기 호출은 어댑터 하나(5.1절)에 가둔다. loupe가 ADR-0005에 바라는 것은 10절에 모았다. 오늘의 inbox와 MCP 경로를 장기 API로 삼지 않는다.
@@ -28,7 +28,7 @@
 | 팔레트 | `Ctrl+Space`, 대체 `Ctrl+K`. 찾기와 만들기를 한 목록에 | 찾기 창과 만들기 메뉴 분리 |
 | 로그인 (D6, D17, 정함) | Google 계정이 신원이다. OIDC 코드 + PKCE, loopback 리디렉션, 허용 `sub` 하나, 쿠키 없는 loupe 세션 유휴 1시간·갱신 없음. 모든 읽기와 쓰기가 그 뒤에 있다. Google에 닿지 못할 때만 TTY로 여는 비상 암호 | 암호만, 토큰 + 헤더만, 무인증 읽기, refresh token |
 | 입력 분류 (D12, 정함) | 정보를 넣을 때 "일반"과 "보안 정보"를 고른다. 보안 정보는 비밀 창으로 KMS에 가고 KB에 가지 않는다. 일반 입력이 비밀 모양이면 저장 전에 KB와 같은 규칙으로 멈추고 다시 고르게 한다 | KB 격리를 첫 알림으로 쓰기 |
-| 편집기 | Milkdown 7.23.0 개별 패키지 + 자체 React UI. **실제 한글 IME 확인과 운영 빌드 gzip 측정 전에는 확정하지 않는다.** 떨어지면 Tiptap 3.32.2 | BlockNote, Lexical, Milkdown Crepe |
+| 편집기 (D2, 정함) | **Tiptap 3.32.0**(StarterKit, 공식 `@tiptap/markdown`) + 자체 React UI. M0a에서 코드 펜스 직렬화, `[[id]]` 노드, 왕복 실패 감소, 사용자의 실제 한글 IME 입력을 끝낸다 | Milkdown(왕복 점수는 더 좋았다), BlockNote, Lexical, Milkdown Crepe |
 | 표 | TanStack Table 9.3.1 + Virtual(v1 Phase 3 계획). 보드는 나중 | Glide Data Grid, AG Grid |
 | 쓰기 | 첫 판은 **온라인 수동 저장만**. 판, `expected_version` 충돌 화면, 직렬 저장. 자동 저장과 기기 안 초안은 나중이고 그때도 로컬 선검사를 지난 것만 둔다 | 자동 저장부터, 검사 전 디스크 초안 |
 | 비밀이 섞인 쓰기 | KB가 `secret`으로 격리한다 [KB답]. loupe는 경고, 화면에서 내림, 재시도 없음, 실행 취소 이력 비움, KMS 안내 | 재시도, 클라이언트 검사로 대신하기 |
@@ -75,7 +75,7 @@ KB를 사용자의 지식 작업 공간으로 쓴다. 주제를 중심으로 그
 - 링크는 `[[id]]` 하나다. 저장 본문에 `[[제목]]` 표기를 남길 이유가 없고, 제목과 ID를 오가는 변환표, 이름 바꾸기 추적이 필요 없다.
 - 데이터베이스 보기 블록의 정의는 loupe 전용 형식이어도 된다. Obsidian Bases나 Dataview와 맞출 필요가 없다.
 - 가져오기의 충돌 처리, 비밀 검사, 링크 해결 경로가 통째로 없다. 시험 대상이 한 갈래 준다.
-- 편집기 선택 기준에서 "Obsidian이 읽는 Markdown 방언"이 빠진다. 기준은 KB 본문 왕복과 읽기 화면(remark)과의 일치뿐이다.
+- 편집기 기준에서 "Obsidian이 읽는 Markdown 방언"이 빠진다. 기준은 KB 본문 왕복과 읽기 화면(remark)과의 일치뿐이다.
 
 ## 2. 정보 구조와 이동 (A)
 
@@ -213,21 +213,37 @@ v1의 시간 기준은 그대로다 [v1: 4절]. **과거 보기나 시점 고정
 | 한글 IME | ProseMirror 조합 처리. Chrome 조합 수정이 계속 들어간다 [출처: prosemirror-view 변경 기록 검색 요약] | 같다 | 같다 | 자체 처리 |
 | 크기 | 개별 패키지만 쓰면 Vue 없음. `@milkdown/kit`과 Crepe는 `@milkdown/components`를 거쳐 Vue 3을 끌고 온다 [측정] | 코어 3.3 MB(압축 전) | 코어 4.9 MB, 의존성 19 | 3.7 MB |
 
-**잠정 선택: Milkdown 개별 패키지(`@milkdown/core`, `preset-commonmark`, `preset-gfm`, `plugin-history`, `plugin-listener`, `plugin-slash`, `plugin-block`, `plugin-clipboard`) + 자체 React UI(shadcn).** 원본이 Markdown이고 읽기 화면과 같은 remark를 쓴다. Crepe와 kit은 Vue를 끌고 와서 쓰지 않는다. **대체안은 Tiptap 3.32.2**다. 파서가 둘(marked, remark)이 되는 것이 대가다.
+**결정(D2, 사용자, 2026-11-04): Tiptap 3.32.0.** StarterKit, 공식 `@tiptap/markdown`, `@tiptap/react`, `@tiptap/extension-drag-handle-react`와 자체 React UI(shadcn)를 쓴다. 3.32.0은 7일 규칙을 지난 최신 판이고, 3.32.2가 2026-11-06 13:19 UTC에 규칙을 지나면 올린다 [출처: `docs/research/spikes/s7-editor/README.md`]. 대가는 Markdown 파서가 둘(편집기의 marked, 읽기 화면의 remark)이 되는 것이다. 그래서 `[[id]]`와 GFM 해석이 두 쪽에서 같은지 시험한다(아래 2번).
+
+**s7 스파이크 결과**(`docs/research/spikes/s7-editor/results.json`, `README.md`, 2026-11-04, 헤드리스 Chromium 156, 같은 자체 UI, 표본 36개, 편집기별 독립 운영 빌드):
+
+| | Milkdown 7.23.0 | Tiptap 3.32.0 |
+|---|---:|---:|
+| 왕복: 바이트 일치 / 개행 정규화만 일치 / 그 외 변경 | **8 / 8 / 20** | 5 / 14 / 17 |
+| 운영 빌드 전체 gzip | **206 KB**(206,138 B) | 215 KB(215,466 B) |
+| IME genuine(신뢰된 `compositionend`) | 0 / 13 | 0 / 13 |
+| IME cdpSimulated | 13 / 13 | 13 / 13 |
+
+- IME는 **두 후보 사이에 차이가 없다.** CDP는 신뢰된 `compositionend`를 만들 수 없어 genuine은 둘 다 0이고, 시뮬레이션은 둘 다 통과했다. 시뮬레이션 통과는 실제 Windows 한국어 IME의 증거가 아니다 [출처: 같은 README].
+- "그 외 변경"에는 의미가 같은 목록 기호, 표 정렬, 이스케이프 변경도 들어 있다. 의미 손실 수가 아니다. 파서·직렬화 오류는 둘 다 0이다.
+- 두 후보 모두 `[[id]]`를 `\[\[id]]`처럼 이스케이프한다. Tiptap은 코드 안에 세 백틱이 있는 블록을 세 백틱 펜스로 감싸 재파싱 때 구조가 바뀌었다(`tilde-code-fence` 표본). Milkdown은 네 백틱으로 보존했다.
+- Tiptap 표는 공식 표 확장이 아니라 `@tiptap/pm/tables`를 쓰는 스파이크의 최소 어댑터였다. 표 직렬화와 크기는 그 구성의 값이다.
 
 | 버린 안 | 이유 |
 |---|---|
+| **Milkdown 7.23.0 개별 패키지** | 왕복(8/8/20)과 gzip(206 KB)은 더 좋았고 읽기 화면과 같은 remark를 쓴다. IME는 차이가 없었다. 사용자가 Tiptap을 골랐다(2026-11-04). 손해는 위 표의 차이와 파서 이원화이고, 아래 M0a 작업으로 메운다 |
 | BlockNote | 원본이 블록 JSON이고 Markdown 변환을 스스로 lossy라 한다. 확장 일부가 GPL-3.0이다 |
 | Lexical | Notion식 조작이 예제 코드이고 Markdown 왕복을 손으로 맞출 곳이 많다 |
 | Milkdown Crepe | Vue 3, CodeMirror, KaTeX를 들인다 |
 
-**확정 조건(v2-0, 둘 다 같은 시험).**
+**M0a의 Tiptap 작업과 완료 조건.**
 
-1. 왕복: loupe fixture와 연구 fixture(`contract-sample/fixtures/research/`)의 Markdown을 열고 편집 없이 직렬화했을 때 바이트 동일 비율, 그리고 블록 하나를 고쳤을 때 다른 블록의 바이트 변화 비율. 차이 나는 구문 목록.
-2. 한글 IME 시뮬레이션: Playwright CDP `Input.imeSetComposition`과 `Input.insertText`로 "한글", 줄 끝 조합, 조합 중 Enter, 조합 중 `/`, 조합 중 `[[`.
-3. **실제 IME**: 사용자가 Windows Chrome과 Microsoft 한국어 IME로 같은 문장을 쳐 본다. 이것 없이는 확정하지 않는다.
-4. **운영 빌드 gzip**: `npm run build` 뒤 편집기 청크의 gzip 크기. 편집 화면에서만 지연 로드되는지 `check-dist`로 막는다.
-5. 4.4절의 악성 붙여넣기 묶음.
+1. **코드 펜스 직렬화.** 펜스 길이를 코드 안의 가장 긴 백틱 연속보다 하나 길게(최소 3) 고르도록 직렬화를 고친다. 물결 펜스도 같은 규칙. 완료: `tilde-code-fence`와 내부 백틱 3·4·5개 표본이 재파싱 뒤 같은 코드 블록 구조와 내용.
+2. **`[[id]]` 위키 링크 노드.** 사용자 정의 인라인 노드가 `[[id]]`를 파싱하고 **이스케이프 없이** 그대로 직렬화한다. 화면은 4.4절의 칩. 완료: 코퍼스의 위키 링크 표본 전부가 바이트 일치이고, 같은 본문을 읽기 화면의 remark 플러그인이 같은 ID 목록으로 읽는다.
+3. **왕복 실패 감소.** 같은 36개 코퍼스에서 "그 외 변경"을 **17개에서 8개 이하로** 줄이고, 재파싱 구조가 원문과 달라지는 표본은 **0개**로 만든다. 남는 변경은 의미가 같은 형식 차이(목록 기호, 표 정렬 등)만이고 표본별 목록을 남긴다. 4.1절 2번(손대지 않은 문서는 보내지 않음)이 있으므로 이 수치는 고친 문서에만 걸린다.
+4. **실제 한글 IME.** 사용자가 Windows 11 Microsoft 한국어 IME(두벌식)로 Chrome에서 스파이크의 13개 사례를 손으로 친다. **이것이 유일한 진짜 IME 근거다.** 최종 글자, 커서, 중복·누락, 조합 중 Enter·Ctrl+Enter·Backspace, 확정 뒤 실행 취소, 블록 이동을 보고 OS·브라우저·IME 판을 남긴다.
+5. 운영 빌드 gzip: loupe에 넣은 뒤 편집기 청크의 gzip 증가분을 재고 편집 화면에서만 지연 로드되는지 `check-dist`로 막는다.
+6. 4.5절의 악성 붙여넣기 묶음과 Trusted Types 위반 수.
 
 ### 4.3 데이터베이스 보기
 
@@ -676,7 +692,7 @@ KB 세션이 읽도록 쓴 목록이다. 결정은 KB가 하고 loupe는 받은 
 
 | 단계 | 내용 | 완료 기준 | 검증 명령 | 선행 |
 |---|---|---|---|---|
-| M0a 편집기 스파이크 | Milkdown과 Tiptap의 4.2절 확정 조건 1~5 | 바이트 비율과 차이 목록, IME 시뮬레이션 통과, **사용자 실제 IME 확인**, 운영 빌드 gzip 증가분, 악성 붙여넣기 0건 | `npx vitest run spike/editor && npx playwright test spike/editor && npm run build` | 없음 |
+| M0a 편집기(Tiptap) | 4.2절의 Tiptap 작업 1~6: 코드 펜스 직렬화, `[[id]]` 노드, 왕복 실패 감소, 사용자의 실제 한글 IME, gzip, 악성 붙여넣기 | 펜스 표본 구조 보존, 위키 링크 표본 바이트 일치, "그 외 변경" 8개 이하·구조 변경 0, **사용자 손 입력 13개 사례 기록**, 지연 로드 확인, 악성 붙여넣기 0건 | `npx vitest run spike/editor && npx playwright test spike/editor && npm run build` | 없음 |
 | M0b 로그인 | 6절 전체: Google OIDC(PKCE, loopback, `state`, `nonce`, `sub`), `loupe google-setup`·`google-enroll`·`breakglass`, 세션(유휴 1시간), 검사, 잠그기, 설정 필요 화면, 모든 `/kb/*`를 세션 뒤로 | 흉내 OIDC 제공자로: 허용 `sub` 통과, 다른 `sub`·틀린 `state`·재사용 `nonce`·틀린 `aud`·`iss`·만료 토큰 거부, 콜백 URL에 코드·세션 없음, `login_secret` 없는 finish 거부. 세션 없는 `/kb/*` 401, 다른 Origin·`localhost`·Host 위조 403, 비 TTY CLI 거부, 비상 경로는 `open` 전 닫힘. 기존 v1 시험이 로그인 하네스로 통과. 그 뒤 사용자의 실제 Google 로그인 1회 | `npm run check && npx playwright test e2e/v2-auth.spec.ts && npx playwright test` | 사용자의 6.2절 설정 |
 | M0c 셸 | 레일, 탭, `Ctrl+Space` 팔레트(찾기만), 주제 지도(kb-mock `Topic` fixture), 탭 제목 규칙 | 탭 URL 재현, 조합 중 Enter 무시, 주제 지도가 v1 그래프 예산 안 | `npm run check && npx playwright test e2e/v2-shell.spec.ts` | M0b |
 | **M1 메모, 온라인 수동 저장(첫 쓰기)** | `write.ts`, `/kb-write/*`, 빠른 메모, 일반/보안 정보 전환, 저장 전 검사, 제목 규칙, 저장 칩, 직렬 저장, 같은 키 재전송, 충돌 띠, 비밀 격리 처리 | 아래 **첫 쓰기 전 시험** 전부 통과. 그 뒤 저장, 변경 없음, 충돌, 거절, 저장 전 검사, 격리, 대기, 끊김 여덟 상태를 kb-mock 쓰기 흉내로 재현 | `npm run check && npx playwright test e2e/v2-security.spec.ts e2e/v2-memo.spec.ts` | M0a~c, ADR-0005(N1~N6, N12), N13 |
@@ -724,6 +740,7 @@ KB 세션이 읽도록 쓴 목록이다. 결정은 KB가 하고 loupe는 받은 
 | D6 | loupe에 로그인을 둔다. 모든 읽기와 쓰기가 그 뒤. D17로 신원은 Google 계정 | 6절 |
 | (명확화) | Obsidian, Notion은 UX 참고일 뿐이다 | 1절. 내보내기, 가져오기, 왕복을 뺐다 |
 | D13 | 메모 승격 때 KB에 가는 글은 메모 제목뿐이고, 그 글을 그대로 적은 승격 단추가 확인이다 | 7.1절. Codex 2차 2를 반영한 설계 판단이다. 사용자가 다르게 원하면 다시 연다 |
+| D2 | 편집기는 Tiptap 3.32.0. Milkdown이 왕복(8/8/20 대 5/14/17)과 gzip(206 대 215 KB)에서 앞섰고 IME는 차이가 없었다(s7) | 4.2절, M0a |
 | D12 | 넣을 때 일반/보안 정보를 고른다. 보안 정보는 KMS로, 일반 입력은 KB와 같은 규칙으로 저장 전 검사 | 5.7절, 8.3절, 와이어프레임 3 |
 | D17 | Google 로그인, 허용 `sub` 하나, 유휴 1시간, 갱신 없음 | 6절 |
 | (설계 판단) | 비상 경로는 TTY로 1시간 여는 로컬 암호 | 6.5절. 사용자가 "없음"을 원하면 그 행을 지운다 |
@@ -732,7 +749,6 @@ KB 세션이 읽도록 쓴 목록이다. 결정은 KB가 하고 loupe는 받은 
 
 | # | 결정 | 권장 | 다른 답의 결과 |
 |---|---|---|---|
-| D2 | 편집기 | M0a 결과로 Milkdown, 떨어지면 Tiptap | BlockNote면 KB에 블록 JSON을 두거나 lossy 변환을 받아들여야 한다 |
 | D7 | 팔레트 키 | `Ctrl+Space` + `Ctrl+K` 대체 | |
 | D8 | 메모 정리 제안 기준 | 30일 미수정이고 링크 없음, "두기"는 30일 뒤 다시 | |
 | D10 | 기기 안 초안(나중) | 비밀 규칙 선검사 뒤에만 둔다 | 안 두면 끊긴 동안 쓴 글을 탭을 닫으면 잃는다 |
@@ -818,6 +834,7 @@ Codex가 건전하다고 본 것(v1 렌더 격리와 Host 검사, `expected_vers
 | KB `docs/adr/0004-research-backend.md` 1장, T.1, T.7, T.8 | `Topic` 형태, 승격 링크, `IN_TOPIC`, 주제 월 상한, 외부 프롬프트 규칙, 인용 게이트 예외 없음 | 2026-11-04 |
 | KB `docs/contracts/data-interface-v0.md` 0.3.2 | 1, 2.3, 2.7, 2.8, 2.9, 4.1, 6장 | 2026-11-04 |
 | `docs/design/relief-v2.md` 1~2절 | 위협 모델, 암호 로그인, 쿠키 없는 세션, 정확한 Origin, tower 마운트 끔, 포트 점유 | 2026-11-04 |
+| `docs/research/spikes/s7-editor/results.json`, `README.md` | Milkdown 7.23.0과 Tiptap 3.32.0의 왕복, gzip, IME(genuine, cdpSimulated) 측정과 한계 | 2026-11-04 |
 | https://developers.google.com/identity/protocols/oauth2/native-app | 데스크톱 앱 유형, loopback IP 리디렉션, PKCE 권장, 데스크톱 앱은 보안 비밀을 지킬 수 없는 공개 클라이언트, loopback은 모바일·Chrome 앱에서만 폐지 | 2026-11-04 |
 | https://developers.google.com/identity/openid-connect/openid-connect | `sub`를 식별자로 쓰고 이메일을 쓰지 말 것, `state`, `nonce`, `iss`, `aud` 확인 | 2026-11-04 |
 | npm `oauth4webapi` 3.8.8, `openid-client` 6.8.9, `jose` 6.2.15 | 판, 게시일, 라이선스, 의존성, 설치 스크립트 없음 | 2026-11-04 |
