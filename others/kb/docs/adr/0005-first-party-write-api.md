@@ -1,7 +1,7 @@
 # ADR-0005: 외부 편집기용 first_party 쓰기 API
 
 - 날짜: 2026-11-04
-- 상태: **승인(7판).** 사용자가 2026-11-04 AskUserQuestion에 직접 답해 전체를 승인했다(`docs/adr/0002-user-decisions.md` "loupe 쓰기 API 승인"). 7판은 그 답(`private` 전면 개방, HITL 범위, 외부 검색어 내보냄)을 반영했다(12장, 14.5). 6판은 두 검토 모두 SHIP이었다. 1판은 Opus 리드 수준 검토와 Codex 교차 검토에서 모두 BLOCK을 받았다. 2판은 리드 결정 10건과 두 검토의 지적을 반영했다. 3~6판은 이어진 재검토(매번 좁은 BLOCK)의 지적을 반영했고(14.1~14.4), 6판은 두 검토 모두 SHIP이다. 사용자 승인 전이다. 이 문서를 쓰는 동안 코드, 설정, 토큰, 원장을 바꾸지 않았고 실제 쓰기도 하지 않았다.
+- 상태: **승인(8판).** 사용자가 2026-11-04 질문 도구에 직접 답한 전체 승인과 추가 결정(의도가 불명확할 때만 HITL, 모든 새 기록의 기본 `private`와 메모의 지식베이스 반영, publish 시 해당 메모의 외부 정제 허용)을 반영했다(`docs/adr/0002-user-decisions.md` "loupe 쓰기 API 승인과 하위 결정", 12장). 8판은 7판(`3709306`)의 Codex HIGH 지적 네 건도 반영했다(14.6). 3~6판 재검토는 14.1~14.4, 7판 사용자 결정은 14.5에 남긴다. 이 문서는 구현 전 계약이며, 8판 재검토·구현 검증은 아직 하지 않았다. 코드, 설정, 토큰, 원장과 실제 쓰기는 바꾸지 않았다.
 - 목적: sagae-tools가 loupe v2 편집기를 안정된 KB 쓰기 계약 위에서 만들 수 있게 한다. 문서, 메모, 주제는 파일이 아니라 KB first_party 기록이고, 주제는 KB에 보내는 연구 요청이 된다.
 - 입력: ADR-0001(7.8, 7.9, 8, 15, 16, 23장), ADR-0002, ADR-0004(T장, 7.3, 7.4, 13장 TP1·TP5·D5, P.2, P.7), `docs/contracts/data-interface-v0.md`, `src/kb/write`, `src/kb/serve`, `src/kb/ticket`, sagae-tools의 loupe v2 UX 초안(아래 `L`), 검토 기록 `review-0005.md`(Opus, 리드 스크래치패드)와 Codex 지적(리드 경유).
 - 소유자 확인: KB 쪽이 이 일을 맡고, 설계를 먼저 한다(리드 경유, 사용자 직접 확인).
@@ -27,11 +27,12 @@
 | 6 | 편집은 기록 전체 교체와 `expected_version`이다. 낡은 판은 내용이 같아도 409다. 서버는 병합하지 않는다. 삭제는 tombstone이고 복원은 다시 쓰기다. 메모 승격은 새 `TopicSpec`과 `PROMOTED_FROM` 엣지다(5장) |
 | 7 | 주제에서 수집으로 가는 길은 연구 요청 호출 하나다. 호출마다 실행 ID가 있고 티켓과 이벤트를 한 트랜잭션으로 쓴다. **유료 연구를 허가하는 것은 KB 예산뿐이다**: 주제, 전체, 엔진 세 단위의 원자적 예약. 예산 장치(TP5, D5)가 없으면 409 `budget_unavailable`이다. 보낸 뒤 결과가 불확실한 호출의 예약은 제공자 사용량으로 맞출 때까지 돌려주지 않는다(6장) |
 | 8 | 식별자(멱등 키, ID, 타입, 속성 이름, tombstone 사유)에 비밀이 있으면 **모든 통로에서 거절**이고 값을 되풀이하지 않는다. 제목, 본문, 속성 값은 HTTP 편집기 경로에서 **기본 거절**, 다른 통로에서는 격리다. 검사는 CAS, 스풀, 원장, 재생 조회 전이다. 클라이언트의 경로 힌트(`source_path` 등)는 거절한다(7장) |
-| 9 | 내부 기록의 제목, 별칭, 제외 표현은 명시적 내보내기 허가 없이 외부 LLM에 가지 않는다. 허가가 없으면 로컬 처리다. MCP 세션은 `internal` 기록을 읽을 수 있고 그 내용은 Claude에 닿는다(사용자 확정, 6.6, 8장). **`private`는 `editor` 범위만 읽고 쓴다.** MCP, 에이전트 세션, `editor`가 아닌 HTTP는 `private`를 보지 않고, `private` 본문은 로컬 sLLM에만 간다(사용자 결정 2026-11-04, 3.6) |
+| 9 | 내부 기록의 제목, 별칭, 제외 표현은 명시적 내보내기 허가 없이 외부 LLM에 가지 않는다. 허가가 없으면 로컬 처리다. MCP 세션은 `internal` 기록을 읽을 수 있고 그 내용은 Claude에 닿는다(사용자 확정, 6.6, 8장). **`private`는 `editor` 범위만 읽고 쓴다.** MCP, 에이전트 세션, `editor`가 아닌 HTTP는 `private`를 보지 않고, `private` 본문은 원칙적으로 로컬 sLLM에만 간다. 예외는 사용자가 `publish`를 눌러 해당 메모의 외부 정제에 동의한 경우뿐이다(사용자 결정 2026-11-04, 3.6, 5.10) |
 | 10 | 자동 저장은 loupe의 기기 안 초안이 받고, KB에는 묶인 판만 온다. KB는 `change`와 무관한 원장 기준 바이트 한도(토큰별·기록별 하루)를 지키고, 스풀된 쓰기도 202 전에 그 한도를 예약한다. 스풀된 쓰기는 발급 토큰만 읽는 쓰기 참조로 끝까지 추적하고, 확정 전에는 초안을 지우지 않는다(5.8, 5.9) |
 | 11 | 읽기는 기존 경로를 쓴다. 새 읽기 경로는 연구 요청 상태와 쓰기 참조 상태 둘이다. 옛 판 본문은 `/v1/nodes/{id}/body?as_of_observed=`로 읽는다(8장) |
 | 12 | 코드에서 결함 다섯을 찾았거나 검토가 짚었다: 64 KB 넘는 본문의 410, 한 낱말 위키 링크, `source_path` 비밀 탐지 우회, 낡은 판의 무연산 통과, 사용자 판마다 걸리는 sLLM 추출. 작업 패키지에서 고친다(1장, 9장) |
-| 13 | **HITL은 정해진 항목만이다.** 사용자가 방향만 준 주제 연구의 결과는 사람 검토 없이 인용 게이트가 지금처럼 자동 판정한다. 사람이 해야 하는 항목은 6.8의 목록뿐이고, 그 결정은 `reviewer` 범위와 동작마다의 WebAuthn 사용자 확인으로만 들어온다. 작성자와 `change`는 여전히 허가가 아니다(사용자 결정 2026-11-04, 목록은 리드 제안이고 사용자 확인 대기) |
+| 13 | **시스템이 의도를 스스로 해소하지 못할 때만 HITL을 올린다.** 방향만 준 주제 연구 결과 등 나머지는 자동이고 인용 게이트가 판정한다. 사용자가 시작하는 격리 해제·민감도 낮추기·메모 반영은 별도 동작이다. 둘 다 `reviewer` 범위, 동작마다의 WebAuthn 사용자 확인, KB UID와 에이전트가 쓸 수 없는 신뢰 저장소를 요구한다(6.8). 작성자와 `change`는 허가가 아니다 |
+| 14 | loupe의 새 `Page`·`Note`·`TopicSpec`·`Review`는 모두 기본 `private`다. 메모의 **지식베이스에 반영** 단추는 해당 메모의 외부 정제에 대한 사용자 동의다. KB 엔진 선택기가 먼저 외부 API 필요성을 판단해 짧고 단순한 정제는 토큰 절약용 로컬 sLLM으로, 길거나 추론이 많은 정제는 예산 안의 외부 엔진으로 처리하며, 결과만 사람 확인 뒤 `internal` 기록과 정상 게이트의 주장 후보로 만들고 `PROMOTED_FROM`으로 잇는다. 원본 메모는 `private`를 유지한다(3.6, 5.10) |
 
 ## 1. 오늘의 사실
 
@@ -110,9 +111,12 @@
 | `GET` | `/v1/hitl` | `listHitl` | 200 | HITL 항목 목록. `reviewer` 범위(6.8, FW9) |
 | `POST` | `/v1/hitl/challenge` | `hitlChallenge` | 201 | 동작에 묶인 WebAuthn 도전(6.8, FW9) |
 | `POST` | `/v1/hitl/{item}/resolve` | `resolveHitl` | 200 | WebAuthn 확인과 함께 항목 해결(6.8, FW9) |
-| `POST` | `/v1/reviewer/enroll` | `enrollReviewer` | 201 | TTY 1회용 코드로 인증기 등록(6.8, FW9) |
+| `POST` | `/v1/reviewer/enroll` | `enrollReviewer` | 201 | 인증기 등록 후보. 신뢰 저장소 반영은 사용자의 별도 특권 단계(6.8, FW9) |
+| `POST` | `/v1/actions` | `prepareUserAction` | 201 | 사용자 동작 준비: `release`, `declassify`, `publish`. `reviewer` 범위(5.10, 6.8) |
+| `POST` | `/v1/actions/challenge` | `userActionChallenge` | 201 | 준비된 사용자 동작에 묶인 WebAuthn 도전(6.8) |
+| `POST` | `/v1/actions/{id}/execute` | `executeUserAction` | 200 | 사람 확인 뒤 사용자 동작 실행(6.8) |
 
-- `{id}`는 `TopicSpec`의 `f-` ID다. `{run}`은 연구 실행(티켓) ID다.
+- 연구 경로의 `{id}`는 `TopicSpec`의 `f-` ID, 기록 경로는 대상 기록의 `f-` ID, 사용자 동작 경로는 준비 응답의 `action_id`다. `{run}`은 연구 실행(티켓) ID다.
 - `POST /v1/records`와 `PUT /v1/records/{id}`는 쿼리 `dry_run=1`을 받는다. 검증과 비밀 탐지만 하고 쓰지 않는다. 다른 쿼리 파라미터는 400 `bad_param`이다(`C:129`).
 - 요청 본문은 `application/json`, UTF-8이다. 본문 상한은 4.5에 있다.
 - 쓰기 응답은 읽기 경로의 `Envelope`를 쓰지 않는다. `kb_put` 응답과 같은 평면 객체에 필드를 더한 것이다(`src/kb/write/engine.py:56-59`, `C:1382-1411`).
@@ -152,7 +156,7 @@
 
 - `record`는 `kb_put`의 `record`와 같은 필드 집합이다(`src/kb/write/record.py:21-22`). `author`, `actor`, `origin`, `generated_by`, `on_behalf_of`, `source_url`, `quote`는 400 `schema_invalid`다(`src/kb/write/record.py:47-52`).
 - `PUT`에서 `record.id`는 생략하거나 경로의 `id`와 같아야 한다.
-- `change`는 필수다. 기본값이 없다. 3.2에 뜻이 있다. 편집 키에는 `change`를 넣고, 만들기 키에는 넣지 않는다(5.1).
+- 기록 쓰기의 `change`는 필수다. 6.8의 HITL·사용자 동작은 별도 스키마와 사람 증명을 쓰며 `change`를 받지 않는다. 기본값이 없다. 3.2에 뜻이 있다. 편집 키에는 `change`를 넣고, 만들기 키에는 넣지 않는다(5.1).
 - `on_secret`은 `reject`(기본) 또는 `quarantine`이다(7장).
 
 ```json
@@ -176,7 +180,7 @@
 | `viewer` | `internal` 이하 | 없음. 403 `scope_denied` | `kb token create --scope viewer`(지금) |
 | `owner` | 결정 14 승인 뒤 `private` 이하 | 이 ADR에서 정하지 않는다. ADR-0004 P.7의 tower 경로가 정한다(`D4:1769`) | 지금 |
 | `editor` **새** | `private` 이하(3.6) | 2.2의 쓰기 경로만. 타입 `Page`, `Note`, `TopicSpec`, `Review`. 민감도 `public`, `internal`, `private` | `kb token create --scope editor --label loupe`, TTY에서만 |
-| `reviewer` **새** | `editor`와 같다 | 6.8의 HITL 경로만. 동작마다 WebAuthn 사용자 확인이 있어야 한다 | `kb token create --scope reviewer --label loupe-review`, TTY에서만. `loupe serve`만 쥔다 |
+| `reviewer` **새** | `editor`와 같다 | 6.8의 HITL 해결과 사용자 동작 경로만. 실행마다 WebAuthn 사용자 확인이 있어야 한다 | `kb token create --scope reviewer --label loupe-review`, TTY에서만. `loupe serve`만 쥔다 |
 
 **`editor`가 쓰지 못하는 것.** 적재 계약 묶음(`kb ingest`, `kb-collect`), 주장, 엔티티와 엣지의 직접 쓰기, 스냅샷, URL 제보(`kb_request`의 `url`), `source_url`·`quote` 필드. loupe는 외부 사실을 내지 않는다. 연구 요청(6장)도 URL을 받지 않는다. 연구 요청이 서버 안에서 쓰는 티켓과 `Topic` 엔티티는 요청과 정의이고 외부 사실이 아니다(`D4:163`).
 
@@ -196,7 +200,7 @@
 | `autosave` | 사람이 친 내용을 loupe가 묶어 보냈다고 신고(무입력, 초점 이탈, 탭 닫기, 오프라인 초안 재전송) | `app:<라벨>` | `user:sagae` | `app:<라벨>:autosave` | 같음 |
 | `auto` | loupe가 스스로 만든 변경(제목 링크를 ID로 바꾸기, 가져오기 변환, 형식 이전, 기본값 채우기) | `app:<라벨>` | 없음 | `app:<라벨>:auto` | "app:loupe의 자동 변경", 카드 `f:app:loupe` |
 
-- HTTP 경로의 `actor`는 `user:sagae`가 되지 않는다. 예외는 6.8의 HITL 해결 하나이고, 그때는 토큰이 아니라 검증된 WebAuthn 사용자 확인이 사람의 행위를 증명한다. 그 밖의 `actor=user:sagae`는 TTY `kb put`과 inbox뿐이다(`src/kb/write/author.py:51-55`). 그래서 loupe의 주장과 터미널의 사람 쓰기가 원장에서 구별된다.
+- HTTP 경로의 `actor`는 `user:sagae`가 되지 않는다. 예외는 6.8의 HITL 해결과 사용자 동작 실행이고, 그때는 토큰이 아니라 검증된 WebAuthn 사용자 확인이 사람의 행위를 증명한다. 그 밖의 `actor=user:sagae`는 TTY `kb put`과 inbox뿐이다(`src/kb/write/author.py:51-55`). 그래서 loupe의 주장과 터미널의 사람 쓰기가 원장에서 구별된다.
 - `author.resolve`에 전송 `http`를 더한다(`src/kb/write/author.py:20`, `:46-59`). 인수는 토큰 라벨과 `change`다. 입력의 `author`를 받지 않는다는 원칙(`A:557`)은 그대로다.
 - 카드 표시 규칙(`src/kb/read/cards.py:185-186`)에 `app:` 작성자를 더한다. 지금 규칙이면 `agent`로 보인다.
 - 귀속은 쓸 때 한 번 정해 이벤트에 박는다. 재시도와 스풀 재적재는 다시 계산하지 않는다(`src/kb/write/author.py:6-7`). `on_behalf_of`, `generated_by`는 멱등 비교에 들어간다(`src/kb/core/ledger.py:237`).
@@ -236,7 +240,7 @@
 
 - 실패는 모두 없는 기록과 같은 404다. 제목, 속성, 링크, 판 번호, 작성자를 싣지 않는다. 숨은 기록은 없는 기록과 같다는 규칙(`A:574`)과 `secret`은 HTTP로 나가지 않는다는 규칙(`src/kb/serve/http.py:192-199`)을 쓰기 경로에도 적용한다.
 - 그래서 `editor`는 `Learning`, `Decision`, `Artifact`, `secret`, 격리된 기록, 다른 출처의 `private` 기록을 ID를 맞혀도 덮거나 지우지 못한다. first_party 네 타입의 `private`는 고칠 수 있다(3.6).
-- 격리 저장(7.4)한 기록은 해제 전까지 loupe에서 고칠 수 없다. 해제는 TTY `kb secret release`다.
+- 격리 저장(7.4)한 기록은 해제 전까지 loupe에서 고칠 수 없다. 해제는 6.8의 사용자 동작 `release`이고, TTY `kb secret release`도 같은 사람 증명을 거친다.
 - 스풀된 쓰기는 재적재 때 같은 확인을 다시 한다. 실패하면 쓰기 참조가 `failed`, `not_found`가 된다(5.9).
 - **죽은 머리.** 현재 판이 `record.tombstone`이면 타입, 민감도, 격리 확인은 마지막 `record.put` 판으로 한다. tombstone 페이로드에는 민감도와 격리 표시가 없으므로 현재 판을 보면 격리된 기록이 통과한다. tombstone된 대상은 통과해도 409 `current`에 내용을 싣지 않는다(5.4).
 - 쓰기 참조 조회(5.9)는 예외다. 확정 전의 만들기 참조는 이 표가 아니라 소유로 판정하고 대상 머리를 읽지 않는다.
@@ -259,15 +263,16 @@
 | 주체 | `private` 읽기 | `private` 쓰기 |
 |---|---|---|
 | `editor` 토큰(loupe serve) | 예. first_party 네 타입과, 그 밖의 `private` 노드의 목록·검색·본문 | 네 타입만 |
-| `reviewer` 토큰 | `editor`와 같다 | 없음(6.8의 해결만) |
+| `reviewer` 토큰 | `editor`와 같다 | 6.8의 사람 증명을 거친 해결·사용자 동작만 |
 | 소켓 무토큰, `viewer`, `owner` HTTP | 아니오. 지금처럼 `internal` 이하 | 없음 |
 | MCP `kb-mcp`, `kb-collect`, tower, `kb api`, `kb search` | 아니오. `kb_search`는 결과에 넣지 않고 `kb_get`은 없는 ID와 같은 `not_found`다 | 없음(MCP `kb_put`의 `private` 쓰기는 지금 규칙 그대로) |
 | TTY `kb owner read` | 예(지금) | |
 
-- **외부 LLM에 가지 않는다.** `private` 본문, 제목, 속성은 로컬 sLLM에만 간다(`A:766`). L2 파생 주장은 원본의 민감도를 물려받는다(`A:578`). `private` `TopicSpec`은 `export_llm`, `export_query`가 늘 `false`이고, `true`를 보내면 400 `schema_invalid`다. 그 `Topic` 엔티티도 `private`라 수집 프로필에 보이지 않는다. 주제 이름이 공개 검색 서비스로도 나가지 않는다.
+- **외부 LLM 전송은 publish 동작만 예외다.** `private` 본문, 제목, 속성은 원칙적으로 로컬 sLLM에만 간다(`A:766`). 사용자가 **지식베이스에 반영** 단추를 누르면 그 메모 내용의 외부 정제에 동의한 것으로 본다. 5.10의 `publish` 외에는 `private` 내용을 외부로 내보내지 않으며, 다른 `private` 기록이나 링크된 비공개 제목은 보내지 않는다. `private` `TopicSpec`은 `export_llm`, `export_query`가 늘 `false`이고, 생략해도 `false`다. `true`를 보내면 400 `schema_invalid`다. 연구 티켓·`Topic` 엔티티·실행 기록도 spec과 같은 민감도라 수집 프로필과 일반 HTTP에 보이지 않는다(6.1). 주제 이름이 공개 검색 서비스로도 나가지 않는다.
+- **파생 주장과 근거의 민감도.** L2 파생 주장과 복사한 근거(인용문·문장 포함)는 연결된 모든 first_party 원본의 현재 민감도 중 최댓값 이상이어야 한다(`public < internal < private < secret`). 원본의 민감도를 높이면 이미 추출한 주장·근거·관련 엣지와 색인도 재투영한다. 지금은 엣지만 갱신하고 주장과 복사 근거를 남기는 결함이 있다(`src/kb/project/apply.py:200-209`, `src/kb/read/nodes.py:57-65`, 검토 근거). 원본 변경이 확정된 뒤부터 재투영 완료 전에도 모든 읽기는 현재 원본에 따른 가시성 제한을 먼저 적용한다. 현재 원본 민감도를 읽을 수 없는 주체에게는 HTTP·MCP·CLI의 목록, 검색/FTS, 본문, 이력/시점 조회, 엣지/백링크/이웃, 변경 피드, 내보내기 모두에서 숨고, 직접 조회는 없는 대상과 같은 404/`not_found`다. 낡은 투영이나 옛 판 조회로 우회하지 못한다. FW5가 기존 데이터 재투영과 회귀 시험을 맡는다. 민감도 하향은 자동 전파하지 않고, 6.8의 검증된 공개 결과 경계(5.10)에서만 허용한다.
 - **`secret`과 격리는 `private` 위다.** `editor`도 읽지 못하고 쓰지 못한다(3.4). 해제는 6.8이나 TTY다.
-- **민감도 낮추기.** `private` → `internal`·`public`은 MCP 세션에 내용을 여는 일이라 `editor` 토큰만으로 하지 않는다. `PUT`이 민감도를 낮추면 403 `declassify_requires_review` **새**이고, 6.8의 HITL 항목 `declassify`로 한다. 높이기(`internal` → `private`)는 `editor`로 된다.
-- **기본 민감도(리드 제안, 사용자 확인 대기).** 요청이 기록마다 `sensitivity`를 고른다. 빠지면 `Page`·`TopicSpec`·`Review`는 `internal`, `Note`는 `private`다. 메모는 임시 노트라 사적인 내용이 많고, 문서와 주제는 세션에서 찾고 수집해야 하기 때문이다.
+- **민감도 낮추기.** `private` → `internal`·`public`과 `internal` → `public`은 읽기 범위를 넓히는 일이라 `editor` 토큰만으로 하지 않는다. `PUT`이나 승격으로 낮추려 하면 403 `declassify_requires_review` **새**다. 6.8의 사용자 동작 `declassify` 또는 `publish`와 사람 증명이 있어야 낮출 수 있다. 높이기(`internal` → `private`)는 `editor`로 된다.
+- **기본 민감도(사용자 확정 2026-11-04).** loupe의 모든 새 `Page`·`Note`·`TopicSpec`·`Review`는 `sensitivity`가 빠지면 `private`다. 새 기록에 명시한 `public`·`internal`은 받을 수 있지만 서버가 만드는 기존 `private` 내용의 복사·승격·정제는 새 기록이라는 이유로 민감도 낮추기를 우회하지 못한다(5.7, 5.10). 메모의 **지식베이스에 반영** 단추는 해당 메모의 외부 정제에 대한 동의이며, 5.10의 KB 엔진 선택과 사람 확인을 거친 결과만 공개한다. 원본 메모는 `private`를 유지한다.
 - 읽기 경로(8장)는 `editor`·`reviewer` 토큰이면 `private`까지 보인다. `/v1/meta.write`에 `private_open: true`를 낸다.
 
 ## 4. 기록 종류
@@ -286,13 +291,13 @@
 
 ### 4.2 필드
 
-공통: `title`(필수, 300자 이하), `body`(필수, 빈 문자열 허용), `body_format`(`markdown` 기본, `text`), `sensitivity`(`public`, `internal`. 기본 `internal`), `props`, `links`. `retention`은 받지 않는다(늘 `permanent`, `A:581`).
+공통: `title`(필수, 300자 이하), `body`(필수, 빈 문자열 허용), `body_format`(`markdown` 기본, `text`), `sensitivity`(`public`, `internal`, `private`. 기본 `private`), `props`, `links`. `retention`은 받지 않는다(늘 `permanent`, `A:581`).
 
 | 타입 | `props` | `links` |
 |---|---|---|
 | `Page` | `tags`(문자열 50개 이하), `order`(정렬 문자열. 부동소수 금지 `A:362`), `icon`(8자 이하), 사용자 속성(데이터베이스 보기 칸, `L 4.3`) | `PART_OF` → 상위 `Page`, `LINKS_TO`, `ABOUT` |
 | `Note` | `tags`, `pinned`(불리언) | `LINKS_TO`, `ABOUT` |
-| `TopicSpec` | `slug`(필수, `ids.SLUG_RE`, `src/kb/core/ids.py:17`), `aliases`(20개 이하, 각 100자 이하), `domain`(`A`~`G` 부분집합), `parent`(`e:topic:<slug>` 또는 없음), `exclude`(문자열 20개 이하), `export_llm`(불리언, 기본 `false`, 6.6), `export_query`(불리언, 기본 `true`, 6.6) | `ABOUT` → 엔티티, 문서, `LINKS_TO`. `PROMOTED_FROM`은 승격 경로만 쓴다 |
+| `TopicSpec` | `slug`(필수, `ids.SLUG_RE`, `src/kb/core/ids.py:17`), `aliases`(20개 이하, 각 100자 이하), `domain`(`A`~`G` 부분집합), `parent`(`e:topic:<slug>` 또는 없음), `exclude`(문자열 20개 이하), `export_llm`(불리언, 기본 `false`, 6.6), `export_query`(불리언, `private`는 `false` 고정, 나머지 기본 `true`, 6.6) | `ABOUT` → 엔티티, 문서, `LINKS_TO`. `PROMOTED_FROM`은 승격·지식베이스 반영 경로만 쓴다 |
 | `Review` | `target`(필수, 주장·엣지·엔티티 ID), `decision`(`accept`, `reject`), `topic`(`e:topic:<slug>`), `note`(500자 이하) | 서버가 `REVIEWS` → `target`을 넣는다 |
 
 - **경로 힌트 금지.** `props`에 `source_path`, `path`, `file`, `filename`, 이름이 `_path`로 끝나는 키가 있으면 400 `schema_invalid`다. 비밀 탐지기가 경로를 허용 목록과 대조하기 때문이다(7.2).
@@ -492,7 +497,7 @@ Authorization: Bearer kbt_e_<토큰>
  "research":{"run_id":"0b7e3c52-6a19-4f0e-9d4b-8f1a2c3d4e5f"},
  "record":{"title":"유튜브 쇼츠","body":"쇼츠 형식의 정책, 수익화, 추천, 제작 관행",
            "props":{"slug":"youtube-shorts","aliases":["YouTube Shorts","쇼츠","Shorts"],"domain":["A","B","D"],
-                    "parent":"e:topic:youtube","exclude":["쇼츠 광고 집행"],"export_llm":false,"export_query":true}}}
+                    "parent":"e:topic:youtube","exclude":["쇼츠 광고 집행"],"export_llm":false,"export_query":false}}}
 ```
 
 ```http
@@ -508,6 +513,7 @@ HTTP/1.1 201 Created
 
 - 메모는 3.4 확인을 지나야 한다. `memo_version`이 현재 판과 다르면 409 `version_conflict`다.
 - 서버가 `record.type=TopicSpec`과 `links`의 `PROMOTED_FROM`을 넣는다. 요청에 `type`이나 `PROMOTED_FROM`이 있으면 400이다.
+- **승격은 공개가 아니다.** 새 spec의 `sensitivity`를 생략하면 잠금 안에서 확인한 원본 메모의 현재 민감도를 그대로 물려받는다. 명시한 값도 원본보다 낮으면 403 `declassify_requires_review`다. 위 예의 원본이 `private`이면 spec·티켓·주제·실행도 `private`이고 `export_llm`·`export_query`는 `false`다. `true`를 보내면 400이다. 원본의 민감도를 낮추려면 먼저 사람 증명을 거친 `declassify`를 하거나, 원본을 그대로 두는 `publish`를 쓴다(5.10, 6.8). 승격의 새 ID·생략한 민감도·동시 연구 요청으로 우회하지 못한다(FW6).
 - 예산 장치가 없으면(6.4) 승격은 성공하고 `research`는 `{"state":"budget_unavailable"}`다. 승격 기록만 남는다.
 - loupe의 8초 되돌리기(`L 6.1`)는 멈춤과 spec tombstone 두 호출이다. 승격 기록은 원장에 남는다.
 - **ADR-0004와 다른 점.** ADR-0004는 `Topic -LINKS_TO-> Note`에 `props.role=promoted_from`을 적었다(`D4:199`). 지금 기록의 `links`는 `{rtype, dst}`만 받는다(`src/kb/write/record.py:68-71`). 전용 `rtype`을 쓴다.
@@ -605,6 +611,16 @@ HTTP/1.1 202 Accepted
 
 `/v1/changes`에 그 ID가 나타났다는 것만으로는 지우지 않는다. 두 탭 경우: 탭 A가 202 `spooled`를 받고, 탭 B가 v2를 바로 쓴다. A의 재적재는 `version_conflict`로 실패한다. A의 초안은 남아 있고, `write_ref`가 `failed`가 되면 loupe가 5.4의 비교 화면을 띄운다. 초안은 탭이 아니라 초안 ID로 저장하고, 탭 사이에는 BroadcastChannel로 상태만 나눈다(`L 5.3`).
 
+### 5.10 메모의 지식베이스에 반영(사용자 동작 `publish`)
+
+사용자 답: "기본은 private를 생각하고, 메모를 지식베이스에 반영하기 버튼이 눌렸을 때, 해당 메모의 정보들을 llm으로 정제후, kb에 반영하는 루트를 생각하고 있음." 단순 저장이나 주제 승격은 이 동작을 실행하지 않는다.
+
+1. loupe의 **지식베이스에 반영** 단추는 `POST /v1/actions`에 `{action:"publish", target:<Note ID>, expected_version:<현재 판>, idempotency_key:<키>}`를 보낸다(`reviewer` 범위). 3.4와 비밀 탐지를 통과한 메모만 준비한다. 단추를 누르는 것은 그 메모 내용만 외부 엔진에 정제용으로 보내는 사용자 동의다. 다른 `private` 기록이나 링크된 비공개 제목은 보내지 않고, 링크를 따라 비공개 내용을 가져오지 않는다. 이 동의는 `publish`에만 적용하며 일반 저장·승격·연구에는 적용하지 않는다. 원본은 고정한 판의 `private` 상태로 남긴다.
+2. KB는 **ADR-0004 E1의 엔진 선택기**로 먼저 외부 API가 필요한 정제인지 판단한다. 로컬 sLLM은 publish의 프라이버시 기본값이나 장애 시 대체만이 아니라 **외부 호출이 불필요한 작업의 토큰 절약 경로**다. 짧고 단순한 메모, 서식 정리, 노트 분할, 별칭 추출은 로컬 sLLM으로 처리하고, 길거나 추론이 많은 정제는 D5 예산과 수락 결과당 비용·품질(7.4)에 따라 고른 외부 엔진으로 처리해 `internal` `Note` 또는 `Page`의 후보를 만든다. 외부 사실처럼 보이는 문장은 주장 후보로 분리한다. 준비 응답은 `action_id`, 원본 판, 후보 본문·타입·민감도와 `payload_sha`를 포함하고 loupe가 이를 확인 화면에 보인다. 준비 상태와 후보도 `private`이고, 준비만으로 `internal` 기록이나 주장을 만들지 않는다. 외부 엔진이 없거나 예산이 소진되면 **로컬 sLLM**으로 대체한다. E1/D5가 준비되지 않았으면 외부 호출을 하지 않고 로컬로 처리한다. 사용한 엔진을 후보와 확정 결과의 provenance에 기록한다(12장 사용자 확정).
+3. 사용자는 준비된 결과에 대해 6.8의 WebAuthn 사람 확인을 한다. 도전은 원본 ID·판·동작·결과별 타입·민감도·본문 해시 전체에 묶인다. 결과나 원본이 바뀌면 다시 준비·확인해야 한다. 검증된 실행만 `internal` `Note`·`Page`와 서버가 넣은 `PROMOTED_FROM`(결과 → 원본 메모)을 쓴다. 클라이언트가 주장·인용·엣지를 직접 넣는 길은 열지 않는다.
+4. **공개 결과의 경계.** 사람 증명이 승인한 정제 결과만 민감도를 낮춘 별도 기록이 된다. 이 증명과 결과 해시는 원장에 남고, `PROMOTED_FROM` 자체는 민감도 상속의 예외 권한이 아니다. 그 기록에서 추출한 주장 후보는 공개된 결과를 first_party 원본으로 삼아 정상 first_party·인용 게이트를 지난다. 원본 메모의 비공개 문장·복사 근거를 끌어오거나, 사실 검증 없이 `supported`로 만들지 않는다. 원본 메모를 직접 근거로 삼는 다른 파생 주장·근거는 계속 3.6의 최댓값 규칙을 따른다. 공개 결과에서 비공개 원본으로 가는 링크는 읽기 범위 밖이면 ID·제목·판도 숨긴다.
+5. 원본 메모의 본문·민감도는 바꾸지 않는다. 결과를 직접 `public`으로 내리려면 별도의 `declassify` 사람 확인이 필요하다. 준비 후보의 저장과 실행은 기존 first_party 게이트, 비밀 거절, 인증된 앱별 멱등 키, 요청·바이트 한도를 그대로 지난다. 준비 후보를 디스크에 보유하는 바이트도 5.8의 보유 상한에 포함한다. LLM 정제는 쓰기 잠금 밖에서 하고, 실행 시 원본 판과 결과 해시를 잠금 안에서 다시 확인한다. 재시도는 같은 실행 결과를 돌려주며 결과 기록이나 추출 요청을 중복 생성하지 않는다(FW9).
+
 ## 6. 주제에서 연구 요청으로
 
 ### 6.1 한 번의 호출
@@ -636,14 +652,15 @@ Location: /v1/topics/f-spec5m7n9p1q3r5s7t9v1w3x5y/research
 4. 없으면 같은 커밋에 쓴다.
    - `research.request` **새 이벤트 종류**: 멱등 키 = 요청 키, `payload = {spec, spec_version, run, outcome: "opened"|"joined"}`. 이 요청의 첫 결과이고, 3번의 합류에서도 같은 모양으로 쓴다.
    - `ticket.open`: kind=topic, `spec`, `spec_version`, `run_id`. 실행 ID는 멱등 키에서 결정적으로 만든다. 지금 `ticket_id()`는 임의 uuid7이라(`src/kb/core/ids.py:136-137`) 재시도가 실행을 둘 만들 수 있다. `topic` 글은 `e:topic:<slug>`이고 `reason`은 고정 문구 "loupe 연구 요청"이다. spec 본문은 티켓에 싣지 않는다. 문장 병합(Jaccard, `A:1220`)은 쓰지 않는다. 주제 ID가 같으면 같은 주제다.
-   - `entity.put Topic e:topic:<slug>`(처음이면 생성, 있으면 `status=active`). 시드어는 별칭 표로 간다(`D4:178`). 이 엔티티는 `origin=first_party`, `sensitivity`는 spec의 현재 판과 같다(기본 `internal`). 외부 출처 엔티티로 만들지 않는다. 그래야 `export_llm=false`면 수집 프로필이 그 라벨과 별칭을 외부 LLM에 내지 않는다. `export_llm=true`면 6.6이 정한 칸만 보인다.
+   - `entity.put Topic e:topic:<slug>`(처음이면 생성, 있으면 `status=active`). 시드어는 별칭 표로 간다(`D4:178`). 이 엔티티는 `origin=first_party`, `sensitivity`는 spec의 현재 판과 같다(기본 `private`). 외부 출처 엔티티로 만들지 않는다. 그래야 `export_llm=false`면 수집 프로필이 그 라벨과 별칭을 외부 LLM에 내지 않는다. `export_llm=true`면 6.6이 정한 칸만 보인다.
    - `edge.put PART_OF`(부모), `edge.put DEFINES`(spec → 주제), `edge.put REQUESTS_ABOUT`(실행 → 주제, 기존 엣지 타입).
 
 - **재생.** 같은 요청 키의 재시도는 `research.request` 이벤트를 찾아 그 `run`을 돌려준다(`replayed:true`, `existing`은 `outcome`대로, `state`는 그 실행의 지금 상태). 합류했던 실행 A가 그 사이 닫혔어도 새 실행을 만들지 않는다. 오류 응답(409 `budget_unavailable`, 503 `gate_busy` 등)은 아무것도 쓰지 않았으므로 재시도가 처음부터 다시 판단한다. 재생 전에 spec의 가시성을 본다(5.1).
 - 이 경로는 ADR-0004 TP1의 `kb_request(kind=topic)`과 `kb topic add --from-ticket`(`D4:192`)과 같은 함수를 부른다. 진입 함수가 하나라 주제 생성 규칙이 두 벌로 갈라지지 않는다. 지금 `open_ticket`은 병합 확인을 잠금 밖에서 하고 따로 커밋하므로(`src/kb/ticket/__init__.py:149-164`) 이 경로에 그대로 쓰지 않는다.
 - **명시적 요청 기록.** `research.request` 이벤트가 "이 spec 판으로 조사해 달라"는 명시적 기록이다. `actor=app:loupe`, `on_behalf_of=user:sagae`(주장)이다. 다른 세션이 `kb_put`으로 쓴 spec도, 내용을 바꾸지 않은 채 이 호출로 연구를 요청할 수 있다. 1판처럼 "사람이 다시 저장해 작성자를 바꾼다"는 길은 내용이 같으면 무연산이라(`src/kb/write/engine.py:163-178`) 성립하지 않았고, 작성자를 허가에 쓰는 것이라 버렸다.
 - **ADR-0004의 `proposed`.** ADR-0004는 확인 없이 들어온 에이전트 주제 기록을 `proposed`로 두고 수집을 돌리지 않는다(`D4:198`). 이 ADR에서 그 확인은 연구 요청 이벤트이고, 돈을 쓰는 허가는 6.4의 예산이다. 요청 이벤트는 허가가 아니라 기록이다.
-- `TopicSpec`을 연구 중에 고치면(`title`, `aliases`, `domain`, `exclude`, `parent`, `export_*`) 서버가 같은 쓰기에서 `entity.put` 새 판을 더한다. 옛 라벨은 별칭으로 남는다(`D4:413`).
+- **연구 메타데이터도 상속한다.** `ticket.open`, `research.request`와 실행 기록, `Topic` 엔티티·별칭·연결 엣지는 모두 해당 `TopicSpec`의 현재 민감도 이상으로 투영한다. 티켓 민감도를 `internal`로 고정하는 지금 투영(`src/kb/project/apply.py:884-886`, 검토 근거)을 FW6에서 고친다. `private` 주제는 처음부터 `internal` 노드를 만들지 않으며, slug·제목·실행 ID·상태도 일반 HTTP 목록/검색과 MCP 티켓 목록에 새지 않는다. spec의 민감도를 높이면 이미 열린/닫힌 티켓·실행과 주제도 재투영하고, 완료 전의 읽기에도 3.6의 현재 원본 가시성 검사를 적용한다. `export_query`는 생략해도 `false` 강제이고 `true`는 400이다.
+- `TopicSpec`을 연구 중에 고치면(`title`, `aliases`, `domain`, `exclude`, `parent`, `export_*`, `sensitivity`) 서버가 같은 쓰기에서 `entity.put` 새 판과 위 메타데이터의 민감도를 동기화한다. 옛 라벨은 별칭으로 남는다(`D4:413`).
 - 같은 `slug`의 `Topic`이 다른 spec에 묶여 있으면 409 `slug_taken`이다.
 - 엔진은 KB가 고른다. 결정적 경로가 먼저이고, 유료 과제는 과제 종류별 결과 기준 라우터가 팔을 고른다(`D4:1015`). ADR-0004의 외부 작업 공간(`D4:202-203`)은 loupe에서 고르지 않는다(12장 질문 3).
 
@@ -667,7 +684,7 @@ Authorization: Bearer kbt_e_<토큰>
 
 ### 6.3 요청 상태 읽기
 
-`GET /v1/topics/{id}/research`는 읽기 경로다. 봉투는 읽기 규칙(`C:82-107`)을 따르고 범위는 `internal` 이하다. spec이 3.4를 통과하지 못하면 404다.
+`GET /v1/topics/{id}/research`는 읽기 경로다. 봉투는 읽기 규칙(`C:82-107`)을 따르고 범위는 3.6과 같다. `editor`·`reviewer`만 `private` 실행을 보며, 다른 읽기 경로는 `internal` 이하다. spec이 3.4를 통과하지 못하면 404다.
 
 ```json
 {"data":{"spec":"f-spec5m7n9p1q3r5s7t9v1w3x5y","topic":"e:topic:youtube-shorts","state":"in_progress",
@@ -724,7 +741,7 @@ loupe는 연구 결과를 사람에게 받기·버리기로 고르게 한다(`L 
 
 - **방향만 준 연구의 결과는 사람 검토를 거치지 않는다**(사용자 결정 2026-11-04). 주장의 `verification`은 인용 게이트가 지금처럼 자동으로 정한다(`A:508`, `A:943-966`). loupe의 받기·버리기는 이 결과를 바꾸지 않는다.
 - 그 받기·버리기는 `editor` 범위의 first_party `Review` 기록이다(4.2). 서버가 `REVIEWS` 엣지로 대상에 잇는다. 결정은 "user:sagae가 X를 받았다고 app:loupe가 주장"이라는 귀속 기록이고, loupe가 자기 화면을 거르는 데만 쓴다. KB 기본 읽기와 게이트는 바뀌지 않는다.
-- 데이터를 바꾸는 사람 결정은 6.8의 HITL 항목뿐이고 다른 경로로 들어온다.
+- 의도가 불명확해 시스템이 올린 HITL과 사용자가 시작하는 공개·해제 동작은 6.8의 별도 경로에서 사람 증명을 받는다. 일반 연구 결과의 `Review`는 이 경로가 아니다.
 
 ```http
 POST /v1/records
@@ -743,12 +760,12 @@ Authorization: Bearer kbt_e_<토큰>
 | `TopicSpec.body`(범위 서술) | 로컬만 | 로컬만. first_party 본문은 로컬 sLLM에만 간다(`A:766`) |
 | 수집 프로필 `kb_ticket_list` | 이 주제의 실행 티켓을 내지 않는다. 수집 에이전트는 외부 LLM이다(`src/kb/serve/mcp_collect.py:130-139`) | 낸다. 티켓 `topic`은 `e:topic:<slug>`, `reason`은 고정 문구다 |
 
-| 대상 | `export_query=true`(기본) | `export_query=false` |
+| 대상 | `export_query=true`(`internal`·`public` 기본) | `export_query=false`(`private` 고정) |
 |---|---|---|
 | 공개 출처 검색어(Wikidata 검색, 피드·사이트맵 발견, `D4:207-246`) | `title`, `aliases`를 검색어로 보낸다. LLM이 아니라 공개 API 질의다 | 보내지 않는다. 기존 레지스트리와 앵커만으로 발견한다 |
 
 - 내보내기 허가는 spec의 필드이고 그 판에 기록된다. 이 값도 `editor` 토큰을 쥔 쪽이 정하므로 "사람이 허가했다"의 증명이 아니라 기록이다. 1판은 범위 서술 외의 짧은 필드를 늘 외부 LLM에 보냈다. ADR-0004 T.1의 같은 규칙(`D4:205`)도 고친다(12장 질문 2).
-- **MCP 세션은 `internal`을 읽는다.** 일반 세션의 `kb-mcp`는 `internal` first_party를 읽고 그 내용은 Claude에 닿는다. 사용자가 2026-11-01에 확정한 규칙이다(`docs/adr/0002-user-decisions.md:56`, `:65-67`). loupe 문서, 메모, 주제 정의도 기본 `internal`이므로 Claude Code 세션이 `kb_search`로 찾을 수 있다. `export_llm`은 KB가 스스로 부르는 외부 LLM에만 적용되고, 사용자가 연 세션의 읽기는 막지 않는다.
+- **MCP 세션은 `internal`을 읽는다.** 일반 세션의 `kb-mcp`는 `internal` first_party를 읽고 그 내용은 Claude에 닿는다. 사용자가 2026-11-01에 확정한 규칙이다(`docs/adr/0002-user-decisions.md:56`, `:65-67`). loupe의 새 기록은 모두 기본 `private`이므로 Claude Code 세션이 찾지 못한다. 명시적으로 `internal`로 만든 기록과 사람 확인을 거쳐 공개된 결과만 `kb_search`로 찾을 수 있다. `export_llm`은 KB가 스스로 부르는 외부 LLM에만 적용되고, 사용자가 연 세션의 읽기는 막지 않는다.
 - **`Topic` 엔티티와 slug.** 6.1이 만드는 `e:topic:<slug>`는 `origin=first_party`이고 spec과 같은 민감도다. slug는 ID 안에 들어가지만 사람이 고른 글이므로 `title`과 같은 내보내는 글로 본다. `export_llm=false`면 slug도 `e:topic:<slug>`도 외부 LLM 프롬프트와 수집 프로필(`kb_ticket_list`, 수집 프로필의 검색·조회)에 싣지 않는다. `export_query=false`면 검색어로도 쓰지 않는다. slug는 식별자이므로 비밀이 있으면 거절이다(7.2).
 - **`export_llm=true`일 때 수집기가 보는 것.** 수집 프로필은 지금 first_party를 내지 않으므로, 허가를 켜도 `Topic`이 보이지 않는다. 그래서 허가된 주제만 좁게 연다. spec의 현재 판이 `export_llm=true`이고 3.4를 통과하는 `Topic` 엔티티는 수집 프로필에서 다음 칸만 보인다: ID `e:topic:<slug>`, 라벨(spec `title`), `aliases`, `exclude`, `domain`, 상태(`active`, `paused`). 통로는 `kb_ticket_list`의 그 주제 실행 티켓(`topic`, 고정 `reason`)과 수집 프로필의 그 엔티티 조회다. spec의 ID, 본문, 그 밖의 속성, 작성자, 링크, 그리고 다른 first_party 기록은 보이지 않는다. 모든 칸은 내보내기 직전에 비밀 탐지를 다시 거친다. 허가를 끄거나 spec이 tombstone·격리되면 다음 읽기부터 숨는다.
 - **KMS.** KB는 비밀 값을 받지 않는다. KMS 참조 문자열(이름)은 글로 저장하고 풀지 않는다. 그 문자열도 비밀 탐지를 지난다.
@@ -761,36 +778,34 @@ Authorization: Bearer kbt_e_<토큰>
 | 연구 요청 | 하루 5회(3.5) |
 | 시드어 | 20개, 각 100자 |
 
-### 6.8 HITL: 사람이 해야 하는 항목
+### 6.8 의도가 불명확할 때의 HITL과 사용자 동작
 
-**범위(사용자 결정 2026-11-04).** 사용자 답: "HITL 적용해야 하는 항목들이 있고, 내가 방향만 제시했을 때, 알아내는 정보들은 굳이 HITL할 필요가 없어보이는데?" 그래서 방향만 준 연구의 결과는 자동이고(6.5), 사람이 하는 일은 아래 목록으로 좁힌다. **목록은 리드 제안이고 사용자 확인 대기다.** 지금 사람만 할 수 있는 자리(TTY, 질문 도구)에서 골랐다.
+**범위(사용자 확정 2026-11-04).** HITL 목록 질문에 대한 사용자 답: "의도가 명확하지 않다고 판단할때가 맞을 듯." 시스템은 기존 자동 해석·판정으로 사용자의 의도를 스스로 해소하지 못할 때만 HITL 항목을 만든다. 아래는 기존 장치가 내는 구체적인 **미해결 신호**와 처리 규칙이며, 작업 종류만으로 사람 검토를 요구하는 고정 목록이 아니다.
 
-| # | 항목 | 지금 사람이 하는 자리 | loupe 해결 동작 | 해결이 바꾸는 것 |
-|---|---|---|---|---|
-| H1 | 새 호스트, 결정이 필요한 소스, 미디어 바이트 소스의 등록 승인(T.3) | `kb topic approve`/`reject --by user`(`D4:274`, `D4:1479`) | `approve`, `reject` | `source.approved` 또는 거절 기록. 수집기 YAML은 지금처럼 `kb topic approve` 함수가 쓴다 |
-| H2 | 다른 세션이 제안한 새 주제(`kb_request kind=topic`, `proposed`) | 사용자 승인 뒤 `kb topic add --from-ticket`(`D4:192`, `D4:198`) | `approve`, `reject` | 주제 `active` 또는 티켓 `rejected`. loupe 자신의 연구 요청(6.1)은 이 항목이 아니다 |
-| H3 | 생존 판정 `dead`, `superseded`, `removed`(H01~H11 근거) | `kb review`(`A:508`, `A:1101`). `kb-judge`는 근거만 정리하고 상태를 정하지 않는다 | `confirm`(근거 묶음의 제안 상태), `reject`, `defer` | `survival.verdict` 이벤트. 그 판정으로 풀리는 `R_LIVENESS_UNKNOWN` 보류는 지금 규칙대로 풀린다 |
-| H4 | 격리 해제(오탐) | TTY `kb secret release`(`A:575`) | `release` | 격리 표시를 떼고 이전 민감도로 돌린다. 목록에는 ID, 타입, 규칙 ID, 만든 시각만 나오고 내용은 나오지 않는다. loupe는 자기 초안과 맞춰 판단한다 |
-| H5 | 민감도 낮추기 `private` → `internal`·`public`(3.6) | 없음(새) | `declassify` | 그 기록의 새 판(같은 내용, 낮은 민감도) |
-| H6 | 자동 판정이 풀지 못한 게이트 보류 주장: `R_VALUE_MISMATCH`, `R_ALIAS_MISMATCH`, `R_SUBJECT_CONTEXT` 가운데 함의 판정(`A:963`)이 `supported`를 내지 못한 것 | 없음. 지금은 `needs_review`로 남아 기본 검색에서 빠진다 | `accept`, `reject` | 주장의 `verification`과 인용은 바꾸지 않는다. 보류 상태만 `review_state: user_accepted \| user_rejected`로 푼다. `user_accepted`는 기본 검색에 `verification=needs_review, review=user_accepted`로 보인다. **선택 항목이다.** 사용자가 하지 않아도 수집은 멈추지 않는다 |
+| 미해결 신호(`kind`) | HITL을 올리는 조건 | 사람 해결과 영향 |
+|---|---|---|
+| `topic_ambiguity` | 주제 intake에서 동음이의어 등으로 엔티티/Wikidata 후보가 여러 개이고, `TopicSpec`의 본문·별칭·범위에 후보를 가를 단서가 없어 자동 해석이 끝나지 않음 | `select`(후보 ID), `clarify`(범위 보충), `reject`. 선택/보충을 주제 정의와 intake에 반영한다. 다른 세션이 제안했다는 이유만으로 올리지 않는다 |
+| `source_policy` | 후보 소스가 ADR-0004 T.3의 자동 등록 기준(기존 호스트, 약관 `allowed`/`no_clause`, robots 허용, 피드·사이트맵·API·JSON-LD)을 벗어나 자동으로 등록 의도를 확정할 수 없음 | `approve`, `reject`. `source.approved` 또는 거절 기록을 기존 `kb topic approve` 함수로 쓴다. 약관·robots의 명시적 금지를 우회하지 않는다 |
+| `liveness_unresolved` | H01~H11 근거가 충돌하거나 부족해 자동 생존 판정이 결론에 이르지 못함(`R_LIVENESS_UNKNOWN` 포함) | `confirm`(근거의 제안 상태), `reject`, `defer`. `survival.verdict`와 관련 보류를 갱신한다. 결론에 이른 근거 묶음은 자동 처리하며 `dead`·`superseded`·`removed`라는 상태만으로 HITL을 올리지 않는다 |
+| `gate_unresolved` | `R_VALUE_MISMATCH`·`R_ALIAS_MISMATCH`·`R_SUBJECT_CONTEXT` 보류를 함의 판정(`A:963`)도 `supported`로 해소하지 못함 | `accept`, `reject`. 문장·인용·출처·`verification`은 불변이고 `review_state: user_accepted \| user_rejected`만 쓴다. 받은 주장은 `verification=needs_review, review=user_accepted`로 보인다. 선택 동작이며 수집 전체를 멈추지 않는다 |
 
-- 이 밖의 일(주제 연구 결과, 자동 등록 경계 안의 소스, 함의 판정이 푼 보류)은 HITL이 아니다.
-- `kb redact`(물리 삭제)는 되돌릴 수 없어 TTY에만 남긴다. loupe에 열지 않는다.
-- TTY 경로(`kb review`, `kb secret release`, `kb topic approve`)는 그대로다. loupe는 같은 함수를 부르는 두 번째 입구다.
+- 시스템은 항목에 해소를 시도한 기제, 미해결 이유, 후보와 근거를 남긴다. 자동으로 해소되면 항목을 닫는다. 같은 신호·대상·판의 항목은 중복 생성하지 않는다.
+- **나머지는 자동이다.** 방향만 준 주제 연구의 모든 결과, T.3 안의 소스 등록, 명확한 주제 intake, 결론에 이른 생존 근거, 함의 판정이 해소한 보류는 HITL을 거치지 않는다. 인용 게이트·first_party 게이트·예산·비밀 규칙은 그대로 적용한다.
 
-**사람이 했다는 증명.** 작성자와 `change`는 허가가 아니고(3.2), 같은 UID의 프로세스는 토큰 파일을 읽을 수 있다. 그래서 HITL 해결은 토큰에 더해 **동작마다의 WebAuthn 사용자 확인(user verification)**을 요구한다. 플랫폼 인증기(Windows Hello 등)는 사람의 생체나 PIN 없이 서명하지 않으므로, 같은 UID 프로세스가 토큰을 가져도 해결을 만들지 못한다.
+**사용자가 시작하는 동작.** `release`(secret/격리 오탐 해제), `declassify`(`private` → `internal`·`public`, `internal` → `public`), `publish`(5.10의 메모 정제·반영)는 시스템이 올리는 HITL 항목이 아니다. 사용자가 원할 때 `POST /v1/actions`로 `{action, target, expected_version, idempotency_key}`를 준비한다. `declassify`는 목표 `sensitivity`도 받는다. `release`는 기존 해제 함수와 이전 민감도를 쓰며 내용은 응답에 싣지 않는다. 비밀/격리 대상에 대한 이 예외는 `release` 준비·실행만이고 다른 쓰기의 404 규칙은 유지한다. 두 종류 모두 아래 사람 증명 없이는 실행할 수 없다. `kb redact`(물리 삭제)는 TTY에만 남긴다.
 
-1. **등록.** 사용자가 TTY에서 `kb reviewer enroll --label loupe-review`를 부르면 10분짜리 1회용 등록 코드가 나온다. loupe가 그 코드로 `POST /v1/reviewer/enroll`을 부르고 브라우저가 `navigator.credentials.create`를 한다. KB는 공개 키, 자격 증명 ID, 서명 카운터를 `~/.config/sagae-kb/reviewers`(0600)에 둔다. 비밀 키는 인증기를 떠나지 않는다. 폐기는 TTY `kb reviewer revoke`.
-2. **도전.** `POST /v1/hitl/challenge {"item":<항목 ID>,"action":<동작>}`(reviewer 범위). KB가 `action_sha = sha256(항목 ID, 동작, 항목의 현재 상태 판)`에 묶인 1회용 도전 값을 내고 120초 뒤 버린다. 도전 값은 잃어도 되는 상태라 `ops.db`에 둔다.
-3. **확인.** 브라우저가 `navigator.credentials.get`(`userVerification: "required"`)으로 서명한다. loupe는 확인 화면에 항목과 동작을 보인다.
-4. **해결.** `POST /v1/hitl/{item}/resolve {"action", "challenge_id", "assertion"}`. KB는 등록된 공개 키로 서명, UV 플래그, RP ID, origin(설정된 loupe origin), 서명 카운터 증가, 도전 값과 `action_sha` 일치를 확인한다. 하나라도 틀리면 403 `review_unverified` **새**이고 아무것도 쓰지 않는다. 항목 상태가 그 사이에 바뀌었으면 409 `review_stale` **새**다.
-5. **기록.** 성공하면 항목별 이벤트(위 표의 "바꾸는 것")를 한 커밋에 쓴다. 귀속은 `actor=user:sagae`, `generated_by=app:<라벨>:hitl`이고 payload에 `{item, action, prior_state, cred_id, assertion_sha}`를 남긴다. 이것이 HTTP에서 `actor=user:sagae`가 되는 유일한 경우다(3.2).
+**사람이 했다는 증명(B1).** 작성자·`change`·TTY·토큰 소지만으로 사람을 증명하지 않는다. HITL 해결과 사용자 동작 실행은 모두 `reviewer` 범위에 더해 **동작마다 WebAuthn 사용자 확인(user verification)**과 보호된 reviewer 신뢰 저장소를 요구한다. 기존 TTY `kb review`, `kb topic approve`, `kb secret release`도 해당 사람 결정의 수동 실행은 같은 증명을 거치며, TTY만으로 우회하지 않는다. 자동 판정 경로는 위 미해결 신호 규칙을 따른다.
 
-- **해결은 주장을 고치지 않는다.** 주장 문장, 인용, `verification`, 출처는 그대로다. 해결은 보류나 상태(소스 승인, 주제 상태, 생존 판정, 격리 표시, 민감도)를 바꾸고 그 결정을 `user:sagae`로 귀속할 뿐이다.
-- **목록 읽기.** `GET /v1/hitl?kind=H1..H6&cursor=`(reviewer 범위). 항목 ID, 종류, 대상 ID, 제안 상태, 근거 링크(`kb-judge` 묶음, 후보 호스트의 약관·robots 판정), 만든 시각. 격리 항목은 내용을 싣지 않는다.
-- **멱등.** 해결 요청은 `idempotency_key`(실효 키 규칙은 5.1과 같다)를 받는다. 같은 키의 재시도는 첫 결과를 돌려주고 새 도전을 요구하지 않는다.
-- **라이브러리.** 서버 쪽 WebAuthn 검증은 직접 만들지 않고 유지보수 중인 라이브러리(후보 `py_webauthn`)를 쓴다. 버전, 라이선스, 의존성은 FW9에서 1차 출처로 확인한다 [미확인].
-- 인증기가 없는 환경에서는 HITL을 loupe에서 열지 않고 TTY 경로만 쓴다. `/v1/meta.write.hitl`이 등록 여부를 낸다.
+1. **신뢰 저장소.** 현재 배치에서는 사용자가 `sudo`로 설치한 `/etc/sagae-kb/reviewers`만 신뢰한다(파일 `root:root`, 0644; 디렉터리 `/etc/sagae-kb`와 상위 경로도 root 소유, 비특권 쓰기 금지). 공개 키·자격 증명 ID·RP ID·허용 origin이 들어간다. KB 서비스 UID와 PC 에이전트 UID는 파일과 디렉터리를 쓸 수 없어야 한다. 홈 디렉터리의 0600 파일은 같은 UID의 키 교체를 막지 못하므로 신뢰 근거로 쓰지 않는다. 심볼릭 링크·그룹 권한·ACL을 통한 교체도 허용하지 않는다.
+2. **등록과 폐기.** `POST /v1/reviewer/enroll`은 브라우저 `navigator.credentials.create`의 등록 후보만 만든다. 사용자가 후보 자격 증명과 RP ID·origin을 확인하고 `sudo kb reviewer enroll --request <등록 ID>`로 설치해야 신뢰된다. 폐기도 `sudo kb reviewer revoke --credential <ID>`로 root 소유 파일을 원자적으로 갱신하는 별도 특권 단계다. HTTP·KB 프로세스·일반 TTY 명령은 이 파일을 변경하거나 새 키를 활성화할 수 없다. 인증기 비밀 키는 인증기를 떠나지 않는다. 서명 카운터와 1회용 도전 상태는 별도 운영 상태에 두며 신뢰 키 등록 근거로 쓰지 않는다.
+3. **안전 확인과 이전.** KB는 시작 시와 사용자 동작 준비·도전 발급·실행마다 소유권과 파일/디렉터리의 실제 쓰기 가능 여부를 확인한다. 파일 누락·읽기 실패·KB UID 또는 에이전트 UID의 쓰기 가능·검사 중 경로 교체를 발견하면 HITL 해결과 사용자 동작을 모두 503 `review_trust_unavailable`로 거절하고 아무 변경도 하지 않는다. `/v1/meta.write.hitl`에 `{available:false, trust_store:"unsafe"|"missing"|"unreadable"}`를 내며 경로나 키는 싣지 않는다. 정상은 `trust_store:"ready"`와 등록 여부를 낸다. ADR-0004 P의 KB writer 전용 VM 이전 뒤에는 그 VM 안에 저장하고 PC 에이전트는 쓰기 접근을 갖지 않는다. 등록·폐기의 특권 단계는 이전 뒤에도 유지한다.
+4. **도전과 확인.** HITL은 `POST /v1/hitl/challenge {item, action, params}`, 사용자 동작은 `POST /v1/actions/challenge {action_id}`다. KB는 `action_sha = sha256(정규화한 종류, 대상 ID와 현재 판/상태, 동작, 매개변수, 준비된 결과별 해시·타입·민감도)`에 묶인 1회용 도전을 발급하고 120초 뒤 버린다. 브라우저는 `navigator.credentials.get`(`userVerification:"required"`)으로 서명하고 loupe는 대상·동작·공개 결과를 확인 화면에 보인다.
+5. **실행.** HITL은 `POST /v1/hitl/{item}/resolve {action, params, challenge_id, assertion, idempotency_key}`, 사용자 동작은 `POST /v1/actions/{id}/execute {challenge_id, assertion, idempotency_key}`다. KB는 보호된 저장소의 현재 공개 키로 서명·UV 플래그·RP ID·origin·서명 카운터 증가·도전·`action_sha`를 확인한다. 하나라도 틀리면 403 `review_unverified`이고 아무것도 쓰지 않는다. 대상 판·상태나 준비 결과가 바뀌면 409 `review_stale`다. 확인과 도전 소비, 대상 확인, 사건 기록은 쓰기 잠금 안에서 원자적으로 한다. 같은 증명으로 다른 동작이나 바뀐 결과를 승인하지 못한다.
+6. **기록과 재생.** 성공은 항목별 상태 이벤트 또는 사용자 동작 결과를 한 커밋에 쓴다. `actor=user:sagae`, `generated_by=app:<라벨>:hitl` 또는 `app:<라벨>:action`이고 payload에 `{item 또는 action_id, action, prior_state, action_sha, cred_id, assertion_sha, 결과 해시}`를 남긴다. 이것이 HTTP에서 `actor=user:sagae`가 되는 예외다(3.2). 멱등 이름공간은 인증된 앱의 `app:<라벨>`(5.1)이며 이벤트의 `user:sagae` 귀속으로 합치지 않는다. 같은 키의 재시도는 첫 결과만 돌려준다. 재생 전에는 현재 신뢰 저장소와 대상 가시성을 다시 확인하며 새 도전 없이 새 변경을 만들지 않는다.
+
+- **남는 위험.** 이 설계는 같은 UID가 reviewer 키를 바꿔 UV를 꾸민 서명을 넣는 우회를 막는다. 다만 현재 KB 코드·원장·운영 상태를 같은 UID가 직접 바꾸거나, root 권한을 얻거나, 확인 화면을 속여 사용자가 다른 동작을 승인하게 하는 공격까지 막지는 못한다. WebAuthn은 인증기 사용자 확인을 증명하고 화면의 의미를 보증하지 않는다. writer 전용 VM은 PC 에이전트의 직접 변경 범위를 줄이지만 신뢰 저장소의 특권 관리자와 사용자 확인은 계속 신뢰해야 한다.
+- **목록 읽기.** `GET /v1/hitl?kind=<미해결 신호>&cursor=`는 `reviewer` 범위다. 항목 ID, 신호, 대상 ID, 미해결 이유, 후보·근거 링크, 제안 상태, 만든 시각을 낸다. 사용자 동작은 이 목록에 올리지 않는다. 사용자 동작 준비의 후보는 그 `reviewer`에만 보이며, 격리 해제는 ID·타입·규칙 ID·시각만 내고 내용을 내지 않는다. 다른 대상에도 3.6의 가시성을 적용한다.
+- **라이브러리.** 서버 WebAuthn 검증은 직접 만들지 않고 유지보수 중인 라이브러리(후보 `py_webauthn`)를 쓴다. 버전·라이선스·의존성은 FW9에서 1차 출처로 확인한다 [미확인]. 인증기가 없거나 신뢰 저장소가 안전하지 않으면 사람 동작을 열지 않고 `/v1/meta`에 이유를 낸다. TTY를 인증 대체 수단으로 쓰지 않는다.
 
 ## 7. 비밀 탐지, 오류, 경고
 
@@ -807,7 +822,7 @@ Authorization: Bearer kbt_e_<토큰>
 
 **결정.** 내용 칸은 HTTP 편집기 경로에서 기본 거절이다. 원장이 덧붙이기 전용이므로 거절된 쓰기만 원장에 닿지 않고, 격리는 지우는 비용을 나중으로 미룰 뿐이다. 다른 통로(MCP `kb_put`, inbox, `kb put`, `kb intake`)는 내용 칸에 격리를 유지한다. 그 통로는 사람이 그 자리에 없을 수 있고 거절하면 내용을 잃는다(`A:575`). ADR-0001 7.9(`A:575`)에 HTTP 예외를 더하는 변경이라 사용자 승인이 필요하다(12장 질문 6).
 
-**오탐.** 사용자가 "비밀이 아니다"를 고르면 loupe는 `on_secret: "quarantine"`으로 다시 보낸다. 지금 규칙대로 격리 저장되고, 해제는 TTY `kb secret release <id>`다(`A:575`). 이 선택은 `change=save`만 받는다. 이것은 실수 방지 규칙이고 허가가 아니다.
+**오탐.** 사용자가 "비밀이 아니다"를 고르면 loupe는 `on_secret: "quarantine"`으로 다시 보낸다. 지금 규칙대로 격리 저장되고, 해제는 6.8의 사용자 동작 `release` 또는 같은 사람 증명을 거치는 TTY `kb secret release <id>`다(`A:575`). 이 선택은 `change=save`만 받는다. 이것은 실수 방지 규칙이고 허가가 아니다.
 
 ### 7.2 무엇을 언제 검사하나
 
@@ -873,14 +888,14 @@ HTTP/1.1 201 Created
 ```
 
 - 키는 7.3의 거절된 요청과 같다. 거절은 아무것도 쓰지 않았으므로 같은 만들기 키를 다시 쓸 수 있고, 한 초안이 한 ID로 남는다(5.1).
-- 이 ID는 읽기에서 404이고(`A:574`), 편집기 쓰기에서도 404다(3.4). 해제 전까지 loupe가 고치거나 지우지 못한다. 응답을 잃고 같은 요청을 다시 보내도 재생 대신 404다(5.1). loupe는 이 404를 "격리됐거나 없음"으로 보이고 확인은 터미널에 맡긴다.
+- 이 ID는 읽기에서 404이고(`A:574`), 편집기 쓰기에서도 404다(3.4). 해제 전까지 loupe가 고치거나 지우지 못한다. 응답을 잃고 같은 요청을 다시 보내도 재생 대신 404다(5.1). loupe는 이 404를 "격리됐거나 없음"으로 보이고, 해제는 내용 없는 6.8의 사용자 동작 또는 같은 증명을 거치는 터미널 경로로 안내한다.
 - 식별자 칸(멱등 키, ID, 타입, 속성 이름, 사유)에 비밀이 든 경우는 격리 저장을 받지 않는다. 그 값은 원장 열에 그대로 남기 때문이다. `on_secret=quarantine`이어도 422로 끝난다(7.2).
 
 **loupe가 해야 할 것.**
 
 1. 거절이면 "저장 거절: 비밀로 보이는 값"을 띄우고 `hits` 구간을 가린다. 값을 화면 밖(알림, 로그, 텔레메트리)으로 보내지 않는다. 초안 저장소와 편집기 이력에서 그 내용을 지운다(`L 5.5`).
 2. 선택지: 값을 지우고 KMS에 옮긴 뒤 다시 저장, 오탐이면 격리 저장, 버리기.
-3. 격리 저장 뒤에는 "이 기록은 이제 loupe에서 보이지 않습니다. 해제는 터미널에서 `kb secret release <id>`"를 알리고 ID와 판만 남긴다.
+3. 격리 저장 뒤에는 "이 기록은 이제 loupe에서 보이지 않습니다. 해제하려면 본인 확인이 필요합니다"를 알리고 ID와 판만 남긴다. 6.8의 `release` 또는 같은 사람 증명을 거치는 TTY `kb secret release <id>`로 안내한다.
 4. 같은 내용을 다른 키로 다시 보내 거절을 피하려 하지 않는다.
 5. 붙여넣기처럼 큰 덩어리는 저장 전에 `?dry_run=1`로 검사할 수 있다. 응답은 `{"would_reject":true,"hits":[…]}`이고 아무것도 쓰지 않는다.
 
@@ -897,14 +912,14 @@ HTTP/1.1 201 Created
 | 403 | `scope_denied` **새** | `viewer` 토큰으로 쓰기 | 같음 | 같음 |
 | 403 | `type_not_allowed` **새** | 새 기록의 타입이 네 타입 밖 | 이 종류는 편집기에서 만들 수 없습니다 | 버그로 기록 |
 | 403 | `sensitivity_not_allowed` **새** | `secret` 요청 | 이 공개 범위는 쓸 수 없습니다 | 선택지에서 뺌 |
-| 403 | `declassify_requires_review` **새** | `PUT`이 `private`를 낮춤(3.6) | 공개 범위를 낮추려면 검토 확인이 필요합니다 | 6.8 `declassify`로 안내 |
-| 403 | `review_unverified` **새** | HITL 해결의 WebAuthn 확인 실패(6.8) | 본인 확인에 실패했습니다 | 다시 확인 |
+| 403 | `declassify_requires_review` **새** | `PUT`·승격이 `private`를 낮춤(3.6, 5.7) | 공개 범위를 낮추려면 검토 확인이 필요합니다 | 6.8 `declassify`로 안내 |
+| 403 | `review_unverified` **새** | HITL 해결·사용자 동작의 WebAuthn 확인 실패(6.8) | 본인 확인에 실패했습니다 | 다시 확인 |
 | 404 | `not_found` | 없는 ID, 3.4 실패, 숨은 대상의 재생(5.1), 남의 쓰기 참조(5.9) | 문서를 찾을 수 없습니다 | 목록 새로고침 |
 | 409 | `version_conflict` | 5.4, 같은 만들기 키에 다른 내용·귀속(5.1) | 다른 곳에서 먼저 고쳤습니다 | `payload_sha`가 같으면 확정, 다르면 비교 화면 |
 | 409 | `idem_conflict` | 같은 키, 다른 내용이나 귀속 | 저장 충돌. 다시 저장합니다 | 새 키로 1회 재시도 |
 | 409 | `redacted_payload` | 지운 본문과 같은 내용(`src/kb/write/engine.py:15-16`) | 삭제된 내용과 같아 저장할 수 없습니다 | 저장 중지 |
 | 409 | `write_in_flight` **새** | `pending`·`held` 쓰기 참조의 `DELETE`(5.8) | 아직 처리 중입니다 | 끝날 때까지 기다림 |
-| 409 | `review_stale` **새** | HITL 항목 상태가 도전 뒤에 바뀜(6.8) | 항목이 바뀌었습니다 | 목록 새로고침 |
+| 409 | `review_stale` **새** | HITL 항목·사용자 동작의 대상 판/상태·결과가 도전 뒤 바뀜(6.8) | 항목이 바뀌었습니다 | 목록 새로고침 |
 | 409 | `research_running` **새** | 열린 실행이 있는 spec의 tombstone | 조사 중인 주제입니다. 먼저 멈추세요 | 주제 화면 |
 | 409 | `budget_unavailable` **새** | 6.4 | KB가 아직 이 조사를 받을 수 없습니다 | 요청 단추 잠금, 상태 표시 |
 | 409 | `slug_taken` **새** | 6.1 | 같은 이름의 주제가 있습니다 | 기존 주제로 이동 |
@@ -913,6 +928,7 @@ HTTP/1.1 201 Created
 | 422 | `secret_detected` **새** | 7.3 | 저장 거절: 비밀로 보이는 값 | 7.4 |
 | 428 | `expected_version_required` | 판 없이 편집 | 버그 | 판을 읽고 1회 재시도 |
 | 429 | `too_many_requests`, `write_rate_limited` **새**, `byte_quota_exceeded` **새** | 3.5, 5.8(스풀 예약 포함) | 저장이 잠시 밀렸습니다 | `Retry-After` 뒤 재시도, 초안 보존 |
+| 503 | `review_trust_unavailable` **새** | reviewer 신뢰 저장소가 없거나 안전하지 않음(6.8) | 본인 확인을 사용할 수 없습니다 | 사람 동작 잠금, `/v1/meta` 이유 표시 |
 | 503 | `not_ready`, `gate_busy` **새**, `spool_full` **새** | 시작 중, 승격·연구 요청의 게이트 시간 초과, 스풀 상한(5.8) | KB가 바쁩니다 | `Retry-After` 뒤 재시도, 초안 보존 |
 
 성공이지만 아직 안 읽히는 경우: 202 `held:true`, `reason:"offsite_path_missing"`(`src/kb/write/engine.py:38`), 202 `spooled:true`, `reason:"gate_timeout"`(`src/kb/write/engine.py:237`), 200/201 `projected:false`(`C:1409`). 앞의 둘은 `write_ref`가 있다(5.9).
@@ -961,22 +977,22 @@ HTTP/1.1 201 Created
 
 | WP | 내용 | 인수 조건 | 검증 명령 |
 |---|---|---|---|
-| FW1 | 계약 0.4.0: OpenAPI에 2.2 경로 9개, 요청·응답 스키마, 7장 오류 코드, `editor` 범위, `change`, `on_secret`, `write_ref`. `/v1/meta.write = {fp_gate, editor_routes}`. `history.versions[]`에 `actor`, `claimed_author`, `generated_by`, `payload_sha`. 6장 "HTTP 쓰기 없음"(`C:1380`)과 7장 쓰기 메서드(`C:1453`) 개정. fixture 11종: 만들기, 편집, 충돌, 숨은 대상 404, tombstone, 승격, 비밀 거절, 격리 저장, 스풀 참조, 연구 요청, 연구 상태 | `oasdiff`가 읽기 경로에 파괴 변경 0. fixture 11종이 스키마 검증 통과. `filter=label:prefix:`가 동작하거나 대안이 계약에 적힘 | `ops/bin/contract-check && ops/bin/dev pytest tests/fpapi/test_contract_fixtures.py -q` |
+| FW1 | 계약 0.4.0: OpenAPI에 2.2의 기본 편집·연구·쓰기 참조 경로(등록·HITL·사용자 동작은 FW9), 요청·응답 스키마, 7장 오류 코드, `editor` 범위, `change`, `on_secret`, `write_ref`. `/v1/meta.write = {fp_gate, editor_routes}`. `history.versions[]`에 `actor`, `claimed_author`, `generated_by`, `payload_sha`. 6장 "HTTP 쓰기 없음"(`C:1380`)과 7장 쓰기 메서드(`C:1453`) 개정. fixture 11종: 만들기, 편집, 충돌, 숨은 대상 404, tombstone, 승격, 비밀 거절, 격리 저장, 스풀 참조, 연구 요청, 연구 상태 | `oasdiff`가 읽기 경로에 파괴 변경 0. fixture 11종이 스키마 검증 통과. `filter=label:prefix:`가 동작하거나 대안이 계약에 적힘 | `ops/bin/contract-check && ops/bin/dev pytest tests/fpapi/test_contract_fixtures.py -q` |
 | FW2 | 타입: `schemas/types/Page.json`, `TopicSpec.json`, `Review.json`, `edge-PROMOTED_FROM.json`, `edge-DEFINES.json`, `edge-REVIEWS.json`. 티켓 상태 `cancelled` | 네 타입이 정의 타입. `TopicSpec.props`, `Review.props` 위반과 경로 힌트 키가 `schema_invalid` | `ops/bin/dev pytest tests/fpapi/test_fp_types.py -q` |
-| FW3 | 쓰기 핵심: `author.resolve`의 `http` 전송과 귀속 표(3.2), 카드 표시의 `app:` 규칙, 대상 확인(3.4, 잠금 안), 처리 순서(2.3: 탐지와 대상 확인을 CAS 앞으로, 낡은 판 확인을 무연산 앞으로), 편집기 경로 비밀 탐지(7.2: 기록 전체와 메타데이터, 경로 힌트 거절, 순번 위치, UTF-16), `on_secret=quarantine`, 고정 오류 문구, `tombstone_record(expected_version, 대상 확인, 사유 탐지)`, 구조화 `VersionConflict.current`, `unchanged`, 크기 상한, 위키 링크 모양(4.6, 편집기 경로만), sLLM 큐 규칙(5.8), `dry_run` | 새 시험이 전부 통과: `change` 3종의 귀속, `actor`가 `user:sagae`가 되지 않음, `source_path` 거절, `props.source_path='x.png'`가 든 키를 거절, 키·사유·속성 이름의 비밀 거절 뒤 원장 `seq`·CAS·`spool/in`·`spool/fp-held` 변화 0, 오류 본문에 입력 문자열 없음, `Learning`·`private`·격리 대상 PUT·tombstone이 404이고 `current` 없음, 낡은 판 + 같은 내용이 409, 복원 후 `status=active`, `[[Shorts]]`·`[[c-suite]]`가 엣지 없음, `TopicSpec` 판이 sLLM 큐에 없음, `Page` 자동 저장 판 여럿이 큐 참조 하나. 만들기 키에 `change`가 없고, 응답을 잃은 `autosave` 만들기 뒤 같은 초안의 `save` 만들기가 409 `version_conflict` + `current`이고 같은 초안의 기록이 하나뿐. 키·ID·타입·속성 이름·사유·slug의 비밀은 `on_secret=quarantine`이어도 422이고 응답에 값이 없음, `inbox:api-token-rotation:<sha32>` 꼴 작성기 키는 통과하고 HTTP 키는 통째로 검사, `…:r12` 편집 키는 통과. 격리된 기록을 CLI로 tombstone한 뒤 같은 키 만들기·낡은 `PUT`이 404이거나 `current`에 본문·제목·`payload_sha`가 없음. 키 K로 저장 뒤 `kb redact`, 민감도 상향, 격리 각각에서 K 재생이 404이고 본문에 `id`·`version`·`payload_sha`·`seq`가 없음. 토큰 A와 B(다른 라벨)가 같은 키 K로 만들면 서로 다른 기록 둘이 생기고 B의 응답이 A의 것과 구별되지 않음(충돌·재생 없음), 원장 `idem_key`가 `h\0<actor>\0K` 꼴, MCP `kb_put`과 inbox의 NUL 든 키가 400, 기존 통로의 전역 재생 시험이 그대로 통과, 만들기 ID가 원장 `meta` 없이 (actor, 키)로 재계산되고 내보낸 세그먼트로 다시 만든 원장에서 같은 키 재시도가 재생 | `ops/bin/dev pytest tests/fpapi/test_write_core.py tests/fpapi/test_secret_editor.py tests/fpapi/test_target_checks.py tests/fpapi/test_wikilink_shape.py tests/fpapi/test_replay_visibility.py tests/fpapi/test_idem_namespace.py -q && ops/bin/dev pytest tests/write -q` |
-| FW4 | HTTP: 2.2 경로, 쓰기 경로의 Bearer 필수(소켓 포함), `editor` 범위, 토큰 만들기(TTY)·라벨 유일·만료·회전·폐기·마지막 사용, 요청 수 상한(3.5), 원장 기준 바이트 한도(5.8)와 색인, 쓰기 동시 2, `write_ref`, `GET`·`DELETE /v1/writes/{ref}`, 스풀 예약·`failed` purge(5.8), 본문과 예외 문자열을 남기지 않는 오류 처리. 읽기 경로 바이트 불변 | 소켓에서 토큰 없는 `POST` 401, `viewer` 403, 만료·폐기 토큰 401. 같은 라벨 두 번째 만들기 거부. 바이트 한도가 `change=save`로도 걸리고 서버 재시작 뒤에도 유지. 재시도가 한도에 걸리지 않음. 두 탭 스풀 경우에 `write_ref`가 `failed`, `version_conflict`. 로그와 응답에 토큰 값·요청 본문 없음. 게이트를 쥔 채 스풀 경로로 한도를 넘게 보내면 넘는 요청이 429이고 `spool/in`에 파일이 늘지 않음, 스풀 상한에서 503 `spool_full`, 재적재·실패 뒤 예약이 합계에서 빠짐, 예약과 스풀 사이 종료를 흉내 낸 뒤 `lost_before_spool`. 낡은 판 1 MiB `PUT`을 게이트를 쥔 채 되풀이하면 하루 한도 429가 나지 않고 보유 상한에서 그 토큰의 오래된 `failed`부터 지워지며 디스크가 64 MiB를 넘지 않음, 지울 `failed`가 없을 때만 503 `spool_full`, 복구 순회와 스풀 쓰기를 동시에 돌려도 살아 있는 예약이 `lost_before_spool`이 되지 않음. 머리가 없는 새 기록의 참조가 소유자에게 `pending`·`failed`로 보임. 토큰 B가 추측한 만들기 키로 스풀한 참조가 A의 `private`·`secret` 기록 유무와 상관없이 같은 응답이고, 같은 ID에 숨은 머리와 보이는 머리가 있을 때 재적재가 둘 다 `create_conflict`. 같은 키라도 actor가 다르면 ID가 다름 다른 `tok_id`(회전된 같은 라벨 포함), `viewer`, 무토큰의 `GET /v1/writes/{ref}`가 없는 참조와 같은 404 `private`: `editor`가 쓰고 읽음, 무토큰·`viewer`·MCP `kb_search`·`kb_get`·`kb-collect`에서 없음, `private` spec의 `export_llm=true`가 400, `private`→`internal` `PUT`이 403 `declassify_requires_review`, `secret` 요청이 403, 타입별 기본 민감도(3.6)가 빠진 `sensitivity`에 적용됨 | `ops/bin/dev pytest tests/fpapi/test_private_scope.py tests/fpapi/test_http_write.py tests/fpapi/test_token_lifecycle.py tests/fpapi/test_byte_quota.py tests/fpapi/test_spool_quota.py tests/fpapi/test_write_ref.py -q && ops/bin/dev pytest tests/http -q && ops/bin/dev pytest tests/mcp -q --ignore=tests/mcp/test_claude_real.py` |
-| FW5 | 투영: `raw/fp` 큰 본문을 `content`에 넣고 문단 색인을 연다, 객체가 없으면 `projected=false`, tombstone된 기록의 나가는 사용자 링크를 `dead`로(5.5) | 100 KB `Page`가 `/body`로 200, 전문 검색에 걸림, `secret`이면 없음, `raw/fp` 객체를 지운 시험에서 격리 이벤트 0, tombstone 뒤 백링크에서 빠짐, 재구축이 증분과 같음 | `ops/bin/dev pytest tests/fpapi/test_fp_big_body_read.py tests/fpapi/test_tombstone_edges.py -q && ops/bin/dev pytest tests/read -q` |
-| FW6 | 승격과 연구: `promote`(연구 포함), `research`, `research/{run}/stop`, `GET …/research`, 한 트랜잭션의 확인과 이벤트(6.1), 결정적 실행 ID, `cancelled`, `DEFINES`, `REQUESTS_ABOUT`, spec 편집 시 `entity.put` 동기화, `Review`와 `REVIEWS`, 세 단위 예산 예약(6.4), `budget_unavailable`, `export_llm`·`export_query`(6.6), 수집 프로필 티켓 숨김. **ADR-0004 TP1, TP5, D5 뒤** | 연구 → 멈춤 → 연구(같은 spec 판)가 새 실행을 만든다. 같은 키 재시도가 실행을 하나만 만든다. 동시 요청 두 개가 열린 실행 하나로 끝난다. 예산 장치가 없으면 409이고 원장 변화 0. 주제·전체·엔진 중 하나가 모자라면 유료 호출 0. `export_llm=false` 주제의 글이 외부 어댑터 요청 본문과 `kb_ticket_list`에 없음. 상태 응답에 비율·점수 필드 없음. 요청 B가 열린 실행 A에 합류하고 A가 닫힌 뒤 B 재생이 A를 돌려주고 새 티켓 0. `sending` 뒤 응답 시간 초과를 흉내 내면 예약이 남아 같은 한도의 다음 유료 호출이 거부되고, `sending` 전 실패만 반환되고, 제공자 사용량 자료로 정산된다. `sending` 뒤 재전송이 새 `(호출 ID, 시도 번호)` 예약을 잡고, 남은 한도가 모자라면 재전송이 일어나지 않음. `export_llm=true` 주제는 수집 프로필에서 ID·라벨·`aliases`·`exclude`·`domain`·상태만 보이고 spec 본문·ID는 없음. `export_llm=false` 주제의 `Topic` 엔티티가 `origin=first_party`이고 slug·라벨·별칭이 수집 프로필 응답에 없음 | `ops/bin/dev pytest tests/fpapi/test_research_runs.py tests/fpapi/test_research_replay.py tests/fpapi/test_research_budget.py tests/fpapi/test_research_export.py tests/fpapi/test_promote.py -q && ops/bin/dev pytest tests/topic -q` |
+| FW3 | 쓰기 핵심: `author.resolve`의 `http` 전송과 귀속 표(3.2), 카드 표시의 `app:` 규칙, 대상 확인(3.4, 잠금 안), 처리 순서(2.3: 탐지와 대상 확인을 CAS 앞으로, 낡은 판 확인을 무연산 앞으로), 편집기 경로 비밀 탐지(7.2: 기록 전체와 메타데이터, 경로 힌트 거절, 순번 위치, UTF-16), `on_secret=quarantine`, 고정 오류 문구, `tombstone_record(expected_version, 대상 확인, 사유 탐지)`, 구조화 `VersionConflict.current`, `unchanged`, 크기 상한, 위키 링크 모양(4.6, 편집기 경로만), sLLM 큐 규칙(5.8), `dry_run` | 새 시험이 전부 통과: `change` 3종의 귀속, `actor`가 `user:sagae`가 되지 않음, `source_path` 거절, `props.source_path='x.png'`가 든 키를 거절, 키·사유·속성 이름의 비밀 거절 뒤 원장 `seq`·CAS·`spool/in`·`spool/fp-held` 변화 0, 오류 본문에 입력 문자열 없음, `Learning`·격리 대상 PUT·tombstone이 404이고 `current` 없음, first_party 네 타입의 `private`는 `editor`로 편집 가능, 낡은 판 + 같은 내용이 409, 복원 후 `status=active`, `[[Shorts]]`·`[[c-suite]]`가 엣지 없음, `TopicSpec` 판이 sLLM 큐에 없음, `Page` 자동 저장 판 여럿이 큐 참조 하나. 만들기 키에 `change`가 없고, 응답을 잃은 `autosave` 만들기 뒤 같은 초안의 `save` 만들기가 409 `version_conflict` + `current`이고 같은 초안의 기록이 하나뿐. 키·ID·타입·속성 이름·사유·slug의 비밀은 `on_secret=quarantine`이어도 422이고 응답에 값이 없음, `inbox:api-token-rotation:<sha32>` 꼴 작성기 키는 통과하고 HTTP 키는 통째로 검사, `…:r12` 편집 키는 통과. 격리된 기록을 CLI로 tombstone한 뒤 같은 키 만들기·낡은 `PUT`이 404이거나 `current`에 본문·제목·`payload_sha`가 없음. 키 K로 저장 뒤 `kb redact`, 민감도 상향, 격리 각각에서 K 재생이 404이고 본문에 `id`·`version`·`payload_sha`·`seq`가 없음. 토큰 A와 B(다른 라벨)가 같은 키 K로 만들면 서로 다른 기록 둘이 생기고 B의 응답이 A의 것과 구별되지 않음(충돌·재생 없음), 원장 `idem_key`가 `h\0<actor>\0K` 꼴, MCP `kb_put`과 inbox의 NUL 든 키가 400, 기존 통로의 전역 재생 시험이 그대로 통과, 만들기 ID가 원장 `meta` 없이 (actor, 키)로 재계산되고 내보낸 세그먼트로 다시 만든 원장에서 같은 키 재시도가 재생 | `ops/bin/dev pytest tests/fpapi/test_write_core.py tests/fpapi/test_secret_editor.py tests/fpapi/test_target_checks.py tests/fpapi/test_wikilink_shape.py tests/fpapi/test_replay_visibility.py tests/fpapi/test_idem_namespace.py -q && ops/bin/dev pytest tests/write -q` |
+| FW4 | HTTP: 2.2 경로, 쓰기 경로의 Bearer 필수(소켓 포함), `editor` 범위, 토큰 만들기(TTY)·라벨 유일·만료·회전·폐기·마지막 사용, 요청 수 상한(3.5), 원장 기준 바이트 한도(5.8)와 색인, 쓰기 동시 2, `write_ref`, `GET`·`DELETE /v1/writes/{ref}`, 스풀 예약·`failed` purge(5.8), 본문과 예외 문자열을 남기지 않는 오류 처리. 읽기 경로 바이트 불변 | 소켓에서 토큰 없는 `POST` 401, `viewer` 403, 만료·폐기 토큰 401. 같은 라벨 두 번째 만들기 거부. 바이트 한도가 `change=save`로도 걸리고 서버 재시작 뒤에도 유지. 재시도가 한도에 걸리지 않음. 두 탭 스풀 경우에 `write_ref`가 `failed`, `version_conflict`. 로그와 응답에 토큰 값·요청 본문 없음. 게이트를 쥔 채 스풀 경로로 한도를 넘게 보내면 넘는 요청이 429이고 `spool/in`에 파일이 늘지 않음, 스풀 상한에서 503 `spool_full`, 재적재·실패 뒤 예약이 합계에서 빠짐, 예약과 스풀 사이 종료를 흉내 낸 뒤 `lost_before_spool`. 낡은 판 1 MiB `PUT`을 게이트를 쥔 채 되풀이하면 하루 한도 429가 나지 않고 보유 상한에서 그 토큰의 오래된 `failed`부터 지워지며 디스크가 64 MiB를 넘지 않음, 지울 `failed`가 없을 때만 503 `spool_full`, 복구 순회와 스풀 쓰기를 동시에 돌려도 살아 있는 예약이 `lost_before_spool`이 되지 않음. 머리가 없는 새 기록의 참조가 소유자에게 `pending`·`failed`로 보임. 토큰 B가 추측한 만들기 키로 스풀한 참조가 A의 `private`·`secret` 기록 유무와 상관없이 같은 응답이고, 같은 ID에 숨은 머리와 보이는 머리가 있을 때 재적재가 둘 다 `create_conflict`. 같은 키라도 actor가 다르면 ID가 다름 다른 `tok_id`(회전된 같은 라벨 포함), `viewer`, 무토큰의 `GET /v1/writes/{ref}`가 없는 참조와 같은 404 `private`: `editor`가 쓰고 읽음, 무토큰·`viewer`·MCP `kb_search`·`kb_get`·`kb-collect`에서 없음, `private` spec의 `export_llm=true`가 400, `private`→`internal` `PUT`이 403 `declassify_requires_review`, `secret` 요청이 403, 네 타입 모두 빠진 `sensitivity`가 `private`, `private` spec의 `export_query=true`도 400이고 생략은 `false` | `ops/bin/dev pytest tests/fpapi/test_private_scope.py tests/fpapi/test_http_write.py tests/fpapi/test_token_lifecycle.py tests/fpapi/test_byte_quota.py tests/fpapi/test_spool_quota.py tests/fpapi/test_write_ref.py -q && ops/bin/dev pytest tests/http -q && ops/bin/dev pytest tests/mcp -q --ignore=tests/mcp/test_claude_real.py` |
+| FW5 | 투영: `raw/fp` 큰 본문을 `content`에 넣고 문단 색인을 연다, 객체가 없으면 `projected=false`, tombstone된 기록의 나가는 사용자 링크를 `dead`로(5.5). 파생 주장·복사 근거·색인의 first_party 원본 최댓값 상속, 민감도 상향 시 기존 파생물 재투영, 완료 전 모든 읽기의 현재 원본 가시성 검사(3.6) | 100 KB `Page`가 `/body`로 200, 전문 검색에 걸림, `secret`이면 없음, `raw/fp` 객체를 지운 시험에서 격리 이벤트 0, tombstone 뒤 백링크에서 빠짐, 재구축이 증분과 같음. `internal` Note에서 이미 추출한 주장·복사 근거를 만든 뒤 Note를 `private`로 높이면 재투영 전/후와 재시작/재구축 뒤 모두 MCP·일반 HTTP·CLI의 검색/FTS·목록·직접 본문·이력/옛 시점·엣지/백링크/이웃·변경 피드·내보내기에 문장·인용·근거가 없고 직접 조회는 404/`not_found`. 원본 둘 중 하나만 `private`여도 최댓값 적용, `editor`만 허용 범위에서 읽음 | `ops/bin/dev pytest tests/fpapi/test_fp_big_body_read.py tests/fpapi/test_tombstone_edges.py tests/fpapi/test_derived_sensitivity.py -q && ops/bin/dev pytest tests/read -q` |
+| FW6 | 승격과 연구: `promote`(연구 포함), `research`, `research/{run}/stop`, `GET …/research`, 한 트랜잭션의 확인과 이벤트(6.1), 결정적 실행 ID, `cancelled`, `DEFINES`, `REQUESTS_ABOUT`, spec 편집 시 `entity.put` 동기화, `Review`와 `REVIEWS`, 세 단위 예산 예약(6.4), `budget_unavailable`, `export_llm`·`export_query`(6.6), 수집 프로필 티켓 숨김, spec 민감도의 연구 티켓·주제·실행 기록 상속과 갱신, 원본 민감도를 물려받는 승격(5.7). **ADR-0004 TP1, TP5, D5 뒤** | 연구 → 멈춤 → 연구(같은 spec 판)가 새 실행을 만든다. 같은 키 재시도가 실행을 하나만 만든다. 동시 요청 두 개가 열린 실행 하나로 끝난다. 예산 장치가 없으면 409이고 원장 변화 0. 주제·전체·엔진 중 하나가 모자라면 유료 호출 0. `export_llm=false` 주제의 글이 외부 어댑터 요청 본문과 `kb_ticket_list`에 없음. 상태 응답에 비율·점수 필드 없음. 요청 B가 열린 실행 A에 합류하고 A가 닫힌 뒤 B 재생이 A를 돌려주고 새 티켓 0. `sending` 뒤 응답 시간 초과를 흉내 내면 예약이 남아 같은 한도의 다음 유료 호출이 거부되고, `sending` 전 실패만 반환되고, 제공자 사용량 자료로 정산된다. `sending` 뒤 재전송이 새 `(호출 ID, 시도 번호)` 예약을 잡고, 남은 한도가 모자라면 재전송이 일어나지 않음. `export_llm=true` 주제는 수집 프로필에서 ID·라벨·`aliases`·`exclude`·`domain`·상태만 보이고 spec 본문·ID는 없음. `export_llm=false` 주제의 `Topic` 엔티티가 `origin=first_party`이고 slug·라벨·별칭이 수집 프로필 응답에 없음. `private` spec의 티켓·주제·실행 기록이 모두 `private`이고 처음부터 `internal` 노드 0, 일반 HTTP 목록/검색·MCP 티켓 목록에 slug·실행 정보 없음. 연구 도중/완료 뒤 spec을 `private`로 높여도 기존 메타데이터가 즉시 숨음. `private` 메모를 민감도 생략으로 승격하면 spec과 메타데이터 모두 `private`, `export_query` 생략은 `false`, `true`는 400, 낮은 민감도 명시는 403이고 쓰기 0 | `ops/bin/dev pytest tests/fpapi/test_research_runs.py tests/fpapi/test_research_replay.py tests/fpapi/test_research_budget.py tests/fpapi/test_research_export.py tests/fpapi/test_research_sensitivity.py tests/fpapi/test_promote.py -q && ops/bin/dev pytest tests/topic -q` |
 | FW7 | **Codex 교차 검토(쓰기 게이트).** FW3, FW4, FW6 구현 뒤, 운영 소켓에서 쓰기를 켜기 전. `codex` 에이전트, tier high. 입력: diff(`src/kb/serve/http.py`, `src/kb/write/author.py`, `src/kb/write/record.py`, `src/kb/write/engine.py`, `src/kb/write/secrets_scan.py`, `src/kb/commands/token.py`, 연구 경로)와 이 ADR 3, 5.8, 6.4, 7장. 볼 것: 무토큰 쓰기, 귀속을 허가로 쓰는 곳, 숨은 대상 누출, 외부 사실 우회, 비밀 탐지 우회와 잔여, 입력 되풀이, 멱등·판·실행 경쟁, 예산 우회, 바이트 한도 우회 | 지적마다 시험을 하나 더하거나 반박 근거를 남긴다. 의견이 갈리면 시험으로 가리고, 못 가리면 양쪽 근거를 사용자에게 보인다. 검토 기록 파일이 있다 | `test -s docs/reviews/0005-codex-fw7.md && ops/bin/dev pytest tests/fpapi tests/write tests/http tests/read -q && ops/bin/contract-check && ops/bin/dev pytest tests/mcp -q --ignore=tests/mcp/test_claude_real.py` |
-| FW8 | 켜기: 사용자 승인 뒤 `kb-read.socket` 재기동, `editor` 토큰 발급 안내(사용자가 TTY에서), sagae-tools에 계약 0.4.0 통지 | 임시 `KB_HOME` 끝단 시험(소켓 활성화 → 만들기 → 자동 저장 → 충돌 → 비밀 거절 → tombstone → 복원 → 승격 → 연구 상태)이 통과. 운영 쓰기는 사용자 입회 | `ops/bin/dev pytest tests/fpapi/test_socket_e2e.py -q` |
+| FW8 | 켜기: 사용자 승인 뒤 `kb-read.socket` 재기동, `editor` 토큰 발급 안내(사용자가 TTY에서), sagae-tools에 배포 계약 버전 통지(FW9 포함 0.5.0) | 임시 `KB_HOME` 끝단 시험(소켓 활성화 → 만들기 → 자동 저장 → 충돌 → 비밀 거절 → tombstone → 복원 → 승격 → 연구 상태)이 통과. 운영 쓰기는 사용자 입회 | `ops/bin/dev pytest tests/fpapi/test_socket_e2e.py -q` |
 
-| FW9 | HITL(6.8): `reviewer` 범위, `kb reviewer enroll`·`revoke`, WebAuthn 등록·도전·검증, `/v1/hitl` 경로 넷, H1~H6 해결이 기존 TTY 함수(`kb topic approve`, `kb review`, `kb secret release`)를 부름, `review_state`, 계약 0.5.0. **사용자의 HITL 목록 확인 뒤** | 토큰만 있고 확인이 없는 해결, 틀린 RP ID·origin·도전·`action_sha`, 카운터가 늘지 않은 확인, 만료된 도전이 모두 403 `review_unverified`이고 원장 변화 0. 도전 뒤 항목이 바뀌면 409 `review_stale`. 성공 해결의 `actor=user:sagae`, `generated_by=app:<라벨>:hitl`, payload에 `cred_id`·`assertion_sha`. H6 해결 뒤 주장의 문장·인용·`verification` 불변. H4 목록에 내용 없음. 방향만 준 연구의 주장이 HITL 목록에 오지 않음 | `ops/bin/dev pytest tests/fpapi/test_hitl_webauthn.py tests/fpapi/test_hitl_items.py tests/fpapi/test_hitl_scope.py -q && ops/bin/contract-check` |
+| FW9 | HITL·사용자 동작(6.8): `reviewer` 범위, 미해결 신호 기반 항목 생성/자동 해소, 특권 등록·폐기와 root 소유 신뢰 저장소 검증, WebAuthn 등록·도전·실행, 2.2의 HITL·등록·사용자 동작 경로, 기존 TTY 함수의 사람 증명, `review_state`, `release`·`declassify`·`publish`, publish 외부 전송 동의·E1/D5 엔진 선택과 예산·외부 API 필요성 우선 판단·토큰 절약용 로컬 sLLM·엔진 provenance·확인 결과 해시/PROMOTED_FROM(5.10), 계약 0.5.0 | 토큰만 있고 확인이 없는 실행, 틀린 RP ID·origin·도전·`action_sha`, 카운터가 늘지 않은 확인, 만료 도전은 403 `review_unverified`이고 원장 변화 0. 대상 판/상태·후보 결과 변경은 409 `review_stale`. 저장소/디렉터리가 KB 또는 agent UID에 쓰기 가능하거나 키 교체·누락이면 HITL·사용자 동작 모두 503, `/v1/meta` 이유 표시. 같은 UID가 등록 후보만 제출해도 활성 키가 되지 않고 root 설치·폐기만 반영됨. 성공은 `actor=user:sagae`와 증명/결과 해시를 기록. 미해결 신호가 있을 때만 항목 생성, 자동 해소 시 닫힘, 일반 연구 결과는 HITL 없음. `gate_unresolved` 해결 뒤 문장·인용·`verification` 불변. 해제 준비에 격리 내용 없음. `publish` 준비 결과는 `private`, publish 단추를 누른 메모 내용만 외부 정제 허용, 다른 private 기록·링크된 private 제목 전송 0, 짧고 단순한 메모·서식 정리·노트 분할·별칭 추출은 토큰 절약용 로컬 처리, 길거나 추론이 많은 정제는 E1/D5 선택·예산 적용 및 엔진 없음/예산 소진 시 로컬 대체, 엔진 provenance 기록, 증명 전 공개 기록 0, 실행 뒤 원본은 `private` 유지하고 `internal` Note/Page만 PROMOTED_FROM으로 연결됨. 주장 후보는 정상 게이트, 원본 비공개 근거는 일반 읽기에 없음, 재생 중복 결과 0. TTY만으로 해제/민감도 낮추기 우회 불가 | `ops/bin/dev pytest tests/fpapi/test_hitl_webauthn.py tests/fpapi/test_hitl_items.py tests/fpapi/test_hitl_scope.py tests/fpapi/test_reviewer_trust.py tests/fpapi/test_publish.py -q && ops/bin/contract-check` |
 
-**순서.** FW1 → FW2 → FW3 → FW4 → FW5 → (TP1, TP5, D5 뒤) FW6 → FW7 → FW8. FW9는 사용자의 HITL 목록 확인 뒤 FW4 다음에 하고, 운영에서 켜기 전에 FW7의 Codex 교차 검토에 넣는다. FW6이 늦어지면 FW7은 FW3~FW5로 먼저 돌고 FW6 뒤 다시 돈다.
+**순서.** FW1 → FW2 → FW3 → FW4 → FW5 → (TP1, TP5, D5 뒤) FW6 → FW7 → FW8. FW9는 두 추가 결정이 확정되어 FW5 다음에 하고, 운영에서 켜기 전에 FW7의 Codex 교차 검토에 넣는다. FW6이 늦어지면 FW7은 FW3~FW5로 먼저 돌고 FW6 뒤 다시 돈다.
 
 **바뀌는 것(모든 통로).** 낡은 `expected_version`은 내용이 같아도 409다(2.3). 식별자 칸(멱등 키, ID, 타입, 속성 이름, tombstone 사유)에 비밀이 있으면 격리가 아니라 거절이고 값을 되풀이하지 않는다(7.1, 7.2. ADR-0001 7.9 개정은 다른 워커가 한다). MCP `kb_put`과 inbox 호출자도 영향을 받는다.
 
-**바꾸지 않는 것.** MCP `kb_put`, `kb_request`의 입력과 응답 모양, inbox, `kb put` CLI, 이 세 통로의 내용 칸(제목, 본문, 속성 값) 비밀 격리와 위키 링크 규칙, 소켓 읽기 범위, 결정 14 (c), first_party 게이트, 원장 체인 규칙, 인용 게이트의 판정.
+**바꾸지 않는 것.** MCP `kb_put`, `kb_request`의 입력과 응답 모양, inbox, `kb put` CLI, 이 세 통로의 내용 칸(제목, 본문, 속성 값) 비밀 격리와 위키 링크 규칙, 무토큰 소켓 읽기 범위, 편집기 밖의 결정 14 (c), first_party 게이트, 원장 체인 규칙, 인용 게이트의 판정. 사람 결정의 TTY 입구에는 6.8의 증명을 적용한다.
 
 ## 10. 남길 KB 기록
 
@@ -1000,7 +1016,7 @@ HTTP/1.1 201 Created
 | 짧은 필드는 외부 LLM에 늘 간다 | 내보내기 허가 없이 내부 글이 나갔다(O-M4, X-7) |
 | 스냅샷 링크 `s-` | 스냅샷은 `n-`다(O-M3, X-9) |
 
-## 12. 사용자 결정과 남은 질문
+## 12. 사용자 결정(외부 정제 질문 종결)
 
 2026-11-04 사용자가 질문 도구에 직접 답했다(원문은 `docs/adr/0002-user-decisions.md` "loupe 쓰기 API 승인과 하위 결정").
 
@@ -1014,11 +1030,12 @@ HTTP/1.1 201 Created
 | 6 비밀 탐지 예외 | 전체 승인 | 7.1 |
 | 7 상한 | 전체 승인(기본값으로 시작) | 3.5, 5.8, 6.4, 6.7 |
 | 9 외부 검색어 | "내보냄 (Recommended)". `export_query` 기본 `true`(`private` spec은 늘 `false`) | 6.6, 3.6 |
+| HITL 목록 추가 답 | "의도가 명확하지 않다고 판단할때가 맞을 듯.". 미해결 신호가 있을 때만 시스템이 올린다. 사용자 공개·해제 동작과 분리한다 | 6.8 |
+| 기본 민감도 추가 답 | "기본은 private를 생각하고, 메모를 지식베이스에 반영하기 버튼이 눌렸을 때, 해당 메모의 정보들을 llm으로 정제후, kb에 반영하는 루트를 생각하고 있음.". 모든 새 기록 기본 `private`, 메모는 사람 확인 뒤 정제 결과만 반영한다 | 3.6, 5.10 |
 
-**남은 질문(사용자).**
+**외부 정제 엔진 결정(2026-11-04, 질문 도구의 사용자 답으로 승인·종결).**
 
-1. **HITL 목록 확인.** 6.8의 H1~H6(리드 제안)을 이대로 할지. 특히 H5(민감도 낮추기를 HITL로)와 H6(자동 판정이 못 푼 보류를 사람이 풀 수 있게, 선택 항목)을 넣을지. FW9는 이 답 뒤에 한다.
-2. **타입별 기본 민감도.** 리드 제안: `Note`는 `private`, `Page`·`TopicSpec`·`Review`는 `internal`. 요청이 기록마다 고를 수 있다(3.6).
+질문 원문: "loupe에서 '지식베이스에 반영' 버튼을 누르면 private 메모를 LLM으로 정제해 KB에 올립니다. 이때 정제를 어떤 엔진으로 할까요?" 사용자 답 원문: "버튼 누르면 외부 허용". `publish` 단추는 해당 메모 내용의 외부 정제 동의이며, KB 선택기는 먼저 외부 API 필요성을 판단하며, 짧고 단순한 메모·서식 정리·노트 분할·별칭 추출은 토큰 절약용 로컬 sLLM으로, 길거나 추론이 많은 정제는 ADR-0004 E1/D5의 예산과 수락 결과당 비용·품질에 따라 고른 외부 엔진으로 처리한다. 같은 날 추가 사용자 지시 원문: "로컬 llm은 굳이 외부 api를 돌릴 필요 없는 케이스에 대해서 토큰 절약으로 접근되길 원함." 로컬은 publish의 프라이버시 기본값이나 대체 전용이 아니다. 외부 엔진이 없거나 예산이 소진되면 로컬 sLLM으로 대체한다. 다른 private 기록·링크된 private 제목은 보내지 않으며 private 외부 전송은 이 동작에서만 허용한다. 후보는 정확한 결과 해시를 묶은 WebAuthn 확인 전까지 private이고, 사용 엔진은 provenance에 남긴다(3.6, 5.10). 남은 사용자 질문은 없다.
 
 ## 13. loupe v2 가정과 요청에 대한 답
 
@@ -1032,7 +1049,7 @@ HTTP/1.1 201 Created
 | K2 | `first_party_open` 전환 시점과 `held` 기간의 뜻 | 받음(설명) | `first_party_open`은 보이는 first_party 노드가 있다는 뜻이고 게이트가 아니다(`src/kb/read/catalog.py:189-193`). 게이트는 원장 `meta.fp_open`이고 2026-11-01에 열렸다(`src/kb/write/engine.py:107-108`, `A:1271`). `held`는 `spool/fp-held`에 내구 보관됐고 `kb fp open` 때 원래 작성 시각으로 적재된다는 뜻이다(`A:675`). 지금 `held`가 나오면 사고다. `/v1/meta.write.fp_gate`와 `write_ref`를 더한다 | 5.9, FW1 |
 | K3 | `Topic`, `Memo` 타입, `ABOUT`, `PROMOTED_FROM`, 주제-티켓 연결 | 고쳐서 받음 | 메모는 기존 `Note`(`D4:199`). 주제 기록은 `TopicSpec`이고 닻은 엔티티 `Topic`이다. `ABOUT`(기존)과 `PROMOTED_FROM`(새)을 받는다. 주제-티켓은 기존 `REQUESTS_ABOUT`로 잇는다 | 4.1, 4.2, 5.7, 6.1 |
 | K4 | HTTP 티켓 생성, `/v1/ops/*` 밖 상태·단계·비용·상한·하위 실패 읽기, 취소 | 고쳐서 받음 | 범용 티켓 생성은 열지 않는다. 티켓은 세션 요청과 URL 제보 통로이고(`A:667`) loupe는 외부 사실을 내지 않는다. 연구 요청, 실행 멈춤, 상태 읽기를 둔다 | 6.1~6.3 |
-| K5 | 검토 결정을 first_party 기록으로 받아 `verification`에 반영 | 고쳐서 받음 | 결정은 `Review` 기록으로 받는다. `verification`은 인용 게이트가 정하므로(`A:508`, `A:943-966`) 반영하지 않는다. 7판: 데이터를 바꾸는 사람 결정은 6.8의 HITL 항목만이고 주장을 고치지 않는다 | 6.5, 12장 질문 5 |
+| K5 | 검토 결정을 first_party 기록으로 받아 `verification`에 반영 | 고쳐서 받음 | 결정은 `Review` 기록으로 받는다. `verification`은 인용 게이트가 정하므로(`A:508`, `A:943-966`) 반영하지 않는다. 8판: 미해결 신호에 대한 HITL과 사용자가 시작하는 공개·해제 동작은 6.8의 사람 증명을 거친다. 검토 결정은 주장 문장·인용·`verification`을 고치지 않는다 | 6.5, 12장 질문 5 |
 | K6 | 비밀 검사의 거절 선택지와 값 없는 위치 | 받음 | HTTP 편집기 경로는 기본 거절이고 순번 필드와 코드포인트·UTF-16 위치를 준다. 근거: 덧붙이기 전용 원장에서 거절만 비밀이 원장과 사본에 닿지 않는다(`A:357`, `src/kb/write/record.py:111-119`). 오탐은 명시적 격리 저장 | 7.1~7.4 |
 | K7 | `[[...]]` 범위, 본문 최대 크기 | 받음 | `[[id\|label]]`, `[[c-…]]`, `[[n-…]]`은 `LINKS_TO`다. 종류별 정확한 모양만 받는다. 제목 링크는 loupe가 ID로 풀어 저장한다. 본문 1 MiB | 4.3, 4.5, 4.6 |
 | K8 | 여러 주제의 이웃을 한 번에 | 받지 않음(지금) | 열린 주제 20개 이하이고(6.7) 동시 처리 16, 웜 p95 200 ms 안에서 주제마다 `/neighbors`를 부르면 된다(`A:1244-1245`). 쓰기 ADR의 범위 밖이다. 50개를 넘으면 읽기 계약 판에서 다시 본다 | 8장 |
@@ -1056,7 +1073,7 @@ HTTP/1.1 201 Created
 | 지금 판 | 13.1의 답 | 달라진 점 |
 |---|---|---|
 | N1 경로와 전송 | K1 | 같음 |
-| N2 작성자, 사람 확인 | A2, 3.2 | 사람 확인은 KB가 검증하지 못한다. 연구의 허가는 예산이고(6.4), 응답의 `state`가 `queued`, `budget_unavailable` 등을 준다 |
+| N2 작성자, 사람 확인 | A2, 3.2 | 일반 저장의 사람 귀속은 loupe의 주장이다. 6.8의 HITL·사용자 동작은 KB가 사람 증명을 검증한다. 연구의 허가는 예산이고(6.4), 응답의 `state`가 `queued`, `budget_unavailable` 등을 준다 |
 | N3 종류, 기록 ID와 노드 ID | K3 | 연구 응답이 `spec`(기록 ID)과 `topic`(노드 ID)을 함께 준다 |
 | N4 편집, 묘비, 복원 | A4 | 묘비와 복원 모두 `expected_version` 필수 |
 | N5 충돌 응답 | A3 | 보이는 대상일 때만 본문 |
@@ -1162,6 +1179,20 @@ HTTP/1.1 201 Created
 | ID | 사용자 답 | 처리 | 위치 |
 |---|---|---|---|
 | U7-1 | "전체 승인 (Recommended)" | 상태를 승인으로 바꾸고, 열린 질문 가운데 기본값이 있는 것은 그 값으로 확정했다 | 상태 줄, 12장 |
-| U7-2 | "private 전면 개방" | `editor`·`reviewer`만 `private`를 읽고 쓴다. MCP, 에이전트, 다른 HTTP 범위는 계속 못 본다. `private`는 외부 LLM과 외부 검색에 가지 않는다. 낮추기는 HITL. `secret`·격리는 그 위. 타입별 기본은 리드 제안(확인 대기) | 0장 결정 9, 3.1, 3.2 약속 5, 3.4, 3.6, 4.2, 7.5, 8장, FW4 |
-| U7-3 | "HITL 적용해야 하는 항목들이 있고, 내가 방향만 제시했을 때, 알아내는 정보들은 굳이 HITL할 필요가 없어보이는데?" | 방향만 준 연구 결과는 자동. HITL은 H1~H6 목록(리드 제안, 확인 대기)이고 `reviewer` 범위와 동작마다의 WebAuthn 사용자 확인으로만 들어온다. 해결은 주장을 고치지 않고 보류·상태만 `user:sagae` 귀속으로 푼다 | 0장 결정 13, 2.2, 3.1, 3.2, 6.5, 6.8, 7.5, FW9 |
+| U7-2 | "private 전면 개방" | `editor`·`reviewer`만 `private`를 읽고 쓴다. MCP, 에이전트, 다른 HTTP 범위는 계속 못 본다. `private`는 외부 LLM과 외부 검색에 가지 않는다. 당시 낮추기는 HITL로 제안했다. `secret`·격리는 그 위. 당시 타입별 기본 제안은 8판의 모든 새 기록 기본 `private`와 사용자 동작으로 대체했다 | 0장 결정 9, 3.1, 3.2 약속 5, 3.4, 3.6, 4.2, 7.5, 8장, FW4 |
+| U7-3 | "HITL 적용해야 하는 항목들이 있고, 내가 방향만 제시했을 때, 알아내는 정보들은 굳이 HITL할 필요가 없어보이는데?" | 방향만 준 연구 결과는 자동. 당시 제안한 H1~H6 고정 목록은 8판의 미해결 신호 규칙으로 대체했다. 해결은 `reviewer` 범위와 동작마다의 WebAuthn 사용자 확인으로만 들어온다. 해결은 주장을 고치지 않고 보류·상태만 `user:sagae` 귀속으로 푼다 | 0장 결정 13, 2.2, 3.1, 3.2, 6.5, 6.8, 7.5, FW9 |
 | U7-4 | "내보냄 (Recommended)" | `export_query` 기본 `true` 유지, `private` spec만 `false` 고정 | 6.6, 3.6, 12장 |
+
+### 14.6 8회차: 추가 사용자 결정과 7판 Codex HIGH 반영(2026-11-04)
+
+사용자 답 두 건은 질문 도구의 직접 답으로 승인됐다. 나머지 네 건은 7판(`3709306`) 검토 지적이며, 아래 위치는 8판 본문의 줄이다. 구현과 시험은 FW에서 수행하고 이 판에서는 문서만 수정했다.
+
+| ID | 결정·지적 | 처리 | 본문 위치 |
+|---|---|---|---|
+| U8-A1 | HITL 답: "의도가 명확하지 않다고 판단할때가 맞을 듯." | 고정 항목을 미해결 신호 규칙으로 대체. 주제 모호성·T.3 밖 소스·결론 없는 생존 근거·함의 판정 미해결 보류만 올리고 나머지 연구 결과는 자동. 사용자 공개·해제 동작과 분리하고 둘 다 B1 증명 | 6.8 L781~808 (미해결 신호·사용자 동작·사람 증명), FW9 L989 |
+| U8-A2 | 모든 새 기록 기본 `private`, 메모를 LLM 정제 후 지식베이스에 반영 | 기본값 확정, 정제 결과의 `internal` Note/Page와 정상 게이트의 주장 후보, PROMOTED_FROM, 원본 private 유지, 공개 결과 해시에 묶인 사람 증명. 외부 정제 엔진의 후속 사용자 승인은 아래 U8-A3와 12장에 반영 | 3.6 L275, 5.10 L614~622, 6.8 L797, 12장 L1038, FW9 L989 |
+| R8-B1 (HIGH) | 같은 UID가 0600 reviewer 파일을 자기 키로 교체 | root 소유 파일·디렉터리를 신뢰 닻으로 고정, 특권 등록/폐기, 쓰기 가능/교체 시 HITL·사용자 동작 차단과 meta 보고, writer VM 이전 및 잔여 위험 명시 | 6.8 L797~806, FW9 L989 |
+| R8-B2 (HIGH) | Note를 private로 높여도 옛 파생 주장·복사 근거가 internal로 남음 | first_party 원본 최대 민감도, 기존 파생물 재투영, 완료 전부터 모든 읽기 경로에서 숨김, FW5 회귀 시험 | 3.6 L272, 5.10 L621, FW5 L984 |
+| R8-B3 (HIGH) | private 주제 slug가 internal 티켓을 통해 일반 목록·검색에 노출 | 티켓·주제·실행 메타데이터는 spec 민감도 상속, 처음부터 internal 노드 금지, 기존 실행도 동기화, private export_query false 고정, FW6 회귀 시험 | 3.6 L271, 6.1 L662~663, 6.3 L687, FW6 L985 |
+| R8-B4 (HIGH) | 민감도 생략 승격으로 internal spec·외부 검색 생성 | 승격은 원본 민감도 상속, 낮은 값 거절, declassify/publish와 B1 증명만 하향 허용, FW6 회귀 시험 | 3.6 L274, 5.7 L516, 5.10 L614~622, FW6 L985 |
+| U8-A3 (추가 승인) | 질문 도구 답(2026-11-04): "버튼 누르면 외부 허용". 추가 사용자 지시 원문: "로컬 llm은 굳이 외부 api를 돌릴 필요 없는 케이스에 대해서 토큰 절약으로 접근되길 원함." | publish 단추는 해당 메모 내용만 외부 정제하는 동의. KB가 외부 API 필요성을 먼저 판단: 짧고 단순한 메모·서식 정리·노트 분할·별칭 추출은 토큰 절약용 로컬 sLLM, 길거나 추론이 많은 정제는 ADR-0004 E1/D5 예산과 수락 결과당 비용·품질로 외부 엔진 선택. 로컬은 publish의 프라이버시 기본값·대체 전용이 아니며, 외부 엔진 없음·예산 소진 시 대체도 유지. 다른 private 기록·링크된 private 제목 전송 금지, WebAuthn 결과 확인 전 후보 private 유지, 엔진 provenance 기록. private 외부 전송은 publish만 예외, 12장 질문 종결 | 0장 결정 9·14, 3.6, 5.10, 12장, FW9 |
