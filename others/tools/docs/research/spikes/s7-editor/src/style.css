@@ -1,0 +1,10 @@
+body { font-family: sans-serif; margin: 24px; color: #18252e; }
+main { max-width: 880px; margin: auto; }
+h1 { font-size: 22px; }
+.editor { border: 1px solid #9aa5af; padding: 18px; margin-top: 12px; }
+.ProseMirror { min-height: 240px; outline: none; white-space: pre-wrap; overflow-wrap: anywhere; }
+table { border-collapse: collapse; }
+td, th { border: 1px solid #9aa5af; min-width: 90px; padding: 8px; }
+pre { white-space: pre-wrap; background: #f1f4f6; padding: 12px; }
+li[data-type="taskItem"] { display: flex; gap: 8px; }
+li[data-type="taskItem"] > div { flex: 1; }

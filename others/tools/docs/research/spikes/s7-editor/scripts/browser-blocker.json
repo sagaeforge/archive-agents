@@ -1,0 +1,9 @@
+{
+  "status": "blocked",
+  "environment": "Codex managed filesystem/network sandbox, approval policy never",
+  "firstAttempt": "Default Playwright Chromium headless launch: sandbox_host_linux.cc:41 Check failed: . shutdown: Operation not permitted (1); SIGTRAP",
+  "secondAttempt": "Supported --no-zygote --single-process configuration: same sandbox_host_linux.cc:41 failure; SIGTRAP",
+  "attemptCount": 2,
+  "cause": "The runtime sandbox denies a socket operation Chromium performs during startup. --no-sandbox does not remove the outer runtime restriction. No browser page or CDP session was created.",
+  "resolution": "Run scripts/measure.mjs in an owner-controlled environment that permits the already installed Chromium to launch; no dependency installation or internet access is needed. Do not treat missing IME measurements as passes."
+}
