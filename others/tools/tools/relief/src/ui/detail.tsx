@@ -6,6 +6,7 @@ import { CHECK_KEY, type Metric } from '../../server/model/threshold.ts';
 import { FACT_LABEL, factText, HOLE_ACTION, KIND_LABEL, trafficText } from '../model.ts';
 import { NO_TRAFFIC } from '../scene/paint.ts';
 import { BasisMark } from './basis.tsx';
+import { pveLink } from '../../server/model/pvelink.ts';
 import { SshCopy } from './ssh.tsx';
 import { TrendCard } from './trend.tsx';
 
@@ -38,6 +39,14 @@ function LoadCard({ e, snap, nowMs, health }: { e: Entity; snap: Snapshot; nowMs
       })}
     </section>
   );
+}
+
+/** A plain link: the browser goes to the node itself, with the login it has there. relief carries nothing and passes nothing. */
+function PveLink({ e, snap }: { e: Entity; snap: Snapshot }) {
+  const link = pveLink(e, snap.nodes);
+  if (!link) return null;
+  if ('why' in link) return <section className="card"><p className="sub" data-testid="pve-none">PVE 열기 없음 · {link.why}</p></section>;
+  return <a className="pve-link" data-testid="pve-open" href={link.url} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">PVE 열기</a>;
 }
 
 const SERVICE_LABEL = { up: '응답', down: '응답 없음' } as const;
@@ -87,6 +96,7 @@ export function ObjectDetail({ snap, nowMs, e, fx, health }: { snap: Snapshot; n
         </section>
         <p className="traffic" data-testid="traffic"><span>트래픽</span><b>{traffic ?? (measurable ? '측정 대기' : NO_TRAFFIC)}</b></p>
         <SshCopy e={e} />
+        <PveLink e={e} snap={snap} />
         <ServiceCard e={e} nowMs={nowMs} />
         <LoadCard e={e} snap={snap} nowMs={nowMs} health={health} />
         <section className="card">

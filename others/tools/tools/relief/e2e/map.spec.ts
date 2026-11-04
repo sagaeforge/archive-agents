@@ -125,6 +125,24 @@ test.describe('modal', () => {
   });
 });
 
+test.describe('PVE link', () => {
+  test('a node and a guest open their own page on the node, in a new window that cannot reach back', async ({ page }) => {
+    await open(page, '#/?fx=today&sel=pve:qemu:100&open=1');
+    const a = page.getByTestId('pve-open');
+    await expect(a).toHaveAttribute('href', 'https://192.0.2.11:8006/#v1:0:=qemu%2F100');
+    await expect(a).toHaveAttribute('target', '_blank');
+    await expect(a).toHaveAttribute('rel', 'noopener noreferrer');
+    await page.keyboard.press('Escape');
+    await page.goto(`${BUILT}/#/?fx=today&sel=pve:node:node-2&open=1`); await page.reload();
+    await expect(page.getByTestId('pve-open')).toHaveAttribute('href', 'https://192.0.2.12:8006/#v1:0:=node%2Fnode-2');
+  });
+  test('a bridge has none', async ({ page }) => {
+    await open(page, '#/?fx=today&sel=pve:br:node-1:vmbr0&open=1');
+    await expect(page.getByTestId('object')).toBeVisible();
+    await expect(page.getByTestId('pve-open')).toHaveCount(0);
+  });
+});
+
 test.describe('palette', () => {
   test('Ctrl+Space opens it, a Korean query finds, arrows move, Enter flies and highlights', async ({ page }) => {
     await open(page, '#/?fx=large');

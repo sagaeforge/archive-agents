@@ -4,7 +4,7 @@ import { connect, isIP } from 'node:net';
 import type { EdgeFile } from './edge.ts';
 import { currentOf } from '../model/edgemap.ts';
 import type { Alert, Entity, Fact, ServiceCheck } from '../model/fact.ts';
-import { inNetwork, networkOf, v4 } from '../model/rules.ts';
+import { inNetwork, LAN_NETS, networkOf, v4 } from '../model/rules.ts';
 
 export const TIMEOUT_MS = 2000;
 const CONCURRENCY = 4;
@@ -28,9 +28,8 @@ export const tcpProbe: Probe = (address, port, timeoutMs, signal) => new Promise
   socket.once('error', (e: NodeJS.ErrnoException) => done({ up: false, latencyMs: null, why: WHY[e.code ?? ''] ?? '연결 실패' }));
 });
 
-const NETS = ['10.0.0.0/8', '172.16.0.0/12', '192.168.x.x/16', '192.0.2.0/24', '198.51.100.0/24', '203.0.113.0/24'];
 /** RFC 1918 and RFC 5737 only. Loopback, link-local, CGNAT and every public address are out. */
-export const isLanAddress = (a: string) => isIP(a) === 4 && v4(a) !== null && NETS.some((n) => inNetwork(a, n));
+export const isLanAddress = (a: string) => isIP(a) === 4 && v4(a) !== null && LAN_NETS.some((n) => inNetwork(a, n));
 
 export type Target = { id: string; title: string; port: number; entity: string | null; address: string | null; refused?: string };
 

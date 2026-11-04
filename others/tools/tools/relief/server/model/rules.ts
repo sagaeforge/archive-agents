@@ -23,6 +23,9 @@ export function networkOf(cidr: string): string | null {
 /** `from` and `to` inclusive. Anything that is no IPv4 address is outside. */
 export const inRange = (a: string, from: string, to: string) => { const n = v4(a); const lo = v4(from); const hi = v4(to); return n !== null && lo !== null && hi !== null && n >= lo && n <= hi; };
 
+/** RFC 1918 and RFC 5737: where a declared LAN host can be. Loopback, link-local, CGNAT and every public address are out. */
+export const LAN_NETS = ['10.0.0.0/8', '172.16.0.0/12', '192.168.x.x/16', '192.0.2.0/24', '198.51.100.0/24', '203.0.113.0/24'];
+
 export const inNetwork = (addr: string, net: string): boolean => { const a = v4(addr); return a !== null && networkOf(`${addr}/${net.split('/')[1]}`) === net; };
 
 /** Rule `same-subnet`: bridges with an address in one network form a segment. No input, no output. */

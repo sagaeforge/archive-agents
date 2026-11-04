@@ -163,6 +163,7 @@ aside .body>div{display:flex;flex-direction:column;gap:12px;min-width:0}
 .tree li:hover{background:var(--surface-2)}.tree li.on{background:color-mix(in oklab,var(--accent) 24%,var(--surface))}.tree .m{color:var(--text-3);font-size:11.5px}.tree li.on .m,.palette li.on .m{color:var(--text)}
 .tree li:focus-visible{box-shadow:inset 0 0 0 2px var(--select)}
 @media (prefers-reduced-motion:no-preference){g[data-id]{transition:opacity .3s}}
+.pve-link{display:block;padding:8px 12px;background:var(--surface);border:1px solid var(--line);border-radius:8px;color:var(--accent);text-decoration:none;font-weight:600}.pve-link:hover{border-color:var(--line-strong)}
 .ssh.card{padding:8px}.ssh button{display:block;width:100%;text-align:left;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);padding:6px 10px;cursor:pointer}
 .ssh button:hover{border-color:var(--line-strong)}
 .ssh button[data-state=done]{border-color:var(--st-good)}.ssh code{display:block;margin-top:3px;font:12.5px ui-monospace,monospace;overflow-wrap:anywhere;user-select:all;color:var(--text-2)}
