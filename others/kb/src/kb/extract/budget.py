@@ -403,18 +403,22 @@ def _complete(res, actual, evidence):
             return False
         if {k:v for k,v in stored.items() if k != "stage"} != dict(res):
             raise Refused("reservation_mismatch")
-        d = _day(c, day_key(res["day"]))
-        d["reserved"] = round(max(0., d["reserved"] - est), 6)
-        d["spent"] = round(d["spent"] + act, 6)
+        reserved_day = _day(c, day_key(res["day"]))
+        reserved_day["reserved"] = round(max(0., reserved_day["reserved"] - est), 6)
         engine = res["engine"]
+        by_engine = reserved_day.setdefault("reserved_by_engine", {})
+        by_engine[engine] = round(max(0., by_engine.get(engine, 0.) - est), 6)
+        _put(c, day_key(res["day"]), reserved_day)
+        # Release the original day's hold, but charge the settlement day's valve.
+        settled_day = settings.kst_day()
+        d = _day(c, day_key(settled_day))
+        d["spent"] = round(d["spent"] + act, 6)
         spent_by_engine = d.setdefault("spent_by_engine", {})
         spent_by_engine[engine] = round(spent_by_engine.get(engine, 0.) + act, 6)
-        by_engine = d.setdefault("reserved_by_engine", {})
-        by_engine[engine] = round(max(0., by_engine.get(engine, 0.) - est), 6)
         if engine == "openrouter" and res["purpose"] == "extract":
             d["openrouter_windows"] += 1
             d["openrouter_extract_usd"] = round(d.get("openrouter_extract_usd", 0.) + act, 6)
-        _put(c, day_key(res["day"]), d)
+        _put(c, day_key(settled_day), d)
         if engine == "openrouter":
             bal = _get(c, BAL)
             if bal is not None:

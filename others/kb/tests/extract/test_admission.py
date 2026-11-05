@@ -58,6 +58,49 @@ def test_all_date_pending_counts_for_daily_valve_and_credit_after_reset(funds, m
     assert budget.balance() == 100. and state.get('credit:anthropic_api')['balance'] == 191.
 
 
+@pytest.mark.parametrize('engine,model', [('openrouter', SOL), ('anthropic_api', 'haiku')])
+@pytest.mark.parametrize('completion', ['settle', 'reconcile'])
+def test_cross_midnight_settlement_charges_today_without_reopening_cap(
+        funds, monkeypatch, engine, model, completion):
+    with settings.override(**{'openrouter.daily_valve_usd': 10.}):
+        at(monkeypatch, '2026-11-04T23:59:00+09:00')
+        token = budget.admit(engine, model, 'extract', 9.)
+        at(monkeypatch, '2026-11-05T00:01:00+09:00')
+        today_token = budget.admit(engine, model, 'extract', .5)
+        with pytest.raises(budget.Refused, match='valve'):
+            budget.admit(engine, model, 'extract', 1.)
+
+        def complete(actual):
+            if completion == 'settle':
+                return budget.settle(token, actual)
+            return budget.reconcile(token['id'], actual=actual, evidence='verified receipt')
+
+        complete(8.)
+        today = budget.day()
+        yesterday = budget.day('2026-11-04')
+        assert today['spent'] == 8.
+        assert today['spent_by_engine'][engine] == 8.
+        assert today['reserved'] == today_token['usd']
+        assert today['reserved_by_engine'][engine] == today_token['usd']
+        assert yesterday['reserved'] == yesterday['reserved_by_engine'][engine] == 0.
+        assert yesterday['spent'] == 0.
+        if engine == 'openrouter':
+            assert today['openrouter_windows'] == 1
+            assert today['openrouter_extract_usd'] == 8.
+            assert yesterday['openrouter_windows'] == 0
+        assert state.get('llm:reservation:' + token['id']) is None
+        receipt = state.get('llm:reconciled:' + token['id'])
+        balance = budget.balance()
+        credit = state.get('credit:' + engine)
+        assert complete(1.) is False
+        assert budget.day() == today and budget.day('2026-11-04') == yesterday
+        assert budget.balance() == balance and state.get('credit:' + engine) == credit
+        assert state.get('llm:reconciled:' + token['id']) == receipt
+        with pytest.raises(budget.Refused, match='valve'):
+            budget.admit(engine, model, 'extract', 2.)
+        assert budget.admit(engine, model, 'extract', 1.5)
+
+
 def test_legacy_unindexed_hold_never_expires(funds, monkeypatch):
     budget.set_balance(10.)
     state.put('llm:day:2026-10-01', {'spent': 0., 'reserved': 9.})
