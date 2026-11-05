@@ -151,6 +151,15 @@ def test_field_limits(name, extra):
     reject(name, dict(VALID[name], **extra))
 
 
+@pytest.mark.parametrize("name,field,value", [
+    ("TopicSpec", "slug", "abc\n"),
+    ("TopicSpec", "parent", "e:topic:abc\n"),
+    ("Review", "target", TARGET + "\n"),
+])
+def test_identifier_trailing_newline_rejected(name, field, value):
+    reject(name, dict(VALID[name], **{field: value}))
+
+
 @pytest.mark.parametrize("name", VALID)
 def test_props_limits(name):
     reject(name, dict(VALID[name], **{"tags" if name in {"Note", "Page"} else "note" if name == "Review" else "exclude":

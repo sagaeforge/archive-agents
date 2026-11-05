@@ -7,12 +7,12 @@
   "x-kb-version": 1,
   "type": "object",
   "properties": {
-    "target": {"type": "string", "maxLength": 256, "pattern": "^(?:c-[a-z0-9]+|r-[A-Za-z0-9._-]+|e:[a-z][a-z0-9_]*:[A-Za-z0-9._-]+)$"},
+    "target": {"type": "string", "maxLength": 256, "pattern": "^(?:c-[a-z0-9]+|r-[A-Za-z0-9._-]+|e:[a-z][a-z0-9_]*:[A-Za-z0-9._-]+)(?![\\s\\S])"},
     "decision": {"enum": ["accept", "reject"]},
     "verdict": {"const": "reject"},
-    "topic": {"type": "string", "pattern": "^e:topic:[a-z0-9]+(?:[._-][a-z0-9]+)*$"},
+    "topic": {"type": "string", "pattern": "^e:topic:[a-z0-9]+(?:[._-][a-z0-9]+)*(?![\\s\\S])"},
     "note": {"type": "string", "maxLength": 500},
-    "source_url": {"type": "string", "format": "uri", "pattern": "^https?://[^\\s]+$"}
+    "source_url": {"type": "string", "format": "uri", "pattern": "^https?://[^\\s]+(?![\\s\\S])"}
   },
   "required": ["target"],
   "anyOf": [{"required": ["decision"]}, {"required": ["verdict"]}],
@@ -24,7 +24,7 @@
         "properties": {
           "decision": {"const": "reject"},
           "note": {"minLength": 1, "pattern": "\\S"},
-          "target": {"pattern": "^c-[a-z0-9]+$"}
+          "target": {"pattern": "^c-[a-z0-9]+(?![\\s\\S])"}
         }
       }
     },

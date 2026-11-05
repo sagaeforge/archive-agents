@@ -7,10 +7,10 @@
   "x-kb-version": 1,
   "type": "object",
   "properties": {
-    "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"},
+    "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*(?![\\s\\S])"},
     "aliases": {"type": "array", "maxItems": 20, "items": {"type": "string", "maxLength": 100}},
     "domain": {"type": "array", "uniqueItems": true, "items": {"enum": ["A", "B", "C", "D", "E", "F", "G"]}},
-    "parent": {"type": ["string", "null"], "pattern": "^e:topic:[a-z0-9]+(?:[._-][a-z0-9]+)*$"},
+    "parent": {"type": ["string", "null"], "pattern": "^e:topic:[a-z0-9]+(?:[._-][a-z0-9]+)*(?![\\s\\S])"},
     "exclude": {"type": "array", "maxItems": 20, "items": {"type": "string"}},
     "export_llm": {"type": "boolean", "default": false},
     "export_query": {"type": "boolean"}
