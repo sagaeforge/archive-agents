@@ -1,5 +1,6 @@
 """FW1 계약 전용 사례. HTTP 구현·dry-run 무저장 검증이 아니다."""
 import copy
+import hashlib
 import json
 from pathlib import Path
 
@@ -78,7 +79,29 @@ def test_errors_and_provenance(contract, packet):
         assert by[name]["actor"] == "app:loupe"
         assert by[name]["claimed_author"] == "user:sagae"
         assert by[name]["generated_by"].startswith("app:loupe:")
-        assert len(by[name]["payload_sha"]) == 64
+        case = next(c for c in packet["cases"] if c["id"] == name)
+        if name == "tombstone":
+            content = {"id": case["response"]["id"], "reason": case["request"]["reason"]}
+        else:
+            # expected_version은 판 비교 조건이며 기록 내용이 아니다.
+            content = {k: v for k, v in case["request"]["record"].items() if k != "expected_version"}
+        canonical = json.dumps(content, ensure_ascii=False, sort_keys=True,
+                               separators=(",", ":"), allow_nan=False).encode("utf-8")
+        assert by[name]["payload_sha"] == hashlib.sha256(canonical).hexdigest(), name
+    assert by["promote"]["payload_sha"] != by["create"]["payload_sha"]
+    assert by["quarantine-save"]["payload_sha"] != by["create"]["payload_sha"]
+
+
+def test_all_first_party_responses_require_no_store(contract, packet):
+    """일반 PUT·dry-run·오류를 포함한 모든 편집기 응답은 캐시하지 않는다."""
+    for path, item in contract["x-first-party-paths"].items():
+        for method, operation in item.items():
+            for status, response in operation["responses"].items():
+                header = response["headers"]["Cache-Control"]
+                assert header["required"] is True, (method, path, status)
+                assert header["schema"]["const"] == "no-store", (method, path, status)
+    for case in packet["cases"]:
+        assert case["headers"]["cache-control"] == "no-store", case["id"]
 
 
 def test_existing_label_prefix_fixture():

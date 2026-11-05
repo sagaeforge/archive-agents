@@ -409,6 +409,15 @@ def first_party_packet() -> dict:
                     code=code, instance=instance, **extra)
 
     def add(cid, method, path, status, response, request=None):
+        if request is not None and "payload_sha" in response:
+            if "record" in request:
+                content = {k: v for k, v in request["record"].items() if k != "expected_version"}
+            else:
+                # tombstone의 정규 본문도 이전 Page의 해시를 재사용하지 않는다.
+                content = {"id": response["id"], "reason": request["reason"]}
+            response["payload_sha"] = hashlib.sha256(json.dumps(
+                content, ensure_ascii=False, sort_keys=True, separators=(",", ":"),
+                allow_nan=False).encode("utf-8")).hexdigest()
         case = {"id": cid, "method": method, "path_template": path, "status": status,
                 "headers": {"cache-control": "no-store"}, "response": response}
         if request is not None:

@@ -6058,60 +6058,110 @@ x-first-party-paths:
               schema:
                 $ref: '#/components/schemas/RecordWriteResult'
         '400':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '401':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '403':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '404':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '409':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '410':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '413':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '415':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '422':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '428':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
@@ -6124,6 +6174,10 @@ x-first-party-paths:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
           headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
             Retry-After:
               required: true
               schema:
@@ -6135,11 +6189,20 @@ x-first-party-paths:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
           headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
             Retry-After:
               required: true
               schema:
                 type: string
         '200':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: 'dry_run=1: 메모리 검사만 한다. 원장/CAS/스풀/보류/추출 큐/영속 캐시/입력 로그에 쓰지 않는다. 일반 PUT은 RecordWriteResult.'
           content:
             application/json:
@@ -6173,6 +6236,11 @@ x-first-party-paths:
           - '1'
       responses:
         '200':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: 'dry_run=1: 메모리 검사만 한다. 원장/CAS/스풀/보류/추출 큐/영속 캐시/입력 로그에 쓰지 않는다. 일반 PUT은 RecordWriteResult.'
           content:
             application/json:
@@ -6192,60 +6260,110 @@ x-first-party-paths:
               schema:
                 $ref: '#/components/schemas/RecordWriteResult'
         '400':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '401':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '403':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '404':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '409':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '410':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '413':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '415':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '422':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '428':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
@@ -6258,6 +6376,10 @@ x-first-party-paths:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
           headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
             Retry-After:
               required: true
               schema:
@@ -6269,6 +6391,10 @@ x-first-party-paths:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
           headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
             Retry-After:
               required: true
               schema:
@@ -6316,60 +6442,110 @@ x-first-party-paths:
               schema:
                 $ref: '#/components/schemas/RecordWriteResult'
         '400':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '401':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '403':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '404':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '409':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '410':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '413':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '415':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '422':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '428':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
@@ -6382,6 +6558,10 @@ x-first-party-paths:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
           headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
             Retry-After:
               required: true
               schema:
@@ -6393,6 +6573,10 @@ x-first-party-paths:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
           headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
             Retry-After:
               required: true
               schema:
@@ -6429,60 +6613,110 @@ x-first-party-paths:
               schema:
                 $ref: '#/components/schemas/RecordWriteResult'
         '400':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '401':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '403':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '404':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '409':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '410':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '413':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '415':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '422':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '428':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
@@ -6495,6 +6729,10 @@ x-first-party-paths:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
           headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
             Retry-After:
               required: true
               schema:
@@ -6506,6 +6744,10 @@ x-first-party-paths:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
           headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
             Retry-After:
               required: true
               schema:
@@ -6553,60 +6795,110 @@ x-first-party-paths:
               schema:
                 $ref: '#/components/schemas/ResearchRequestResult'
         '400':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '401':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '403':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '404':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '409':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '410':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '413':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '415':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '422':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '428':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
@@ -6619,6 +6911,10 @@ x-first-party-paths:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
           headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
             Retry-After:
               required: true
               schema:
@@ -6630,6 +6926,10 @@ x-first-party-paths:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
           headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
             Retry-After:
               required: true
               schema:
@@ -6665,60 +6965,110 @@ x-first-party-paths:
               schema:
                 $ref: '#/components/schemas/ResearchStatusEnvelope'
         '400':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '401':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '403':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '404':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '409':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '410':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '413':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '415':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '422':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '428':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
@@ -6731,6 +7081,10 @@ x-first-party-paths:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
           headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
             Retry-After:
               required: true
               schema:
@@ -6742,6 +7096,10 @@ x-first-party-paths:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
           headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
             Retry-After:
               required: true
               schema:
@@ -6777,60 +7135,110 @@ x-first-party-paths:
               schema:
                 $ref: '#/components/schemas/StopResearchResult'
         '400':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '401':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '403':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '404':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '409':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '410':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '413':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '415':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '422':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '428':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
@@ -6843,6 +7251,10 @@ x-first-party-paths:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
           headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
             Retry-After:
               required: true
               schema:
@@ -6854,6 +7266,10 @@ x-first-party-paths:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
           headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
             Retry-After:
               required: true
               schema:
@@ -6897,60 +7313,110 @@ x-first-party-paths:
               schema:
                 $ref: '#/components/schemas/WriteReferenceEnvelope'
         '400':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '401':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '403':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '404':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '409':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '410':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '413':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '415':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '422':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '428':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
@@ -6963,6 +7429,10 @@ x-first-party-paths:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
           headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
             Retry-After:
               required: true
               schema:
@@ -6974,6 +7444,10 @@ x-first-party-paths:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
           headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
             Retry-After:
               required: true
               schema:
@@ -7003,60 +7477,110 @@ x-first-party-paths:
               schema:
                 $ref: '#/components/schemas/WriteReferenceEnvelope'
         '400':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '401':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '403':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '404':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '409':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '410':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '413':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '415':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '422':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '428':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
@@ -7069,6 +7593,10 @@ x-first-party-paths:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
           headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
             Retry-After:
               required: true
               schema:
@@ -7080,6 +7608,10 @@ x-first-party-paths:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
           headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
             Retry-After:
               required: true
               schema:
@@ -7115,60 +7647,110 @@ x-first-party-paths:
               schema:
                 $ref: '#/components/schemas/ClaimReviewListEnvelope'
         '400':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '401':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '403':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '404':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '409':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '410':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '413':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '415':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '422':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
         '428':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
           description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
           content:
             application/problem+json:
@@ -7181,6 +7763,10 @@ x-first-party-paths:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
           headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
             Retry-After:
               required: true
               schema:
@@ -7192,6 +7778,10 @@ x-first-party-paths:
               schema:
                 $ref: '#/components/schemas/FirstPartyProblem'
           headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
             Retry-After:
               required: true
               schema:
