@@ -70,42 +70,7 @@ def parse_stream(stdout: str) -> dict:
 
 
 def run_claude(model: str, system: str, user: str, schema_obj: dict, budget_usd: float, window_id: str) -> Result:
-    r = Result(window_id, NAME, model)
-    t0 = time.time()
-    try:
-        p = subprocess.run(build_cmd(model, system, json.dumps(schema_obj, ensure_ascii=False), budget_usd), input=user,
-                           capture_output=True, text=True, env=clean_env(),
-                           timeout=float(settings.get("claude.timeout_s", 300)))
-    except subprocess.TimeoutExpired:
-        r.error = "timeout"
-        r.elapsed_s = round(time.time() - t0, 3)
-        return r
-    except OSError as e:
-        r.error = f"spawn: {type(e).__name__}"
-        return r
-    r.elapsed_s = round(time.time() - t0, 3)
-    s = parse_stream(p.stdout)
-    r.extra["rate"] = rate_view(s["rate"])
-    res = s["result"]
-    if res is None:
-        r.error = f"no result event exit={p.returncode}"
-        return r
-    u = res.get("usage") or {}
-    cr, cc, un = u.get("cache_read_input_tokens") or 0, u.get("cache_creation_input_tokens") or 0, u.get("input_tokens") or 0
-    r.usage = {"input_tokens": un + cr + cc, "output_tokens": u.get("output_tokens"), "cached_input_tokens": cr,
-               "reasoning_tokens": (u.get("output_tokens_details") or {}).get("thinking_tokens")}
-    r.cost_usd = res.get("total_cost_usd")     # 구독이라 추정값이고 실제 청구가 아니다
-    mu = res.get("modelUsage") or {}
-    r.served_model = ",".join(mu.keys()) if mu else None
-    r.provider = "anthropic"
-    so = res.get("structured_output")
-    if res.get("is_error") or res.get("permission_denials") or so is None:
-        r.error = (f"verdict subtype={res.get('subtype')} is_error={res.get('is_error')} "
-                   f"denials={len(res.get('permission_denials') or [])} so={so is not None}")
-    if so is not None:
-        r.raw = json.dumps(so, ensure_ascii=False)
-    r.finish_reason = "length" if res.get("stop_reason") in ("max_tokens", "length") else "stop"
-    return r
+    return Result(window_id, NAME, model, error="subscription_automatic_forbidden")
 
 
 CANARY_TEXT = "Claude Code 2.1.316 was released on 2026-10-30. The release notes state that the --tools flag accepts an empty string."
@@ -134,28 +99,10 @@ class Claude:
         ttl = float(settings.get("claude.canary_ttl_s", 86400))
         if c.get("bin") == b and c.get("ok") and settings.now_s() - c.get("at", 0) < ttl and _has_rate(c.get("rate")):
             return Preflight(True, "", info={"rate": c.get("rate"), "at": c.get("at")})
-        if not self._auth_ok():
-            return Preflight(False, "auth")
         return self.canary()
 
     def canary(self) -> Preflight:
-        """전체 플래그 조합 1회. 결과를 CAS에 남긴다. rate_limit 값이 없으면 시작하지 않고 경고한다."""
-        from kb.extract import schema
-        from kb.extract.prompt import system_text, user_message
-        w = canary_window()
-        sch = schema.extract_schema(["e:canary"])
-        r = run_claude(str(settings.get("claude.model", "haiku")), system_text(), user_message(w), sch,
-                       float(settings.get("claude.budget_usd", 0.02)), "canary")
-        sha = cas.put(json.dumps(r.as_dict(), ensure_ascii=False, sort_keys=True).encode())
-        rv = r.extra.get("rate") or {}
-        ok = r.error is None and r.raw is not None
-        state.put("claude:canary", {"bin": bin_path(), "ok": ok, "at": settings.now_s(), "sha": sha,
-                                    "five_hour": rv.get("five_hour"), "rate": rv})
-        if not ok:
-            return Preflight(False, "canary_failed", r.error or "")
-        if not _has_rate(rv):
-            return Preflight(False, "no_rate_value", "rate_limit_event 값 없음: 시작하지 않는다")
-        return Preflight(True, "", info={"rate": rv, "canary_sha": sha, "at": settings.now_s()})
+        return Preflight(False, "subscription_automatic_forbidden")
 
     def extract(self, job: Job, permit) -> Result:
         guard.verify(permit, NAME, job.user)

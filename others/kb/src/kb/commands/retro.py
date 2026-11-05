@@ -17,7 +17,7 @@ def cmd_retro(args) -> int:
         snap = snapshot(c, days=7)
     finally:
         c.close()
-    out = retro.run(snap, dry_run=args.dry_run, proposals=props)
+    out = retro.run(snap, dry_run=args.dry_run, proposals=props, engine=args.engine)
     if args.json:
         print(json.dumps(out, ensure_ascii=False, sort_keys=True))
     else:
@@ -27,6 +27,7 @@ def cmd_retro(args) -> int:
 
 def register(sub) -> None:
     p = sub.add_parser("retro", help="주간 회고(수치만 입력, 제안은 적용하지 않음)")
+    p.add_argument("--engine", choices=("openrouter", "anthropic_api"), default=None)
     p.add_argument("--dry-run", action="store_true")
     p.add_argument("--proposals-file", default=None, help="에이전트 대신 이 제안 JSON을 거른다")
     p.add_argument("--json", action="store_true")

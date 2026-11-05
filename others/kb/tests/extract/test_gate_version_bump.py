@@ -62,19 +62,19 @@ def test_bump_keeps_done_raw_and_queue_and_is_idempotent_on_existing_claim(ent, 
     monkeypatch.setattr(M, "GATE_VERSION", "gate@2")
     monkeypatch.setattr(P, "GATE_VERSION", "gate@2")
     sid = H.ingest_doc()
-    f = H.Fake("claude", True, H.extract_all(ent))
+    f = H.Fake("anthropic_api", True, H.extract_all(ent))
     with settings.override(**{"openrouter.enabled": False}):
-        runner.run_agent("public", backends={"claude": f}, do_support=False)
+        runner.run_agent("public", backends={"anthropic_api": f}, do_support=False)
     assert len(H.events("claim.assert")) == 1 and H.events("claim.assert")[0]["evidence"][0]["gate_version"] == "gate@2"
     keys = _state()
     monkeypatch.setattr(M, "GATE_VERSION", "gate@3")
     monkeypatch.setattr(P, "GATE_VERSION", "gate@3")
     tick_stage.enqueue_new()
     with settings.override(**{"openrouter.enabled": False}):
-        out = runner.run_agent("public", backends={"claude": f}, do_support=False)
+        out = runner.run_agent("public", backends={"anthropic_api": f}, do_support=False)
     assert len(f.calls) == 1 and out["windows"] == 0 and _state() == keys          # 재호출 0, 완료·원응답 키와 큐 그대로
     it = {"item": "claim", "ref": "c0", "subject": ent, "statement": H.GOOD["statement"], "kind": "state", "stance": "stated",
-          "method": "llm", "extractor": "l2:claude:haiku:extract-2", "evidence": {"snapshot": sid, "quote": H.GOOD["quote"]}}
+          "method": "llm", "extractor": "l2:anthropic_api:haiku:extract-2", "evidence": {"snapshot": sid, "quote": H.GOOD["quote"]}}
     rep = ingest.submit(itm.bundle("a" * 64, [it]), fetch=False, windows={sid: []})
     assert rep.lines[0]["result"] == "accepted" and rep.lines[0]["would_be"]["existing"] is True
     evs = H.events("claim.assert")

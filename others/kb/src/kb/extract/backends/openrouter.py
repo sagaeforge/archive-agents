@@ -6,25 +6,24 @@ import json
 import time
 
 from kb.core import paths
-from kb.extract import budget, guard, llmhttp, schema, settings, state
+from kb.extract import budget, engines, guard, llmhttp, schema, settings, state
 from kb.extract.types import Job, Preflight, Result
 
 NAME = "openrouter"
 
 
 def read_key() -> str | None:
-    p = paths.config_dir() / str(settings.get("openrouter.key_file", "openrouter.key"))
     try:
-        k = p.read_text(encoding="utf-8").strip()
-    except OSError:
+        return engines.read_key(NAME)
+    except engines.AuthError:
         return None
-    return k or None
 
 
-def _req(path: str, key: str, body: dict | None = None, timeout: float = 30.0) -> dict:
+def _req(path: str, key: str, body: dict | None = None, timeout: float = 30.0, *, admission=None) -> dict:
     url = str(settings.get("openrouter.base_url")).rstrip("/") + path
+    engines.check_host(NAME, url)
     h = {"Authorization": "Bearer " + key, "User-Agent": "sagae-kb", "X-Title": "sagae-kb"}
-    return llmhttp.request_json(url, body=body, headers=h, timeout=timeout)
+    return llmhttp.request_json(url, body=body, headers=h, timeout=timeout, admission=admission, engine=NAME, model=(body or {}).get("model"))
 
 
 def fetch_credits(key: str) -> float | None:
@@ -89,6 +88,7 @@ class OpenRouter:
 
     def extract(self, job: Job, permit) -> Result:
         guard.verify(permit, NAME, job.user)
+        budget.before_send(job.admission, engine=NAME, model=job.model, role=job.purpose, job=job.window.window_id, consume=False)
         key = read_key()
         r = Result(job.window.window_id, NAME, job.model)
         if not key:
@@ -96,12 +96,12 @@ class OpenRouter:
             return r
         t0 = time.time()
         try:
-            d = _req("/chat/completions", key, self.request_body(job), float(settings.get("openrouter.timeout_s", 300)))
+            d = _req("/chat/completions", key, self.request_body(job), float(settings.get("openrouter.timeout_s", 300)), admission=job.admission)
             if d.get("error"):
-                r.error = "body error: " + json.dumps(d["error"], ensure_ascii=False)[:300]
+                r.error = "body error: " + engines.redact(json.dumps(d["error"], ensure_ascii=False), (key,), partial=True)[:300]
             ch = (d.get("choices") or [{}])[0]
             if ch.get("error"):
-                r.error = "choice error: " + json.dumps(ch["error"], ensure_ascii=False)[:300]
+                r.error = "choice error: " + engines.redact(json.dumps(ch["error"], ensure_ascii=False), (key,), partial=True)[:300]
             r.raw = (ch.get("message") or {}).get("content")
             r.finish_reason = ch.get("finish_reason")
             u = d.get("usage") or {}
@@ -110,11 +110,17 @@ class OpenRouter:
                        "cached_input_tokens": pd.get("cached_tokens"), "reasoning_tokens": cd.get("reasoning_tokens")}
             r.cost_usd = u.get("cost")
             r.provider, r.served_model = d.get("provider"), d.get("model")
+        except budget.Refused:
+            raise
         except llmhttp.HTTPError as e:
-            r.error = f"HTTP {e.code}: {e.read()[:200].decode('utf8', 'replace')}"
+            r.error = f"HTTP {e.code}: " + engines.redact(e.read().decode("utf8", "replace"), (key,), partial=True)[:200]
             if e.code in (401, 402):                       # 인증, 잔액 거절은 일을 하기 전에 끝난다. 나머지 실패는 비용을 모른다(None)
                 r.cost_usd = 0.0
         except Exception as e:  # noqa: BLE001
-            r.error = f"{type(e).__name__}: {str(e)[:200]}"
+            r.error = f"{type(e).__name__}: " + engines.redact(str(e), (key,), partial=True)[:200]
+        for attr in ("error", "raw", "provider", "served_model"):
+            value = getattr(r, attr)
+            if isinstance(value, str):
+                setattr(r, attr, engines.redact(value, (key,)))
         r.elapsed_s = round(time.time() - t0, 3)
         return r

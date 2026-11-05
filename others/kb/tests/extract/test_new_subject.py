@@ -21,9 +21,9 @@ def _resp(typ, aliases, labels=("새도구", "새도구")):
 
 
 def _run(resp):
-    f = H.Fake("claude", True, resp)
+    f = H.Fake("anthropic_api", True, resp)
     with settings.override(**{"openrouter.enabled": False}):
-        return runner.run_agent("public", backends={"claude": f}, do_support=False)
+        return runner.run_agent("public", backends={"anthropic_api": f}, do_support=False)
 
 
 def _node(eid):

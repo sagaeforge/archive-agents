@@ -6,13 +6,13 @@ from . import helpers as H
 
 def _run(fake):
     with settings.override(**{"openrouter.enabled": False}):
-        return runner.run_agent("public", backends={"claude": fake}, do_support=False)
+        return runner.run_agent("public", backends={"anthropic_api": fake}, do_support=False)
 
 
 def test_changed_paragraph_only(ent):
     sid = H.ingest_doc()
     assert H.queue_n() == 4
-    f = H.Fake("claude", True, H.extract_all(ent))
+    f = H.Fake("anthropic_api", True, H.extract_all(ent))
     out = _run(f)
     assert out["windows"] == 1 and len(f.calls) == 1 and out["claims"] == 1
     assert H.queue_n() == 0
@@ -32,7 +32,7 @@ def test_changed_paragraph_only(ent):
 def test_prompt_version_change_recalls(ent):
     from kb.extract import tick_stage
     H.ingest_doc()
-    f = H.Fake("claude", True, H.extract_all(ent))
+    f = H.Fake("anthropic_api", True, H.extract_all(ent))
     _run(f)
     assert len(f.calls) == 1
     with settings.override(prompt_version="extract-3"):
@@ -45,7 +45,7 @@ def test_prompt_version_change_recalls(ent):
 def test_cache_hit_counted_when_marked_done(ent):
     from kb.extract import cache
     sid = H.ingest_doc()
-    f = H.Fake("claude", True, H.extract_all(ent))
+    f = H.Fake("anthropic_api", True, H.extract_all(ent))
     from kb.core import opsdb
     c = opsdb.connect()
     try:

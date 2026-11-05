@@ -36,7 +36,7 @@ def fakes(home, monkeypatch):
     monkeypatch.setenv("KB_BIN", script(home / "fake-kb", f'echo "kb $*" >> "{log}"\n'))
     monkeypatch.setenv("KB_AGENT_RUN", script(home / "fake-agent-run", f'echo "agent-run $*" >> "{log}"\n'))
     from kb.commands import jobs
-    monkeypatch.setattr(jobs, "_claude_gate", lambda: None)   # 활용률 검사는 test_job_gate.py가 본다
+    monkeypatch.setattr(jobs, "_engine_for", lambda j: "openrouter")   # 활용률 검사는 test_job_gate.py가 본다
     return log
 
 
@@ -54,8 +54,8 @@ def test_only_due_jobs_in_fixed_order(fakes, home):
     from kb.commands import jobs
     approve(home, 11)
     out = jobs.run_due()
-    assert lines(fakes) == ["kb agent run --scope public", "agent-run kb-fulfill", "agent-run kb-liveness-review", "kb retro",
-                            "agent-run kb-retro"]
+    assert lines(fakes) == ["kb agent run --scope public", "agent-run kb-fulfill --engine openrouter", "agent-run kb-liveness-review --engine openrouter", "kb retro --engine openrouter",
+                            "agent-run kb-retro --engine openrouter"]
     assert out["calls"] == 5 and not out["failed"]
     # 곧바로 다시 돌리면 만기가 아니라 호출 0회
     again = jobs.run_due()
@@ -97,23 +97,30 @@ def test_agent_run_finds_copied_share_from_outside_cwd(home, tmp_path_factory, m
     shutil.copytree(REPO / "ops/job-settings", share / "ops/job-settings")
     shutil.copytree(REPO / ".claude/agents", share / ".claude/agents")
     shutil.copytree(REPO / ".claude/workflows", share / ".claude/workflows")
+    (share / "sources" / "internal.d").mkdir(parents=True)
+    shutil.copy(REPO / "sources/internal.d/extract.yaml", share / "sources/internal.d/extract.yaml")
+    from kb.extract import state
+    state.put("credit:anthropic_api", dict(balance=200., budget_usd=200., cycle_spent=0., spent_today=0., reserved=0., cap_today=60.))
     out = home / "claude-out"
-    fake = script(home / "fake-claude", f'''pwd > "{out}.cwd"
+    fake = script(home / "fake-claude", f'''case "$*" in *"auth status"*) echo '{{"authMethod":"api_key","apiKeySource":"apiKeyHelper"}}'; exit 0;; esac
+pwd > "{out}.cwd"
 echo "$*" > "{out}.args"
-for a in "$@"; do case "$a" in ops/job-settings/*) test -f "$a" && echo "found $a" >> "{out}.found";; esac; done
+for a in "$@"; do case "$a" in *api-settings.json) test -f "$a" && echo "found $a" >> "{out}.found";; esac; done
 test -f .claude/workflows/kb-fulfill.js && echo wf >> "{out}.found"
-echo '{{"type":"system","subtype":"init","mcp_servers":[]}}'
+echo '{{"type":"system","subtype":"init","apiKeySource":"apiKeyHelper","mcp_servers":[]}}'
 echo '{{"type":"result","subtype":"success","is_error":false,"permission_denials":[],"result":"{{\\\\"workflow\\\\":\\\\"kb-fulfill\\\\",\\\\"incidents\\\\":[]}}"}}'
 ''')
+    (home / "config" / "anthropic.key").write_text("fixture-api-key")
+    (home / "config" / "anthropic.key").chmod(0o600)
     approve(home, 11)
     elsewhere = tmp_path_factory.mktemp("elsewhere")
     env = dict(os.environ, KB_SHARE=str(share), KB_CLAUDE_BIN=fake, KB_PYTHON=sys.executable)
-    p = subprocess.run([str(share / "ops/bin/kb-agent-run"), "kb-fulfill"], cwd=elsewhere, env=env, capture_output=True, text=True)
+    p = subprocess.run([str(share / "ops/bin/kb-agent-run"), "kb-fulfill", "--engine", "anthropic_api"], cwd=elsewhere, env=env, capture_output=True, text=True)
     assert p.returncode == 0, p.stderr + p.stdout
     assert json.loads(p.stdout.strip().splitlines()[-1])["ok"] is True
     assert open(f"{out}.cwd").read().strip() == str(share)
     found = open(f"{out}.found").read()
-    assert "found ops/job-settings/kb-fulfill.json" in found and "wf" in found
+    assert "api-settings.json" in found and "wf" in found
     args = open(f"{out}.args").read()
     assert "--strict-mcp-config" in args and "--permission-mode dontAsk" in args
     # 실행 기록 보관
@@ -122,12 +129,12 @@ echo '{{"type":"result","subtype":"success","is_error":false,"permission_denials
 
 def test_agent_run_refuses_without_decision(home, monkeypatch):
     env = dict(os.environ, KB_SHARE=str(REPO), KB_CLAUDE_BIN="/bin/false", KB_PYTHON=sys.executable)
-    p = subprocess.run([str(REPO / "ops/bin/kb-agent-run"), "kb-first-collect", "--sample"], env=env, capture_output=True, text=True)
+    p = subprocess.run([str(REPO / "ops/bin/kb-agent-run"), "kb-first-collect", "--sample", "--engine", "anthropic_api"], env=env, capture_output=True, text=True)
     assert p.returncode == 3 and "승인 전" in p.stderr
 
 
 def test_dry_run_fixed_form(repo):
-    p = subprocess.run([str(repo / "ops/bin/kb-agent-run"), "--dry-run", "kb-fulfill"], capture_output=True, text=True,
+    p = subprocess.run([str(repo / "ops/bin/kb-agent-run"), "--dry-run", "kb-fulfill", "--engine", "anthropic_api"], capture_output=True, text=True,
                        env=dict(os.environ, KB_PYTHON=sys.executable))
     assert p.returncode == 0
     s = p.stdout

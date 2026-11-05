@@ -40,10 +40,10 @@ def test_bad_scope_rejected(env):
 def test_json_has_by_backend_and_scope_after_real_run(ent, capsys, monkeypatch):
     from kb.extract import runner
     H.ingest_doc()
-    f = H.Fake("claude", True, H.extract_all(ent))
-    monkeypatch.setattr(runner, "default_backends", lambda: {"claude": f})
+    f = H.Fake("anthropic_api", True, H.extract_all(ent))
+    monkeypatch.setattr(runner, "default_backends", lambda: {"anthropic_api": f})
     with settings.override(**{"openrouter.enabled": False}):
         rc, out = _run(capsys, "--max-windows", "1")
-    assert rc == 0 and out["windows"] == 1 and out["by_backend"] == {"claude": 1} and out["claims"] == 1
+    assert rc == 0 and out["windows"] == 1 and out["by_backend"] == {"anthropic_api": 1} and out["claims"] == 1
     jsonschema.validate(out, SCHEMA)
     assert out["queue_left"] == 0 and out["is_error"] is False

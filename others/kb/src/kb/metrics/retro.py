@@ -116,13 +116,13 @@ def proposals_from_events(events: list[dict]) -> list[dict]:
     return []
 
 
-def agent_cmd(inp: dict) -> list[str]:
+def agent_cmd(inp: dict, engine: str | None = None) -> list[str]:
     from kb.core import paths
     exe = os.environ.get("KB_AGENT_RUN") or str(paths.share_dir() / "ops" / "bin" / "kb-agent-run")
-    return [exe, "kb-retro", "--args", json.dumps({"metrics": inp["metrics"], "week": inp["week"]}, sort_keys=True, separators=(",", ":"))]
+    return [exe, "kb-retro", "--engine", engine or "openrouter", "--args", json.dumps({"metrics": inp["metrics"], "week": inp["week"]}, sort_keys=True, separators=(",", ":"))]
 
 
-def run(snap: dict, *, dry_run: bool = False, proposals: list | None = None, timeout: float = 3600.0) -> dict:
+def run(snap: dict, *, dry_run: bool = False, proposals: list | None = None, timeout: float = 3600.0, engine: str | None = None) -> dict:
     """proposals가 주어지면 에이전트를 부르지 않고 그 제안을 거른다(수동 입력, 시험). 아니면 kb-agent-run kb-retro를 부른다."""
     inp = build_input(snap)
     out = {"week": inp["week"], "called": False, "skipped": None, "proposals": 0, "dropped": 0, "path": None}
@@ -131,7 +131,13 @@ def run(snap: dict, *, dry_run: bool = False, proposals: list | None = None, tim
         out["argv"] = agent_cmd(inp)[:2] + ["--args", "<수치 JSON>"]
         return out
     if proposals is None:
-        argv = agent_cmd(inp)
+        if engine is None:
+            from kb.commands.jobs import _engine_for
+            engine = _engine_for({"cmd": "kb retro"})
+        if engine is None:
+            out["skipped"] = "no_api_engine"
+            return out
+        argv = agent_cmd(inp, engine)
         p = subprocess.run(argv, capture_output=True, text=True, timeout=timeout)
         out["called"] = True
         if p.returncode == 3:

@@ -120,4 +120,4 @@ def test_adapter_cannot_send_without_permit(orsrv, permit):
 def test_sllm_needs_no_permit_but_external_does():
     assert guard.authorize([{"origin": "first_party", "sensitivity": 2, "display": "f:user", "text": "x"}], "sllm", "x") is None
     with pytest.raises(guard.GuardDenied):
-        guard.authorize([{"origin": "first_party", "sensitivity": 2, "display": "f:user", "text": "x"}], "claude", "x")
+        guard.authorize([{"origin": "first_party", "sensitivity": 2, "display": "f:user", "text": "x"}], "anthropic_api", "x")

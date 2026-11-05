@@ -40,10 +40,10 @@ def setup(ent, tmp_path, monkeypatch):
 
 
 def test_claims_inherit_source_sensitivity(setup, ent):
-    ext_calls = {"claude": H.Fake("claude", True, H.extract_all(ent)), "openrouter": H.Fake("openrouter", True, H.extract_all(ent))}
+    ext_calls = {"anthropic_api": H.Fake("anthropic_api", True, H.extract_all(ent)), "openrouter": H.Fake("openrouter", True, H.extract_all(ent))}
     out = runner.run_agent("sensitive", backends={**ext_calls, "sllm": Sllm(port=18932)})
     assert out["windows"] == 1 and out["claims"] == 1 and out["by_backend"] == {"sllm": 1}, out
-    assert not ext_calls["claude"].calls and not ext_calls["openrouter"].calls          # 외부 호출 0
+    assert not ext_calls["anthropic_api"].calls and not ext_calls["openrouter"].calls          # 외부 호출 0
     ev = H.events("claim.assert")[0]
     assert ev["extractor"].startswith("l2:sllm:") and ev["sensitivity_floor"] >= 2      # 원본 private(2) 이상
     run = H.events("extract.run")[0]

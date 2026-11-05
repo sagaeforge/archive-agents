@@ -28,7 +28,7 @@ def test_daily_windows_formula(env, monkeypatch):
 def test_avg_price_follows_actual_spend(env):
     budget.set_balance(100.0)
     for _ in range(4):
-        r = budget.reserve(0.054)
+        r = budget.reserve(0.054, model="openai/gpt-6.1-sol")
         budget.settle(r, 0.04)
     assert abs(budget.avg_price() - 0.04) < 1e-9
 
@@ -43,22 +43,22 @@ def valve30():
 def test_valve_and_kst_midnight_reset(env, valve30, monkeypatch):
     budget.set_balance(500.0)
     monkeypatch.setenv("KB_EXTRACT_NOW", at("2026-11-02T23:30:00+09:00"))
-    r = budget.reserve(29.9)
+    r = budget.reserve(29.9, model="openai/gpt-6.1-sol")
     budget.settle(r, 29.9)
     with pytest.raises(budget.Refused) as e:
-        budget.reserve(0.2)                                          # 29.9 + 0.2 > 30
+        budget.reserve(0.2, model="openai/gpt-6.1-sol")                                          # 29.9 + 0.2 > 30
     assert e.value.reason == "valve"
     monkeypatch.setenv("KB_EXTRACT_NOW", at("2026-11-03T00:05:00+09:00"))   # KST 자정 뒤
-    budget.reserve(0.2)                                              # 초기화됐다
+    budget.reserve(0.2, model="openai/gpt-6.1-sol")                                              # 초기화됐다
 
 
 def test_reserve_then_settle_and_internal_ledger(envk):
     budget.set_balance(10.0)
-    r = budget.reserve(0.054)
+    r = budget.reserve(0.054, model="openai/gpt-6.1-sol")
     assert abs(budget.day()["reserved"] - 0.054) < 1e-9
     over = budget.settle(r, 0.03)
     assert over is False and abs(budget.balance() - 9.97) < 1e-9 and budget.day()["reserved"] == 0
-    r = budget.reserve(0.054)
+    r = budget.reserve(0.054, model="openai/gpt-6.1-sol")
     assert budget.settle(r, 0.06) is True                            # 실제 > 예약
 
 
@@ -70,14 +70,29 @@ def test_credits_failure_only_warns(envk, monkeypatch):
     assert p.ok and p.warn == "credits_check_failed" and budget.balance() == 50.0   # 장부가 기준, /credits 실패는 경고만
 
 
-def test_initial_balance_from_credits(envk):
-    srv = H.OrServer(balance=77.5)
-    try:
-        with settings.override(**{"openrouter.base_url": srv.url}):
-            p = OpenRouter().preflight()
-    finally:
-        srv.close()
+def test_initial_balance_from_credits(envk, monkeypatch):
+    """크레딧 메타데이터로만 초기 잔액을 읽는다. 실제 소켓은 열지 않는다."""
+    import io
+    from kb.extract import llmhttp
+    calls = []
+
+    def response(req, *, timeout):
+        assert req.get_method() == "GET" and req.data is None
+        assert req.full_url == "http://127.0.0.1:18999/api/v1/credits"
+        calls.append(req.full_url)
+        return io.BytesIO(b'{"data":{"total_credits":78.5,"total_usage":1.0}}')
+
+    monkeypatch.setattr(llmhttp._OPENER, "open", response)
+    assert budget.balance() is None
+    with settings.override(**{"openrouter.base_url": "http://127.0.0.1:18999/api/v1"}):
+        p = OpenRouter().preflight()
     assert p.ok and abs(budget.balance() - 77.5) < 1e-6
+    assert len(calls) == 1 and not state.keys("llm:reservation:")
+    # The unpaid metadata exception cannot authorize a model request.
+    with pytest.raises(budget.Refused):
+        llmhttp.request_json("https://openrouter.ai/api/v1/chat/completions",
+                             body={"model": "m"}, engine="openrouter", model="m")
+    assert len(calls) == 1
 
 
 def test_exhaustion_order_extract_then_support_then_cross(envk, ent):
@@ -93,9 +108,9 @@ def test_exhaustion_order_extract_then_support_then_cross(envk, ent):
             return {"supported": True}
         return {"claims": [H.claim_obj(ent, H.GOOD["quote"], "샘플도구는 하루 최대 600건의 요청을 지원한다.", value="600")]}
     f = H.Fake("openrouter", True, resp, cost=0.03)
-    cl = H.Fake("claude", True, resp)
+    cl = H.Fake("anthropic_api", True, resp)
     with settings.override(**{"openrouter.support_calibrated": True}):
-        out = runner.run_agent("public", backends={"openrouter": f, "claude": cl}, do_cross=True)
+        out = runner.run_agent("public", backends={"openrouter": f, "anthropic_api": cl}, do_cross=True)
     assert seq[0] == "extract" and "support" in seq
     assert seq.index("support") > seq.index("extract")
     assert out["support"]["supported"] == 1
@@ -108,7 +123,7 @@ def test_status_llm_block_same_ledger(envk, monkeypatch):
     from kb.guard import status
     monkeypatch.setenv("KB_EXTRACT_NOW", at("2026-11-20T12:00:00+09:00"))
     budget.set_balance(100.0)
-    r = budget.reserve(0.054)
+    r = budget.reserve(0.054, model="openai/gpt-6.1-sol")
     budget.settle(r, 7.0)
     blk = budget.llm_block()
     st = status.build()["llm"]

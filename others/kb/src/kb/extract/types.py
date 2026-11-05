@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Protocol
 
-EXTERNAL = ("claude", "codex", "openrouter")
+EXTERNAL = ("claude", "claude_sub", "codex", "openrouter", "openai_api", "anthropic_api")
 
 
 @dataclass
@@ -38,6 +38,7 @@ class Job:
     schema: dict | None = None     # full 정본
     model: str = ""
     budget_usd: float | None = None
+    admission: object | None = field(default=None, repr=False)
 
 
 @dataclass

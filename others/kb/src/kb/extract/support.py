@@ -42,9 +42,6 @@ def judge(c: dict, backends: dict, router, *, purpose: str = "support", extracto
         if not pf.ok:
             last = pf.reason
             continue
-        if cand.backend == "claude" and not route.claude_gate(pf, be):
-            last = "claude_limit"
-            continue
         w = Window(f"support:{c['id']}", c["snapshot"], c["quote"], [], [], "", "", "", "")
         job = Job(w, purpose, "public", prompt.SUPPORT_SYSTEM, prompt.support_user(c["statement"], c["quote"], c["context"]),
                   schema.SUPPORT_SCHEMA, cand.model, cand.budget_usd)
@@ -54,10 +51,10 @@ def judge(c: dict, backends: dict, router, *, purpose: str = "support", extracto
             return {"ok": False, "reason": f"guard:{e.reason}"}
         res = None
         resv = None
-        if cand.backend == "openrouter":
+        if cand.backend in {"openrouter", "openai_api", "anthropic_api"}:
             try:
                 reserve = budget.reservation_for(be, job)
-                resv = budget.reserve(reserve, purpose="support")
+                resv = budget.admit(cand.backend, cand.model, job.purpose, reserve, job=job.window.window_id)
             except budget.TooLarge:
                 last = "too_large"
                 continue
@@ -69,16 +66,19 @@ def judge(c: dict, backends: dict, router, *, purpose: str = "support", extracto
                 last = e.reason
                 continue
         try:
-            res = be.extract(job, permit)
+            from kb.extract import paid
+            res = paid.extract(resv, be, job, permit) if be.external else be.extract(job, permit)
+        except budget.Refused as e:
+            budget.release(resv)
+            last = e.reason
+            continue
         except Exception:
             if resv is not None:
-                budget.release(resv)
+                budget.settle(resv, None)
             raise
         called = True
-        rate = res.extra.get("rate")
-        if rate and (rate.get("five_hour") is not None or rate.get("seven_day") is not None):
-            state.put("claude:rate", dict(rate, at=settings.now_s()))
         if resv is not None:
+            res.extra["charged_usd"] = budget.settlement_amount(resv, res.cost_usd)
             if budget.settle(resv, res.cost_usd):             # 호출당 비용 초과: 배치를 멈추고 사고로 남긴다
                 route.apply("cost_exceeded", actual=res.cost_usd or 0.0, reserved=resv["usd"])
                 budget.count_window(cand.backend, support=True)
@@ -95,6 +95,9 @@ def judge(c: dict, backends: dict, router, *, purpose: str = "support", extracto
         if schema.validate(schema.SUPPORT_SCHEMA, obj):
             last = "bad_schema"
             continue
+        from kb.extract.engines import Arm, record
+        record(Arm(purpose, cand.backend, cand.model), cost=res.extra.get("charged_usd", res.cost_usd or 0.),
+               accepted=int(bool(obj["supported"])), rejected=int(not obj["supported"]))
         return {"ok": True, "supported": bool(obj["supported"]), "backend": cand.backend, "model": cand.model,
                 "same_vendor": cand.same_vendor, "reason": cand.reason}
     return {"ok": False, "reason": last, "called": called}
@@ -206,6 +209,12 @@ def cross_check(backends: dict, router, now_s: float | None = None) -> dict:
                     out["gap"] = True
                     state.metric("llm.cross_gap", 1, {"week": wk})
                 break
+            from kb.extract import engines
+            parts = cl["extractor"].split(":", 3)
+            if len(parts) == 4:
+                engine = "local" if parts[1] == "sllm" else parts[1]
+                if engine in engines.AUTO_ENGINES:
+                    engines.record_audit(engines.Arm("extract", engine, parts[2]), distorted=not j["supported"])
             got["n"] += 1
             got[lang] += 1
             out["sampled"] += 1

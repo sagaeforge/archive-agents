@@ -125,11 +125,12 @@ def apply(signal: str, **ctx) -> Verdict:
             set_off("claude", "seven_day", None, retry="next_run")
             return Verdict(signal, "stop", "claude")
     elif signal == "claude_overage":
-        if ctx.get("isUsingOverage"):
-            set_off("claude", "overage", None)
-            state.put(STOP_KEY, {"reason": "claude_overage", "at": now})
-            state.incident("other", "Claude isUsingOverage=true: 초과 과금 정지")
-            return Verdict(signal, "halt", "claude", None, incident=True, fallthrough=False)
+        if ctx.get("isUsingOverage") or ctx.get("rate_limit_type") == "overage":
+            import logging
+            logging.getLogger(__name__).warning("claude_sub overage: stop this manual execution")
+            state.metric("claude.overage_seen", 1, {"engine": "claude_sub"})
+            return Verdict(signal, "halt", "claude_sub", None, fallthrough=False,
+                           detail="subscription_overage: stop this manual execution")
     elif signal == "claude_daily_windows":
         if budget.windows_today("claude") >= int(S("claude.daily_windows", 400)):
             set_off("claude", "daily_windows", midnight)
@@ -253,149 +254,91 @@ def claude_hold() -> str | None:
     return None
 
 
-def claude_job_gate(be=None) -> str | None:
-    """에이전트 작업(kb-agent-run, kb retro)이 claude -p를 부르기 전 검사. 시작해도 되면 None, 아니면 건너뛸 사유.
-    사람이 풀어야 하는 정지(claude_hold)를 먼저 보고, 추출과 같은 claude_rate, 같은 5시간(시작 >0.5, 값 없음)과 7일(>=0.80, 값 없음)
-    문턱을 쓰고 초과 과금(ADR-0003 5장)도 본다. 작업마다 부른다(jobs.run_due).
-    비용: 카나리아가 하루(claude.canary_ttl_s) 안이고 저장된 활용률이 1시간(claude.rate_recheck_s) 안이면 호출 0회.
-    아니면 카나리아 claude -p 1회(haiku, 한 문장 입력, --max-budget-usd 0.02 상한, 실측 $0.00059)와 `claude auth status`(토큰 0)다.
-    한 번 돌린 카나리아는 저장되므로 같은 시간대 다른 작업의 검사는 호출 0회다. 카나리아가 실패하면 물러나 있는 동안 호출 없이 닫는다."""
-    hold = claude_hold()
-    if hold:
-        return "hold_" + hold
-    if _canary_waiting():
-        return "canary_backoff"
-    if be is None:
-        from kb.extract.backends.claude import Claude
-        be = Claude()
-    pf = be.preflight()
-    if not pf.ok:
-        if pf.reason in ("canary_failed", "no_rate_value"):
-            _canary_failed()
-        return "preflight_" + (pf.reason or "failed")
-    if (pf.info or {}).get("canary_sha"):
-        state.delete(CANARY_FAIL_KEY)
-    r = claude_rate(pf, be)
-    if r.get("isUsingOverage"):
-        apply("claude_overage", isUsingOverage=True)
-        return "overage"
-    return _rate_reason(r, True)
+def claude_job_gate(be=None, *, engine=None, model=None, job=None) -> str | None:
+    """구독 활용률 카나리아를 호출하던 옛 자동 진입점은 항상 거부한다."""
+    if engine in {"openrouter", "openai_api", "anthropic_api"}:
+        return stopped() or ("halted" if guard.halted() else None)
+    return "subscription_automatic_forbidden"
 
 
 class Router:
     def __init__(self, backends: dict | None = None):
-        self.backends = backends or {}
+        self.backends = backends
 
-    # --------------------------------------------------------------- 가용성
     def _or_ok(self, model: str) -> tuple:
         if is_off("openrouter") or is_off(model):
             return False, (state.get(off_key("openrouter")) or {}).get("reason") or "model_off"
         if not settings.get("openrouter.enabled", True):
             return False, "disabled"
         b = budget.balance()
-        if b is not None and b < float(settings.get("openrouter.min_balance_usd", 0.10)):
+        if b is not None and b < float(settings.get("openrouter.min_balance_usd", .10)):
             return False, "balance_exhausted"
         d = budget.day()
-        if d["spent"] + d["reserved"] + float(settings.get("openrouter.reserve_usd", 0.054)) > float(settings.get("openrouter.daily_valve_usd", 30.0)) + 1e-9:
+        if d["spent"] + d["reserved"] + float(settings.get("openrouter.reserve_usd", .054)) > float(settings.get("openrouter.daily_valve_usd", 30.)) + 1e-9:
             return False, "daily_valve"
         return True, ""
 
     def _claude_ok(self, support: bool = False) -> tuple:
-        for t in ("claude", model_key("claude", str(settings.get("claude.model", "haiku")))):   # gate_pass_drop, low_yield는 claude:<모델> 키에 쓴다
-            if is_off(t):
-                e = state.get(off_key(t)) or {}
-                if e.get("retry") != "next_run":
-                    return False, e.get("reason") or "off"
-        if support:
-            if budget.windows_today("claude", support=True) >= int(settings.get("claude.support_daily", 100)):
-                return False, "support_daily"
-        elif budget.windows_today("claude") >= int(settings.get("claude.daily_windows", 400)):
-            return False, "daily_windows"
-        return True, ""
+        return False, "subscription_automatic_forbidden"
 
-    def _codex_ok(self) -> tuple:
-        if not settings.get("codex.enabled", False):
-            return False, "disabled"
-        if is_off("codex"):
-            return False, "limit"
-        return True, ""
-
-    # --------------------------------------------------------------- 계획
     def plan(self, scope: str, purpose: str = "extract", *, extractor: str | None = None) -> Plan:
-        st = stopped() or ("halted" if state.get(guard.HALT_KEY) else None)
-        if st:
-            return Plan([], st)
-        if scope == "excluded":
-            return Plan([], "excluded")
-        if scope == "sensitive":
-            if purpose == "classify":
-                return Plan([Cand("sllm", str(settings.get("sllm.model", "nemotron")), "sensitive:classify")])
-            if purpose != "extract":
+        from kb.extract import engines
+        st = stopped() or ("halted" if guard.halted() else None)
+        if st or scope == "excluded":
+            return Plan([], st or "excluded")
+        local = scope == "sensitive" or purpose in engines.LOCAL_TASKS
+        if local:
+            if scope == "sensitive" and purpose not in ("extract", "classify"):
                 return Plan([], "sensitive_no_judge")
-            if not settings.get("sllm.enabled", True) or is_off("sllm"):
+            if not settings.get("sllm.enabled", True) or is_off("sllm") or is_off("local"):
                 return Plan([], "sllm_off")
-            return Plan([Cand("sllm", str(settings.get("sllm.model", "nemotron")), "sensitive:sllm")])
-        if purpose == "extract":
-            return self._plan_extract()
-        if purpose == "support":
-            return self._plan_support()
+            model = str(settings.get("sllm.model", "nemotron"))
+            arm = engines.select(purpose, [engines.Arm(purpose, "local", model)], needs_external=False)
+            return Plan([Cand("sllm", model, "local")]) if arm else Plan([], "local_unavailable")
+        if purpose not in ("extract", "support", "cross"):
+            return Plan([], "unknown_purpose")
+        sol = str(settings.get("openrouter.extract_model", SOL))
+        hk = str(settings.get("openrouter.extract_fallback_model", OR_HAIKU))
+        models = [sol, hk] if purpose == "extract" else []
+        if purpose == "support" and settings.get("openrouter.support_calibrated", False):
+            models = [str(settings.get("openrouter.support_model", OR_SONNET))]
         if purpose == "cross":
-            return self._plan_cross(extractor or "")
-        return Plan([], "unknown_purpose")
+            cm = settings.get("openrouter.cross_models") or {}
+            models = [cm.get(extractor) or cm.get("default") or SOL]
+        candidates = [engines.Arm(purpose, "openrouter", m) for m in models]
+        # API Claude Code is executable now; O1/A1 add Python/Batch executors later.
+        if self.backends and "anthropic_api" in self.backends:
+            candidates.append(engines.Arm(purpose, "anthropic_api", str(settings.get("claude.model", "haiku")) if purpose != "cross" else "sonnet"))
+        if purpose == "cross":
+            def vendor(model):
+                m = model.lower()
+                if any(x in m for x in ("anthropic", "claude", "haiku", "sonnet")):
+                    return "anthropic"
+                if "openai" in m or "gpt" in m:
+                    return "openai"
+                return None
+            extracted_vendor = vendor(extractor or "")
+            candidates = [a for a in candidates if extracted_vendor and vendor(a.model)
+                          and vendor(a.model) != extracted_vendor]
+        reason = "all_blocked"
+        def eligible(a):
+            nonlocal reason
+            if a.engine == "openrouter":
+                ok, reason = self._or_ok(a.model)
+                if not ok:
+                    return False
+            return engines.available(a, executable=self.backends is None or (a.engine in self.backends and self.backends[a.engine].name == a.engine),
+                                     authenticate=self.backends is None)
+        # A reached daily valve is a batch boundary, not a reason to move money.
+        if models and self._or_ok(models[0])[1] == "daily_valve":
+            return Plan([], "daily_valve")
+        arm = engines.select(purpose, candidates, eligible=eligible)
+        if arm is None:
+            return Plan([], "week_gap" if purpose == "cross" else (reason or "all_blocked"))
+        # Pin the selected arm for this task; do not execute an unscored fallback.
+        return Plan([Cand(arm.engine, arm.model, "selector:" + purpose,
+                          float(settings.get("claude.budget_usd", .02)) if arm.engine == "anthropic_api" else None)])
 
-    def _plan_extract(self) -> Plan:
-        c: list = []
-        reasons: list = []
-        sol, hk = str(settings.get("openrouter.extract_model", SOL)), str(settings.get("openrouter.extract_fallback_model", OR_HAIKU))
-        for model, reason in ((sol, "or:balance"), (hk, "or:fallback_haiku")):
-            ok, w = self._or_ok(model)
-            if ok:
-                c.append(Cand("openrouter", model, reason))
-            else:
-                reasons.append(w)
-        why = reasons[0] if reasons else ""
-        if not c and why == "daily_valve":
-            return Plan([], "daily_valve")              # 구독으로 번지지 않는다
-        post = "or:fallback_claude" if c else ("claude:post_exhaustion" if why in ("balance_exhausted", "key_invalid", "no_key", "disabled", "") else f"claude:or_{why}")
-        cl, w2 = self._claude_ok()
-        if cl:
-            c.append(Cand("claude", str(settings.get("claude.model", "haiku")), post, float(settings.get("claude.budget_usd", 0.02))))
-        cx, _ = self._codex_ok()
-        if cx:
-            c.append(Cand("codex", str(settings.get("codex.model", "gpt-6.1-sol")), "codex:fallback"))
-        return Plan(c, None if c else (w2 or why or "all_blocked"))
-
-    def _plan_support(self) -> Plan:
-        c: list = []
-        sm = str(settings.get("openrouter.support_model", OR_SONNET))
-        if settings.get("openrouter.support_calibrated", False):
-            ok, why = self._or_ok(sm)
-            if not ok and why == "daily_valve":
-                return Plan([], "daily_valve")              # 밸브 도달 뒤에는 Claude, Codex로 번지지 않는다
-            if ok and budget.windows_today("openrouter", support=True) < int(settings.get("openrouter.support_daily", 1000)):
-                c.append(Cand("openrouter", sm, "support:or_sonnet"))
-        cl, w = self._claude_ok(support=True)
-        if cl:
-            c.append(Cand("claude", "haiku", "support:claude_haiku", float(settings.get("claude.budget_usd", 0.02))))
-        return Plan(c, None if c else (w or "needs_review"))
-
-    def _plan_cross(self, extractor: str) -> Plan:
-        """추출과 다른 벤더. Sol 추출분은 OR Sonnet, Haiku 추출분은 OR Sol. 대체: Codex -> claude sonnet(같은 벤더 표시)."""
-        m = settings.get("openrouter.cross_models") or {}
-        model = m.get(extractor) or m.get("default") or SOL
-        c: list = []
-        ok, why = self._or_ok(model)
-        if not ok and why == "daily_valve":
-            return Plan([], "daily_valve")                  # 밸브 도달 뒤에는 Codex, Claude로 번지지 않는다
-        if ok:
-            c.append(Cand("openrouter", model, "cross:other_vendor"))
-        cx, _ = self._codex_ok()
-        if cx:
-            c.append(Cand("codex", str(settings.get("codex.model", "gpt-6.1-sol")), "cross:codex"))
-        cl, _ = self._claude_ok(support=True)
-        if cl:
-            c.append(Cand("claude", "sonnet", "cross:claude_sonnet", float(settings.get("claude.cross_budget_usd", 0.05)), same_vendor=True))
-        return Plan(c, None if c else "week_gap")
 
 
 def kst_label(ts: float) -> str:

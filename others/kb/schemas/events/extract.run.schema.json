@@ -39,6 +39,9 @@
         "claude",
         "codex",
         "openrouter",
+        "openai_api",
+        "anthropic_api",
+        "local",
         "sllm"
       ]
     },

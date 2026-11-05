@@ -33,9 +33,9 @@ def _responder(subject):
 
 def _extract(ent, doc, fetched_at):
     H.ingest_doc(url=URL, text=doc, fetched_at=fetched_at)
-    f = H.Fake("claude", True, _responder(ent))
+    f = H.Fake("anthropic_api", True, _responder(ent))
     with settings.override(**{"openrouter.enabled": False}):
-        runner.run_agent("public", backends={"claude": f}, do_support=False)
+        runner.run_agent("public", backends={"anthropic_api": f}, do_support=False)
     return f
 
 
@@ -128,10 +128,10 @@ def test_moving_window_source_is_not_degraded(ent, monkeypatch):
     from kb.core.conn import connect_ro  # noqa: F401
     url = "https://example.test/feed.xml"
     H.ingest_doc(url=url, text="# 피드\n\n샘플도구는 하루 최대 500건의 요청을 지원한다고 공식 문서가 밝힌다.\n", source="src:feed")
-    f = H.Fake("claude", True, H.extract_all(ent))
+    f = H.Fake("anthropic_api", True, H.extract_all(ent))
     from kb.extract import runner, settings
     with settings.override(**{"openrouter.enabled": False}):
-        runner.run_agent("public", backends={"claude": f}, do_support=False)
+        runner.run_agent("public", backends={"anthropic_api": f}, do_support=False)
     H.ingest_doc(url=url, text="# 피드\n\n샘플도구의 다른 항목이 올라왔다.\n", source="src:feed", fetched_at=1_793_000_100_000)
     r = reconfirm.run_new_snapshots()
     assert r["degraded"] == 0 and not H.events("source.status") and not H.events("claim.withdraw")
@@ -234,10 +234,10 @@ def test_ambiguous_quote_confirmed_without_position(ent):
     # 철회 뒤 재추출: 대체된 옛 스냅샷의 창은 건너뛰므로(order.py) 새 스냅샷만 다시 뽑는다. 인용구가 두 곳인 주장은
     # 게이트가 E_QUOTE_AMBIGUOUS로 거부하므로 되살아나지 않고, 나머지 위치 있는 주장은 되살아난다
     from kb.cli import main
-    assert main(["claim", "retract", "--extractor", "l2:claude:haiku:extract-2", "--json"]) == 0
-    f = H.Fake("claude", True, _responder(ent))
+    assert main(["claim", "retract", "--extractor", "l2:anthropic_api:haiku:extract-2", "--json"]) == 0
+    f = H.Fake("anthropic_api", True, _responder(ent))
     with settings.override(**{"openrouter.enabled": False}):
-        out = runner.run_agent("public", backends={"claude": f}, do_support=False, reextract=True)
+        out = runner.run_agent("public", backends={"anthropic_api": f}, do_support=False, reextract=True)
     assert out["revived"] == 3 and len(H.claims("n.status='active'")) == 3
 
 

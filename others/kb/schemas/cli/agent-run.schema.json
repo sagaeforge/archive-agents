@@ -11,7 +11,7 @@
     "queue_left": {"type": "integer", "minimum": 0},
     "is_error": {"type": "boolean"},
     "scope": {"enum": ["public", "sensitive"]},
-    "by_backend": {"type": "object", "propertyNames": {"enum": ["claude", "codex", "openrouter", "sllm"]},
+    "by_backend": {"type": "object", "propertyNames": {"enum": ["claude", "codex", "openrouter", "openai_api", "anthropic_api", "local", "sllm"]},
                    "additionalProperties": {"type": "integer", "minimum": 0}},
     "reason": {"type": ["string", "null"]},
     "needs_review": {"type": "integer"},

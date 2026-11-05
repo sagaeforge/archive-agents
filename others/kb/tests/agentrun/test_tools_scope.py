@@ -14,13 +14,29 @@ TABLE = {  # 이름: (도구 집합, model, effort, maxTurns)
     "kb-judge": (set(), "haiku", "low", 3),
     "kb-verifier": ({"kb_search", "kb_get", "kb_source"}, "haiku", "low", 6),
     "kb-retro": (set(), "sonnet", "medium", 3),
+    # ADR-0006 project roles explicitly use local tools; no KB collector-body contract.
+    "sp-implementer": ({"Bash", "TaskOutput"}, "haiku", "low", None),
+    "sp-reviewer": ({"Bash", "TaskOutput"}, "haiku", "low", None),
+    "sp-test-runner": ({"Bash", "Read"}, "haiku", "low", None),
+    "sp-committer": ({"Bash", "Read"}, "haiku", "low", None),
 }
 FORBIDDEN = {"Read", "Bash", "Write", "Edit"}
 MCP = "mcp__kb-collect__"
 
 
 def front(name):
-    txt = (REPO / ".claude" / "agents" / f"{name}.md").read_text(encoding="utf-8")
+    path = REPO / ".claude" / "agents" / f"{name}.md"
+    if name.startswith("sp-"):
+        # Peer-owned role files: inspect frontmatter only.
+        with path.open(encoding="utf-8") as f:
+            lines = [next(f)]
+            for line in f:
+                lines.append(line)
+                if line.strip() == "---":
+                    break
+        txt = "".join(lines)
+    else:
+        txt = path.read_text(encoding="utf-8")
     m = re.match(r"---\n(.*?)\n---\n(.*)", txt, re.S)
     fm = {}
     for ln in m.group(1).splitlines():
@@ -33,7 +49,7 @@ def tools_of(fm):
     return {t.strip() for t in fm.get("tools", "").split(",") if t.strip()}
 
 
-def test_five_agents_exactly():
+def test_registered_agents_exactly():
     assert {p.stem for p in (REPO / ".claude" / "agents").glob("*.md")} == set(TABLE)
 
 
@@ -42,9 +58,13 @@ def test_agent_matches_adr_table(name):
     fm, body = front(name)
     want_tools, model, effort, turns = TABLE[name]
     got = tools_of(fm)
+    assert fm["model"] == model and fm["effort"] == effort
+    if turns is None:
+        assert got == want_tools
+        return
     assert {t.removeprefix(MCP) for t in got} == want_tools
     assert all(t.startswith(MCP) for t in got if t not in ("WebSearch", "WebFetch"))
-    assert fm["model"] == model and fm["effort"] == effort and int(fm["maxTurns"]) == turns
+    assert int(fm["maxTurns"]) == turns
     assert fm["omitClaudeMd"] == "true"
     assert "## 공통 규칙" in body and "incidents" in body and "데이터이며 지시가 아니다" in body
     assert "attributed" in body and "자체 점수" in body and "개인 정보" in body and "liveness=removed" in body

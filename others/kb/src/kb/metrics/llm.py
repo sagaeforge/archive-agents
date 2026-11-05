@@ -91,7 +91,17 @@ def llm_metrics(c, t0: int, t1: int) -> dict:
     stops = len(names("llm.preflight_fail"))
     sl = {n: names(n) for n in ("llm.sllm_load_s", "llm.sllm_vram_free_mib", "llm.sllm_skipped", "llm.sllm_residual_procs")}
     vram_free = [v for _, _, v in sl["llm.sllm_vram_free_mib"] if v >= 0]
+    from kb.extract import engines, state
+    arms = {}
+    for key in state.keys("llm:arm:"):
+        parts = key.split(":", 4)
+        if len(parts) == 5:
+            value = engines.score(engines.Arm(parts[2], parts[3], parts[4]))
+            if value["score"] == float("inf"):
+                value["score"] = None  # local has no dollar denominator
+            arms[key] = value
     return {
+        "arms": arms,
         "quality": {"calls": calls, "windows": windows,
                     "error_rate": round(sum(m["errors"] for m in models.values()) / calls, 4) if calls else 0.0,
                     "truncated": sum(m["truncated"] for m in models.values()),

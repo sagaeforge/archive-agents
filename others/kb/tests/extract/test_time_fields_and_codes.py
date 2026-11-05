@@ -71,8 +71,8 @@ def test_agent_bundle_with_bad_time_is_still_e_schema(ent):
 
 def _run_with(monkeypatch, capsys, valid_from, quote=QUOTE, doc=DOC25):
     H.ingest_doc(text=doc)
-    f = H.Fake("claude", True, lambda job: {"claims": [_claim(quote, valid_from=valid_from, value="81.8", unit="%")]})
-    monkeypatch.setattr(runner, "default_backends", lambda: {"claude": f})
+    f = H.Fake("anthropic_api", True, lambda job: {"claims": [_claim(quote, valid_from=valid_from, value="81.8", unit="%")]})
+    monkeypatch.setattr(runner, "default_backends", lambda: {"anthropic_api": f})
     with settings.override(**{"openrouter.enabled": False}):
         rc = main(["agent", "run", "--max-windows", "1", "--json"])
     return rc, json.loads(capsys.readouterr().out.strip().splitlines()[-1])
@@ -101,8 +101,8 @@ def test_run_mis_dating_inputs_stay_e_schema_and_nothing_is_stored(ent, capsys, 
 def test_run_json_counts_reject_and_review_codes(ent, capsys, monkeypatch):
     H.ingest_doc()
     bad = H.claim_obj(ent, H.GOOD["quote"], H.GOOD["statement"].replace("500건", "900건"), predicate="quota", value="900", unit="건")
-    f = H.Fake("claude", True, lambda job: {"claims": [bad]})
-    monkeypatch.setattr(runner, "default_backends", lambda: {"claude": f})
+    f = H.Fake("anthropic_api", True, lambda job: {"claims": [bad]})
+    monkeypatch.setattr(runner, "default_backends", lambda: {"anthropic_api": f})
     with settings.override(**{"openrouter.enabled": False}):
         main(["agent", "run", "--max-windows", "1", "--json"])
     out = json.loads(capsys.readouterr().out.strip().splitlines()[-1])

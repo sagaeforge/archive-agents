@@ -107,9 +107,9 @@ def test_kb_live_must_be_exactly_1(env, monkeypatch, capsys):
 
 
 def test_gate_pass_drop_off_on_claude_model_key_stops_claude(env):
-    """claude:haiku 키에 쓴 끔이 계획에서 Claude를 빼지 않던 결함(_claude_ok가 'claude'만 봤다)."""
+    """anthropic_api:haiku 키에 쓴 끔이 계획에서 Claude를 빼지 않던 결함(_claude_ok가 'anthropic_api'만 봤다)."""
     budget.set_balance(100.0)
     with settings.override(**{"openrouter.enabled": False}):
-        assert [c.backend for c in route.Router().plan("public", "extract").cands][:1] == ["claude"]
-        route.set_off("claude:haiku", "gate_pass_drop", None, human=True)
-        assert "claude" not in [c.backend for c in route.Router().plan("public", "extract").cands]
+        assert [c.backend for c in route.Router({"anthropic_api": H.Fake("anthropic_api", True)}).plan("public", "extract").cands][:1] == ["anthropic_api"]
+        route.set_off("anthropic_api:haiku", "gate_pass_drop", None, human=True)
+        assert "anthropic_api" not in [c.backend for c in route.Router({"anthropic_api": H.Fake("anthropic_api", True)}).plan("public", "extract").cands]

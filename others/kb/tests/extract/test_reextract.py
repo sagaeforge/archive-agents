@@ -18,9 +18,9 @@ def _resp(subject, idx):
 
 
 def _run(ent, idx, model, **kw):
-    f = H.Fake("claude", True, _resp(ent, idx))
+    f = H.Fake("anthropic_api", True, _resp(ent, idx))
     with settings.override(**{"openrouter.enabled": False, "claude.model": model}):
-        out = runner.run_agent("public", backends={"claude": f}, do_support=False, **kw)
+        out = runner.run_agent("public", backends={"anthropic_api": f}, do_support=False, **kw)
     return out, f
 
 
@@ -55,7 +55,7 @@ def test_bulk_retract_by_extractor(ent, capsys):
     H.ingest_doc(text=DOC)
     _run(ent, [0, 1, 2], "haiku")
     ex = H.claims()[0][5]
-    assert ex == "l2:claude:haiku:extract-2"
+    assert ex == "l2:anthropic_api:haiku:extract-2"
     rc = main(["claim", "retract", "--extractor", ex, "--json"])
     out = json.loads(capsys.readouterr().out.strip().splitlines()[-1])
     assert rc == 0 and out["matched"] == 3 and out["retracted"] == 3

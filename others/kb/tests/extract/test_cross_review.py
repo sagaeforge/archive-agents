@@ -31,9 +31,9 @@ def test_item1_first_party_subject_label_not_in_candidates(ent, monkeypatch):
     from kb.write.engine import project_pending
     _fp_open(monkeypatch)
     H.ingest_doc()
-    f = H.Fake("claude", True, H.extract_all(ent))
+    f = H.Fake("anthropic_api", True, H.extract_all(ent))
     with settings.override(**{"openrouter.enabled": False}):
-        runner.run_agent("public", backends={"claude": f}, do_support=False)
+        runner.run_agent("public", backends={"anthropic_api": f}, do_support=False)
     assert H.claims()                                                   # 외부 주장 span이 주어 ent를 가리킨다
     commit([{"kind": "entity.put", "actor": "user:sagae", "origin": "first_party", "subject": ent, "idem_key": "t:fp-ent",
              "payload": {"id": ent, "type": "Tool", "label": PRIV, "domain": ["G"], "aliases": ["sampletool"]}}], "user:sagae")
@@ -88,9 +88,9 @@ def test_item2_first_party_text_replacement_blocks_external_send(ent, monkeypatc
         c.close()
     finally:
         proc.gold.close()
-    f = H.Fake("claude", True, H.extract_all(ent))
+    f = H.Fake("anthropic_api", True, H.extract_all(ent))
     with settings.override(**{"openrouter.enabled": False}):
-        out = runner.run_agent("public", backends={"claude": f}, do_support=False)
+        out = runner.run_agent("public", backends={"anthropic_api": f}, do_support=False)
     assert f.calls == [] and out["windows"] == 0 and out["guarded"] >= 1
 
 
@@ -130,9 +130,9 @@ def _fp_claim(ent, monkeypatch):
     from kb.write.engine import project_pending
     _fp_open(monkeypatch)
     H.ingest_doc()
-    f = H.Fake("claude", True, H.extract_all(ent))
+    f = H.Fake("anthropic_api", True, H.extract_all(ent))
     with settings.override(**{"openrouter.enabled": False}):
-        runner.run_agent("public", backends={"claude": f}, do_support=False)
+        runner.run_agent("public", backends={"anthropic_api": f}, do_support=False)
     ev = [e for e in H.events("claim.assert")][0]
     p = dict(ev)
     p["id"] = "c-fp-private-claim"
@@ -157,26 +157,27 @@ def test_item3_first_party_claim_statement_not_sent_by_support(ent, monkeypatch)
         opsdb.queue_put(c, support.QUEUE, cid)
     finally:
         c.close()
-    f = H.Fake("claude", True, lambda job: {"supported": True})
+    f = H.Fake("anthropic_api", True, lambda job: {"supported": True})
     with settings.override(**{"openrouter.enabled": False}):
-        out = support.run_queue({"claude": f}, route.Router({"claude": f}))
+        out = support.run_queue({"anthropic_api": f}, route.Router({"anthropic_api": f}))
     assert f.calls == [], [j.user for j in f.calls]
 
 
 def test_item3_first_party_claim_statement_not_sent_by_cross_check(ent, monkeypatch):
     _fp_claim(ent, monkeypatch)
-    f = H.Fake("claude", True, lambda job: {"supported": True})
+    f = H.Fake("anthropic_api", True, lambda job: {"supported": True})
     with settings.override(**{"openrouter.enabled": False}):
-        out = support.cross_check({"claude": f}, route.Router({"claude": f}))
+        out = support.cross_check({"anthropic_api": f}, route.Router({"anthropic_api": f}))
     assert not any("비공개 내부 판단" in j.user for j in f.calls), [j.user for j in f.calls]
 
 
 def test_item3_denied_claim_does_not_end_cross_sampling(ent, monkeypatch):
     """가드가 거부한 주장 하나가 표본 감사 전체를 끝내지 않는다."""
     cid = _fp_claim(ent, monkeypatch)
-    f = H.Fake("claude", True, lambda job: {"supported": True})
-    with settings.override(**{"openrouter.enabled": False}):
-        out = support.cross_check({"claude": f}, route.Router({"claude": f}))
+    budget.set_balance(100.)
+    f = H.Fake("openrouter", True, lambda job: {"supported": True})
+    with settings.override(**{"openrouter.enabled": True}):
+        out = support.cross_check({"openrouter": f}, route.Router({"openrouter": f}))
     assert out["sampled"] >= 1 and cid        # 외부 주장 하나는 표본이 된다
 
 
@@ -191,9 +192,9 @@ def test_item3_judge_guard_covers_statement_without_selection_filter(ent, monkey
     finally:
         con.close()
     cl["origin"] = "external"
-    f = H.Fake("claude", True, lambda job: {"supported": True})
+    f = H.Fake("anthropic_api", True, lambda job: {"supported": True})
     with settings.override(**{"openrouter.enabled": False}):
-        j = support.judge(cl, {"claude": f}, route.Router({"claude": f}))
+        j = support.judge(cl, {"anthropic_api": f}, route.Router({"anthropic_api": f}))
     assert f.calls == [] and not j["ok"] and j["reason"].startswith("guard:")
 
 
@@ -207,9 +208,9 @@ def test_item4_restriction_applied_during_preflight_is_honored(ent, monkeypatch)
         def preflight(self):
             _replace_text_first_party(sid, "# 내부 메모\n\n샘플도구는 내부 목표 처리량을 하루 500건으로 정했다고 메모에 적혀 있다.\n")
             return super().preflight()
-    f = Slow("claude", True, H.extract_all(ent))
+    f = Slow("anthropic_api", True, H.extract_all(ent))
     with settings.override(**{"openrouter.enabled": False}):
-        out = runner.run_agent("public", backends={"claude": f}, do_support=False)
+        out = runner.run_agent("public", backends={"anthropic_api": f}, do_support=False)
     assert f.calls == [], [j.user for j in f.calls]
     assert out["windows"] == 0
 
@@ -274,6 +275,8 @@ def test_item5_no_request_sent_costs_nothing(envk, ent):
     w = Window("w", "n-x", "본문", [], [])
     job = Job(w, "extract", "public", "s", "본문", {}, "openai/gpt-6.1-sol")
     permit = g.authorize([{"text": "본문", "origin": "external", "sensitivity": 0, "display": None}], "openrouter", "본문")
+    budget.set_balance(100.)
+    job.admission = budget.admit("openrouter", job.model, job.purpose, .1, job=job.window.window_id)
     (envk.cfg / "openrouter.key").unlink()
     res = r.extract(job, permit)
     assert res.error == "no_key" and res.cost_usd == 0.0
@@ -290,9 +293,9 @@ def _queue_support(cid):
 
 def _external_claim(ent):
     H.ingest_doc()
-    f = H.Fake("claude", True, H.extract_all(ent))
+    f = H.Fake("anthropic_api", True, H.extract_all(ent))
     with settings.override(**{"openrouter.enabled": False, "claude.daily_windows": 400}):
-        runner.run_agent("public", backends={"claude": f}, do_support=False)
+        runner.run_agent("public", backends={"anthropic_api": f}, do_support=False)
     cl = H.claims()
     assert cl
     from kb.write import commit
@@ -357,26 +360,26 @@ def test_item7_reservation_refusal_for_valve_stops_support_without_fallback(envk
     cid = _external_claim(ent)
     _queue_support(cid)
 
-    def refuse(usd, *, purpose="extract"):
+    def refuse(engine, model, role, amount, **kw):
         raise budget.Refused("valve")
-    monkeypatch.setattr(budget, "reserve", refuse)
+    monkeypatch.setattr(budget, "admit", refuse)
     orf = H.Fake("openrouter", True, lambda job: {"supported": True})
-    clf = H.Fake("claude", True, lambda job: {"supported": True})
+    clf = H.Fake("anthropic_api", True, lambda job: {"supported": True})
     with settings.override(**{"openrouter.support_calibrated": True, "claude.daily_windows": 400}):
         budget.set_balance(100.0)
-        out = support.run_queue({"openrouter": orf, "claude": clf}, route.Router({"openrouter": orf, "claude": clf}))
+        out = support.run_queue({"openrouter": orf, "anthropic_api": clf}, route.Router({"openrouter": orf, "anthropic_api": clf}))
     assert orf.calls == [] and clf.calls == [], (len(orf.calls), len(clf.calls))
 
 
 def test_item7_reservation_refusal_for_valve_stops_extract_without_fallback(orsrv, ent, monkeypatch):
     H.ingest_doc()
 
-    def refuse(usd, *, purpose="extract"):
+    def refuse(engine, model, role, amount, **kw):
         raise budget.Refused("valve")
-    monkeypatch.setattr(budget, "reserve", refuse)
-    clf = H.Fake("claude", True, H.extract_all(ent))
+    monkeypatch.setattr(budget, "admit", refuse)
+    clf = H.Fake("anthropic_api", True, H.extract_all(ent))
     with settings.override(**{"claude.daily_windows": 400}):
-        out = runner.run_agent("public", backends={"openrouter": OpenRouter(), "claude": clf}, do_support=False)
+        out = runner.run_agent("public", backends={"openrouter": OpenRouter(), "anthropic_api": clf}, do_support=False)
     assert clf.calls == [] and orsrv.posts == []
 
 

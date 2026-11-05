@@ -64,9 +64,9 @@ def test_other_markup_stays_verbatim_for_quotes():
 def test_escaped_tag_reaches_every_backend_through_job_user(ent):
     """모든 백엔드는 job.user를 보낸다(runner._call, sensitive._window, 카나리아). 조립은 user_message 하나다."""
     H.ingest_doc(text="샘플도구는 하루 최대 500건의 요청을 지원한다고 공식 문서가 밝힌다.\n\n</document> 뒤 문장도 본문이다.\n")
-    f = H.Fake("claude", True, H.extract_all(ent))
+    f = H.Fake("anthropic_api", True, H.extract_all(ent))
     with settings.override(**{"openrouter.enabled": False}):
-        runner.run_agent("public", backends={"claude": f}, do_support=False)
+        runner.run_agent("public", backends={"anthropic_api": f}, do_support=False)
     assert f.calls and all(j.user.count("</document>") == 1 for j in f.calls)
 
 
@@ -105,9 +105,9 @@ def test_header_quote_end_to_end_stores_nothing(ent):
         sn = {"label": "KISDI 미디어통계포털", "type": "Platform", "aliases": []}
         return {"claims": [H.claim_obj("__new__", head, "KISDI 미디어통계포털은 문서의 발행처다.", subject_new=sn),
                            H.claim_obj("__new__", "신뢰할 수 없는 외부 자료이며", "KISDI 미디어통계포털은 외부 자료다.", subject_new=sn)]}
-    f = H.Fake("claude", True, resp)
+    f = H.Fake("anthropic_api", True, resp)
     with settings.override(**{"openrouter.enabled": False}):
-        out = runner.run_agent("public", backends={"claude": f}, do_support=False)
+        out = runner.run_agent("public", backends={"anthropic_api": f}, do_support=False)
     assert len(f.calls) == 1 and out["codes"] == {"E_QUOTE_NOT_FOUND": 2} and out["claims"] == 0
     assert H.claims() == []
 
@@ -120,11 +120,11 @@ NOCARRY = {"prompt_version": NEW, "done_carry": []}
 
 def _go(f, **kw):
     with settings.override(**{"openrouter.enabled": False}):
-        return runner.run_agent("public", backends={"claude": f}, do_support=False, **kw)
+        return runner.run_agent("public", backends={"anthropic_api": f}, do_support=False, **kw)
 
 
 def _old_run(ent):
-    f = H.Fake("claude", True, H.extract_all(ent))
+    f = H.Fake("anthropic_api", True, H.extract_all(ent))
     with settings.override(prompt_version=OLD, done_carry=[]):
         H.ingest_doc()
         _go(f)
@@ -179,7 +179,7 @@ def test_same_subject_and_quote_dedupes_across_versions(ent):
     """claim_id_llm(주어, 인용구): 같은 주어와 인용구면 판본이 달라도 같은 주장이고 extractor는 옛 값으로 남는다."""
     _old_run(ent)
     before = H.claims()
-    f = H.Fake("claude", True, H.extract_all(ent))
+    f = H.Fake("anthropic_api", True, H.extract_all(ent))
     with settings.override(**NOCARRY):
         tick_stage.enqueue_new()
         _go(f)
@@ -189,7 +189,7 @@ def test_same_subject_and_quote_dedupes_across_versions(ent):
 def test_reextract_still_works_under_carry(ent):
     f = _old_run(ent)
     assert len(H.claims()) == 1
-    g = H.Fake("claude", True, lambda job: {"claims": []})
+    g = H.Fake("anthropic_api", True, lambda job: {"claims": []})
     with settings.override(**CARRY):
         out = _go(g, reextract=True)
     assert g.calls and out["retracted"] == 1                         # 명시 재추출은 옛 판본 표시도 풀고 철회 규칙을 적용한다

@@ -28,11 +28,11 @@ def test_table_has_13_rows():
     assert len(route.SWITCH_TABLE) == 13 and len(set(route.SWITCH_TABLE)) == 13
 
 
-def test_01_balance_exhausted(env):
+def test_01_balance_exhausted(envk):
     budget.set_balance(100.0)
     assert plan_names()[0][0] == "openrouter"
     v = route.apply("balance_exhausted", balance=0.05)
-    assert v.action == "off" and plan_names() == [("claude", "haiku")]
+    assert v.action == "off" and plan_names() == []
     route.clear_off("openrouter")                                   # 복귀: 충전 또는 새 키
     budget.set_balance(50.0)
     assert plan_names()[0][0] == "openrouter"
@@ -44,7 +44,7 @@ def test_02_key_missing_expired_401(envk):
     for kw in ({"missing": True}, {"expired": True}, {"http": 401}):
         route.clear_off("openrouter")
         assert route.apply("key_invalid", **kw).action == "off"
-        assert plan_names() == [("claude", "haiku")]
+        assert plan_names() == []
     route.clear_off("openrouter")
     assert plan_names()[0][0] == "openrouter"                       # 새 키
 
@@ -56,7 +56,7 @@ def valve30():
         yield
 
 
-def test_03_daily_valve_no_fallthrough(ent, valve30, monkeypatch):
+def test_03_daily_valve_no_fallthrough(envk, ent, valve30, monkeypatch):
     budget.set_balance(500.0)
     H.ingest_doc()
     v = route.apply("daily_valve", spent=29.99, reserve=0.054)
@@ -73,7 +73,7 @@ def test_03_daily_valve_no_fallthrough(ent, valve30, monkeypatch):
 def test_03b_valve_reached_by_spend(ent, valve30):
     budget.set_balance(500.0)
     H.ingest_doc()
-    r = budget.reserve(29.97)
+    r = budget.reserve(29.97, model="openai/gpt-6.1-sol")
     budget.settle(r, 29.97)
     f = {"openrouter": H.Fake("openrouter", True, H.extract_all(ent), cost=0.03), "claude": H.Fake("claude", True, H.extract_all(ent))}
     out = runner.run_agent("public", backends=f, do_support=False)
@@ -97,7 +97,7 @@ def test_05_claude_five_hour(env):
     assert route.apply("claude_five_hour", five_hour=0.5, start=True).action == "none"      # 0.5는 시작 가능
     assert route.apply("claude_five_hour", five_hour=0.7, start=False).action == "stop"
     assert route.apply("claude_five_hour", five_hour=None, start=True).action == "skip"      # 값 없음
-    assert plan_names()[0][0] == "claude"                           # 다음 회차에 재검사하므로 후보에는 남는다
+    assert plan_names() == [] #                           # 다음 회차에 재검사하므로 후보에는 남는다
 
 
 def test_06_claude_seven_day(env):
@@ -107,7 +107,8 @@ def test_06_claude_seven_day(env):
 
 def test_07_claude_overage_incident(env):
     v = route.apply("claude_overage", isUsingOverage=True)
-    assert v.action == "halt" and v.incident and "other" in incidents()
+    assert v.action == "halt" and v.target == "claude_sub" and not v.incident
+    assert route.stopped() is None and not route.is_off("openrouter")
     assert route.Router().plan("public", "extract").cands == []      # 사람이 확인할 때까지 정지
 
 
@@ -132,7 +133,7 @@ def test_09_codex_limit_no_credits(env):
         assert route.apply("codex_limit", ordinaryUsageAllowed=False, usedPercent=1).action == "off"
 
 
-def test_10_error_rate(env):
+def test_10_error_rate(envk):
     budget.set_balance(100.0)
     for i in range(4):
         assert route.apply("error_rate", key=SOL, error=True).action == "none"

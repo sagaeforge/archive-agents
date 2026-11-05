@@ -1,220 +1,387 @@
-"""kb jobs run: claude -p를 부르는 작업(agents.fulfill, agents.liveness_review, metrics.retro)은 작업마다 ADR-0003 5장 활용률 규칙과 사람의 정지를 지난다.
-7일 >= 0.80, 초과 과금, 값 없음, llm:stop, HALT이면 사유를 남기고 건너뛴다(실패 아님, 만기 기록 없음). 0.5면 돈다. claude -p는 대역이다."""
-import stat
-import subprocess
+"""ADR-0004 E1: jobs select API engines; no subscription preflight or canary."""
+import json
 
 import pytest
-import yaml
 
-from arhelp import REPO, approve
-
-JOBS_YAML = """jobs:
-  - {id: agents.fulfill, kind: agent, every_s: 86400, cmd: "kb-agent-run kb-fulfill"}
-  - {id: agents.liveness_review, kind: agent, every_s: 604800, cmd: "kb-agent-run kb-liveness-review"}
-  - {id: metrics.retro, kind: agent, every_s: 604800, cmd: "kb retro"}
-  - {id: extract.l2, kind: agent, every_s: 3600, cmd: "kb agent run --scope public"}
-"""
-CLAUDE_JOBS = {"agents.fulfill", "agents.liveness_review", "metrics.retro"}
+from arhelp import approve
+from kb.commands import jobs
+from kb.extract import budget, engines, guard, route, settings, state
 
 
-def script(path, body):
-    path.write_text("#!/bin/sh\n" + body)
-    path.chmod(path.stat().st_mode | stat.S_IEXEC)
-    return str(path)
+def fund(home):
+    budget.set_balance(100.)
+    state.put('credit:anthropic_api', credit())
+
+
+def credit(**kw):
+    return dict(dict(balance=200., budget_usd=200., cycle_spent=0., spent_today=0., reserved=0., cap_today=60.), **kw)
+
+
+@pytest.fixture(autouse=True)
+def funding(home):
+    fund(home)
+    with settings.override(**{'selector.epsilon': 0, 'openrouter.daily_valve_usd': 60.}):
+        yield
+
+
+def fake_cli(home, *, cost=.25, source='apiKeyHelper', crash=False):
+    import sys
+    from pathlib import Path
+    src = str(Path(__file__).resolve().parents[2] / 'src')
+    fake = home / 'fake-claude'
+    fake.write_text(f'''#!{sys.executable}
+import json,os,sys,subprocess,shlex
+sys.path.insert(0, {src!r})
+from kb.extract import budget,state
+if 'auth' in sys.argv:
+    print(json.dumps({{'authMethod':'api_key','apiKeySource':'apiKeyHelper'}}))
+    sys.exit(0)
+settings=json.load(open(sys.argv[sys.argv.index('--settings')+1]))
+assert settings.get('disableAllHooks') is True
+assert sys.argv[sys.argv.index('--setting-sources')+1] == ''
+assert '--strict-mcp-config' in sys.argv
+with open({str(home / 'paid.jsonl')!r}, 'a') as f:
+    f.write(json.dumps({{'reserved':budget.day()['reserved'], 'env':dict(os.environ), 'argv':sys.argv, 'admissions':[state.get(k) for k in state.keys('llm:reservation:')]}})+'\\n')
+subprocess.run([sys.executable, '-c', 'import os,json;open('+repr({str(home / 'descendant.json')!r})+',"w").write(json.dumps(dict(os.environ)))'], check=True)
+if '--mcp-config' in sys.argv:
+    mcp=json.load(open(sys.argv[sys.argv.index('--mcp-config')+1]))['mcpServers']
+    assert list(mcp)==['kb-collect']
+    srv=mcp['kb-collect']
+    subprocess.run([srv['command'],*srv['args']],env=dict(os.environ,ANTHROPIC_API_KEY='injected-fixture-key',OPENAI_API_KEY='injected-fixture-key'),check=True)
+key=subprocess.run(shlex.split(settings['apiKeyHelper']),capture_output=True,text=True,check=True).stdout.strip()
+print(json.dumps({{'type':'system','subtype':'init','apiKeySource':{source!r}}}),flush=True)
+if {crash!r}:
+    sys.exit(7)
+print(json.dumps({{'type':'result','is_error':False,'subtype':'success','total_cost_usd':{cost!r},'result':key}}),flush=True)
+''')
+    fake.chmod(0o700)
+    server = home / 'runtime' / 'bin' / 'kb-mcp'
+    server.parent.mkdir(parents=True, exist_ok=True)
+    server.write_text(f'''#!{sys.executable}
+import os,json
+open({str(home / 'mcp-env.json')!r},'w').write(json.dumps(dict(os.environ)))
+''')
+    server.chmod(0o700)
+    return fake
+
+
+def key(home, engine):
+    p = home / 'config' / engines.KEY_FILES[engine]
+    p.write_text('fixture-redaction-key')
+    p.chmod(0o600)
 
 
 @pytest.fixture
 def env(home, monkeypatch):
-    from kb.extract.backends import claude as cb
-    from kb.extract.types import Result
-    share = home / "share"
-    (share / "sources" / "internal.d").mkdir(parents=True)
-    (share / "sources" / "internal.d" / "t.yaml").write_text(JOBS_YAML)
-    cfg = yaml.safe_load((REPO / "sources/internal.d/extract.yaml").read_text())["settings"]       # 문턱은 저장소 것, 작업 목록은 뺀다
-    (share / "sources" / "internal.d" / "extract.yaml").write_text(yaml.safe_dump({"settings": cfg}))
-    for d in ("schemas", "prompts"):
-        (share / d).symlink_to(REPO / d)
-    monkeypatch.setenv("KB_SHARE", str(share))
-    log = home / "calls.log"
-    monkeypatch.setenv("KB_BIN", script(home / "fake-kb", f'echo "kb $*" >> "{log}"\n'))
-    monkeypatch.setenv("KB_AGENT_RUN", script(home / "fake-agent-run", f'echo "agent-run $*" >> "{log}"\n'))
-    fake_bin = home / "claude-bin"
-    fake_bin.write_text("")
-    monkeypatch.setenv("KB_CLAUDE_BIN", str(fake_bin))
     approve(home, 11)
-    st = {"rate": {"five_hour": 0.1, "seven_day": 0.5, "status": "allowed", "isUsingOverage": False}, "canaries": 0}
-
-    def fake_run_claude(model, system, user, schema_obj, budget_usd, window_id):
-        st["canaries"] += 1
-        r = Result(window_id, "claude", model)
-        r.raw = "{}"
-        r.error = st.get("error")
-        r.extra["rate"] = dict(st["rate"])
-        return r
-    monkeypatch.setattr(cb, "run_claude", fake_run_claude)
-    monkeypatch.setattr(cb.Claude, "_auth_ok", lambda self: True)
-    st["log"] = log
-    return st
+    key(home, 'openrouter')
+    monkeypatch.setenv('KB_CLAUDE_BIN', str(fake_cli(home)))
+    monkeypatch.setattr(jobs, 'load_agent_jobs', lambda: [
+        {'id': 'a', 'cmd': 'kb-agent-run kb-fulfill'}, {'id': 'b', 'cmd': 'kb-agent-run kb-retro'}])
+    monkeypatch.setenv('KB_AGENT_RUN', str(__import__('pathlib').Path(__file__).resolve().parents[2] / 'ops/bin/kb-agent-run'))
+    # Real selector, wrapper, reservation, settlement and subprocesses; no paid calls.
+    return home
 
 
-def calls(st):
-    return st["log"].read_text().splitlines() if st["log"].exists() else []
+def paid(home):
+    p = home / 'paid.jsonl'
+    return [json.loads(s) for s in p.read_text().splitlines()] if p.exists() else []
 
 
-def test_skipped_at_seven_day_095(env):
-    from kb.commands import jobs
-    env["rate"]["seven_day"] = 0.95
+def test_jobs_pass_engine_on_every_invocation(env):
     out = jobs.run_due()
-    assert {k: v for k, v in out["skipped"].items() if k in CLAUDE_JOBS} == {j: "claude_seven_day" for j in CLAUDE_JOBS}
-    assert out["failed"] == [] and out["calls"] == 1
-    assert calls(env) == ["kb agent run --scope public"]          # claude 작업은 하나도 시작하지 않았다
-    assert env["canaries"] == 1                                    # 검사 1회, 작업 셋이 공유한다
-    from kb.extract import state
-    recs = state.metrics("agentjob.skipped")
-    assert sorted(d["job"] for _, d, _ in recs) == sorted(CLAUDE_JOBS) and {d["reason"] for _, d, _ in recs} == {"seven_day"}
+    assert len(paid(env)) == 2
+    assert [x['reserved'] for x in paid(env)] == [2., 1.]
+    assert budget.day()['spent'] == .5 and budget.day()['reserved'] == 0
+    assert budget.balance() == 99.5
+    assert all(r['engine'] == 'openrouter' for r in out['ran'])
 
 
-def test_retried_next_cycle_when_utilization_drops(env):
-    from kb.commands import jobs
-    env["rate"]["seven_day"] = 0.95
-    jobs.run_due()
-    env["rate"]["seven_day"] = 0.5
-    from kb.extract import state
-    c = state.get("claude:canary")
-    state.put("claude:canary", dict(c, at=c["at"] - 7200))        # 마지막 측정이 1시간보다 낡아 다시 잰다
+def test_existing_global_stop_is_respected_without_canary(env, monkeypatch):
+    state.put(route.STOP_KEY, {'reason': 'incident_1'})
+    monkeypatch.setattr(route, 'claude_rate', lambda *a: pytest.fail('subscription canary'))
     out = jobs.run_due()
-    assert [j for j in out["ran"] if j["id"] in CLAUDE_JOBS] and not out["failed"]
-    assert sorted(c for c in calls(env) if c.startswith(("agent-run", "kb retro"))) == [
-        "agent-run kb-fulfill", "agent-run kb-liveness-review", "kb retro"]
+    assert not paid(env) and set(out['skipped'].values()) == {'engine_hold_incident_1'}
 
 
-def test_runs_at_seven_day_05(env):
-    from kb.commands import jobs
+def test_overage_leaves_api_jobs_available(env):
+    route.apply('claude_overage', isUsingOverage=True)
+    assert jobs.run_due()['calls'] == 2 and len(paid(env)) == 2
+    assert route.stopped() is None and not route.is_off('openrouter')
+
+
+def test_gate_is_rechecked_for_each_job(env, monkeypatch):
+    real = jobs.subprocess.run
+    def run(argv, **kw):
+        result = real(argv, **kw)
+        route.set_off('openrouter', 'auth_signature', None)
+        return result
+    monkeypatch.setattr(jobs.subprocess, 'run', run)
     out = jobs.run_due()
-    assert not out["failed"] and out["calls"] == 4
-    assert {j["id"] for j in out["ran"]} == CLAUDE_JOBS | {"extract.l2"}
-    assert calls(env) == ["kb agent run --scope public", "agent-run kb-fulfill", "agent-run kb-liveness-review", "kb retro"]
+    assert out['calls'] == 1 and out['skipped']['b'] == 'no_api_engine'
 
 
-@pytest.mark.parametrize("rate,reason", [
-    ({"five_hour": 0.1, "seven_day": 0.80}, "seven_day"),            # 문턱은 이상(>=)
-    ({"five_hour": 0.6, "seven_day": 0.1}, "five_hour"),             # 시작 시 5시간 > 0.5
-    ({"five_hour": 0.1, "seven_day": 0.1, "isUsingOverage": True}, "overage"),
-    ({"five_hour": 0.1, "seven_day": None}, "rate_unavailable"),     # 7일 값이 없으면 문턱을 잴 수 없다
-])
-def test_other_stop_reasons(env, rate, reason):
-    from kb.commands import jobs
-    env["rate"] = dict(rate, status="allowed")
-    out = jobs.run_due()
-    allowed = {"claude_" + reason, "claude_hold_claude_overage"} if reason == "overage" else {"claude_" + reason}
-    assert {out["skipped"][j] for j in CLAUDE_JOBS} <= allowed and not out["failed"]
-    assert calls(env) == ["kb agent run --scope public"]
+def test_no_available_engine_is_queued(env, monkeypatch):
+    monkeypatch.setattr(jobs, '_engine_for', lambda j: None)
+    assert set(jobs.run_due()['skipped'].values()) == {'no_api_engine'} and not paid(env)
 
 
-def _rate_rises_after(job, monkeypatch, env):
-    """job이 끝나는 사이 다른 경로가 활용률 0.95를 저장한다."""
-    from kb.commands import jobs
-    from kb.extract import settings, state
-    real = subprocess.run
-
-    def wrapped(argv, *a, **k):
-        r = real(argv, *a, **k)
-        if job in " ".join(map(str, argv)):
-            state.put("claude:rate", {"five_hour": 0.2, "seven_day": 0.95, "status": "allowed", "isUsingOverage": False, "at": settings.now_s()})
-        return r
-    monkeypatch.setattr(jobs.subprocess, "run", wrapped)
-
-
-def test_rate_stored_after_first_job_skips_later_jobs(env, monkeypatch):
-    """리뷰 M2: 검사는 작업마다다."""
-    from kb.commands import jobs
-    _rate_rises_after("kb-fulfill", monkeypatch, env)
-    out = jobs.run_due()
-    assert calls(env) == ["kb agent run --scope public", "agent-run kb-fulfill"]
-    assert out["skipped"]["agents.liveness_review"] == out["skipped"]["metrics.retro"] == "claude_seven_day"
-
-
-@pytest.mark.parametrize("hold,reason", [
-    (lambda r, s, g: s.put(r.STOP_KEY, {"reason": "cost_exceeded", "at": 1}), "hold_cost_exceeded"),
-    (lambda r, s, g: s.put(g.HALT_KEY, {"reason": "external_send", "backend": "x"}), "hold_halted"),
-    (lambda r, s, g: r.apply("claude_overage", isUsingOverage=True), "hold_claude_overage"),
-    (lambda r, s, g: r.set_off("claude", "overage", None), "hold_overage"),
-], ids=["llm_stop", "halt", "overage_signal", "off_without_retry"])
-def test_human_holds_block_jobs_with_clean_rate(env, hold, reason):
-    """리뷰 M3: 지금 활용률이 깨끗해도 사람이 풀어야 하는 정지는 작업을 막고 카나리아도 쓰지 않는다."""
-    from kb.commands import jobs
-    from kb.extract import guard, route, state
-    hold(route, state, guard)
-    out = jobs.run_due()
-    assert {out["skipped"][j] for j in CLAUDE_JOBS} == {"claude_" + reason} and not out["failed"]
-    assert calls(env) == ["kb agent run --scope public"] and env["canaries"] == 0
-
-
-def test_automatic_off_does_not_hold_jobs(env):
-    """다음 회차에 재검사하는 끄기(5시간, 7일)는 지금 값으로 다시 판단한다."""
-    from kb.commands import jobs
-    from kb.extract import route
-    route.set_off("claude", "seven_day", None, retry="next_run")
-    route.set_off("claude", "daily_windows", route.settings.now_s() + 3600)
-    assert {j["id"] for j in jobs.run_due()["ran"]} >= CLAUDE_JOBS
-
-
-@pytest.mark.parametrize("fail", ["rate", "error"], ids=["no_rate_value", "canary_failed"])
-def test_failing_canary_backs_off(env, fail):
-    """리뷰 L2: 실패한 카나리아는 한 회차에 한 번이고, 물러나 있는 동안 다음 회차도 호출하지 않는다."""
-    from kb.commands import jobs
-    from kb.extract import route, settings, state
-    if fail == "rate":
-        env["rate"] = {"five_hour": None, "seven_day": None, "status": "allowed"}
-    else:
-        env["error"] = "boom"
-    first = {"rate": "claude_preflight_no_rate_value", "error": "claude_preflight_canary_failed"}[fail]
-    out = jobs.run_due()
-    assert out["skipped"]["agents.fulfill"] == first and env["canaries"] == 1
-    assert out["skipped"]["agents.liveness_review"] == out["skipped"]["metrics.retro"] == "claude_canary_backoff"
-    assert jobs.run_due()["skipped"]["agents.fulfill"] == "claude_canary_backoff" and env["canaries"] == 1
-    f = state.get(route.CANARY_FAIL_KEY)
-    assert f["n"] == 1 and f["until"] - f["at"] == settings.get("claude.rate_recheck_s")
-
-    state.put(route.CANARY_FAIL_KEY, dict(f, until=settings.now_s() - 1))       # 대기가 끝나면 다시 재고, 실패하면 두 배로 물러난다
-    jobs.run_due()
-    f = state.get(route.CANARY_FAIL_KEY)
-    assert env["canaries"] == 2 and f["n"] == 2 and f["until"] - f["at"] == 2 * settings.get("claude.rate_recheck_s")
-
-    env["rate"], env["error"] = {"five_hour": 0.1, "seven_day": 0.5, "status": "allowed", "isUsingOverage": False}, None
-    state.put(route.CANARY_FAIL_KEY, dict(f, until=settings.now_s() - 1))
-    assert {j["id"] for j in jobs.run_due()["ran"]} >= CLAUDE_JOBS and state.get(route.CANARY_FAIL_KEY) is None
-
-
-def test_check_error_closes_the_gate(env, monkeypatch):
-    from kb.commands import jobs
-    from kb.extract import route
-
-    def boom(be=None):
-        raise RuntimeError("x")
-    monkeypatch.setattr(route, "claude_job_gate", boom)
-    out = jobs.run_due()
-    assert {out["skipped"][j] for j in CLAUDE_JOBS} == {"claude_gate_error:RuntimeError"} and calls(env) == ["kb agent run --scope public"]
-
-
-def test_dry_run_makes_no_check_and_no_claude_call(env):
-    from kb.commands import jobs
-    env["rate"]["seven_day"] = 0.95
+def test_dry_run_has_engine_and_makes_zero_calls(env):
     out = jobs.run_due(dry_run=True)
-    assert env["canaries"] == 0 and len(out["ran"]) == 4 and calls(env) == []
+    assert len(out['ran']) == 2 and not paid(env)
+    assert all(r['engine'] != 'claude_sub' for r in out['ran'])
 
 
-def test_second_check_in_the_hour_costs_no_call(env):
-    from kb.commands import jobs
-    jobs.run_due()
-    n = env["canaries"]
-    from kb.core import opsdb
-    c = opsdb.connect()
-    try:
-        for r in c.execute("SELECT k FROM tick_state WHERE k LIKE 'agentjob:%'").fetchall():
-            c.execute("DELETE FROM tick_state WHERE k=?", (r[0],))
-        c.commit()
-    finally:
-        c.close()
-    jobs.run_due()
-    assert env["canaries"] == n == 1
+def test_configured_subscription_engine_rejected(home):
+    assert jobs._engine_for({'cmd': 'kb retro', 'engine': 'claude_sub'}) is None
+
+
+def test_api_auth_signatures_are_required():
+    assert engines.auth_signature('anthropic_api', {'authMethod': 'api_key'})
+    assert not engines.auth_signature('anthropic_api', {'authMethod': 'oauth_token'})
+    assert not engines.auth_signature('openrouter', {'authMethod': 'claude.ai'})
+    assert engines.auth_signature('openrouter', {'apiKeySource': 'ANTHROPIC_AUTH_TOKEN'}, phase='init')
+    assert not engines.auth_signature('openrouter', {'apiKeySource': '/login managed key'}, phase='init')
+    assert not engines.auth_signature('anthropic_api', {}, phase='init')
+
+
+def test_isolated_api_environment_and_redacted_preview(home, monkeypatch):
+    from kb.agentrun import auth, invoke
+    secret = 'fixture-api-key'
+    for engine in ('openrouter', 'anthropic_api'):
+        p = home / 'config' / engines.KEY_FILES[engine]
+        p.write_text(secret)
+        p.chmod(0o600)
+        call = invoke.build('kb-fulfill', str(home), engine=engine,
+                            environ={'HOME': str(home), 'OPENAI_API_KEY': 'inherited', 'ANTHROPIC_AUTH_TOKEN': 'inherited'})
+        assert secret not in call.shell() and secret not in repr(call)
+        with auth.environment(engine, call.env) as (e, key):
+            from pathlib import Path
+            assert key == secret and e['HOME'] != str(home)
+            assert e['CLAUDE_CONFIG_DIR'] == e['HOME']
+            assert not (Path(e['HOME']) / '.credentials.json').exists()
+            assert 'OPENAI_API_KEY' not in e
+            assert secret not in e.values()
+            assert not {'ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'OPENAI_API_KEY'} & e.keys()
+            doc = json.loads(__import__('pathlib').Path(e['KB_API_SETTINGS']).read_text())
+            assert doc['disableAllHooks'] is True and secret not in json.dumps(doc)
+
+
+def test_agent_requires_explicit_engine(home):
+    from kb.agentrun import invoke
+    with pytest.raises(ValueError, match='explicit_api_engine_required'):
+        invoke.build('kb-fulfill', str(home))
+
+
+@pytest.mark.parametrize('engine', ['openrouter', 'anthropic_api'])
+def test_runner_auth_and_secret_redaction(home, monkeypatch, capsys, engine):
+    from kb.agentrun import runner
+    from kb.metrics.retro import _read_archive
+    approve(home, 11)
+    secret = 'fixture-redaction-key'
+    key(home, engine)
+    monkeypatch.setenv('KB_CLAUDE_BIN', str(fake_cli(home)))
+    assert runner.main(['kb-retro', '--engine', engine]) == 0
+    captured = capsys.readouterr()
+    assert secret not in captured.out + captured.err
+    out = json.loads(captured.out)
+    events = _read_archive(out['archive'])
+    assert secret not in json.dumps(events) and '<redacted>' in json.dumps(events)
+
+
+def test_runner_signature_mismatch_only_disables_selected_engine(home, monkeypatch, capsys):
+    from kb.agentrun import runner
+    approve(home, 11)
+    key(home, 'anthropic_api')
+    monkeypatch.setenv('KB_CLAUDE_BIN', str(fake_cli(home, source='/login managed key')))
+    assert runner.main(['kb-retro', '--engine', 'anthropic_api']) == 1
+    assert route.is_off('anthropic_api') and not route.is_off('openrouter')
+    assert route.stopped() is None
+    assert 'auth_signature' in capsys.readouterr().out
+
+
+@pytest.mark.parametrize('cmd', ['claude -p hello', 'codex exec hello', 'env claude -p hello'])
+def test_raw_subscription_commands_cannot_bypass_selector(home, cmd):
+    assert jobs._engine_for({'cmd': cmd}) is None
+
+
+def test_sensitive_job_selects_local_without_api_key(home):
+    assert jobs._engine_for({'cmd': 'kb agent run --scope sensitive'}) == 'local'
+
+
+@pytest.mark.parametrize('engine', ['openrouter', 'anthropic_api'])
+def test_workflow_reserves_and_settles_shared_ledger(home, monkeypatch, engine):
+    from kb.agentrun import runner
+    approve(home, 11)
+    key(home, engine)
+    monkeypatch.setenv('KB_CLAUDE_BIN', str(fake_cli(home)))
+    assert runner.main(['kb-fulfill', '--engine', engine]) == 0
+    assert paid(home)[0]['reserved'] == 2.
+    assert budget.day()['spent'] == .25 and budget.day()['reserved'] == 0
+    if engine == 'openrouter':
+        assert budget.balance() == 99.75
+    else:
+        assert state.get('credit:anthropic_api')['cycle_spent'] == .25
+        assert state.get('credit:anthropic_api')['balance'] == 199.75
+    # An extraction reservation shares the exact same daily record.
+    reservation = budget.reserve(.1, model="openai/gpt-6.1-sol")
+    assert budget.day()['spent'] == .25 and budget.day()['reserved'] == .1
+    budget.release(reservation)
+
+
+def test_jobs_refuse_5999_valve_without_credit_state(env):
+    state.put(budget.day_key(), dict(spent=59.99, reserved=0.))
+    assert state.get('credit:openrouter') is None
+    out = jobs.run_due()
+    assert not paid(env) and out['calls'] == 0
+    assert set(out['skipped'].values()) == {'no_api_engine'}
+    assert budget.day()['spent'] == 59.99
+
+
+@pytest.mark.parametrize('engine', ['openrouter', 'anthropic_api'])
+@pytest.mark.parametrize('control', ['llm_off', 'credit_off', 'pace_off', 'model_hold', 'canonical_model_hold',
+    'arm_hold', 'enabled', 'day_cap', 'cycle_cap', 'target', 'balance', 'missing', 'incomplete', 'valve', 'pace_day_cap', 'pace_cycle_cap'])
+def test_direct_workflow_honors_every_disable_control(home, monkeypatch, engine, control):
+    from kb.agentrun import runner
+    approve(home, 11)
+    key(home, engine)
+    model = 'anthropic/claude-haiku-5.5' if engine == 'openrouter' else 'haiku'
+    changes = {}
+    if control == 'llm_off':
+        route.set_off(engine, 'test', None)
+    elif control == 'credit_off':
+        state.put('credit:off:' + engine, {'reason': 'test'})
+    elif control == 'pace_off':
+        changes[f'engines.{engine}.pace.mode'] = 'off'
+    elif control == 'pace_day_cap':
+        changes[f'engines.{engine}.pace.cap_day_usd'] = 1.
+    elif control == 'pace_cycle_cap':
+        changes[f'engines.{engine}.pace.budget_usd'] = 1.
+    elif control == 'enabled':
+        changes[f'engines.{engine}.enabled'] = False
+    elif control in ('model_hold', 'canonical_model_hold'):
+        route.set_off(route.model_key(engine, model) if control == 'model_hold' else f'{engine}:{model}', 'test', None)
+    elif control == 'arm_hold':
+        state.put(f'arm:off:agent:{engine}:{model}', {'reason': 'test'})
+    elif control == 'missing':
+        state.delete(budget.BAL if engine == 'openrouter' else 'credit:' + engine)
+    elif control == 'incomplete':
+        state.put('credit:' + engine, {})
+    elif control == 'valve':
+        state.put(budget.day_key(), dict(spent=59.99, reserved=0.))
+    else:
+        values = credit()
+        if control == 'day_cap': values['cap_today'] = 1.
+        if control == 'cycle_cap': values['cycle_spent'] = 199.
+        if control == 'target': values['target_today'] = 1.
+        if control == 'balance': values['balance'] = 1.
+        state.put('credit:' + engine, values)
+    monkeypatch.setattr(__import__('kb.agentrun.auth', fromlist=['preflight']), 'preflight',
+                        lambda *a: pytest.fail('disabled engine reached CLI authentication'))
+    with settings.override(**changes):
+        assert runner.main(['kb-fulfill', '--engine', engine]) == 3
+    assert not paid(home)
+
+
+@pytest.mark.parametrize('engine', ['openrouter', 'anthropic_api'])
+def test_descendants_never_inherit_credential_and_project_hooks_are_disabled(home, monkeypatch, engine):
+    from kb.agentrun import runner
+    approve(home, 11)
+    key(home, engine)
+    monkeypatch.setenv('ANTHROPIC_API_KEY', 'inherited-secret')
+    monkeypatch.setenv('OPENAI_API_KEY', 'inherited-secret')
+    monkeypatch.setenv('KB_CLAUDE_BIN', str(fake_cli(home)))
+    assert runner.main(['kb-fulfill', '--engine', engine]) == 0
+    for name in ('descendant.json', 'mcp-env.json'):
+        doc = json.loads((home / name).read_text())
+        assert not {'ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'OPENAI_API_KEY', 'CODEX_API_KEY'} & doc.keys()
+        assert not {'fixture-redaction-key', 'inherited-secret', 'injected-fixture-key'} & set(doc.values())
+    cli = paid(home)[0]
+    assert 'fixture-redaction-key' not in json.dumps(cli)
+
+
+def test_workflow_crash_charges_full_reservation(home, monkeypatch):
+    from kb.agentrun import runner
+    approve(home, 11)
+    key(home, 'openrouter')
+    monkeypatch.setenv('KB_CLAUDE_BIN', str(fake_cli(home, crash=True)))
+    assert runner.main(['kb-fulfill', '--engine', 'openrouter']) == 1
+    assert budget.day()['spent'] == 2. and budget.day()['reserved'] == 0
+    assert budget.balance() == 98.
+
+
+def test_failed_spawn_releases_reservation(home, monkeypatch):
+    from kb.agentrun import runner
+    from kb.agentrun import auth
+    approve(home, 11)
+    key(home, 'openrouter')
+    monkeypatch.setenv('KB_CLAUDE_BIN', '/nonexistent/claude')
+    monkeypatch.setattr(auth, 'preflight', lambda *a: True)
+    with pytest.raises(OSError):
+        runner.main(['kb-fulfill', '--engine', 'openrouter'])
+    assert budget.day()['spent'] == 0 and budget.day()['reserved'] == 0
+
+
+def test_competing_reservations_are_atomic(home):
+    from concurrent.futures import ThreadPoolExecutor
+    def attempt(_):
+        try:
+            return budget.reserve(.6, model="openai/gpt-6.1-sol")
+        except budget.Refused:
+            return None
+    with settings.override(**{'openrouter.daily_valve_usd': 1.}):
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            results = list(pool.map(attempt, range(8)))
+    admitted = [r for r in results if r]
+    assert len(admitted) == 1 and budget.day()['reserved'] == .6
+    assert not budget.settle(admitted[0], .4)
+    assert not budget.settle(admitted[0], .4)  # duplicate completion cannot charge twice
+    assert budget.day()['spent'] == .4 and budget.day()['reserved'] == 0
+
+
+def test_engine_balances_are_independent_but_valve_is_shared(home):
+    budget.set_balance(1.)
+    anthropic = budget.reserve(2., engine='anthropic_api', purpose='agent', model="openai/gpt-6.1-sol")
+    openrouter = budget.reserve(.2, purpose='agent', model="openai/gpt-6.1-sol")
+    assert budget.day()['reserved'] == 2.2
+    budget.settle(anthropic, .5)
+    budget.settle(openrouter, .1)
+    assert budget.balance() == .9
+    assert state.get('credit:anthropic_api')['balance'] == 199.5
+    assert budget.day()['spent'] == .6 and budget.day()['reserved'] == 0
+
+
+@pytest.mark.parametrize('value', [0, -1, float('nan'), float('inf')])
+def test_invalid_reservation_never_launches_paid_workflow(home, monkeypatch, value):
+    from kb.agentrun import runner
+    approve(home, 11)
+    key(home, 'openrouter')
+    monkeypatch.setenv('KB_CLAUDE_BIN', str(fake_cli(home)))
+    assert runner.main(['kb-fulfill', '--engine', 'openrouter', f'--max-budget-usd={value}']) == 3
+    assert not paid(home)
+
+
+def test_preflight_failure_leaves_no_reservation_or_spend(home, monkeypatch):
+    from kb.agentrun import auth, runner
+    approve(home, 11)
+    key(home, 'openrouter')
+    monkeypatch.setattr(auth, 'preflight', lambda *a: False)
+    assert runner.main(['kb-fulfill', '--engine', 'openrouter']) == 3
+    assert budget.day()['reserved'] == 0 and budget.day()['spent'] == 0
+
+
+@pytest.mark.parametrize('hold', ['engine', 'model', 'global', 'guard'])
+def test_hold_applied_during_preflight_prevents_paid_spawn(home, monkeypatch, hold):
+    from kb.agentrun import auth, runner
+    approve(home, 11)
+    key(home, 'openrouter')
+    monkeypatch.setenv('KB_CLAUDE_BIN', str(fake_cli(home)))
+    def preflight(*a):
+        if hold == 'engine': route.set_off('openrouter', 'test', None)
+        elif hold == 'model': route.set_off('anthropic/claude-haiku-5.5', 'test', None)
+        elif hold == 'global': state.put(route.STOP_KEY, {'reason': 'test'})
+        else: state.put(guard.HALT_KEY, {'reason': 'test'})
+        return True
+    monkeypatch.setattr(auth, 'preflight', preflight)
+    assert runner.main(['kb-fulfill', '--engine', 'openrouter']) == 3
+    assert not paid(home) and budget.day()['reserved'] == 0

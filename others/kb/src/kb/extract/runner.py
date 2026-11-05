@@ -16,11 +16,9 @@ REEXTRACT = "ex:reextract:"                                                     
 
 
 def default_backends() -> dict:
-    from kb.extract.backends.claude import Claude
-    from kb.extract.backends.codex import Codex
     from kb.extract.backends.openrouter import OpenRouter
     from kb.extract.backends.sllm import Sllm
-    return {"claude": Claude(), "openrouter": OpenRouter(), "codex": Codex(), "sllm": Sllm()}
+    return {"openrouter": OpenRouter(), "sllm": Sllm()}
 
 
 def _dec(x, nd: int):
@@ -171,8 +169,6 @@ class Run:
             pf = self._pf(cand)
             if be is None or pf is None or not pf.ok:
                 continue
-            if cand.backend == "claude" and not route.claude_gate(pf, be, start=self.claude_calls == 0):
-                continue
             r = self._call(proc, w, cand, be, inputs)
             if r == "ok":
                 return "ok"
@@ -243,7 +239,7 @@ class Run:
                     self.out["reason"] = "daily_windows"
                     return "switched"
                 try:
-                    resv = budget.reserve(reserve)
+                    resv = budget.admit(cand.backend, cand.model, job.purpose, reserve, job=job.window.window_id)
                 except budget.Refused as e:
                     if e.reason == "valve":                  # 밸브 도달 뒤에는 다른 경로로 넘기지 않는다
                         d = budget.day()
@@ -252,6 +248,13 @@ class Run:
                         self.stop = True
                         return "stop"
                     route.apply("balance_exhausted", balance=budget.balance()) if e.reason == "balance" else None
+                    return "switched"
+            elif cand.backend in {"openai_api", "anthropic_api"}:
+                try:
+                    reserve = budget.reservation_for(be, job)
+                    resv = budget.admit(cand.backend, cand.model, job.purpose, reserve, job=job.window.window_id)
+                except (budget.Refused, budget.TooLarge) as e:
+                    self.out["reason"] = getattr(e, "reason", "too_large")
                     return "switched"
             try:
                 # 사전 점검과 예약은 느릴 수 있다. 그 사이에 제한이 걸렸을 수 있으므로 전송 직전에 다시 검사한다
@@ -263,7 +266,12 @@ class Run:
                 self.out["reason"] = f"guard:{e.reason}"
                 return "stop" if e.reason == "halted" else "guard"
             try:
-                res = be.extract(job, permit)
+                from kb.extract import paid
+                res = paid.extract(resv, be, job, permit) if be.external else be.extract(job, permit)
+            except budget.Refused as e:
+                budget.release(resv)
+                self.out['reason'] = e.reason
+                return 'switched'
             except guard.PermitError:
                 if resv:
                     budget.release(resv)
@@ -271,12 +279,13 @@ class Run:
                 return "stop"
             except Exception:
                 if resv:
-                    budget.release(resv)                  # 예약이 그날 끝까지 남지 않게 한다
+                    budget.settle(resv, None)             # 전송 뒤 예외는 비용 불명으로 예약액을 청구한다
                 raise
             self.last_called = True
             if cand.backend == "claude":
                 self.claude_calls += 1
         if resv is not None:
+            res.extra["charged_usd"] = budget.settlement_amount(resv, res.cost_usd)
             over = budget.settle(resv, res.cost_usd)         # 비용을 모르면(None) 예약액을 청구한다. 실패도 유료일 수 있다
             if res.error and "HTTP 402" in res.error:
                 route.apply("balance_exhausted", http=402)
@@ -286,13 +295,6 @@ class Run:
                 route.apply("cost_exceeded", actual=res.cost_usd or 0.0, reserved=resv["usd"])
                 self.out["reason"] = "cost_exceeded"
                 return "stop"
-        rate = res.extra.get("rate")
-        if rate:
-            if rate.get("five_hour") is not None or rate.get("seven_day") is not None:
-                state.put("claude:rate", dict(rate, at=settings.now_s()))
-            route.apply("claude_overage", isUsingOverage=rate.get("isUsingOverage"))
-            route.apply("claude_five_hour", five_hour=rate.get("five_hour"), seven_day=rate.get("seven_day"), start=False)
-            route.apply("claude_seven_day", seven_day=rate.get("seven_day"))
         replayed = bool(res.extra.get("replayed"))
         if not replayed:
             budget.count_window(cand.backend)
@@ -322,6 +324,10 @@ class Run:
                                                       "seven_day": (res.extra.get("rate") or {}).get("seven_day")})
         v = route.apply("error_rate", key=key, error=bool(err))
         if err:
+            from kb.extract.engines import Arm, record
+            record(Arm("extract", "local" if cand.backend == "sllm" else cand.backend, cand.model),
+                   cost=res.extra.get("charged_usd", res.cost_usd or 0.), rejected=1,
+                   schema_failed=str(err).startswith(("schema:", "bad_json")), truncated=err == "truncated")
             if v.action == "off":
                 return "switched"
             return err
@@ -377,6 +383,10 @@ class Run:
                     ids_new.add(cid)
                     if wb.get("existing"):
                         existing.append((cid, wb.get("verification")))
+        if not replayed:
+            from kb.extract.engines import Arm, record
+            record(Arm("extract", "local" if cand.backend == "sllm" else cand.backend, cand.model),
+                   cost=res.extra.get("charged_usd", res.cost_usd or 0.), accepted=acc, held=nr, rejected=rej)
         self._revive(w, existing, extractor)
         route.apply("low_yield", key=route.model_key(cand.backend, cand.model), empty=not claims)   # 모든 창. 빈 응답만 내는 모델을 끈다
         if claims:         # 주장이 없는 창(표지, 목차, 차트 표)은 게이트를 지나지 않았으므로 통과율 이력에 넣지 않는다. total=max(1, 0)은 실패 [0,1]로 남았다

@@ -39,8 +39,14 @@ def seed_env(kb_home, monkeypatch, with_key: bool = False):
         rebuild(led=led)
     finally:
         led.close()
+    from kb.extract import state
+    for engine in ("anthropic_api", "openai_api"):
+        if state.get("credit:" + engine) is None:
+            state.put("credit:" + engine, dict(balance=200., budget_usd=200., cycle_spent=0.,
+                                                spent_today=0., reserved=0., cap_today=60.))
     if with_key:
         (cfg / "openrouter.key").write_text("test-key-not-real\n")
+        (cfg / "openrouter.key").chmod(0o600)
     return type("Env", (), {"home": kb_home, "cfg": cfg, "share": share})()
 
 

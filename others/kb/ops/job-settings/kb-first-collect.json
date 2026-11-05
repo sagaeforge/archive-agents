@@ -1,4 +1,6 @@
 {
+  "disableAllHooks": true,
+  "enableAllProjectMcpServers": false,
   "permissions": {
     "allow": [
       "Workflow(kb-first-collect)",

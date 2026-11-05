@@ -25,13 +25,13 @@ def test_extractor_format_and_same_gate_for_all_backends(ent, monkeypatch):
     H.ingest_doc(url="https://example.test/b.md", text="# B\n\n" + S[1] + "\n")
     orf = H.Fake("openrouter", True, _resp(ent, [0, 1]), cost=0.03)
     # 첫 문서는 OpenRouter로, 두 번째 문서는 소진 뒤 Claude로
-    out1 = runner.run_agent("public", backends={"openrouter": orf, "claude": H.Fake("claude", True)}, do_support=False, max_windows=1)
+    out1 = runner.run_agent("public", backends={"openrouter": orf, "anthropic_api": H.Fake("anthropic_api", True)}, do_support=False, max_windows=1)
     budget.set_balance(0.0)
-    clf = H.Fake("claude", True, _resp(ent, [0, 1]))
-    out2 = runner.run_agent("public", backends={"openrouter": orf, "claude": clf}, do_support=False)
+    clf = H.Fake("anthropic_api", True, _resp(ent, [0, 1]))
+    out2 = runner.run_agent("public", backends={"openrouter": orf, "anthropic_api": clf}, do_support=False)
     ex = {r[5] for r in H.claims()}
-    assert ex == {"l2:openrouter:openai/gpt-6.1-sol:extract-2", "l2:claude:haiku:extract-2"}
-    assert all(re.fullmatch(r"l2:[a-z]+:[^:]+:[^:]+", e) for e in ex)
+    assert ex == {"l2:openrouter:openai/gpt-6.1-sol:extract-2", "l2:anthropic_api:haiku:extract-2"}
+    assert all(re.fullmatch(r"l2:[a-z_]+:[^:]+:[^:]+", e) for e in ex)
     assert len(calls) == 2                                              # 두 백엔드 모두 같은 함수를 지났다
     con = H.gold()
     try:
@@ -41,9 +41,9 @@ def test_extractor_format_and_same_gate_for_all_backends(ent, monkeypatch):
     assert gv == {"gate@3"}                                             # 게이트 판본은 evidence.gate_version
     # 경로별 철회
     from kb.cli import main
-    assert main(["claim", "retract", "--extractor", "l2:claude:haiku:extract-2"]) == 0
+    assert main(["claim", "retract", "--extractor", "l2:anthropic_api:haiku:extract-2"]) == 0
     st = {r[5]: r[1] for r in H.claims()}
-    assert st["l2:claude:haiku:extract-2"] == "dead" and st["l2:openrouter:openai/gpt-6.1-sol:extract-2"] == "active"
+    assert st["l2:anthropic_api:haiku:extract-2"] == "dead" and st["l2:openrouter:openai/gpt-6.1-sol:extract-2"] == "active"
 
 
 def test_extract_run_event_fields(ent):
@@ -56,7 +56,7 @@ def test_extract_run_event_fields(ent):
               "window_sha", "para_shas", "prompt_version", "model", "output_sha", "usage"):
         assert k in ev, k
     assert ev["backend"] == "openrouter" and ev["purpose"] == "extract" and ev["scope"] == "public"
-    assert ev["cost_usd"] == "0.030000" and ev["route_reason"] == "or:balance"
+    assert ev["cost_usd"] == "0.030000" and ev["route_reason"] == "selector:extract"
 
 
 def test_no_model_specific_gate_branches():

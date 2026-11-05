@@ -24,6 +24,7 @@ def _bin() -> str:
 def _env() -> dict:
     node = os.path.dirname(_bin()) if os.sep in _bin() else ""
     e = {"HOME": os.path.expanduser("~"), "PATH": (node + ":" if node else "") + "/usr/bin:/bin", "LANG": "C.UTF-8"}
+    e["CODEX_HOME"] = str(paths.kb_home() / "codex-home")
     if settings.get("codex.mock_base_url"):
         e["MOCK_KEY"] = "dummy"
     return e
@@ -84,7 +85,7 @@ def build_cmd(model: str, schema_path: str, out_path: str, work: str) -> list:
          "--sandbox", "read-only", "-C", work, "--output-schema", schema_path, "-o", out_path, "-m", model]
     for f in OFF:
         c += ["--disable", f]
-    c += ["-c", 'web_search="disabled"', "-c", "agents.enabled=false",
+    c += ["-c", 'forced_login_method="chatgpt"', "-c", 'web_search="disabled"', "-c", "agents.enabled=false",
           "-c", f'model_reasoning_effort="{settings.get("codex.effort", "low")}"']
     mock = settings.get("codex.mock_base_url")
     if mock:
@@ -110,47 +111,4 @@ class Codex:
 
     def extract(self, job: Job, permit) -> Result:
         guard.verify(permit, NAME, job.user)
-        model = job.model or str(settings.get("codex.model", "gpt-6.1-sol"))
-        r = Result(job.window.window_id, NAME, model)
-        work = tempfile.mkdtemp(prefix="kb-codex-", dir=str(paths.kb_home() / "test-tmp") if (paths.kb_home() / "test-tmp").is_dir() else None)
-        sp, op = os.path.join(work, "schema.json"), os.path.join(work, "out.json")
-        sch = job.schema
-        with open(sp, "w", encoding="utf-8") as f:
-            json.dump(sch, f, ensure_ascii=False)
-        t0 = time.time()
-        try:
-            p = subprocess.run(build_cmd(model, sp, op, work), input=job.system + "\n\n" + job.user, capture_output=True,
-                               text=True, env=_env(), timeout=float(settings.get("codex.timeout_s", 300)))
-        except subprocess.TimeoutExpired:
-            r.error = "timeout"
-            r.elapsed_s = round(time.time() - t0, 3)
-            return r
-        except OSError as e:
-            r.error = f"spawn: {type(e).__name__}"
-            return r
-        r.elapsed_s = round(time.time() - t0, 3)
-        if os.path.exists(op):
-            r.raw = open(op, encoding="utf-8").read()
-        items, usage, fail = [], None, None
-        for line in p.stdout.splitlines():
-            try:
-                e = json.loads(line)
-            except ValueError:
-                continue
-            t = e.get("type")
-            if t in ("item.started", "item.completed"):
-                items.append((e.get("item") or {}).get("type"))
-            elif t == "turn.completed":
-                usage = e.get("usage")
-            elif t in ("turn.failed", "error"):
-                fail = json.dumps(e, ensure_ascii=False)[:300]
-        r.extra["tool_items"] = sorted({x for x in items if x and x not in ("agent_message", "reasoning")})
-        if usage:
-            r.usage = {"input_tokens": usage.get("input_tokens"), "output_tokens": usage.get("output_tokens"),
-                       "cached_input_tokens": usage.get("cached_input_tokens"),
-                       "reasoning_tokens": usage.get("reasoning_output_tokens")}
-        r.finish_reason = "stop" if usage else None
-        r.provider, r.served_model, r.cost_usd = "openai", model, None     # Codex 비용은 null이고 usedPercent를 남긴다
-        if p.returncode != 0 or not r.raw:
-            r.error = fail or f"exit={p.returncode}"
-        return r
+        return Result(job.window.window_id, NAME, job.model, error="subscription_automatic_forbidden")
