@@ -347,10 +347,10 @@ def _csv_hash(items) -> str:
 
 def _build_ctx(route: Route, p: dict, cfg: ServeConfig, max_sens: str) -> RC.ReadCtx:
     kw = {CTX_KEYS[k]: v for k, v in p.items() if k in CTX_KEYS and k in route.params}
-    if p.get("status") in ("dead", "all"):
+    if route.op == "listNodes" and p.get("status") in ("dead", "all"):
         from kb.write import fpquota
         info = fpquota.identity.get()
-        if route.op != "listNodes" or not info or info["scope"] != "editor":
+        if not info or info["scope"] != "editor":
             raise RC.ScopeDenied("KB 쓰기 권한이 없습니다. 토큰을 다시 설정하세요")
         from kb.core import ledger
         from kb.write.record import _record_state

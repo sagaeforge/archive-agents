@@ -178,3 +178,22 @@ def test_read_auth_and_rate_errors_mask_private_id_but_keep_missing_path(api, mo
     missing = "/v1/nodes/f-missing-review-target"
     response = api.call("GET", missing, token, tcp=True)
     assert problem(response, status, code)["instance"] == missing
+
+
+def test_editor_status_all_reads_keep_baseline_while_trash_stays_owned(api):
+    token, other = api.token(), api.token("other")
+    visible = api.create(other, key="other:c:visible-all", record=dict(REC, title="x visible", body="x"))
+    mine = api.create(token, key="loupe:c:trash-all")
+    theirs = api.create(other, key="other:c:trash-all")
+    assert all(response.status == 201 for response in (visible, mine, theirs))
+    visible_id, mine_id, other_id = (data(response)["id"] for response in (visible, mine, theirs))
+    delete_record(api, token, mine_id)
+    delete_record(api, other, other_id)
+    search = api.call("GET", "/v1/search?q=x&status=all", token)
+    assert search.status == 200
+    detail = api.call("GET", f"/v1/nodes/{visible_id}?status=all", token)
+    assert detail.status == 200 and data(detail)["data"]["id"] == visible_id
+    for status in ("dead", "all"):
+        trash = api.call("GET", "/v1/nodes?origin=first_party&types=Page,Note,TopicSpec,Review&status=" + status, token)
+        assert ids(trash) == [mine_id]
+        assert other_id.encode() not in trash.body
