@@ -1,0 +1,140 @@
+[
+  {
+    "id": "script-tag",
+    "html": "<p>before</p><script>window.__pwned = 1; alert('script')</script><p>after</p>",
+    "text": "before\nafter",
+    "keeps": [
+      "before",
+      "after"
+    ],
+    "absent": [
+      "alert('script')",
+      "__pwned"
+    ]
+  },
+  {
+    "id": "img-onerror",
+    "html": "<p>x</p><img src=\"https://evil.example/pixel.png\" onerror=\"alert('onerror')\"><img src=x onerror=\"window.__pwned=1\">",
+    "text": "x",
+    "keeps": [
+      "x"
+    ],
+    "absent": [
+      "evil.example"
+    ]
+  },
+  {
+    "id": "javascript-link",
+    "html": "<p><a href=\"javascript:alert('js')\" onclick=\"alert('click')\">js link</a> <a href=\" JaVaScRiPt:alert(1)\">spaced</a> <a href=\"&#x6A;avascript:alert(1)\">entity</a></p>",
+    "text": "js link",
+    "keeps": [
+      "js link",
+      "spaced",
+      "entity"
+    ],
+    "absent": [
+      "javascript"
+    ]
+  },
+  {
+    "id": "data-link",
+    "html": "<p><a href=\"data:text/html,<script>alert('data')</script>\">data link</a> <a href=\"vbscript:msgbox(1)\">vb</a> <a href=\"file:///etc/passwd\">file</a></p>",
+    "text": "data link",
+    "keeps": [
+      "data link",
+      "vb",
+      "file"
+    ],
+    "absent": [
+      "<script>"
+    ]
+  },
+  {
+    "id": "svg-onload",
+    "html": "<p>svg</p><svg onload=\"alert('svg')\" xmlns=\"http://www.w3.org/2000/svg\"><script>alert('svg-script')</script><foreignObject><iframe src=\"https://evil.example/\"></iframe></foreignObject></svg>",
+    "text": "svg",
+    "keeps": [
+      "svg"
+    ],
+    "absent": [
+      "alert('svg"
+    ]
+  },
+  {
+    "id": "css-expression",
+    "html": "<p style=\"width: expression(alert('css')); background: url(https://evil.example/bg.png)\">styled</p><style>@import url(https://evil.example/x.css); p { background: url(https://evil.example/y.png) }</style><div style=\"behavior:url(x.htc)\">div</div>",
+    "text": "styled",
+    "keeps": [
+      "styled",
+      "div"
+    ],
+    "absent": [
+      "expression",
+      "@import",
+      "evil.example"
+    ]
+  },
+  {
+    "id": "nested-iframe",
+    "html": "<p>frames</p><iframe srcdoc=\"&lt;iframe src='https://evil.example/inner'&gt;&lt;/iframe&gt;&lt;script&gt;alert('srcdoc')&lt;/script&gt;\" src=\"https://evil.example/outer\"><iframe src=\"https://evil.example/nested\"></iframe></iframe>",
+    "text": "frames",
+    "keeps": [
+      "frames"
+    ],
+    "absent": [
+      "srcdoc",
+      "evil.example"
+    ]
+  },
+  {
+    "id": "form-and-controls",
+    "html": "<form action=\"https://evil.example/post\" method=\"post\"><input name=\"a\" value=\"b\"><button formaction=\"https://evil.example/\">send</button><textarea>area</textarea></form><p>kept</p>",
+    "text": "kept",
+    "keeps": [
+      "kept"
+    ],
+    "absent": [
+      "area",
+      "send"
+    ]
+  },
+  {
+    "id": "embeds",
+    "html": "<object data=\"https://evil.example/o\"></object><embed src=\"https://evil.example/e\"><video src=\"https://evil.example/v\" autoplay onloadstart=\"alert(1)\"></video><audio src=\"https://evil.example/a\" onerror=\"alert(1)\"></audio><link rel=\"stylesheet\" href=\"https://evil.example/s.css\"><meta http-equiv=\"refresh\" content=\"0;url=https://evil.example/\"><base href=\"https://evil.example/\"><p>embeds</p>",
+    "text": "embeds",
+    "keeps": [
+      "embeds"
+    ],
+    "absent": [
+      "evil.example"
+    ]
+  },
+  {
+    "id": "event-handlers-everywhere",
+    "html": "<h2 onmouseover=\"alert('h')\" id=\"x\" class=\"y\">title</h2><p onclick=\"alert(1)\" contenteditable=\"true\" style=\"position:fixed\">para</p><table onfocus=\"alert(1)\"><tr><td colspan=\"2\" onmouseenter=\"alert(1)\">cell</td></tr></table>",
+    "text": "title\npara\ncell",
+    "keeps": [
+      "title",
+      "para",
+      "cell"
+    ],
+    "absent": [
+      "alert"
+    ]
+  },
+  {
+    "id": "mixed-case-and-broken",
+    "html": "<ScRiPt>alert(1)</sCrIpT><IMG SRC=x ONERROR=alert(1)><<script>alert(1)//<</script><p>ok<b>bold</p></b>",
+    "text": "ok",
+    "keeps": [
+      "ok"
+    ],
+    "absent": [
+      "alert(1)"
+    ]
+  },
+  {
+    "id": "markdown-with-html",
+    "text": "# title\n\n<script>alert('md')</script>\n\n<img src=x onerror=alert(1)>\n\n[js](javascript:alert(1)) [data](data:text/html,x) [ok](https://example.com/)\n\n![tracker](https://evil.example/pixel.png) and ![inline](https://evil.example/in.png) text\n\n<iframe src=\"https://evil.example/\"></iframe>\n\n[ref]: javascript:alert(1)\n\n<javascript:alert(1)>"
+  }
+]

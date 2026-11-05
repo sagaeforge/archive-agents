@@ -42,7 +42,9 @@ const graphRoute = createRoute({
   getParentRoute: () => rootRoute, path: '/graph', validateSearch: validateGraphSearch, component: lazyRouteComponent(() => import('./graph/GraphScreen.tsx'), 'GraphScreen'), errorComponent: RouteError,
 });
 
-export const routeTree = rootRoute.addChildren([indexRoute, statusRoute, nodeRoute, sourceRoute, graphRoute]);
+const windowRoute = createRoute({ getParentRoute: () => rootRoute, path: '/w/$id', params: idParams, validateSearch: validateNodeSearch, component: () => null });
+
+export const routeTree = rootRoute.addChildren([indexRoute, statusRoute, nodeRoute, sourceRoute, graphRoute, windowRoute]);
 export const router = createRouter({
   routeTree, history: createHashHistory(), defaultPreload: false, scrollRestoration: true, defaultErrorComponent: ({ error }) => <ErrorPage error={error} />,
 });

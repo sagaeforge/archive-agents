@@ -1,0 +1,15 @@
+.gizmo-box { position:absolute; left:16px; bottom:10px; z-index:2147483600; }
+.gizmo { position:relative; width:88px; height:88px; border-radius:50%; border:1px solid #9da8b6; background:var(--color-paper,#fff); box-shadow:0 2px 10px #0002; }
+.gizmo button { position:absolute; border-radius:50%; border:1px solid #9da8b6; background:var(--color-paper,#fff); font-size:12px; line-height:1; padding:0; cursor:pointer; }
+.gizmo button:hover { background:#dde4eb; }
+.gizmo button[aria-pressed=true] { background:#536f8b; color:#fff; border-color:#536f8b; }
+.gizmo .gizmo-all { width:28px; height:28px; left:calc(50% - 14px); top:calc(50% - 14px); }
+.gizmo .gizmo-axis { width:24px; height:24px; }
+/* Shape, not colour alone: a chosen axis is filled and its name is written under the circle. */
+.gizmo-picks { position:absolute; left:92px; bottom:0; display:flex; flex-direction:column; gap:2px; padding:6px; border:1px solid #9da8b6; border-radius:10px; background:var(--color-paper,#fff); box-shadow:0 4px 12px #0002; visibility:hidden; }
+.gizmo:hover .gizmo-picks,.gizmo:focus-within .gizmo-picks { visibility:visible; }
+.gizmo .gizmo-picks button { position:static; border-radius:6px; padding:5px 10px; text-align:left; white-space:nowrap; font-size:13px; }
+.gizmo-picks kbd { display:inline-block; min-width:1em; opacity:.7; }
+.gizmo-summary { margin:4px 0 0; font-size:12px; white-space:nowrap; background:var(--color-paper,#fff); }
+/* The accessibility list opens at the lower left when focused: it must stay clear of the gizmo. */
+.workspace .graph-accessibility:focus-within { bottom:140px; }

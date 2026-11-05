@@ -1,0 +1,30 @@
+{
+  "tiptap": "3.32.0",
+  "editorGzBytes": 215739,
+  "editorGzKB": 210.7,
+  "firstScreenGzBytes": 239826,
+  "editorChunks": [
+    {
+      "name": "EditorWindow.css",
+      "gzBytes": 1138
+    },
+    {
+      "name": "EditorWindow.js",
+      "gzBytes": 214601
+    }
+  ],
+  "firstScreenChunks": [
+    {
+      "name": "index.css",
+      "gzBytes": 14922
+    },
+    {
+      "name": "index.js",
+      "gzBytes": 198525
+    },
+    {
+      "name": "useTimeBasis.js",
+      "gzBytes": 26379
+    }
+  ]
+}

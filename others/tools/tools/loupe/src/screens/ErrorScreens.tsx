@@ -1,6 +1,7 @@
 import type { ErrorComponentProps } from '@tanstack/react-router';
 import { useScreenTitle } from '../app/useScreenTitle.ts';
 import { ErrorCard } from '../components/bits.tsx';
+import { PageRoot } from '../components/PageRoot.tsx';
 import { IdParamError } from '../ids.ts';
 import { TimeParamError } from '../time/parse.ts';
 import { SearchParamError } from '../routes/search.ts';
@@ -40,5 +41,5 @@ export function NotFoundScreen() {
 }
 
 export function ErrorPage({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
-  return <main className="page-narrow"><ErrorCard error={error} {...(onRetry ? { onRetry } : {})} /></main>;
+  return <PageRoot className="page-narrow"><ErrorCard error={error} {...(onRetry ? { onRetry } : {})} /></PageRoot>;
 }

@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { keepPreviousData, queryOptions, useInfiniteQuery, useQueries, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import {
-  getGetNodeQueryOptions, getGetSnapshotTextQueryOptions, getNodeBody, getSnapshotText, useGetClaim, useGetMeta, useGetNode, useGetNodeHistory, useGetNodeNeighbors, useGetSchema,
+  getGetNodeNeighborsQueryOptions, getGetNodeQueryOptions, getGetSnapshotTextQueryOptions, getNodeBody, getSnapshotText, useGetClaim, useGetMeta, useGetNode, useGetNodeHistory, useGetNodeNeighbors, useGetSchema,
   useGetSnapshot, useListNodeClaimsInfinite, useListNodeEdgesInfinite, useListNodes, useSearch as useKbSearch,
 } from '../client/kb.ts';
 import type { EdgeRefListEnvelope, Evidence, GetNodeParams, NodeDetailEnvelope, SchemaCatalog } from '../client/model/index.ts';
@@ -240,4 +240,25 @@ export function useBodyRest(id: string, loaded: string | null | undefined, total
     getNextPageParam: (last) => (last.data.end < last.data.total_chars ? last.data.end : undefined),
   });
   return { ...q, more, asked: asked === keyText, request: () => setAsked(keyText), text: q.data?.pages.map((p) => p.data.text).join('') ?? '' };
+}
+
+/** Topic-only home reads. Each topic expands one hop using the existing contract ceilings. */
+export function useTopicGraph() {
+  const t=useTimeBasis();
+  const topics=useListNodes({types:'Topic',limit:20,...asOfFor('listNodes',t)});
+  const ids=topics.data?.data.items.map(n=>n.id)??[];
+  const neighbors=useQueries({queries:ids.map(id=>getGetNodeNeighborsQueryOptions(id,{depth:1,direction:'both',limit:500,edge_limit:2000,...asOfFor('getNodeNeighbors',t)}))});
+  return {topics,neighbors};
+}
+/** TopicSpec, Page and Note records are one typed search and the entities another: two requests per pause, and TopicSpec and private
+ *  records stay out of the v1 entity search contract. The entity query is called last so it is the last request sent. */
+export function usePaletteSearch(raw:string, workspace:boolean) {
+  const t=useTimeBasis(); const q=raw.normalize('NFC').trim();
+  const records=useKbSearch({q,types:'TopicSpec,Page,Note',kinds:'record',limit:24,...asOfFor('search',t)},{query:{enabled:workspace&&!!q,placeholderData:keepPreviousData,staleTime:30_000}});
+  const entities=useEntitySearch(raw);
+  const all=workspace?[records,entities]:[entities];
+  // No data at all (not even an empty page) means the search has not answered: the caller must be able to tell that from "nothing found".
+  const answered=all.some(r=>r.data);
+  const items=all.flatMap(r=>r.data?.data.items??[]);
+  return {data:answered?{data:{items}}:undefined,isFetching:all.some(r=>r.isFetching),isPlaceholderData:all.some(r=>r.isPlaceholderData),isError:all.some(r=>r.isError),error:all.find(r=>r.error)?.error};
 }

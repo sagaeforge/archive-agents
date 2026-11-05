@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { useNavigate } from '@tanstack/react-router';
 import { CommandDialog, Command, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from '@/components/ui/command';
 import type { SearchHit } from '../client/model/index.ts';
-import { useEntitySearch, useLabels } from '../data/hooks.ts';
+import { usePaletteSearch, useLabels } from '../data/hooks.ts';
 import { splitHighlights } from '../quote/codepoints.ts';
 import { parseDateQuery } from '../time/format.ts';
 import { useIsPastView, useTimeBasis } from '../time/useTimeBasis.ts';
@@ -11,6 +11,7 @@ import { formatKst, formatValidAxis } from '../time/format.ts';
 import type { TimeBasis } from '../time/asOf.ts';
 import { useTimeActions } from '../app/TimeControls.tsx';
 import { copyCurrentLink } from '../app/CopyLink.tsx';
+import { isComposing } from '../wm/model.ts';
 import { describeError } from '../lib/errors.ts';
 import { readRecent } from './recent.ts';
 import { setPaletteOpen, usePaletteOpen } from './store.ts';
@@ -45,7 +46,8 @@ function HitRow({ hit }: { hit: SearchHit }) {
 
 type Command_ = { value: string; label: string; hint?: string; run: () => void; testid?: string };
 
-function PaletteBody() {
+type WorkspacePalette = { openNode?: (id:string, replace?:boolean)=>void; preview?: (id:string)=>void };
+function PaletteBody({ openNode, preview }:WorkspacePalette) {
   const navigate = useNavigate();
   const past = useIsPastView();
   const { toPresent, pinNow, set, canPin } = useTimeActions();
@@ -54,7 +56,7 @@ function PaletteBody() {
   const [selected, setSelected] = useState('');
   useEffect(() => { const t = setTimeout(() => setQuery(input), DEBOUNCE_MS); return () => clearTimeout(t); }, [input]);
 
-  const search = useEntitySearch(query);
+  const search = usePaletteSearch(query, !!openNode);
   const typing = input.trim().length > 0;
   const settled = input === query && !search.isFetching && !search.isPlaceholderData;
   const hits = useMemo(() => {
@@ -67,7 +69,7 @@ function PaletteBody() {
   const recent = useLabels(recentIds, true);
 
   const close = () => setPaletteOpen(false);
-  const go = (id: string) => { close(); void navigate({ to: '/node/$id', params: { id } }); };
+  const go = (id: string, replace = false) => { close(); if (openNode) { openNode(id, replace); return; } void navigate({ to: '/node/$id', params: { id } }); };
   const run = (f: () => void) => () => { close(); f(); };
 
   const needle = input.trim().toLowerCase();
@@ -100,6 +102,8 @@ function PaletteBody() {
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => { const f = requestAnimationFrame(() => inputRef.current?.focus()); return () => cancelAnimationFrame(f); }, []);
   const onKeyDown = (e: KeyboardEvent) => {
+    if (isComposing(e.nativeEvent) && ['Enter','ArrowUp','ArrowDown'].includes(e.key)) { e.preventDefault(); e.stopPropagation(); return; }
+    if (e.key === 'Enter' && e.ctrlKey && openNode && selected.startsWith('hit:')) { e.preventDefault(); e.stopPropagation(); go(selected.slice(4), true); return; }
     if (e.key === 'Enter' && typing && !settled && !date) { e.preventDefault(); e.stopPropagation(); pendingEnter.current = true; }
   };
   useEffect(() => {
@@ -107,6 +111,8 @@ function PaletteBody() {
     pendingEnter.current = false;
     if (hits[0]) go(hits[0].id);
   }, [settled, hits]);
+
+  useEffect(() => { if (selected.startsWith('hit:')) preview?.(selected.slice(4)); }, [selected, preview]);
 
   const searchError = typing && search.isError && !search.data ? describeError(search.error) : null;
   // The palette searches names (titles) only, and in a past view only as they were then. Say that, not "nothing exists".
@@ -121,7 +127,7 @@ function PaletteBody() {
         {searchError && <p role="alert" data-testid="palette-error" className="px-3 py-2 text-sm text-danger">{searchError.title}. {searchError.detail}</p>}
         {typing && !settled && hits.length === 0 && !searchError && <p role="status" className="px-3 py-2 text-sm text-faint">찾는 중</p>}
         {hits.length > 0 && (
-          <CommandGroup heading="엔티티">
+          <CommandGroup heading={openNode ? "주제 · 문서 · 메모 · 엔티티" : "엔티티"}>
             {hits.map((h) => (
               <CommandItem key={h.id} value={`hit:${h.id}`} onSelect={() => go(h.id)} data-testid="palette-hit" data-id={h.id}><HitRow hit={h} /></CommandItem>
             ))}
@@ -160,8 +166,9 @@ function PaletteBody() {
   );
 }
 
-export function Palette() {
+export function Palette({ openNode, preview }:WorkspacePalette = {}) {
   const open = usePaletteOpen();
+  if (openNode) return open ? <div className="workspace-find" data-testid="inline-find"><PaletteBody openNode={openNode} preview={preview} /></div> : null;
   return (
     <CommandDialog open={open} onOpenChange={setPaletteOpen} title="팔레트" description="엔티티를 찾고 화면과 시간을 옮긴다" className="palette-dialog top-[13vh] sm:max-w-xl">
       {open && <PaletteBody />}

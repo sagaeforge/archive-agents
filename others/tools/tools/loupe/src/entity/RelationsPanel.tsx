@@ -77,7 +77,7 @@ function Backlinks({ items, truncated }: { items: readonly Backlink[]; truncated
   );
 }
 
-export function RelationsPanel({ node, id, filters }: { node: NodeDetail; id: string; filters: NodeFilters }) {
+export function RelationsPanel({ node, id, filters, embedded = false }: { node: NodeDetail; id: string; filters: NodeFilters; embedded?: boolean }) {
   const [more, setMore] = useState(false);
   const truncated = !!node.edges?.truncated;
   const rest = useEdgesRest(id, filters, more);
@@ -89,8 +89,9 @@ export function RelationsPanel({ node, id, filters }: { node: NodeDetail; id: st
   const out = useMemo(() => group(outAll, (e) => e.dst, names.map), [outAll, names.map]);
   const inc = useMemo(() => group(withoutBacklinked(inAll, node.backlinks ?? []), (e) => e.src, names.map), [inAll, node.backlinks, names.map]);
   const backlinks = node.backlinks ?? [];
+  const Element = embedded ? 'section' : 'aside';
   return (
-    <aside className="relations" aria-label="관계" id={RELATIONS_ID} tabIndex={-1} data-testid="relations">
+    <Element className={embedded ? "window-info" : "relations"} aria-label="관계" id={embedded ? `${RELATIONS_ID}-${id}` : RELATIONS_ID} tabIndex={-1} data-testid={embedded ? "window-info" : "relations"}>
       <TimeMark />
       <EdgeList title="나가는 링크" testid="edges-out" groups={out} empty="나가는 링크가 없다." />
       <EdgeList title="들어오는 링크" testid="edges-in" groups={inc} empty="들어오는 링크가 없다." />
@@ -101,6 +102,6 @@ export function RelationsPanel({ node, id, filters }: { node: NodeDetail; id: st
           {rest.isFetching ? '읽는 중' : '관계 이어 읽기'}
         </button>
       )}
-    </aside>
+    </Element>
   );
 }

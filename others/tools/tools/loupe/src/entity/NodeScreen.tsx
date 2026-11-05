@@ -1,10 +1,12 @@
 // /node/<id>. Everything is a node in the KB (KB ADR 7.3): the screen is chosen by what the id turns out to be (design 7.1).
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import { getRouteApi, Link, Navigate, useNavigate } from '@tanstack/react-router';
+import { getRouteApi, Link, Navigate, useNavigate, useSearch } from '@tanstack/react-router';
 import type { Claim, Evidence, NodeDetail } from '../client/model/index.ts';
+import { validateNodeSearch } from '../routes/search.ts';
 import { useScreenTitle } from '../app/useScreenTitle.ts';
 import { CopyLink } from '../app/CopyLink.tsx';
 import { Chip, Empty, ErrorCard, Instant, Loading } from '../components/bits.tsx';
+import { PageRoot } from '../components/PageRoot.tsx';
 import { useBodyRest, useCheckAll, useClaimsRest, useNodeBrief, useNodeDetail, useSchemaCatalog, type CheckTally, type NodeFilters } from '../data/hooks.ts';
 import { KbProblem } from '../data/kbFetch.ts';
 import { classifyId } from '../ids.ts';
@@ -35,46 +37,46 @@ export function NodeScreen() {
 function NotVisible({ id }: { id: string }) {
   const past = useIsPastView();
   return (
-    <main className="page-narrow" data-testid="not-visible-page">
+    <PageRoot className="page-narrow" data-testid="not-visible-page">
       <h1 className="page-title">없거나 볼 수 없음</h1>
       <p className="mt-2 text-soft">{past ? '이 시점에는 없었거나, 지금 범위에서 볼 수 없다.' : '이 ID는 없거나 지금 범위에서 볼 수 없다.'}</p>
       <p className="id mt-3 break-all" data-testid="node-id">{id}</p>
-    </main>
+    </PageRoot>
   );
 }
 
 function Tombstone({ id, path }: { id: string; path: string[] }) {
   return (
-    <main className="page-narrow" data-testid="tombstone">
+    <PageRoot className="page-narrow" data-testid="tombstone">
       <h1 className="page-title">병합됨, 대상 접근 불가</h1>
       <p className="mt-2 text-soft">이 항목은 다른 항목으로 병합됐다. 병합 대상이 없거나 볼 수 없다.</p>
       <p className="id mt-3 break-all">{path.join(' → ')}</p>
       <p className="id mt-1 break-all" data-testid="node-id">{id}</p>
-    </main>
+    </PageRoot>
   );
 }
 
 function MergeError({ path }: { path: string[] }) {
   return (
-    <main className="page-narrow" role="alert" data-testid="merge-error">
+    <PageRoot className="page-narrow" role="alert" data-testid="merge-error">
       <h1 className="page-title">병합 경로를 따라갈 수 없다</h1>
       <p className="mt-2 text-soft">병합 연결이 순환하거나 너무 길다. KB 쪽 데이터를 확인해야 한다.</p>
       <p className="id mt-3 break-all">{path.join(' → ')}</p>
-    </main>
+    </PageRoot>
   );
 }
 
-function EntityScreen({ id }: { id: string }) {
-  const search = route.useSearch();
+export function EntityScreen({ id, windowed = false }: { id: string; windowed?: boolean }) {
+  const search = validateNodeSearch(useSearch({ strict: false }));
   const filters: NodeFilters = useMemo(() => ({ status: search.status, include_unverified: search.include_unverified }), [search.status, search.include_unverified]);
   const q = useNodeDetail(id, filters);
   const node = q.data?.data;
   const merge = useMergeRedirect(id, node);
-  useScreenTitle(node?.label ?? id);
+  useScreenTitle(node?.label ?? id, !windowed);
   const settled = !!node && !merge.active;
   useEffect(() => { if (settled) pushRecent(id); }, [settled, id]);
 
-  if (q.isPending) return <main className="page"><Loading /></main>;
+  if (q.isPending) return <PageRoot className="page"><Loading /></PageRoot>;
   // An error with data in hand is a failed background read: the screen stays and says so (design 7.4). Only a read with nothing to show is an error screen.
   if (q.isError && !node) {
     const info = describeError(q.error);
@@ -85,10 +87,10 @@ function EntityScreen({ id }: { id: string }) {
     if (merge.error) return <ErrorPage error={merge.error} onRetry={merge.retry} />;
     if (merge.result?.kind === 'gone') return <Tombstone id={id} path={merge.result.path} />;
     if (merge.result) return <MergeError path={merge.result.path} />;
-    return <main className="page"><Loading label="병합 대상을 찾는 중" /></main>;
+    return <PageRoot className="page"><Loading label="병합 대상을 찾는 중" /></PageRoot>;
   }
   if (node!.type === 'Snapshot') return <Navigate to="/source/$id" params={{ id }} replace />;
-  return <EntityPage node={node!} id={id} filters={filters} truncated={!!node!.claims_truncated} mergedFrom={search.merged_from} staleError={q.isError ? q.error : null} onRetry={() => void q.refetch()} />;
+  return <EntityPage windowed={windowed} node={node!} id={id} filters={filters} truncated={!!node!.claims_truncated} mergedFrom={search.merged_from} staleError={q.isError ? q.error : null} onRetry={() => void q.refetch()} />;
 }
 
 function MergeNotice({ from, to, label }: { from: string; to: string; label: string }) {
@@ -231,11 +233,12 @@ function ClaimsSection({ node, id, filters, truncated }: { node: NodeDetail; id:
   );
 }
 
-function EntityPage({ node, id, filters, truncated, mergedFrom, staleError, onRetry }: {
+function EntityPage({ node, id, filters, truncated, mergedFrom, staleError, onRetry, windowed = false }: {
+  windowed?: boolean;
   node: NodeDetail; id: string; filters: NodeFilters; truncated: boolean; mergedFrom: string | undefined; staleError: unknown; onRetry: () => void;
 }) {
   return (
-    <main className="page entity-page" data-testid="entity-page" data-id={id}>
+    <PageRoot className={windowed ? "page window-entity" : "page entity-page"} data-testid="entity-page" data-id={id}>
       <div className="min-w-0">
         {staleError != null && <div className="mb-4" data-testid="stale-error"><ErrorCard error={staleError} compact onRetry={onRetry} /></div>}
         {mergedFrom && <MergeNotice from={mergedFrom} to={id} label={node.label} />}
@@ -243,8 +246,8 @@ function EntityPage({ node, id, filters, truncated, mergedFrom, staleError, onRe
         <RecordBody node={node} id={id} />
         <ClaimsSection node={node} id={id} filters={filters} truncated={truncated} />
       </div>
-      <RelationsPanel node={node} id={id} filters={filters} />
-    </main>
+      {windowed ? <details className="window-relations"><summary>백링크 · 정보</summary><RelationsPanel node={node} id={id} filters={filters} embedded /></details> : <RelationsPanel node={node} id={id} filters={filters} />}
+    </PageRoot>
   );
 }
 

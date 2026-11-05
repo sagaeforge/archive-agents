@@ -7,10 +7,14 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { zstdCompressSync } from 'node:zlib';
 import { Hono, type Context } from 'hono';
+import { topicFixtures as m0cFixtures, topicEdges } from './topics.ts';
+import { gizmoFixtures, gizmoEdges } from './gizmo.ts';
+import { editorFixtures } from './editor.ts';
 import { fixturePath as defaultFixture, schemaOf, compileParam, operations, type Op } from './spec.ts';
 
 type Row = Record<string, any>;
 export type MockOptions = {
+  topics?: boolean;
   fixturePath?: string;
   /** Negative controls for the contract flow. Schemathesis or the mock tests must fail on each of these. */
   bug?: 'drop_field' | 'wrong_error_type' | 'ignore_as_of' | 'no_cursor_check' | 'leak_private' | undefined;
@@ -579,6 +583,42 @@ export function createKbMock(opts: MockOptions = {}): Hono {
     listOpsRuns: (c, _q, ctx, op) => envelope(op, c, ctx, { etag: null, data: { items: [] }, page: { next_cursor: null, total: 0, truncated: false } }),
     getOpsMetrics: (c, _q, ctx, op) => envelope(op, c, ctx, { etag: null, data: { items: [{ name: 'claims_total', dims: {}, value: fx.claims.length, at: fx.meta.data_as_of }] } }),
   };
+
+  // New fixture IDs and explicitly typed queries only: v1 responses are untouched.
+  if (opts.topics !== false) {
+    const topicFixtures = [...m0cFixtures, ...gizmoFixtures];
+    for (const operation of ['listNodes', 'getNode', 'getNodeNeighbors', 'search']) {
+      const original = H[operation]!;
+      H[operation] = (c, q, ctx, op) => {
+        const id = c.req.param('id');
+        const row = topicFixtures.find(n => n.id === id);
+        const types = (q.get('types') ?? '').split(',');
+        const typed = types.some(t => ['Topic', 'TopicSpec', 'Page', 'Note'].includes(t));
+        const page = { next_cursor:null, total:null, truncated:false };
+        if (operation === 'getNode' && row) return envelope(op,c,ctx,{data:row,etag:null});
+        // M0a: readable by ID only, so no list, search or graph count changes.
+        if (operation === 'getNode' && editorFixtures.some(n => n.id === id)) return envelope(op,c,ctx,{data:editorFixtures.find(n => n.id === id)!,etag:null});
+        if (operation === 'getNodeNeighbors' && gizmoFixtures.some(n => n.id === id)) return envelope(op,c,ctx,{data:{
+          nodes:{columns:['id','label','type','status'],rows:gizmoFixtures.map(n=>[n.id,n.label,n.type,n.status])},
+          edges:{columns:['id','src','dst','rtype','status'],rows:gizmoEdges.map(e=>[e.id,e.src,e.dst,e.rtype,e.status])},
+          truncated:false,node_total:gizmoFixtures.length,edge_total:gizmoEdges.length,
+        },etag:null});
+        if (operation === 'getNodeNeighbors' && row) return envelope(op,c,ctx,{data:{
+          nodes:{columns:['id','label','type','status'],rows:m0cFixtures.map(n=>[n.id,n.label,n.type,n.status])},
+          edges:{columns:['id','src','dst','rtype','status'],rows:topicEdges.map(e=>[e.id,e.src,e.dst,e.rtype,e.status])},
+          truncated:false,node_total:4,edge_total:3,
+        },etag:null});
+        if (operation === 'listNodes' && typed) return envelope(op,c,ctx,{data:{items:topicFixtures.filter(n=>types.includes(n.type))},page,etag:null});
+        if (operation === 'search' && typed) {
+          const needle=(q.get('q')??'').normalize('NFC').toLowerCase();
+          return envelope(op,c,ctx,{data:{items:topicFixtures.filter(n=>types.includes(n.type)&&n.label.toLowerCase().includes(needle)).map(n=>({
+            id:n.id,kind:n.id.startsWith('f-')?'record':'entity',type:n.type,title:n.label,snippet:n.body??n.label,highlights:[],highlight_unit:'codepoint',origin:n.origin,status:n.status,recorded_at:n.recorded_at,sensitivity:n.sensitivity,author:null,liveness:null,
+          }))},page,etag:null});
+        }
+        return original(c,q,ctx,op);
+      };
+    }
+  }
 
   // ---- routing and the common checks
   const app = new Hono();

@@ -20,7 +20,9 @@ export type LayoutState =
 
 type Base = { nonce: number; scope: string; promise: Promise<ResolvedLayout>; source?: ResolvedLayout['source']; settled: boolean; abort: () => void };
 
-export function useGraphLayout(view: GraphView | null, data: GraphData | null, scope: string, nonce: number): { state: LayoutState; revision: number } {
+/** The workspace home draws a slice of the graph. It may reuse what the graph screen cached, but it never writes a record of its own
+ *  (a slice record would push the graph screen's out of the cache) and never reads the whole core export just to place a slice. */
+export function useGraphLayout(view: GraphView | null, data: GraphData | null, scope: string, nonce: number, readOnly = false): { state: LayoutState; revision: number } {
   const [state, setState] = useState<LayoutState>({ phase: 'idle' });
   const [revision, setRevision] = useState(0);
   const worker = useRef<LayoutWorker | null>(null);
@@ -31,7 +33,7 @@ export function useGraphLayout(view: GraphView | null, data: GraphData | null, s
   const seeding = useRef(false);
   /** What a cold start must draw: the data of this moment, not of the run that started the load. */
   const drawSeed = useRef<(() => void) | null>(null);
-  const store = useMemo(indexedDbLayoutStore, []);
+  const store = useMemo(() => { const s = indexedDbLayoutStore(); return readOnly ? { list: s.list, put: async () => undefined } : s; }, [readOnly]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -71,7 +73,7 @@ export function useGraphLayout(view: GraphView | null, data: GraphData | null, s
         const deps: LayoutDeps = {
           ...compute, store, signal,
           readManifestSha: () => readCoreSha(signal),
-          readCore: async () => decodeTopology(await readCoreExport(signal)),
+          readCore: async () => (readOnly ? null : decodeTopology(await readCoreExport(signal))),
         };
         const next: Base = { nonce, scope, promise: resolveLayout(deps, data, scope, onCold), settled: false, abort: () => { load.abort(); } };
         // A load nobody is left to report still must not stay behind as the answer for the next run.
@@ -96,7 +98,7 @@ export function useGraphLayout(view: GraphView | null, data: GraphData | null, s
       setState({ phase: 'failed', message: e instanceof Error ? e.message : String(e) });
     });
     return () => { alive = false; };
-  }, [view, data, scope, nonce, store]);
+  }, [view, data, scope, nonce, store, readOnly]);
 
   return { state, revision };
 }

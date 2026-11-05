@@ -1,15 +1,34 @@
 // Phase 1 completion conditions 1 and 2 (design 12): the whole walk, then every URL of it in a new tab.
+import type { Page } from '@playwright/test';
 import { test, expect, watchPage, expectClean } from './support/test.ts';
 import { RESEARCH } from './support/ports.ts';
 import { claimRow, fingerprint, fixture, highlights, setTime, settled } from './support/app.ts';
 
 const fx = fixture('kb-research.json');
+/** The fingerprint of a workspace URL (design 2.7: a copied URL opens one record). The session may have more windows open behind it, so those and the window count are left out; everything else on the page is still compared. */
+const workspacePrint = (page: Page) => page.evaluate(() => {
+  const main = document.querySelector('main')!.cloneNode(true) as HTMLElement;
+  main.querySelectorAll('[data-testid=verdict]').forEach((e) => e.remove());
+  main.querySelectorAll('[data-testid=wm-window]:not([data-front=true])').forEach((e) => e.remove());
+  main.querySelectorAll('p.sr-only[aria-live]').forEach((e) => e.remove());
+  return {
+    title: document.title,
+    band: document.querySelector('[data-testid=time-band]')?.textContent ?? null,
+    frame: !!document.querySelector('[data-testid=time-frame]'),
+    screen: document.querySelector('main')!.getAttribute('data-testid'),
+    text: main.textContent,
+    highlights: [] as string[],
+  };
+});
+const printOf = (page: Page) => (/#\/w\//.test(page.url()) ? workspacePrint(page) : fingerprint(page));
 const NEW = 'c-ecfb958d5519', OLD = 'c-4c2e31e4ac9b';
 
 test('palette, entity, relation, incoming link, claim, quote, past view and back, each URL reproducing its screen', async ({ page, context, watch }) => {
-  const steps: { name: string; url: string; print: Awaited<ReturnType<typeof fingerprint>> }[] = [];
+  const steps: { name: string; url: string; print: Awaited<ReturnType<typeof printOf>> }[] = [];
+  const front = page.locator('[data-testid=wm-window][data-front=true]');
+  const expandRelations = async (win: typeof front) => { await win.locator('summary').click(); await expect(win.getByTestId('window-info')).toBeVisible(); };
   const noFailure = async () => { await expect(page.getByTestId('error-card')).toHaveCount(0); await expect(page.getByTestId('route-error')).toHaveCount(0); };
-  const mark = async (name: string) => { await settled(page); await noFailure(); steps.push({ name, url: page.url(), print: await fingerprint(page) }); };
+  const mark = async (name: string) => { await settled(page); await noFailure(); steps.push({ name, url: page.url(), print: await printOf(page) }); };
 
   // 1. Palette to an entity, by keyboard only
   await page.goto(`${RESEARCH}/`);
@@ -20,22 +39,28 @@ test('palette, entity, relation, incoming link, claim, quote, past view and back
   await expect(page.getByTestId('palette-hit').first()).toHaveAttribute('data-id', 'e:library:sigma-js');
   await page.keyboard.press('Enter');
   await expect(page.getByTestId('node-title')).toHaveText('sigma.js');
-  await expect(page).toHaveURL(/#\/node\/e%3Alibrary%3Asigma-js$/);
+  await expect(page).toHaveURL(/#\/w\/e%3Alibrary%3Asigma-js$/); // design 2.4 Enter opens the window, 2.7 address is #/w/<id>
   await mark('entity');
 
-  // 2. A relation to another entity
-  await page.locator('[data-testid=edges-out] [data-rtype=DEPENDS_ON] [data-far="e:library:graphology"] [data-testid=edge-link]').click();
-  await expect(page.getByTestId('node-title')).toHaveText('graphology');
+  // 2. A relation to another entity: the relations sit in a collapsed <details> of the window, and a link opens the next window (design 2.7)
+  await expandRelations(front);
+  await front.locator('[data-testid=edges-out] [data-rtype=DEPENDS_ON] [data-far="e:library:graphology"] [data-testid=edge-link]').click();
+  await expect(page.getByTestId('wm-window')).toHaveCount(2);
+  await expect(front.getByTestId('node-title')).toHaveText('graphology');
+  await expect(page).toHaveURL(/#\/w\/e%3Alibrary%3Agraphology$/);
   await mark('related entity');
 
-  // 3. Back through its incoming link
-  await page.locator('[data-testid=edges-in] [data-far="e:library:sigma-js"] [data-testid=edge-link]').first().click();
-  await expect(page.getByTestId('node-title')).toHaveText('sigma.js');
+  // 3. Back through its incoming link: the entity's window is already open and comes to the front
+  await expandRelations(front);
+  await front.locator('[data-testid=edges-in] [data-far="e:library:sigma-js"] [data-testid=edge-link]').first().click();
+  await expect(page.getByTestId('wm-window')).toHaveCount(2);
+  await expect(front.getByTestId('node-title')).toHaveText('sigma.js');
+  await expect(page).toHaveURL(/#\/w\/e%3Alibrary%3Asigma-js$/);
   await mark('entity through the incoming link');
 
   // 4. A claim to its quote: one click
   const claim = claimRow(fx, NEW);
-  await page.locator(`[data-claim=${NEW}] [data-testid=evidence-pill]`).click();
+  await front.locator(`[data-claim=${NEW}] [data-testid=evidence-pill]`).click();
   await expect(page.getByTestId('source-page')).toBeVisible();
   await expect(page.getByTestId('quote-verdict')).toHaveText('원문 일치');
   await expect.poll(() => highlights(page)).toEqual([claim.evidence[0]!.exact]);
@@ -74,7 +99,7 @@ test('palette, entity, relation, incoming link, claim, quote, past view and back
     const w = await watchPage(tab);
     await tab.goto(s.url);
     await settled(tab);
-    expect(await fingerprint(tab), `${s.name}: ${s.url}`).toEqual(s.print);
+    expect(await printOf(tab), `${s.name}: ${s.url}`).toEqual(s.print);
     await expectClean(tab, w);
     await tab.close();
   }

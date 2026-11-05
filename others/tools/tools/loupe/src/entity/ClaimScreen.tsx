@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router';
 import { useScreenTitle } from '../app/useScreenTitle.ts';
 import { CopyLink } from '../app/CopyLink.tsx';
 import { Chip, ErrorCard, Instant, Loading, TimeMark } from '../components/bits.tsx';
+import { PageRoot } from '../components/PageRoot.tsx';
 import { NodeLink, fallbackLabel } from '../components/NodeLink.tsx';
 import { useClaim, useNodeBrief, useSchemaCatalog } from '../data/hooks.ts';
 import { KbProblem } from '../data/kbFetch.ts';
@@ -23,16 +24,16 @@ export function ClaimScreen({ id }: { id: string }) {
   const past = useIsPastView();
   const basis = useTimeBasis();
   useScreenTitle(claim ? '주장' : id);
-  if (q.isPending) return <main className="page"><Loading /></main>;
+  if (q.isPending) return <PageRoot className="page"><Loading /></PageRoot>;
   // A failed refetch keeps the claim on screen; only a read with nothing to show is an error page.
   if (q.isError && !claim) {
     if (q.error instanceof KbProblem && q.error.status === 404) {
       return (
-        <main className="page-narrow" data-testid="not-visible-page">
+        <PageRoot className="page-narrow" data-testid="not-visible-page">
           <h1 className="page-title">없거나 볼 수 없음</h1>
           <p className="mt-2 text-soft">{past ? '이 시점에는 없었거나, 지금 범위에서 볼 수 없다.' : '이 주장은 없거나 지금 범위에서 볼 수 없다.'}</p>
           <p className="id mt-3 break-all" data-testid="node-id">{id}</p>
-        </main>
+        </PageRoot>
       );
     }
     return <ErrorPage error={q.error} onRetry={() => void q.refetch()} />;
@@ -41,7 +42,7 @@ export function ClaimScreen({ id }: { id: string }) {
   const predicate = schema.data?.predicates.find((p) => p.id === c.predicate);
   const versions = (c.versions ?? []) as { version: number; status?: string; value?: string | null; valid?: Parameters<typeof formatValid>[0]; recorded_at: string; expired_at?: string | null }[];
   return (
-    <main className="page-narrow" data-testid="claim-page" data-id={id}>
+    <PageRoot className="page-narrow" data-testid="claim-page" data-id={id}>
       <p className="eyebrow">
         <span>주장</span>
         <NodeLink id={c.subject} testid="claim-subject" className="link"><bdi>{subject.data?.label ?? fallbackLabel(c.subject)}</bdi></NodeLink>
@@ -82,6 +83,6 @@ export function ClaimScreen({ id }: { id: string }) {
           </table>
         </section>
       )}
-    </main>
+    </PageRoot>
   );
 }

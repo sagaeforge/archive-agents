@@ -30,6 +30,20 @@ const clickNode = async (page: Page, id?: string) => {
 };
 const clearCache = (page: Page) => page.evaluate(() => new Promise<void>((res) => { const r = indexedDB.deleteDatabase('loupe-layout'); r.onsuccess = r.onerror = r.onblocked = () => res(); }));
 const open = async (page: Page, path = '/graph', base = G) => { await page.goto(`${base}${hash(path)}`); };
+// v2 has no header link (design 2.2): the graph route is reached through the palette's 이동 group (design 2.4), by keyboard.
+const viaPalette = async (page: Page) => {
+  await page.keyboard.press('Control+k');
+  await expect(page.getByTestId('palette-input')).toBeFocused();
+  await page.keyboard.type('그래프', { delay: 20 });
+  // Entity hits are listed above 이동 and Enter takes the selected row, so wait for the answer and walk down to the 그래프 row.
+  await expect(page.getByTestId('palette-hit').or(page.getByTestId('palette-empty')).first()).toBeVisible();
+  const row = page.locator('[cmdk-item][data-value="nav:graph"]');
+  await expect(row).toBeVisible();
+  for (let i = 0; i < 12 && (await row.getAttribute('aria-selected')) !== 'true'; i++) await page.keyboard.press('ArrowDown');
+  await expect(row).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/#\/graph/);
+};
 const edgePaths = (paths: string[]) => paths.filter((p) => p.startsWith('/v1/export/graph?'));
 
 test('renders the overview from the contract, with the explicit limits and no remote or CSP trouble', async ({ page, watch }) => {
@@ -55,10 +69,11 @@ test('sigma and graphology load on the graph route only', async ({ page, watch }
   void watch;
   const scripts: string[] = [];
   page.on('response', (r) => { if (r.url().endsWith('.js')) scripts.push(r.url()); });
-  await page.goto(`${G}/`);
+  // v2 `/` is the workspace whose home is the sigma graph (design 2.2), so the chunk is lazy against a route that has no graph: a cold load of /status.
+  await page.goto(`${G}${hash('/status')}`);
   await settled(page);
   expect(scripts.filter((u) => u.includes('graph-vendor'))).toEqual([]);
-  await page.getByTestId('graph-link').click();
+  await viaPalette(page);
   await ready(page);
   expect(scripts.filter((u) => u.includes('graph-vendor'))).toHaveLength(1);
 });
@@ -666,7 +681,7 @@ for (const phase of ['export', 'layout'] as const) {
       if (action === 'leave') {
         expect((await instrumented(page)).puts, 'nothing is stored by a screen that is gone').toBe(0);
         if (phase === 'layout') expect((await instrumented(page)).terminated).toBeGreaterThan(0);
-        await page.getByTestId('graph-link').click();
+        await viaPalette(page);
         await ready(page, 'cold');
       }
       await expect(stage(page)).toHaveAttribute('data-layout', 'cold', { timeout: 15_000 });
