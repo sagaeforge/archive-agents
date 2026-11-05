@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import cfx_run as R   # noqa: E402
 import cfx_world as W   # noqa: E402
 
-CONTRACT_VERSION = "0.3.1"
+CONTRACT_VERSION = "0.4.0"
 
 # 태그 -> 계약 9장 사례. test_fixture_cases.py가 모두 있는지 본다.
 TAGS = {
@@ -136,6 +136,7 @@ def define_cases(rec: Recorder, rp) -> None:
     run("nodes-repo-sort-asc", _u("/v1/nodes", ("type", "Repo"), ("sort", "stars")), tags=["sort_desc_tie"], expect=200)
     run("nodes-filter-and", _u("/v1/nodes", ("type", "Repo"), ("filter", "lang:eq:go"), ("filter", "stars:gte:10")), tags=["filter_syntax"], expect=200)
     run("nodes-filter-colon", _u("/v1/nodes", ("type", "Repo"), ("filter", "label:eq:a:b:c")), tags=["filter_syntax"], expect=200)
+    run("nodes-label-prefix", _u("/v1/nodes", ("type", "Repo"), ("filter", "label:prefix:a:b:")), tags=["filter_syntax"], expect=200)
     run("nodes-filter-in-escape", _u("/v1/nodes", ("type", "Repo"), ("filter", "label:in:a\\,b,zeta")), tags=["filter_syntax"], expect=200)
     run("nodes-limit-2", _u("/v1/nodes", ("type", "Repo"), ("limit", 2), ("sort", "-stars")), tags=["truncated"], expect=200)
     cur = rec.body("nodes-limit-2")["page"]["next_cursor"]
@@ -365,6 +366,106 @@ def held_fixture(home: Path) -> dict:
                 os.environ[k] = v
 
 
+def first_party_packet() -> dict:
+    """승인된 미배포 계약의 합성 예다. HTTP 재생 결과와 분리한다."""
+    import hashlib
+    import copy
+
+    artifact = json.loads((R.REPO / "docs/contracts/first-party-secret-rules-v1.json").read_text(encoding="utf-8"))
+    sha = hashlib.sha256(json.dumps(artifact, ensure_ascii=False, sort_keys=True,
+                                    separators=(",", ":")).encode("utf-8")).hexdigest()
+    spec = yaml.safe_load((R.REPO / "docs/contracts/openapi.yaml").read_text(encoding="utf-8"))
+    inactive = {"fp_gate": False, "editor_routes": [], "private_open": False,
+                "hitl": {"available": False, "trust_store": "missing", "rp_ids": []},
+                "secret_rules": {"version": None, "sha": None}}
+    ready = {"fp_gate": True, "editor_routes": ["POST /v1/records", "PUT /v1/records/{id}"],
+             "private_open": True,
+             "hitl": {"available": True, "trust_store": "ready", "rp_ids": [
+                 {"rp_id": "localhost", "allowed_origins": ["http://localhost:4812"], "registered": True}]},
+             "secret_rules": {"version": artifact["version"], "sha": sha}}
+    packet = {"synthetic": True, "contract_version": CONTRACT_VERSION,
+              "note": "승인된 계약 예시. 실제 HTTP 동작이나 현재 준비 상태의 실행 결과가 아니다.",
+              "meta_unready": inactive, "meta_ready": ready,
+              "deployment": copy.deepcopy(inactive), "cases": []}
+    fid, tid, run = "f-fixture-page", "f-fixture-spec", "t-fixture-run"
+    record = {"type": "Page", "title": "합성 문서", "body": "한글😀 합성 본문",
+              "body_format": "markdown", "sensitivity": "private", "props": {}, "links": []}
+    payload_sha = hashlib.sha256(json.dumps(record, ensure_ascii=False, sort_keys=True,
+                                            separators=(",", ":")).encode()).hexdigest()
+    base = {"id": fid, "version": 1, "seq": 101, "replayed": False, "unchanged": False,
+            "projected": True, "spooled": False, "held": False, "write_ref": None,
+            "payload_sha": payload_sha, "quarantined": False, "warnings": [], "reason": None,
+            "actor": "app:loupe", "claimed_author": "user:sagae", "generated_by": "app:loupe:save"}
+
+    def envelope(data):
+        return {"schema_version": CONTRACT_VERSION, "epoch": 1, "build_id": "g-fixture",
+                "data_as_of": "2026-11-05T00:00:00Z", "applied_seq": 101,
+                "as_of": {"valid": None, "observed": None}, "degraded": [], "data": data}
+
+    def problem(code, instance="/v1/records", **extra):
+        err = spec["x-first-party-errors"][code]
+        return dict(type="https://kb.local/problems/" + code.replace("_", "-"),
+                    title=code.replace("_", " "), status=err["status"], detail=err["detail"],
+                    code=code, instance=instance, **extra)
+
+    def add(cid, method, path, status, response, request=None):
+        case = {"id": cid, "method": method, "path_template": path, "status": status,
+                "headers": {"cache-control": "no-store"}, "response": response}
+        if request is not None:
+            case["request"] = request
+        packet["cases"].append(case)
+
+    request = {"idempotency_key": "loupe:c:synthetic-draft", "change": "save", "record": record}
+    add("create", "POST", "/v1/records", 201, copy.deepcopy(base), copy.deepcopy(request))
+    edit = copy.deepcopy(request)
+    edit["idempotency_key"] = "loupe:e:f-fixture-page:v1:save:r2"
+    edit["record"]["expected_version"] = 1
+    add("edit", "PUT", "/v1/records/{id}", 200, dict(base, version=2, seq=102), edit)
+    current = {"version": 2, "status": "active", "payload_sha": payload_sha,
+               "actor": "app:loupe", "claimed_author": "user:sagae", "generated_by": "app:loupe:save",
+               "recorded_at": "2026-11-05T00:00:00Z", "title": record["title"], "body": record["body"],
+               "body_truncated": False, "props": {}, "links": []}
+    add("conflict", "PUT", "/v1/records/{id}", 409, problem("version_conflict", current=current), copy.deepcopy(edit))
+    add("hidden-404", "PUT", "/v1/records/{id}", 404, problem("not_found"), copy.deepcopy(edit))
+    add("tombstone", "POST", "/v1/records/{id}/tombstone", 200, dict(base, version=3, seq=103),
+        {"idempotency_key": "loupe:t:f-fixture-page:v2", "change": "save", "expected_version": 2, "reason": "합성 문서로 합침"})
+    add("promote", "POST", "/v1/records/{id}/promote", 201,
+        dict(base, id=tid, seq=104, promoted_from={"id": "f-fixture-note", "version": 4},
+             research={"state": "budget_unavailable"}),
+        {"idempotency_key": "loupe:p:f-fixture-note:v4", "change": "save", "to": "topic", "memo_version": 4,
+         "record": {"title": "합성 연구", "body": "조사 범위", "props": {"export_llm": False, "export_query": False}}})
+    secret = copy.deepcopy(request)
+    secret["record"]["body"] = "한글😀-----BEGIN PRIVATE KEY-----"
+    hit = {"field": "record.body", "rule": "kb-private-key-header", "start": 3, "end": 30, "start_u16": 4, "end_u16": 31}
+    add("secret-reject", "POST", "/v1/records", 422, problem("secret_detected", stored=False, hits=[hit]), copy.deepcopy(secret))
+    secret["on_secret"] = "quarantine"
+    add("quarantine-save", "POST", "/v1/records", 201,
+        dict(base, quarantined=True, sensitivity="secret", warnings=["secret_detected:kb-private-key-header"]), secret)
+    add("spool-reference", "GET", "/v1/writes/{ref}", 200,
+        envelope({"ref": "w-fixture", "state": "failed", "id": fid, "version": None, "code": "version_conflict"}))
+    research = {"spec": tid, "spec_version": 2, "topic": "e:topic:fixture", "run": run,
+                "existing": False, "state": "queued", "seq": 105, "replayed": False,
+                "status_url": "/v1/topics/" + tid + "/research"}
+    add("research-request", "POST", "/v1/topics/{id}/research", 201, research,
+        {"idempotency_key": "loupe:r:f-fixture-spec:00000000-0000-4000-8000-000000000001",
+         "run_id": "00000000-0000-4000-8000-000000000001", "change": "save", "expected_version": 2})
+    add("research-status", "GET", "/v1/topics/{id}/research", 200,
+        envelope({"spec": tid, "topic": "e:topic:fixture", "state": "queued",
+                  "run": {"id": run, "status": "queued", "opened_at": "2026-11-05T00:00:00Z"},
+                  "engines": [], "cost": None, "reported": False,
+                  "results": {"accepted_claims": 0, "edges": 0, "needs_review": 0, "since": "2026-11-05T00:00:00Z",
+                              "list_url": "/v1/nodes/e:topic:fixture/edges?direction=in&rtypes=IN_TOPIC",
+                              "review_url": "/v1/nodes/e:topic:fixture/edges?direction=in&rtypes=IN_TOPIC&include_unverified=true"},
+                  "discovery": "narrowed", "discovery_reason": "private_topic_registered_sources_only",
+                  "pending_hosts": 0, "failures": []}))
+    packet["errors"] = [problem(code, **({"stored": False, "hits": [hit]} if code == "secret_detected" else {}))
+                        for code in spec["x-first-party-errors"]]
+    packet["dry_run"] = {"would_reject": True, "hits": [hit], "secret_rules": ready["secret_rules"]}
+    packet["spooled"] = dict(base, version=None, seq=None, projected=False, spooled=True,
+                             write_ref="w-fixture", reason="gate_timeout")
+    return packet
+
+
 def generate(workdir: Path) -> dict[str, bytes]:
     """workdir 아래 임시 KB_HOME 둘을 쓰고 {상대경로: 바이트}를 돌려준다."""
     files: dict[str, bytes] = {}
@@ -401,15 +502,15 @@ def generate(workdir: Path) -> dict[str, bytes]:
     for cid, st in rec.res.items():
         files[f"responses/{cid}.json"] = R.dump_json(st).encode()
     files["mcp/kb_put-held.json"] = R.dump_json(held).encode()
+    packet = first_party_packet()
+    files["first-party.json"] = R.dump_json(packet).encode()
+    for case in packet["cases"]:
+        files[f"first-party/responses/{case['id']}.json"] = R.dump_json(case).encode()
     return files
 
 
 def write_fixtures(files: dict[str, bytes], dest: Path) -> None:
-    keep = {"README.md"}
-    for child in dest.iterdir() if dest.exists() else []:
-        if child.name in keep:
-            continue
-        shutil.rmtree(child) if child.is_dir() else child.unlink()
+    # 생성 대상만 덮어쓴다. 사용자·동료의 기존 파일은 삭제하지 않는다.
     for rel, data in files.items():
         p = dest / rel
         p.parent.mkdir(parents=True, exist_ok=True)

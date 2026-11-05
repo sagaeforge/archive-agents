@@ -1,6 +1,6 @@
 # KB 데이터 인터페이스 계약 v0
 
-- 상태: 0.3.2. sagae-tools 3차 회신(`docs/contracts/consumers/sagae-tools-reply-3.md`)을 항목별로 처리했고(`sagae-tools-reply-3-response.md`) 13장이 합의 상태다. 0.3.1은 호환 변경만 담는다. 남은 `[잠정]`은 v1 소비자가 쓰지 않는 구간이다(1장의 TCP와 Proxmox 주소, 4.13의 `/v1/ops/*`).
+- 상태: 0.4.0 (ADR-0005 FW1 계약 추가; HTTP 구현 전). sagae-tools 3차 회신(`docs/contracts/consumers/sagae-tools-reply-3.md`)을 항목별로 처리했고(`sagae-tools-reply-3-response.md`) 13장이 합의 상태다. 0.3.1은 호환 변경만 담는다. 남은 `[잠정]`은 v1 소비자가 쓰지 않는 구간이다(1장의 TCP와 Proxmox 주소, 4.13의 `/v1/ops/*`).
 - 날짜: 2026-10-31
 - 기준: `docs/adr/0001-architecture.md`, `docs/contracts/consumers/sagae-tools.md`(잠정본), `docs/contracts/consumers/sagae-tools-reply-2.md`(2차 회신). 항목별 처리는 `docs/contracts/consumers/sagae-tools-reply-2-response.md`(이하 응답표)다.
 - 계약 형식: OpenAPI 3.1.1 + JSON Schema 2020-12. 기계 판독 원본은 `docs/contracts/openapi.yaml`이다. WP-23이 WP-04, WP-05, WP-10 전에 이 문서에서 만든다. 그 뒤로 두 문서가 어긋나면 `openapi.yaml`이 이긴다.
@@ -54,7 +54,7 @@
 | 1순위 경로 | HTTP JSON `/v1` |
 | 보조 경로 | 스냅샷 export(5장) |
 | 대체 경로 | `kb api <path>?<query>` CLI. HTTP와 같은 JSON을 stdout으로 낸다. 오류는 RFC 9457 본문 + exit 1. loupe는 쓰지 않는다 |
-| 쓰기 | 도구는 읽기 전용이다. 쓰기 경로는 6장. HTTP 쓰기는 v1에 없다 |
+| 쓰기 | ADR-0005 편집기 HTTP 계약은 6.3. 현재 배포된 읽기 경로와 준비 상태를 구분한다 |
 | MCP | 에이전트용이다. UI 경로로 쓰지 않는다. HTTP와 조회 코어를 공유한다 |
 | 파일 직접 접근 | 제공하지 않는다. SQLite 사본을 게시하지 않는다 |
 
@@ -81,7 +81,7 @@ http.get({ socketPath: "/home/user/sagae-kb-data/run/read.sock", path: "/v1/meta
 
 ### 2.1 봉투
 
-모든 성공 응답은 이 봉투다. 예외는 `/v1/export/graph` 파일과 `/v1/snapshots/{id}/raw`다.
+읽기 성공 응답은 이 봉투다. 6.3의 쓰기 응답은 평면 객체다. 읽기 예외는 `/v1/export/graph` 파일과 `/v1/snapshots/{id}/raw`다.
 
 ```json
 {
@@ -130,7 +130,7 @@ RFC 9457 `application/problem+json`이다. 404, 405, 500을 포함해 오류 응
 | 401 | `token_required`, `token_invalid` | TCP에서 토큰 없음, 토큰이 맞지 않음 |
 | 403 | `host_rejected` | Host 헤더 불일치 |
 | 404 | `not_found` | 없음. 민감도로 숨긴 레코드와 형식이 틀린 ID도 같은 응답이다 |
-| 405 | `method_not_allowed` | `GET`, `HEAD` 외 메서드 |
+| 405 | `method_not_allowed` | 해당 경로에서 지원하지 않는 메서드. 현재 배포된 읽기는 GET/HEAD, 승인된 편집기 메서드는 6.3이며 배포 전에는 사용할 수 없다 |
 | 410 | `epoch_changed`, `content_removed` | 커서의 `epoch`이 현재와 다르거나 커서가 현재 `applied_seq`보다 앞선다. export로 재동기화한다. `content_removed`는 `record.redact`나 `ttl30`으로 본문이 지워졌다는 뜻이고 메타데이터는 계속 읽힌다 |
 | 416 | `range_not_satisfiable` | `/raw`의 `Range`가 범위 밖이다 |
 | 429 | `too_many_requests` | 동시 처리 요청이 상한을 넘었다. 상한은 설정 `read.max_concurrent`이고 기본 16, 하한 12다. 값은 `/v1/meta`의 `limits.concurrent`다. `Retry-After`(초)를 항상 준다 |
@@ -1029,7 +1029,7 @@ OpsMetrics:
 
 ## 4. 읽기 엔드포인트
 
-모든 경로는 `GET`이고 `HEAD`도 받는다. 아래 표가 경로, `operationId`, 응답, 허용 쿼리 파라미터의 전부다. 표에 없는 파라미터는 400 `bad_param`이다(2.3). `F`는 공통 필터 `types`, `origin`, `status`, `domain`, `source`, `author`, `include_unverified`이고 `T`는 시점 파라미터 `as_of_valid`, `as_of_observed`다.
+모든 경로는 `GET`이고 `HEAD`도 받는다. 아래 표는 기존 읽기 경로, `operationId`, 응답, 허용 쿼리 파라미터다. ADR-0005의 추가 읽기와 쓰기는 6.3이다. 표에 없는 파라미터는 400 `bad_param`이다(2.3). `F`는 공통 필터 `types`, `origin`, `status`, `domain`, `source`, `author`, `include_unverified`이고 `T`는 시점 파라미터 `as_of_valid`, `as_of_observed`다.
 
 | 경로 | `operationId` | `data` | `page` | 파라미터 |
 |---|---|---|---|---|
@@ -1368,7 +1368,7 @@ KB가 내는 집계는 개수와 분포까지다. 레이아웃, 커뮤니티, �
 
 ## 6. 쓰기 경로
 
-가시화 도구는 읽기 전용이다. first_party 입력 창구는 KB 쪽에서 설계했다.
+기존 읽기와 에이전트 입력 창구를 유지하고, 편집기 first_party 계약을 6.3에 추가한다.
 
 | 통로 | 대상 | 형식 |
 |---|---|---|
@@ -1377,7 +1377,7 @@ KB가 내는 집계는 개수와 분포까지다. 레이아웃, 커뮤니티, �
 | `kb put -f record.json` | 스크립트, 사람 | 6.1과 같은 JSON |
 | `~/sagae-kb-data/inbox/*.md` | 사람 | Markdown + YAML 머리말. 6.2 |
 | `kb ingest submit`, `kb-collect` MCP | 수집 에이전트, 스크립트 | 적재 계약 `kb-ingest/1`(ADR 9장). `record`는 사람 경로만 |
-| HTTP 쓰기 | 없음 | v1에 없다. 도구가 쓰기가 필요해지면 협의한다 |
+| HTTP 쓰기 | 인증된 편집기 | ADR-0005 승인 계약 6.3. 아직 HTTP 동작 구현 없음 |
 
 ### 6.1 `kb_put`
 
@@ -1442,15 +1442,58 @@ links: [e:platform:youtube-shorts]
 - 타입 미정 레코드는 나중에 타입을 정의하면 된다. 옛 레코드는 그대로 유효하다.
 - first_party 쓰기가 열리기 전에도 계약과 검증은 그대로 동작한다.
 
+### 6.3 first_party 편집기 HTTP 계약 0.4.0 (ADR-0005 FW1)
+
+이 절은 승인된 계약이고 HTTP 구현 완료를 뜻하지 않는다. 요청·응답의 기계 판독 원본은 `openapi.yaml`의 `x-first-party-paths`(Path Item 모양), 자료형은 `components.schemas`다. 기존 `paths`는 배포된 읽기 GET 26개를 유지한다. 아직 없는 메서드를 실서버 재생 시험이나 일반 클라이언트 생성기에 배포된 경로로 넣지 않기 위해 별도로 공개한다. 일반 OpenAPI 생성기는 이 확장을 자동으로 경로로 생성하지 않는다. 소비자는 이를 명시적으로 읽어 구현하고, 후속 배포에서 해당 Path Item을 `paths`로 옮긴다. `x-implemented:false`는 계약의 배포 상태이며 기능 탐지는 반드시 `/v1/meta`의 실제 `data.write`로 한다. FW9 reviewer/HITL/사용자 동작 경로는 이 계약 패킷에서 제외한다.
+
+| 메서드·경로 | operationId | 요청 스키마 | 성공 스키마·상태 |
+|---|---|---|---|
+| `POST /v1/records` | `createRecord` | `RecordWriteRequest` | `RecordWriteResult`, 201/202 |
+| `PUT /v1/records/{id}` | `replaceRecord` | `RecordWriteRequest` | `RecordWriteResult`, 200/202 |
+| `POST /v1/records/{id}/tombstone` | `tombstoneRecord` | `TombstoneRequest` | `RecordWriteResult`, 200/202 |
+| `POST /v1/records/{id}/promote` | `promoteRecord` | `PromoteRequest` | `RecordWriteResult`, 201 |
+| `POST /v1/topics/{id}/research` | `requestResearch` | `ResearchRequest` | `ResearchRequestResult`, 201(새 실행)/200(열린 실행) |
+| `POST /v1/topics/{id}/research/{run}/stop` | `stopResearch` | `StopResearchRequest` | `StopResearchResult`, 200 |
+| `GET /v1/topics/{id}/research` | `getResearch` | 없음 | `ResearchStatusEnvelope`, 200 |
+| `GET /v1/writes/{ref}` | `getWrite` | `include=body` 선택 | `WriteReferenceEnvelope`, 200 |
+| `DELETE /v1/writes/{ref}` | `discardWrite` | 없음 | `WriteReferenceEnvelope`, 200 |
+| `GET /v1/nodes/{id}/reviews` | `listClaimReviews` | `cursor` 선택 | `ClaimReviewListEnvelope`, 200 |
+
+`{id}`는 기록/TopicSpec의 `f-` ID, `{run}`은 연구 티켓 ID다. 쓰기 응답은 평면 객체이며 읽기 Envelope로 감싸지 않는다. 연구 상태·쓰기 참조·리뷰 목록 GET은 기존 읽기 봉투를 쓴다. 위 경로는 `Cache-Control: no-store`다. JSON 요청은 UTF-8 `application/json`, 요청 전체 2 MiB, 본문 UTF-8 1 MiB, 제목 300자, props 정규 JSON 16 KB, 링크 500개 상한이다. JSON Schema의 문자열 길이는 바이트 상한을 대신하지 않는다.
+
+기록 요청은 `{idempotency_key,change,on_secret?,record}`다. 키는 1~256자, `change`는 필수 `save|autosave|auto`, `on_secret`은 기본 `reject`이고 `quarantine`은 `change=save`에만 허용한다. 기록은 `Page|Note|TopicSpec|Review`, `title`, `body` 필수이며 `body_format`은 기본 `markdown` 또는 `text`, 민감도는 기본 `private`다. `props`·`links`는 전체 교체이며 빠진 기존 값은 지운다. PUT의 `record.id`는 생략하거나 경로와 같아야 한다. 판 없는 편집은 428, 낡은 판은 내용이 같아도 409이고 서버는 병합하지 않는다. 같은 판·같은 내용은 `unchanged:true`다.
+
+작성자·actor·origin·generated_by·on_behalf_of·source_url·quote·retention을 기록에 받지 않는다. props의 `source_path`, `path`, `file`, `filename`, `_path`로 끝나는 이름과 `quarantine*`는 금지다. Page·Note 사용자 속성은 허용하지만 TopicSpec·Review는 선언한 속성만 허용한다. TopicSpec은 엔진·예산 선택을 받지 않는다. slug 생략 시 새 기록 ID로 `"t-" + sha256(UTF-8("kb-topic-slug-v1\0" + record_id)).hexdigest()[:16]`, PUT 생략 시 기존 slug를 유지한다. private spec의 `export_llm`·`export_query`는 false다. Review의 `source_url`은 거절 제보 `verdict=reject`와 함께일 때만 후보 URL로 받으며 최상위 출처 필드 허용을 뜻하지 않는다.
+
+기록 결과는 `{id,version,seq,replayed,unchanged,projected,spooled,held,write_ref,payload_sha,quarantined,warnings,reason,actor,claimed_author,generated_by}`다. `actor=app:<인증 앱 라벨>`, `claimed_author`는 앱의 주장이고 권한이 아니다. `generated_by=app:<라벨>:<change>`다. 202이면 판·seq는 null, projected는 false이며 보류·스풀의 `write_ref`가 있다. reason은 각각 `offsite_path_missing`·`gate_timeout`이다. `projected:false`는 읽기 반영 전이므로 로컬 초안을 유지한다. history의 기존 `versions[]`에 `actor`, `claimed_author`, `generated_by`, `payload_sha`를 선택 nullable 필드로 추가한다. 기존 판에서 없을 수 있다. 옛 본문은 기존 `/v1/nodes/{id}/body?as_of_observed=`로 읽는다.
+
+멱등 키는 만들기 `loupe:c:<초안 UUID>`, 편집 `loupe:e:<id>:v<판>:<change>:r<초안 개정>`, tombstone `loupe:t:<id>:v<판>`, 승격 `loupe:p:<메모 id>:v<판>`, 연구 `loupe:r:<spec id>:<실행 UUID>`, 멈춤 `loupe:x:<run id>`다. 만들기 키에는 change를 넣지 않는다. 같은 키라도 귀속·내용이 달라지면 충돌이다. 재생도 현재 가시성을 확인하고 숨은 대상은 없는 대상과 같은 404이며 current·ID·판·해시를 주지 않는다. 충돌한 tombstone current는 `{version,status:"dead"}`뿐이다. 활성 current는 ADR 5.4의 본문(200,000자 상한)과 provenance·해시를 포함한다.
+
+승격은 원본 Note를 바꾸지 않고 새 TopicSpec과 `PROMOTED_FROM`을 만든다. `memo_version` 필수이며 요청의 type/PROMOTED_FROM은 받지 않는다. 민감도는 원본 현재 판을 상속하고 낮추기는 403이다. `research:{run_id}`를 함께 받지만 예산 장치가 없으면 승격은 성공하고 `research:{state:"budget_unavailable"}`다. 승격·연구는 스풀하지 않으며 게이트 대기 실패는 503 `gate_busy`와 Retry-After다.
+
+연구 요청은 `idempotency_key,run_id,change=save,expected_version`이다. 엔진·예산은 서버가 정하고 예산 장치가 없으면 409 `budget_unavailable`이다. 상태는 `queued,in_progress,paused,cancelled,done,unanswerable,blocked_policy,budget_unavailable`이며, 엔진·보고된 비용·결과 수·검토 URL·수집 범위 제한·최근 실패(최대 20건)를 공개한다. 비용 미보고 시 `cost:null,reported:false`이고 내부 주소 대신 source ID를 쓴다. private는 `discovery=narrowed`, `discovery_reason=private_topic_registered_sources_only`다. 열린 실행에 합류하면 `existing:true`, 같은 요청 재생은 같은 run을 가리킨다.
+
+쓰기 참조의 `state`는 `pending,committed,failed,purged`다. 발급 토큰의 tok_id만 조회·삭제하고 회전 토큰도 다른 소유자로 처리한다. failed code는 `version_conflict,idem_conflict,not_found,byte_quota_exceeded,lost_before_spool,create_conflict`다. `include=body`는 failed이며 소유·현재 가시성을 통과한 경우에만 record·payload_sha를 더한다. purged 본문 회수는 410 `content_removed`, 다른 상태의 include는 400이다. pending/held의 DELETE는 409 `write_in_flight`다. 초안은 직접 200/201, ref committed, 같은 payload_sha의 이력, 또는 사용자 버림을 확인할 때만 지운다. changes 피드에 ID가 나타난 것만으로 지우지 않는다.
+
+**오류·비밀 탐지.** `FirstPartyProblem`은 ADR 7.5의 전체 code·status·고정 detail을 oneOf로 묶는다. `x-first-party-errors`에 그 표를 그대로 공개하며 `같음`은 바로 앞 문구로 해소한다. ADR 5.4·7.3의 설명용 detail과 다를 때 이 작업 명세가 지정한 7.5를 따른다. 415·428 표의 고정 표시 `버그`도 임의 문구로 바꾸지 않는다. 오류·로그·경고에 입력값을 되풀이하지 않는다. link 경고에는 순번만 쓰며 429·503은 Retry-After를 준다.
+
+멱등 키·ID·타입·모든 중첩 속성 이름·tombstone reason·slug·연구 문자열의 비밀은 항상 422, 내용 필드는 기본 거절 또는 명시 격리다. 검사는 CAS·스풀·원장·멱등 재생 조회보다 먼저다. 거절 응답은 `stored:false`와 `hits:[{field,rule,start,end,start_u16,end_u16}]`이며 field는 속성 이름이 아닌 순번(`record.props[2].value`)이다. start는 포함, end는 제외이고 코드포인트와 UTF-16 code unit을 함께 준다. 격리는 `quarantined:true,sensitivity:secret`이며 사람이 해제하기 전에는 읽히지 않는다. `POST /v1/records?dry_run=1`과 `PUT /v1/records/{id}?dry_run=1`은 정상 검사 시 200 `DryRunResult={would_reject,hits,secret_rules:{version,sha}}`다. 영속 기록·캐시·입력 로그를 남기지 않는 동작은 FW3/FW4에서 시험하며 FW1의 정적 fixture는 그 동작을 입증하지 않는다.
+
+공개 파일은 `first-party-secret-rules-v1.json`, 판은 `fp-secret-rules-v1`이다. 저장소의 Gitleaks v8.30.1(MIT) 221개 Python 정규식과 KB의 두 추가 규칙·플래그·다이제스트 예외·합성 벡터를 포함하며 실제 비밀·사용자 자료·설치별 예외 목록을 싣지 않는다. 패턴 엔진과 예외 생략으로 브라우저 사전 검사는 안내일 뿐이다. 최종 서버 검사를 생략하지 않는다. sha는 전체 JSON을 `ensure_ascii=False,sort_keys=True,separators=(",",":")`로 직렬화한 UTF-8 바이트의 SHA-256(소문자 64자리)다. 자기 sha를 파일에 넣지 않는다. 서버는 배포 artifact의 판·해시와 자기 규칙 정의가 대응할 때만 편집기 경로를 공개한다.
+
+**쓰기 준비 상태의 단일 정의.** `/v1/meta.data.write`는 추가 선택 필드이며 존재하면 반드시 `WriteReadiness`다. 필드가 없으면 편집기를 준비 완료로 취급하지 않는다. 모양은 준비 전·후 모두 `{fp_gate,editor_routes,private_open,hitl:{available,trust_store,rp_ids},secret_rules:{version,sha}}`다. 미배포 상태는 editor_routes 빈 배열·private_open=false·hitl.available=false다. artifact 미배포는 version/sha 둘 다 null이고 경로도 빈 배열이다. 공개 준비 뒤에는 판과 실제 해시를 함께 준다. private_open은 private 쓰기와 모든 읽기·파생물 가시성 검사가 함께 준비됐을 때만 true다. hitl의 trust_store는 `ready,missing,unreadable,unsafe`, rp_ids는 `{rp_id,allowed_origins,registered}` 배열이며 안전하지 않으면 빈 배열이다. reviewer 키·자격 증명 ID·설치 경로는 공개하지 않는다. fp_gate는 실제 원장 fp_open이고 저장소의 정적 예시를 실제 상태로 쓰지 않는다.
+
+합성 11종은 `fixtures/first-party.json`과 `fixtures/first-party/responses/*.json`이며 생성기는 `tests/contract/gen_fixtures.py`다. packet의 meta_ready는 미래 준비 상태의 모양 예시이고 deployment도 미배포의 합성 예시다. 실행 관측값이 아니다. 기존 읽기 fixture는 requests.yaml/responses에 그대로 둔다. `filter=label:prefix:a:b:`는 `src/kb/read/nodes.py:463-480`의 label 문자열 열·prefix 분기를 근거로 `nodes-label-prefix` 사례를 추가했으며 예상 ID는 e:repo:c다. 실제 재생 통과 여부는 검증 보고서에서 확인한다. 재생 실패를 읽기 기준선 변경으로 숨기지 않는다.
+
 ## 7. 보안
 
 | 항목 | 규칙 |
 |---|---|
 | Host | 자체 ASGI 미들웨어. 허용 목록은 설정값이고 기본은 `127.0.0.1`, `localhost`다. 원격 이전 때 호스트를 더한다. 불일치는 403 `host_rejected` problem+json이다 |
 | CORS | 없다. 와일드카드 금지. 뷰어 백엔드가 호출한다 |
-| 인증 | Unix 소켓은 파일 권한이고 토큰이 없다. 범위는 `internal` 이하다(2.8). TCP는 Bearer 필수. `.wslconfig`의 `networkingMode=Mirrored`로 Windows에서 루프백이 보일 수 있어 로컬이라도 토큰을 요구한다 |
-| 토큰 범위 | `viewer`(`internal` 이하), `owner`(`private` 이하). `kb token create`로 만들고 파일은 `~/.config/sagae-kb/api-tokens`(0600)다. 전달은 `Authorization: Bearer`다. loupe는 TCP일 때만 `viewer` 토큰을 쓴다. 쓰기 범위는 쓰기 경로를 열 때 정한다 |
-| 쓰기 메서드 | 기본 없음 |
+| 인증 | 기존 읽기 Unix 소켓은 파일 권한이고 토큰이 없으며 그 범위는 `internal` 이하다(2.8). 6.3의 쓰기는 소켓에서도 Bearer 필수다. TCP는 Bearer 필수. `.wslconfig`의 `networkingMode=Mirrored`로 Windows에서 루프백이 보일 수 있어 로컬이라도 토큰을 요구한다 |
+| 토큰 범위 | `viewer`(`internal` 이하), `owner`(`private` 이하). `kb token create`로 만들고 파일은 `~/.config/sagae-kb/api-tokens`(0600)다. 전달은 `Authorization: Bearer`다. loupe는 TCP일 때만 `viewer` 토큰을 쓴다. 편집기 쓰기는 editor 범위와 app 귀속을 요구한다(6.3). reviewer 전용 동작은 FW9 범위다 |
+| 쓰기 메서드 | 6.3의 승인 계약. 실제 열린 경로는 meta.data.write.editor_routes로 확인. 쓰기는 소켓에서도 Bearer 필수 |
 | 비신뢰 내용 | 본문과 `raw`는 외부 데이터다. 표시할 때 실행하지 않는다. `/raw`는 내려받기로만 나간다(4.11) |
 
 ## 8. 버전 정책

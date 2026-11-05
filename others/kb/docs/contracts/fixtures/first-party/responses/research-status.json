@@ -1,0 +1,46 @@
+{
+  "headers": {
+    "cache-control": "no-store"
+  },
+  "id": "research-status",
+  "method": "GET",
+  "path_template": "/v1/topics/{id}/research",
+  "response": {
+    "applied_seq": 101,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-fixture",
+    "data": {
+      "cost": null,
+      "discovery": "narrowed",
+      "discovery_reason": "private_topic_registered_sources_only",
+      "engines": [],
+      "failures": [],
+      "pending_hosts": 0,
+      "reported": false,
+      "results": {
+        "accepted_claims": 0,
+        "edges": 0,
+        "list_url": "/v1/nodes/e:topic:fixture/edges?direction=in&rtypes=IN_TOPIC",
+        "needs_review": 0,
+        "review_url": "/v1/nodes/e:topic:fixture/edges?direction=in&rtypes=IN_TOPIC&include_unverified=true",
+        "since": "2026-11-05T00:00:00Z"
+      },
+      "run": {
+        "id": "t-fixture-run",
+        "opened_at": "2026-11-05T00:00:00Z",
+        "status": "queued"
+      },
+      "spec": "f-fixture-spec",
+      "state": "queued",
+      "topic": "e:topic:fixture"
+    },
+    "data_as_of": "2026-11-05T00:00:00Z",
+    "degraded": [],
+    "epoch": 1,
+    "schema_version": "0.4.0"
+  },
+  "status": 200
+}

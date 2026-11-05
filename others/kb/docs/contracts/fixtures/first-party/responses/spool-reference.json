@@ -1,0 +1,28 @@
+{
+  "headers": {
+    "cache-control": "no-store"
+  },
+  "id": "spool-reference",
+  "method": "GET",
+  "path_template": "/v1/writes/{ref}",
+  "response": {
+    "applied_seq": 101,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-fixture",
+    "data": {
+      "code": "version_conflict",
+      "id": "f-fixture-page",
+      "ref": "w-fixture",
+      "state": "failed",
+      "version": null
+    },
+    "data_as_of": "2026-11-05T00:00:00Z",
+    "degraded": [],
+    "epoch": 1,
+    "schema_version": "0.4.0"
+  },
+  "status": 200
+}

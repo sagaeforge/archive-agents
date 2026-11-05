@@ -2,6 +2,15 @@
 
 `docs/contracts/openapi.yaml`의 변경 기록이다. 파괴 변경은 major(0.x 동안은 minor)를 올리고 여기에 적은 뒤 sagae-tools 세션에 알린다(계약 8장). 기준선은 `docs/contracts/baseline/openapi.yaml`이고 올리는 것은 소비자 통지 뒤의 명시 절차다.
 
+## 0.4.0 (2026-11-06) ADR-0005 FW1 승인 계약
+
+- `x-first-party-paths`에 편집·승격·연구·쓰기 참조·주장별 리뷰 Path Item 10개 operation을 고정했다. 미배포(`x-implemented:false`)이며 기존 `paths`의 읽기 GET 26개와 실서버 기준선을 유지한다. 일반 생성기는 확장 경로를 자동 생성하지 않는다. 후속 HTTP 배포에서 Path Item을 승격한다.
+- 기록 쓰기의 평면 결과, 읽기의 봉투 결과, dry-run·전체 오류 코드/고정 문구(ADR 7.5), 단일 WriteReadiness(ADR 8.1)를 추가했다. history VersionRow의 provenance/해시와 Meta.write는 선택 필드다. reviewer/HITL/사용자 동작 경로와 HTTP 구현은 포함하지 않는다.
+- 공개 `first-party-secret-rules-v1.json`: Gitleaks v8.30.1(MIT), 221개 규칙과 KB 추가 규칙·다이제스트 예외·코드포인트/UTF-16 합성 벡터. 실제 비밀·설치별 예외는 없다. 브라우저 검사는 안내이며 서버가 최종 판정한다.
+- 11종 승인 계약 fixture와 label-prefix 읽기 재생 사례를 생성기에 추가했다. 생성기는 기존 사용자·동료 파일을 삭제하지 않는다.
+- info.version·예시·생성기 CONTRACT_VERSION·requests.meta.contract_version을 0.4.0으로 맞췄다. 기준선에서 소비자 검사를 막던 `0.3.1 !== 0.3.2`의 상수 불일치를 수정한다. 실제 기존 서버의 schema_version 응답은 수정하지 않는다. 계약 검사 통과 여부는 task-1-report.md에 기록한다.
+- 기존 읽기 기준선 파일은 변경하지 않았다. 합성 계약의 스키마 통과가 HTTP 저장·거절·준비 상태 동작을 입증하지 않는다.
+
 ## 0.3.2 (2026-11-01) 소비자 확정본 요청 3건, 호환 변경만
 
 입력은 `docs/contracts/consumers/sagae-tools.md` 확정본의 열린 요청 1~3이다. 파괴 변경은 없다.

@@ -1,0 +1,787 @@
+{
+  "cases": [
+    {
+      "headers": {
+        "cache-control": "no-store"
+      },
+      "id": "create",
+      "method": "POST",
+      "path_template": "/v1/records",
+      "request": {
+        "change": "save",
+        "idempotency_key": "loupe:c:synthetic-draft",
+        "record": {
+          "body": "한글😀 합성 본문",
+          "body_format": "markdown",
+          "links": [],
+          "props": {},
+          "sensitivity": "private",
+          "title": "합성 문서",
+          "type": "Page"
+        }
+      },
+      "response": {
+        "actor": "app:loupe",
+        "claimed_author": "user:sagae",
+        "generated_by": "app:loupe:save",
+        "held": false,
+        "id": "f-fixture-page",
+        "payload_sha": "383ef845b7c12722d81fbbb5315e5437e0440ba672d79af8af63be92d25e77df",
+        "projected": true,
+        "quarantined": false,
+        "reason": null,
+        "replayed": false,
+        "seq": 101,
+        "spooled": false,
+        "unchanged": false,
+        "version": 1,
+        "warnings": [],
+        "write_ref": null
+      },
+      "status": 201
+    },
+    {
+      "headers": {
+        "cache-control": "no-store"
+      },
+      "id": "edit",
+      "method": "PUT",
+      "path_template": "/v1/records/{id}",
+      "request": {
+        "change": "save",
+        "idempotency_key": "loupe:e:f-fixture-page:v1:save:r2",
+        "record": {
+          "body": "한글😀 합성 본문",
+          "body_format": "markdown",
+          "expected_version": 1,
+          "links": [],
+          "props": {},
+          "sensitivity": "private",
+          "title": "합성 문서",
+          "type": "Page"
+        }
+      },
+      "response": {
+        "actor": "app:loupe",
+        "claimed_author": "user:sagae",
+        "generated_by": "app:loupe:save",
+        "held": false,
+        "id": "f-fixture-page",
+        "payload_sha": "383ef845b7c12722d81fbbb5315e5437e0440ba672d79af8af63be92d25e77df",
+        "projected": true,
+        "quarantined": false,
+        "reason": null,
+        "replayed": false,
+        "seq": 102,
+        "spooled": false,
+        "unchanged": false,
+        "version": 2,
+        "warnings": [],
+        "write_ref": null
+      },
+      "status": 200
+    },
+    {
+      "headers": {
+        "cache-control": "no-store"
+      },
+      "id": "conflict",
+      "method": "PUT",
+      "path_template": "/v1/records/{id}",
+      "request": {
+        "change": "save",
+        "idempotency_key": "loupe:e:f-fixture-page:v1:save:r2",
+        "record": {
+          "body": "한글😀 합성 본문",
+          "body_format": "markdown",
+          "expected_version": 1,
+          "links": [],
+          "props": {},
+          "sensitivity": "private",
+          "title": "합성 문서",
+          "type": "Page"
+        }
+      },
+      "response": {
+        "code": "version_conflict",
+        "current": {
+          "actor": "app:loupe",
+          "body": "한글😀 합성 본문",
+          "body_truncated": false,
+          "claimed_author": "user:sagae",
+          "generated_by": "app:loupe:save",
+          "links": [],
+          "payload_sha": "383ef845b7c12722d81fbbb5315e5437e0440ba672d79af8af63be92d25e77df",
+          "props": {},
+          "recorded_at": "2026-11-05T00:00:00Z",
+          "status": "active",
+          "title": "합성 문서",
+          "version": 2
+        },
+        "detail": "다른 곳에서 먼저 고쳤습니다",
+        "instance": "/v1/records",
+        "status": 409,
+        "title": "version conflict",
+        "type": "https://kb.local/problems/version-conflict"
+      },
+      "status": 409
+    },
+    {
+      "headers": {
+        "cache-control": "no-store"
+      },
+      "id": "hidden-404",
+      "method": "PUT",
+      "path_template": "/v1/records/{id}",
+      "request": {
+        "change": "save",
+        "idempotency_key": "loupe:e:f-fixture-page:v1:save:r2",
+        "record": {
+          "body": "한글😀 합성 본문",
+          "body_format": "markdown",
+          "expected_version": 1,
+          "links": [],
+          "props": {},
+          "sensitivity": "private",
+          "title": "합성 문서",
+          "type": "Page"
+        }
+      },
+      "response": {
+        "code": "not_found",
+        "detail": "문서를 찾을 수 없습니다",
+        "instance": "/v1/records",
+        "status": 404,
+        "title": "not found",
+        "type": "https://kb.local/problems/not-found"
+      },
+      "status": 404
+    },
+    {
+      "headers": {
+        "cache-control": "no-store"
+      },
+      "id": "tombstone",
+      "method": "POST",
+      "path_template": "/v1/records/{id}/tombstone",
+      "request": {
+        "change": "save",
+        "expected_version": 2,
+        "idempotency_key": "loupe:t:f-fixture-page:v2",
+        "reason": "합성 문서로 합침"
+      },
+      "response": {
+        "actor": "app:loupe",
+        "claimed_author": "user:sagae",
+        "generated_by": "app:loupe:save",
+        "held": false,
+        "id": "f-fixture-page",
+        "payload_sha": "383ef845b7c12722d81fbbb5315e5437e0440ba672d79af8af63be92d25e77df",
+        "projected": true,
+        "quarantined": false,
+        "reason": null,
+        "replayed": false,
+        "seq": 103,
+        "spooled": false,
+        "unchanged": false,
+        "version": 3,
+        "warnings": [],
+        "write_ref": null
+      },
+      "status": 200
+    },
+    {
+      "headers": {
+        "cache-control": "no-store"
+      },
+      "id": "promote",
+      "method": "POST",
+      "path_template": "/v1/records/{id}/promote",
+      "request": {
+        "change": "save",
+        "idempotency_key": "loupe:p:f-fixture-note:v4",
+        "memo_version": 4,
+        "record": {
+          "body": "조사 범위",
+          "props": {
+            "export_llm": false,
+            "export_query": false
+          },
+          "title": "합성 연구"
+        },
+        "to": "topic"
+      },
+      "response": {
+        "actor": "app:loupe",
+        "claimed_author": "user:sagae",
+        "generated_by": "app:loupe:save",
+        "held": false,
+        "id": "f-fixture-spec",
+        "payload_sha": "383ef845b7c12722d81fbbb5315e5437e0440ba672d79af8af63be92d25e77df",
+        "projected": true,
+        "promoted_from": {
+          "id": "f-fixture-note",
+          "version": 4
+        },
+        "quarantined": false,
+        "reason": null,
+        "replayed": false,
+        "research": {
+          "state": "budget_unavailable"
+        },
+        "seq": 104,
+        "spooled": false,
+        "unchanged": false,
+        "version": 1,
+        "warnings": [],
+        "write_ref": null
+      },
+      "status": 201
+    },
+    {
+      "headers": {
+        "cache-control": "no-store"
+      },
+      "id": "secret-reject",
+      "method": "POST",
+      "path_template": "/v1/records",
+      "request": {
+        "change": "save",
+        "idempotency_key": "loupe:c:synthetic-draft",
+        "record": {
+          "body": "한글😀-----BEGIN PRIVATE KEY-----",
+          "body_format": "markdown",
+          "links": [],
+          "props": {},
+          "sensitivity": "private",
+          "title": "합성 문서",
+          "type": "Page"
+        }
+      },
+      "response": {
+        "code": "secret_detected",
+        "detail": "저장 거절: 비밀로 보이는 값",
+        "hits": [
+          {
+            "end": 30,
+            "end_u16": 31,
+            "field": "record.body",
+            "rule": "kb-private-key-header",
+            "start": 3,
+            "start_u16": 4
+          }
+        ],
+        "instance": "/v1/records",
+        "status": 422,
+        "stored": false,
+        "title": "secret detected",
+        "type": "https://kb.local/problems/secret-detected"
+      },
+      "status": 422
+    },
+    {
+      "headers": {
+        "cache-control": "no-store"
+      },
+      "id": "quarantine-save",
+      "method": "POST",
+      "path_template": "/v1/records",
+      "request": {
+        "change": "save",
+        "idempotency_key": "loupe:c:synthetic-draft",
+        "on_secret": "quarantine",
+        "record": {
+          "body": "한글😀-----BEGIN PRIVATE KEY-----",
+          "body_format": "markdown",
+          "links": [],
+          "props": {},
+          "sensitivity": "private",
+          "title": "합성 문서",
+          "type": "Page"
+        }
+      },
+      "response": {
+        "actor": "app:loupe",
+        "claimed_author": "user:sagae",
+        "generated_by": "app:loupe:save",
+        "held": false,
+        "id": "f-fixture-page",
+        "payload_sha": "383ef845b7c12722d81fbbb5315e5437e0440ba672d79af8af63be92d25e77df",
+        "projected": true,
+        "quarantined": true,
+        "reason": null,
+        "replayed": false,
+        "sensitivity": "secret",
+        "seq": 101,
+        "spooled": false,
+        "unchanged": false,
+        "version": 1,
+        "warnings": [
+          "secret_detected:kb-private-key-header"
+        ],
+        "write_ref": null
+      },
+      "status": 201
+    },
+    {
+      "headers": {
+        "cache-control": "no-store"
+      },
+      "id": "spool-reference",
+      "method": "GET",
+      "path_template": "/v1/writes/{ref}",
+      "response": {
+        "applied_seq": 101,
+        "as_of": {
+          "observed": null,
+          "valid": null
+        },
+        "build_id": "g-fixture",
+        "data": {
+          "code": "version_conflict",
+          "id": "f-fixture-page",
+          "ref": "w-fixture",
+          "state": "failed",
+          "version": null
+        },
+        "data_as_of": "2026-11-05T00:00:00Z",
+        "degraded": [],
+        "epoch": 1,
+        "schema_version": "0.4.0"
+      },
+      "status": 200
+    },
+    {
+      "headers": {
+        "cache-control": "no-store"
+      },
+      "id": "research-request",
+      "method": "POST",
+      "path_template": "/v1/topics/{id}/research",
+      "request": {
+        "change": "save",
+        "expected_version": 2,
+        "idempotency_key": "loupe:r:f-fixture-spec:00000000-0000-4000-8000-000000000001",
+        "run_id": "00000000-0000-4000-8000-000000000001"
+      },
+      "response": {
+        "existing": false,
+        "replayed": false,
+        "run": "t-fixture-run",
+        "seq": 105,
+        "spec": "f-fixture-spec",
+        "spec_version": 2,
+        "state": "queued",
+        "status_url": "/v1/topics/f-fixture-spec/research",
+        "topic": "e:topic:fixture"
+      },
+      "status": 201
+    },
+    {
+      "headers": {
+        "cache-control": "no-store"
+      },
+      "id": "research-status",
+      "method": "GET",
+      "path_template": "/v1/topics/{id}/research",
+      "response": {
+        "applied_seq": 101,
+        "as_of": {
+          "observed": null,
+          "valid": null
+        },
+        "build_id": "g-fixture",
+        "data": {
+          "cost": null,
+          "discovery": "narrowed",
+          "discovery_reason": "private_topic_registered_sources_only",
+          "engines": [],
+          "failures": [],
+          "pending_hosts": 0,
+          "reported": false,
+          "results": {
+            "accepted_claims": 0,
+            "edges": 0,
+            "list_url": "/v1/nodes/e:topic:fixture/edges?direction=in&rtypes=IN_TOPIC",
+            "needs_review": 0,
+            "review_url": "/v1/nodes/e:topic:fixture/edges?direction=in&rtypes=IN_TOPIC&include_unverified=true",
+            "since": "2026-11-05T00:00:00Z"
+          },
+          "run": {
+            "id": "t-fixture-run",
+            "opened_at": "2026-11-05T00:00:00Z",
+            "status": "queued"
+          },
+          "spec": "f-fixture-spec",
+          "state": "queued",
+          "topic": "e:topic:fixture"
+        },
+        "data_as_of": "2026-11-05T00:00:00Z",
+        "degraded": [],
+        "epoch": 1,
+        "schema_version": "0.4.0"
+      },
+      "status": 200
+    }
+  ],
+  "contract_version": "0.4.0",
+  "deployment": {
+    "editor_routes": [],
+    "fp_gate": false,
+    "hitl": {
+      "available": false,
+      "rp_ids": [],
+      "trust_store": "missing"
+    },
+    "private_open": false,
+    "secret_rules": {
+      "sha": null,
+      "version": null
+    }
+  },
+  "dry_run": {
+    "hits": [
+      {
+        "end": 30,
+        "end_u16": 31,
+        "field": "record.body",
+        "rule": "kb-private-key-header",
+        "start": 3,
+        "start_u16": 4
+      }
+    ],
+    "secret_rules": {
+      "sha": "59b3dcaa28889542d2a1f6429d53feb6604ad9b8cbb5f27a0ef55c4615332a20",
+      "version": "fp-secret-rules-v1"
+    },
+    "would_reject": true
+  },
+  "errors": [
+    {
+      "code": "bad_json",
+      "detail": "저장 요청이 깨졌습니다",
+      "instance": "/v1/records",
+      "status": 400,
+      "title": "bad json",
+      "type": "https://kb.local/problems/bad-json"
+    },
+    {
+      "code": "schema_invalid",
+      "detail": "저장할 수 없는 값이 있습니다",
+      "instance": "/v1/records",
+      "status": 400,
+      "title": "schema invalid",
+      "type": "https://kb.local/problems/schema-invalid"
+    },
+    {
+      "code": "bad_param",
+      "detail": "저장할 수 없는 값이 있습니다",
+      "instance": "/v1/records",
+      "status": 400,
+      "title": "bad param",
+      "type": "https://kb.local/problems/bad-param"
+    },
+    {
+      "code": "token_required",
+      "detail": "KB 쓰기 권한이 없습니다. 토큰을 다시 설정하세요",
+      "instance": "/v1/records",
+      "status": 401,
+      "title": "token required",
+      "type": "https://kb.local/problems/token-required"
+    },
+    {
+      "code": "token_invalid",
+      "detail": "KB 쓰기 권한이 없습니다. 토큰을 다시 설정하세요",
+      "instance": "/v1/records",
+      "status": 401,
+      "title": "token invalid",
+      "type": "https://kb.local/problems/token-invalid"
+    },
+    {
+      "code": "scope_denied",
+      "detail": "KB 쓰기 권한이 없습니다. 토큰을 다시 설정하세요",
+      "instance": "/v1/records",
+      "status": 403,
+      "title": "scope denied",
+      "type": "https://kb.local/problems/scope-denied"
+    },
+    {
+      "code": "type_not_allowed",
+      "detail": "이 종류는 편집기에서 만들 수 없습니다",
+      "instance": "/v1/records",
+      "status": 403,
+      "title": "type not allowed",
+      "type": "https://kb.local/problems/type-not-allowed"
+    },
+    {
+      "code": "sensitivity_not_allowed",
+      "detail": "이 공개 범위는 쓸 수 없습니다",
+      "instance": "/v1/records",
+      "status": 403,
+      "title": "sensitivity not allowed",
+      "type": "https://kb.local/problems/sensitivity-not-allowed"
+    },
+    {
+      "code": "declassify_requires_review",
+      "detail": "공개 범위를 낮추려면 검토 확인이 필요합니다",
+      "instance": "/v1/records",
+      "status": 403,
+      "title": "declassify requires review",
+      "type": "https://kb.local/problems/declassify-requires-review"
+    },
+    {
+      "code": "external_consent_required",
+      "detail": "외부 정제에 먼저 본인 확인이 필요합니다",
+      "instance": "/v1/records",
+      "status": 403,
+      "title": "external consent required",
+      "type": "https://kb.local/problems/external-consent-required"
+    },
+    {
+      "code": "review_unverified",
+      "detail": "본인 확인에 실패했습니다",
+      "instance": "/v1/records",
+      "status": 403,
+      "title": "review unverified",
+      "type": "https://kb.local/problems/review-unverified"
+    },
+    {
+      "code": "not_found",
+      "detail": "문서를 찾을 수 없습니다",
+      "instance": "/v1/records",
+      "status": 404,
+      "title": "not found",
+      "type": "https://kb.local/problems/not-found"
+    },
+    {
+      "code": "version_conflict",
+      "detail": "다른 곳에서 먼저 고쳤습니다",
+      "instance": "/v1/records",
+      "status": 409,
+      "title": "version conflict",
+      "type": "https://kb.local/problems/version-conflict"
+    },
+    {
+      "code": "idem_conflict",
+      "detail": "저장 충돌. 다시 저장합니다",
+      "instance": "/v1/records",
+      "status": 409,
+      "title": "idem conflict",
+      "type": "https://kb.local/problems/idem-conflict"
+    },
+    {
+      "code": "redacted_payload",
+      "detail": "삭제된 내용과 같아 저장할 수 없습니다",
+      "instance": "/v1/records",
+      "status": 409,
+      "title": "redacted payload",
+      "type": "https://kb.local/problems/redacted-payload"
+    },
+    {
+      "code": "write_in_flight",
+      "detail": "아직 처리 중입니다",
+      "instance": "/v1/records",
+      "status": 409,
+      "title": "write in flight",
+      "type": "https://kb.local/problems/write-in-flight"
+    },
+    {
+      "code": "review_stale",
+      "detail": "항목이 바뀌었습니다",
+      "instance": "/v1/records",
+      "status": 409,
+      "title": "review stale",
+      "type": "https://kb.local/problems/review-stale"
+    },
+    {
+      "code": "research_running",
+      "detail": "조사 중인 주제입니다. 먼저 멈추세요",
+      "instance": "/v1/records",
+      "status": 409,
+      "title": "research running",
+      "type": "https://kb.local/problems/research-running"
+    },
+    {
+      "code": "budget_unavailable",
+      "detail": "KB가 아직 이 조사를 받을 수 없습니다",
+      "instance": "/v1/records",
+      "status": 409,
+      "title": "budget unavailable",
+      "type": "https://kb.local/problems/budget-unavailable"
+    },
+    {
+      "code": "slug_taken",
+      "detail": "같은 이름의 주제가 있습니다",
+      "instance": "/v1/records",
+      "status": 409,
+      "title": "slug taken",
+      "type": "https://kb.local/problems/slug-taken"
+    },
+    {
+      "code": "content_removed",
+      "detail": "보관한 초안 본문이 삭제됐습니다",
+      "instance": "/v1/records",
+      "status": 410,
+      "title": "content removed",
+      "type": "https://kb.local/problems/content-removed"
+    },
+    {
+      "code": "body_too_large",
+      "detail": "문서가 너무 큽니다(1 MiB)",
+      "instance": "/v1/records",
+      "status": 413,
+      "title": "body too large",
+      "type": "https://kb.local/problems/body-too-large"
+    },
+    {
+      "code": "unsupported_media_type",
+      "detail": "버그",
+      "instance": "/v1/records",
+      "status": 415,
+      "title": "unsupported media type",
+      "type": "https://kb.local/problems/unsupported-media-type"
+    },
+    {
+      "code": "secret_detected",
+      "detail": "저장 거절: 비밀로 보이는 값",
+      "hits": [
+        {
+          "end": 30,
+          "end_u16": 31,
+          "field": "record.body",
+          "rule": "kb-private-key-header",
+          "start": 3,
+          "start_u16": 4
+        }
+      ],
+      "instance": "/v1/records",
+      "status": 422,
+      "stored": false,
+      "title": "secret detected",
+      "type": "https://kb.local/problems/secret-detected"
+    },
+    {
+      "code": "expected_version_required",
+      "detail": "버그",
+      "instance": "/v1/records",
+      "status": 428,
+      "title": "expected version required",
+      "type": "https://kb.local/problems/expected-version-required"
+    },
+    {
+      "code": "too_many_requests",
+      "detail": "저장이 잠시 밀렸습니다",
+      "instance": "/v1/records",
+      "status": 429,
+      "title": "too many requests",
+      "type": "https://kb.local/problems/too-many-requests"
+    },
+    {
+      "code": "write_rate_limited",
+      "detail": "저장이 잠시 밀렸습니다",
+      "instance": "/v1/records",
+      "status": 429,
+      "title": "write rate limited",
+      "type": "https://kb.local/problems/write-rate-limited"
+    },
+    {
+      "code": "byte_quota_exceeded",
+      "detail": "저장이 잠시 밀렸습니다",
+      "instance": "/v1/records",
+      "status": 429,
+      "title": "byte quota exceeded",
+      "type": "https://kb.local/problems/byte-quota-exceeded"
+    },
+    {
+      "code": "review_trust_unavailable",
+      "detail": "본인 확인을 사용할 수 없습니다",
+      "instance": "/v1/records",
+      "status": 503,
+      "title": "review trust unavailable",
+      "type": "https://kb.local/problems/review-trust-unavailable"
+    },
+    {
+      "code": "not_ready",
+      "detail": "KB가 바쁩니다",
+      "instance": "/v1/records",
+      "status": 503,
+      "title": "not ready",
+      "type": "https://kb.local/problems/not-ready"
+    },
+    {
+      "code": "gate_busy",
+      "detail": "KB가 바쁩니다",
+      "instance": "/v1/records",
+      "status": 503,
+      "title": "gate busy",
+      "type": "https://kb.local/problems/gate-busy"
+    },
+    {
+      "code": "spool_full",
+      "detail": "KB가 바쁩니다",
+      "instance": "/v1/records",
+      "status": 503,
+      "title": "spool full",
+      "type": "https://kb.local/problems/spool-full"
+    }
+  ],
+  "meta_ready": {
+    "editor_routes": [
+      "POST /v1/records",
+      "PUT /v1/records/{id}"
+    ],
+    "fp_gate": true,
+    "hitl": {
+      "available": true,
+      "rp_ids": [
+        {
+          "allowed_origins": [
+            "http://localhost:4812"
+          ],
+          "registered": true,
+          "rp_id": "localhost"
+        }
+      ],
+      "trust_store": "ready"
+    },
+    "private_open": true,
+    "secret_rules": {
+      "sha": "59b3dcaa28889542d2a1f6429d53feb6604ad9b8cbb5f27a0ef55c4615332a20",
+      "version": "fp-secret-rules-v1"
+    }
+  },
+  "meta_unready": {
+    "editor_routes": [],
+    "fp_gate": false,
+    "hitl": {
+      "available": false,
+      "rp_ids": [],
+      "trust_store": "missing"
+    },
+    "private_open": false,
+    "secret_rules": {
+      "sha": null,
+      "version": null
+    }
+  },
+  "note": "승인된 계약 예시. 실제 HTTP 동작이나 현재 준비 상태의 실행 결과가 아니다.",
+  "spooled": {
+    "actor": "app:loupe",
+    "claimed_author": "user:sagae",
+    "generated_by": "app:loupe:save",
+    "held": false,
+    "id": "f-fixture-page",
+    "payload_sha": "383ef845b7c12722d81fbbb5315e5437e0440ba672d79af8af63be92d25e77df",
+    "projected": false,
+    "quarantined": false,
+    "reason": "gate_timeout",
+    "replayed": false,
+    "seq": null,
+    "spooled": true,
+    "unchanged": false,
+    "version": null,
+    "warnings": [],
+    "write_ref": "w-fixture"
+  },
+  "synthetic": true
+}

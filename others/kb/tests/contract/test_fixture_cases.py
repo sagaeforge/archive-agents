@@ -199,6 +199,8 @@ def test_each_tag_means_what_it_says(requests_doc, stored):
     assert order[:2] == ["c", "a"] and order[2:5] == ["b", "e", "f"]
     # filter 문법
     assert [i["id"] for i in stored("nodes-filter-colon")["body"]["data"]["items"]] == ["e:repo:c"]
+    # nodes.py:463-480은 label 문자열 열에서 prefix 범위 검색을 지원한다.
+    assert [i["id"] for i in stored("nodes-label-prefix")["body"]["data"]["items"]] == ["e:repo:c"]
     assert [i["id"] for i in stored("nodes-filter-in-escape")["body"]["data"]["items"]] == ["e:repo:d", "e:repo:g"]
     assert [i["id"] for i in stored("nodes-filter-and")["body"]["data"]["items"]] == ["e:repo:a"]
 

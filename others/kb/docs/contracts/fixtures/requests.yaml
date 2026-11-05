@@ -2,7 +2,7 @@
 # 사례 하나가 요청 하나다. 응답은 responses/<id>.json이다.
 meta:
   synthetic: true
-  contract_version: 0.3.1
+  contract_version: 0.4.0
   now_ms: 1801296000000
   export_after_seq: 89
   ledger_events: 92
@@ -127,6 +127,11 @@ cases:
   status: 200
 - id: nodes-filter-colon
   path: /v1/nodes?type=Repo&filter=label:eq:a:b:c
+  tags:
+  - filter_syntax
+  status: 200
+- id: nodes-label-prefix
+  path: '/v1/nodes?type=Repo&filter=label:prefix:a:b:'
   tags:
   - filter_syntax
   status: 200

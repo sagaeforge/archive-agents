@@ -1,0 +1,45 @@
+{
+  "headers": {
+    "cache-control": "no-store"
+  },
+  "id": "conflict",
+  "method": "PUT",
+  "path_template": "/v1/records/{id}",
+  "request": {
+    "change": "save",
+    "idempotency_key": "loupe:e:f-fixture-page:v1:save:r2",
+    "record": {
+      "body": "한글😀 합성 본문",
+      "body_format": "markdown",
+      "expected_version": 1,
+      "links": [],
+      "props": {},
+      "sensitivity": "private",
+      "title": "합성 문서",
+      "type": "Page"
+    }
+  },
+  "response": {
+    "code": "version_conflict",
+    "current": {
+      "actor": "app:loupe",
+      "body": "한글😀 합성 본문",
+      "body_truncated": false,
+      "claimed_author": "user:sagae",
+      "generated_by": "app:loupe:save",
+      "links": [],
+      "payload_sha": "383ef845b7c12722d81fbbb5315e5437e0440ba672d79af8af63be92d25e77df",
+      "props": {},
+      "recorded_at": "2026-11-05T00:00:00Z",
+      "status": "active",
+      "title": "합성 문서",
+      "version": 2
+    },
+    "detail": "다른 곳에서 먼저 고쳤습니다",
+    "instance": "/v1/records",
+    "status": 409,
+    "title": "version conflict",
+    "type": "https://kb.local/problems/version-conflict"
+  },
+  "status": 409
+}

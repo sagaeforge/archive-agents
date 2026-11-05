@@ -4,9 +4,9 @@
 openapi: 3.1.1
 info:
   title: KB 데이터 인터페이스
-  version: 0.3.2
-  summary: 지식 저장소 읽기 전용 HTTP 계약 v0
-  description: 기계 판독 원본이다. `docs/contracts/data-interface-v0.md`는 설명 문서이고 둘이 어긋나면 이 파일이 이긴다. 모든 경로는 `GET`이고 `HEAD`도 받는다. 서버 주소는 선언하지 않는다(Unix 소켓이 기본, TCP는 원격 이전 때). 저장소는 데이터만 제공하며 점수와 추천을 내지 않는다. 모르는 필드와 열린 값은 무시한다. `x-provisional`이 붙은 구간은 잠정이다(`/v1/ops/*`).
+  version: 0.4.0
+  summary: 지식 저장소 읽기 및 승인된 first_party 쓰기 계약 v0
+  description: 기계 판독 원본이다. `docs/contracts/data-interface-v0.md`는 설명 문서이고 둘이 어긋나면 이 파일이 이긴다. `paths`는 배포된 읽기 경로(GET/HEAD)다. 미배포 first_party 경로는 `x-first-party-paths`의 Path Item으로 고정한다. 준비 상태는 Meta.write 한 정의를 따른다. 서버 주소는 선언하지 않는다(Unix 소켓이 기본, TCP는 원격 이전 때). 저장소는 데이터만 제공하며 점수와 추천을 내지 않는다. 모르는 필드와 열린 값은 무시한다. `x-provisional`이 붙은 구간은 잠정이다(`/v1/ops/*`).
 security:
 - {}
 - bearerAuth: []
@@ -48,7 +48,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.2
+                    schema_version: 0.4.0
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -109,7 +109,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.2
+                    schema_version: 0.4.0
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -274,7 +274,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.2
+                    schema_version: 0.4.0
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -375,7 +375,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.2
+                    schema_version: 0.4.0
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -451,7 +451,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.2
+                    schema_version: 0.4.0
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -593,7 +593,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.2
+                    schema_version: 0.4.0
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -697,7 +697,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.2
+                    schema_version: 0.4.0
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -767,7 +767,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.2
+                    schema_version: 0.4.0
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -842,7 +842,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.2
+                    schema_version: 0.4.0
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -928,7 +928,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.2
+                    schema_version: 0.4.0
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -1038,7 +1038,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.2
+                    schema_version: 0.4.0
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -1135,7 +1135,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.2
+                    schema_version: 0.4.0
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -1218,7 +1218,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.2
+                    schema_version: 0.4.0
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -1345,7 +1345,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.2
+                    schema_version: 0.4.0
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -1422,7 +1422,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.2
+                    schema_version: 0.4.0
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -1481,7 +1481,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.2
+                    schema_version: 0.4.0
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -1547,7 +1547,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.2
+                    schema_version: 0.4.0
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -1619,7 +1619,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.2
+                    schema_version: 0.4.0
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -1766,7 +1766,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.2
+                    schema_version: 0.4.0
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -1832,7 +1832,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.2
+                    schema_version: 0.4.0
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -1937,7 +1937,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.2
+                    schema_version: 0.4.0
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -2002,7 +2002,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.2
+                    schema_version: 0.4.0
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -2062,7 +2062,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.2
+                    schema_version: 0.4.0
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -2118,7 +2118,7 @@ paths:
               examples:
                 default:
                   value:
-                    schema_version: 0.3.2
+                    schema_version: 0.4.0
                     epoch: 1
                     build_id: g-000183422-a1b2
                     data_as_of: '2026-10-31T09:12:03Z'
@@ -3463,6 +3463,23 @@ components:
       - status
       - recorded_at
       properties:
+        actor:
+          type:
+          - string
+          - 'null'
+        claimed_author:
+          type:
+          - string
+          - 'null'
+        generated_by:
+          type:
+          - string
+          - 'null'
+        payload_sha:
+          type:
+          - string
+          - 'null'
+          pattern: ^[0-9a-f]{64}$
         version:
           type: integer
         label:
@@ -3979,6 +3996,8 @@ components:
       - first_party_open
       - counts
       properties:
+        write:
+          $ref: '#/components/schemas/WriteReadiness'
         contract:
           type: string
         kb_version:
@@ -4614,3 +4633,2663 @@ components:
           data:
             $ref: '#/components/schemas/OpsMetrics'
       x-provisional: true
+    SecretRulesIdentity:
+      type: object
+      properties:
+        version:
+          type: string
+          enum:
+          - fp-secret-rules-v1
+        sha:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+      required:
+      - version
+      - sha
+      additionalProperties: false
+    SecretRulesReadiness:
+      oneOf:
+      - $ref: '#/components/schemas/SecretRulesIdentity'
+      - type: object
+        properties:
+          version:
+            type: 'null'
+          sha:
+            type: 'null'
+        required:
+        - version
+        - sha
+        additionalProperties: false
+    HitlReadiness:
+      type: object
+      properties:
+        available:
+          type: boolean
+        trust_store:
+          type: string
+          enum:
+          - ready
+          - missing
+          - unreadable
+          - unsafe
+        rp_ids:
+          type: array
+          items:
+            type: object
+            properties:
+              rp_id:
+                type: string
+              allowed_origins:
+                type: array
+                items:
+                  type: string
+                  format: uri
+              registered:
+                type: boolean
+            required:
+            - rp_id
+            - allowed_origins
+            - registered
+            additionalProperties: false
+      required:
+      - available
+      - trust_store
+      - rp_ids
+      additionalProperties: false
+      allOf:
+      - if:
+          properties:
+            trust_store:
+              enum:
+              - missing
+              - unreadable
+              - unsafe
+        then:
+          properties:
+            available:
+              const: false
+            rp_ids:
+              maxItems: 0
+    WriteReadiness:
+      type: object
+      properties:
+        fp_gate:
+          type: boolean
+        editor_routes:
+          type: array
+          items:
+            type: string
+            pattern: ^(GET|POST|PUT|DELETE) /v1/[^ ]+$
+          uniqueItems: true
+        private_open:
+          type: boolean
+        hitl:
+          $ref: '#/components/schemas/HitlReadiness'
+        secret_rules:
+          $ref: '#/components/schemas/SecretRulesReadiness'
+      required:
+      - fp_gate
+      - editor_routes
+      - private_open
+      - hitl
+      - secret_rules
+      additionalProperties: false
+      allOf:
+      - if:
+          properties:
+            secret_rules:
+              properties:
+                version:
+                  type: 'null'
+        then:
+          properties:
+            editor_routes:
+              maxItems: 0
+    SecretHit:
+      type: object
+      properties:
+        field:
+          type: string
+          pattern: ^(idempotency_key|reason|run_id|record\.(id|type|title|body|links\[[0-9]+\]|props\[[0-9]+\]\.(name|value)))$
+        rule:
+          type: string
+        start:
+          type: integer
+          minimum: 0
+        end:
+          type: integer
+          minimum: 0
+        start_u16:
+          type: integer
+          minimum: 0
+        end_u16:
+          type: integer
+          minimum: 0
+      required:
+      - field
+      - rule
+      - start
+      - end
+      - start_u16
+      - end_u16
+      additionalProperties: false
+    DryRunResult:
+      type: object
+      properties:
+        would_reject:
+          type: boolean
+        hits:
+          type: array
+          items:
+            $ref: '#/components/schemas/SecretHit'
+        secret_rules:
+          $ref: '#/components/schemas/SecretRulesIdentity'
+      required:
+      - would_reject
+      - hits
+      - secret_rules
+      additionalProperties: false
+    PageProps:
+      type: object
+      properties:
+        tags:
+          type: array
+          items:
+            type: string
+          maxItems: 50
+        title_locked:
+          type: boolean
+        order:
+          type: string
+        icon:
+          type: string
+          maxLength: 8
+      required: []
+    NoteProps:
+      type: object
+      properties:
+        tags:
+          type: array
+          items:
+            type: string
+          maxItems: 50
+        title_locked:
+          type: boolean
+        pinned:
+          type: boolean
+      required: []
+    TopicSpecProps:
+      type: object
+      properties:
+        slug:
+          type: string
+          pattern: ^[a-z0-9]+(?:[._-][a-z0-9]+)*$
+        aliases:
+          type: array
+          items:
+            type: string
+            maxLength: 100
+          maxItems: 20
+        domain:
+          type: array
+          items:
+            type: string
+            enum:
+            - A
+            - B
+            - C
+            - D
+            - E
+            - F
+            - G
+          uniqueItems: true
+        parent:
+          type:
+          - string
+          - 'null'
+          pattern: '^e:topic:'
+        exclude:
+          type: array
+          items:
+            type: string
+          maxItems: 20
+        export_llm:
+          type: boolean
+          default: false
+        export_query:
+          type: boolean
+      required: []
+      additionalProperties: false
+    ReviewProps:
+      type: object
+      properties:
+        target:
+          $ref: '#/components/schemas/PublicId'
+        decision:
+          type: string
+          enum:
+          - accept
+          - reject
+        verdict:
+          type: string
+          enum:
+          - reject
+        topic:
+          type: string
+          pattern: '^e:topic:'
+        note:
+          type: string
+          maxLength: 500
+        source_url:
+          type: string
+          format: uri
+          pattern: ^https?://
+      required:
+      - target
+      additionalProperties: false
+      anyOf:
+      - required:
+        - decision
+      - required:
+        - verdict
+      allOf:
+      - if:
+          required:
+          - verdict
+        then:
+          properties:
+            decision:
+              const: reject
+      - if:
+          required:
+          - source_url
+        then:
+          required:
+          - verdict
+    EditorRecord:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/PublicId'
+        type:
+          type: string
+          enum:
+          - Page
+          - Note
+          - TopicSpec
+          - Review
+        title:
+          type: string
+          maxLength: 300
+        body:
+          type: string
+        body_format:
+          type: string
+          enum:
+          - markdown
+          - text
+          default: markdown
+        sensitivity:
+          type: string
+          enum:
+          - public
+          - internal
+          - private
+          default: private
+        props:
+          type: object
+          propertyNames:
+            not:
+              pattern: (^source_path$|^path$|^file$|^filename$|_path$|^quarantine)
+        links:
+          type: array
+          items:
+            type: object
+            properties:
+              rtype:
+                type: string
+                enum:
+                - PART_OF
+                - LINKS_TO
+                - ABOUT
+              dst:
+                $ref: '#/components/schemas/PublicId'
+            required:
+            - rtype
+            - dst
+            additionalProperties: false
+          maxItems: 500
+        expected_version:
+          type: integer
+          minimum: 1
+      required:
+      - type
+      - title
+      - body
+      additionalProperties: false
+      allOf:
+      - if:
+          properties:
+            type:
+              const: Page
+        then:
+          properties:
+            props:
+              $ref: '#/components/schemas/PageProps'
+      - if:
+          properties:
+            type:
+              const: Note
+        then:
+          properties:
+            props:
+              $ref: '#/components/schemas/NoteProps'
+      - if:
+          properties:
+            type:
+              const: TopicSpec
+        then:
+          properties:
+            props:
+              $ref: '#/components/schemas/TopicSpecProps'
+      - if:
+          properties:
+            type:
+              const: Review
+        then:
+          properties:
+            props:
+              $ref: '#/components/schemas/ReviewProps'
+    RecordWriteRequest:
+      type: object
+      properties:
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 256
+        change:
+          type: string
+          enum:
+          - save
+          - autosave
+          - auto
+        on_secret:
+          type: string
+          enum:
+          - reject
+          - quarantine
+          default: reject
+        record:
+          $ref: '#/components/schemas/EditorRecord'
+      required:
+      - idempotency_key
+      - change
+      - record
+      additionalProperties: false
+      allOf:
+      - if:
+          required:
+          - on_secret
+          properties:
+            on_secret:
+              const: quarantine
+        then:
+          properties:
+            change:
+              const: save
+    TombstoneRequest:
+      type: object
+      properties:
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 256
+        change:
+          const: save
+        expected_version:
+          type: integer
+          minimum: 1
+        reason:
+          type: string
+          maxLength: 500
+      required:
+      - idempotency_key
+      - change
+      - expected_version
+      - reason
+      additionalProperties: false
+    PromoteRecord:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/PublicId'
+        title:
+          type: string
+          maxLength: 300
+        body:
+          type: string
+        body_format:
+          type: string
+          enum:
+          - markdown
+          - text
+          default: markdown
+        sensitivity:
+          type: string
+          enum:
+          - public
+          - internal
+          - private
+          default: private
+        props:
+          $ref: '#/components/schemas/TopicSpecProps'
+        links:
+          type: array
+          items:
+            type: object
+            properties:
+              rtype:
+                type: string
+                enum:
+                - PART_OF
+                - LINKS_TO
+                - ABOUT
+              dst:
+                $ref: '#/components/schemas/PublicId'
+            required:
+            - rtype
+            - dst
+            additionalProperties: false
+          maxItems: 500
+        expected_version:
+          type: integer
+          minimum: 1
+      required:
+      - title
+      - body
+      additionalProperties: false
+    PromoteRequest:
+      type: object
+      properties:
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 256
+        change:
+          const: save
+        to:
+          const: topic
+        memo_version:
+          type: integer
+          minimum: 1
+        research:
+          type: object
+          properties:
+            run_id:
+              type: string
+              format: uuid
+          required:
+          - run_id
+          additionalProperties: false
+        record:
+          $ref: '#/components/schemas/PromoteRecord'
+      required:
+      - idempotency_key
+      - change
+      - to
+      - memo_version
+      - record
+      additionalProperties: false
+    ResearchRequest:
+      type: object
+      properties:
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 256
+        run_id:
+          type: string
+          format: uuid
+        change:
+          const: save
+        expected_version:
+          type: integer
+          minimum: 1
+      required:
+      - idempotency_key
+      - run_id
+      - change
+      - expected_version
+      additionalProperties: false
+    StopResearchRequest:
+      type: object
+      properties:
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 256
+        change:
+          const: save
+      required:
+      - idempotency_key
+      - change
+      additionalProperties: false
+    RecordWriteResult:
+      type: object
+      properties:
+        id:
+          type: string
+        version:
+          type:
+          - integer
+          - 'null'
+          minimum: 1
+        seq:
+          type:
+          - integer
+          - 'null'
+          minimum: 1
+        replayed:
+          type: boolean
+        unchanged:
+          type: boolean
+        projected:
+          type: boolean
+        spooled:
+          type: boolean
+        held:
+          type: boolean
+        write_ref:
+          type:
+          - string
+          - 'null'
+        payload_sha:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        quarantined:
+          type: boolean
+        warnings:
+          type: array
+          items:
+            type: string
+        reason:
+          type:
+          - string
+          - 'null'
+        actor:
+          type: string
+        claimed_author:
+          type:
+          - string
+          - 'null'
+        generated_by:
+          type:
+          - string
+          - 'null'
+        sensitivity:
+          type: string
+          enum:
+          - secret
+        promoted_from:
+          type: object
+          properties:
+            id:
+              type: string
+            version:
+              type: integer
+              minimum: 1
+          required:
+          - id
+          - version
+          additionalProperties: false
+        research:
+          oneOf:
+          - type: object
+            properties:
+              state:
+                const: budget_unavailable
+            required:
+            - state
+            additionalProperties: false
+          - type: object
+            properties:
+              topic:
+                type: string
+              run:
+                type: string
+              state:
+                const: queued
+              status_url:
+                type: string
+            required:
+            - topic
+            - run
+            - state
+            - status_url
+            additionalProperties: false
+      required:
+      - id
+      - version
+      - seq
+      - replayed
+      - unchanged
+      - projected
+      - spooled
+      - held
+      - write_ref
+      - payload_sha
+      - quarantined
+      - warnings
+      - reason
+      - actor
+      - claimed_author
+      - generated_by
+      additionalProperties: false
+      allOf:
+      - if:
+          anyOf:
+          - properties:
+              spooled:
+                const: true
+          - properties:
+              held:
+                const: true
+        then:
+          properties:
+            write_ref:
+              type: string
+            version:
+              type: 'null'
+            seq:
+              type: 'null'
+            projected:
+              const: false
+      - if:
+          properties:
+            quarantined:
+              const: true
+        then:
+          required:
+          - sensitivity
+          properties:
+            sensitivity:
+              const: secret
+    ResearchState:
+      type: string
+      enum:
+      - queued
+      - in_progress
+      - paused
+      - cancelled
+      - done
+      - unanswerable
+      - blocked_policy
+      - budget_unavailable
+    ResearchRequestResult:
+      type: object
+      properties:
+        spec:
+          type: string
+        spec_version:
+          type: integer
+          minimum: 1
+        topic:
+          type: string
+        run:
+          type: string
+        existing:
+          type: boolean
+        state:
+          $ref: '#/components/schemas/ResearchState'
+        seq:
+          type: integer
+          minimum: 1
+        replayed:
+          type: boolean
+        status_url:
+          type: string
+      required:
+      - spec
+      - spec_version
+      - topic
+      - run
+      - existing
+      - state
+      - seq
+      - replayed
+      - status_url
+      additionalProperties: false
+    StopResearchResult:
+      type: object
+      properties:
+        spec:
+          type: string
+        topic:
+          type: string
+        run:
+          type: string
+        state:
+          const: cancelled
+        topic_status:
+          const: paused
+        seq:
+          type: integer
+          minimum: 1
+        replayed:
+          type: boolean
+      required:
+      - spec
+      - topic
+      - run
+      - state
+      - topic_status
+      - seq
+      - replayed
+      additionalProperties: false
+    WriteReference:
+      type: object
+      properties:
+        ref:
+          type: string
+        state:
+          type: string
+          enum:
+          - pending
+          - committed
+          - failed
+          - purged
+        id:
+          type: string
+        version:
+          type:
+          - integer
+          - 'null'
+          minimum: 1
+        code:
+          type:
+          - string
+          - 'null'
+          enum:
+          - null
+          - version_conflict
+          - idem_conflict
+          - not_found
+          - byte_quota_exceeded
+          - lost_before_spool
+          - create_conflict
+        record:
+          $ref: '#/components/schemas/EditorRecord'
+        payload_sha:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+      required:
+      - ref
+      - state
+      - id
+      - version
+      - code
+      additionalProperties: false
+      allOf:
+      - if:
+          properties:
+            state:
+              const: committed
+        then:
+          properties:
+            version:
+              type: integer
+              minimum: 1
+      - if:
+          required:
+          - record
+        then:
+          required:
+          - payload_sha
+          properties:
+            state:
+              const: failed
+    ResearchStatus:
+      type: object
+      properties:
+        spec:
+          type: string
+        topic:
+          type: string
+        state:
+          $ref: '#/components/schemas/ResearchState'
+        run:
+          oneOf:
+          - type: 'null'
+          - type: object
+            properties:
+              id:
+                type: string
+              status:
+                $ref: '#/components/schemas/ResearchState'
+              opened_at:
+                type: string
+                format: date-time
+            required:
+            - id
+            - status
+            - opened_at
+            additionalProperties: false
+        engines:
+          type: array
+          items:
+            type: object
+            properties:
+              kind:
+                type: string
+                enum:
+                - deterministic
+                - llm
+              collectors:
+                type: integer
+                minimum: 0
+              task:
+                type: string
+              arm:
+                type: string
+              calls:
+                type: integer
+                minimum: 0
+            required:
+            - kind
+            additionalProperties: false
+        cost:
+          oneOf:
+          - type: 'null'
+          - type: object
+            properties:
+              month_usd:
+                type: string
+              budget_usd_month:
+                type: string
+              reported:
+                type: boolean
+              as_of:
+                type: string
+                format: date-time
+            required:
+            - month_usd
+            - budget_usd_month
+            - reported
+            - as_of
+            additionalProperties: false
+        reported:
+          type: boolean
+        results:
+          type: object
+          properties:
+            accepted_claims:
+              type: integer
+              minimum: 0
+            edges:
+              type: integer
+              minimum: 0
+            needs_review:
+              type: integer
+              minimum: 0
+            since:
+              type: string
+              format: date-time
+            list_url:
+              type: string
+            review_url:
+              type: string
+          required:
+          - accepted_claims
+          - edges
+          - needs_review
+          - since
+          - list_url
+          - review_url
+          additionalProperties: false
+        discovery:
+          type: string
+          enum:
+          - standard
+          - narrowed
+        discovery_reason:
+          type:
+          - string
+          - 'null'
+        pending_hosts:
+          type: integer
+          minimum: 0
+        failures:
+          type: array
+          items:
+            type: object
+            properties:
+              stage:
+                type: string
+              source:
+                type: string
+              code:
+                type: string
+              at:
+                type: string
+                format: date-time
+            required:
+            - stage
+            - source
+            - code
+            - at
+            additionalProperties: false
+          maxItems: 20
+      required:
+      - spec
+      - topic
+      - state
+      - run
+      - engines
+      - cost
+      - results
+      - discovery
+      - discovery_reason
+      - pending_hosts
+      - failures
+      additionalProperties: false
+    ClaimReview:
+      type: object
+      properties:
+        id:
+          type: string
+        version:
+          type: integer
+          minimum: 1
+        verdict:
+          type: string
+          enum:
+          - reject
+        decision:
+          type: string
+          enum:
+          - accept
+          - reject
+        note:
+          type: string
+        source_url:
+          type:
+          - string
+          - 'null'
+      required:
+      - id
+      - version
+      - note
+      - source_url
+      additionalProperties: false
+      anyOf:
+      - required:
+        - verdict
+      - required:
+        - decision
+    WriteReferenceEnvelope:
+      allOf:
+      - $ref: '#/components/schemas/Envelope'
+      - type: object
+        properties:
+          data:
+            $ref: '#/components/schemas/WriteReference'
+        required:
+        - data
+    ResearchStatusEnvelope:
+      allOf:
+      - $ref: '#/components/schemas/Envelope'
+      - type: object
+        properties:
+          data:
+            $ref: '#/components/schemas/ResearchStatus'
+        required:
+        - data
+    ClaimReviewListEnvelope:
+      allOf:
+      - $ref: '#/components/schemas/Envelope'
+      - type: object
+        properties:
+          data:
+            type: object
+            properties:
+              items:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ClaimReview'
+            required:
+            - items
+            additionalProperties: false
+          page:
+            $ref: '#/components/schemas/Page'
+        required:
+        - data
+        - page
+    FirstPartyProblem:
+      type: object
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        code:
+          type: string
+        instance:
+          type: string
+        stored:
+          const: false
+        hits:
+          type: array
+          items:
+            $ref: '#/components/schemas/SecretHit'
+        current:
+          oneOf:
+          - type: object
+            properties:
+              version:
+                type: integer
+                minimum: 1
+              status:
+                const: dead
+            required:
+            - version
+            - status
+            additionalProperties: false
+          - type: object
+            properties:
+              version:
+                type: integer
+                minimum: 1
+              status:
+                const: active
+              payload_sha:
+                type: string
+                pattern: ^[0-9a-f]{64}$
+              actor:
+                type: string
+              claimed_author:
+                type:
+                - string
+                - 'null'
+              generated_by:
+                type:
+                - string
+                - 'null'
+              recorded_at:
+                type: string
+                format: date-time
+              title:
+                type: string
+              body:
+                type: string
+                maxLength: 200000
+              body_truncated:
+                type: boolean
+              props:
+                type: object
+              links:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    rtype:
+                      type: string
+                      enum:
+                      - PART_OF
+                      - LINKS_TO
+                      - ABOUT
+                    dst:
+                      $ref: '#/components/schemas/PublicId'
+                  required:
+                  - rtype
+                  - dst
+                  additionalProperties: false
+            required:
+            - version
+            - status
+            - payload_sha
+            - actor
+            - claimed_author
+            - generated_by
+            - recorded_at
+            - title
+            - body
+            - body_truncated
+            - props
+            - links
+            additionalProperties: false
+        param:
+          type: string
+      required:
+      - type
+      - title
+      - status
+      - detail
+      - code
+      - instance
+      additionalProperties: false
+      oneOf:
+      - properties:
+          code:
+            const: bad_json
+          status:
+            const: 400
+          detail:
+            const: 저장 요청이 깨졌습니다
+      - properties:
+          code:
+            const: schema_invalid
+          status:
+            const: 400
+          detail:
+            const: 저장할 수 없는 값이 있습니다
+      - properties:
+          code:
+            const: bad_param
+          status:
+            const: 400
+          detail:
+            const: 저장할 수 없는 값이 있습니다
+      - properties:
+          code:
+            const: token_required
+          status:
+            const: 401
+          detail:
+            const: KB 쓰기 권한이 없습니다. 토큰을 다시 설정하세요
+      - properties:
+          code:
+            const: token_invalid
+          status:
+            const: 401
+          detail:
+            const: KB 쓰기 권한이 없습니다. 토큰을 다시 설정하세요
+      - properties:
+          code:
+            const: scope_denied
+          status:
+            const: 403
+          detail:
+            const: KB 쓰기 권한이 없습니다. 토큰을 다시 설정하세요
+      - properties:
+          code:
+            const: type_not_allowed
+          status:
+            const: 403
+          detail:
+            const: 이 종류는 편집기에서 만들 수 없습니다
+      - properties:
+          code:
+            const: sensitivity_not_allowed
+          status:
+            const: 403
+          detail:
+            const: 이 공개 범위는 쓸 수 없습니다
+      - properties:
+          code:
+            const: declassify_requires_review
+          status:
+            const: 403
+          detail:
+            const: 공개 범위를 낮추려면 검토 확인이 필요합니다
+      - properties:
+          code:
+            const: external_consent_required
+          status:
+            const: 403
+          detail:
+            const: 외부 정제에 먼저 본인 확인이 필요합니다
+      - properties:
+          code:
+            const: review_unverified
+          status:
+            const: 403
+          detail:
+            const: 본인 확인에 실패했습니다
+      - properties:
+          code:
+            const: not_found
+          status:
+            const: 404
+          detail:
+            const: 문서를 찾을 수 없습니다
+      - properties:
+          code:
+            const: version_conflict
+          status:
+            const: 409
+          detail:
+            const: 다른 곳에서 먼저 고쳤습니다
+      - properties:
+          code:
+            const: idem_conflict
+          status:
+            const: 409
+          detail:
+            const: 저장 충돌. 다시 저장합니다
+      - properties:
+          code:
+            const: redacted_payload
+          status:
+            const: 409
+          detail:
+            const: 삭제된 내용과 같아 저장할 수 없습니다
+      - properties:
+          code:
+            const: write_in_flight
+          status:
+            const: 409
+          detail:
+            const: 아직 처리 중입니다
+      - properties:
+          code:
+            const: review_stale
+          status:
+            const: 409
+          detail:
+            const: 항목이 바뀌었습니다
+      - properties:
+          code:
+            const: research_running
+          status:
+            const: 409
+          detail:
+            const: 조사 중인 주제입니다. 먼저 멈추세요
+      - properties:
+          code:
+            const: budget_unavailable
+          status:
+            const: 409
+          detail:
+            const: KB가 아직 이 조사를 받을 수 없습니다
+      - properties:
+          code:
+            const: slug_taken
+          status:
+            const: 409
+          detail:
+            const: 같은 이름의 주제가 있습니다
+      - properties:
+          code:
+            const: content_removed
+          status:
+            const: 410
+          detail:
+            const: 보관한 초안 본문이 삭제됐습니다
+      - properties:
+          code:
+            const: body_too_large
+          status:
+            const: 413
+          detail:
+            const: 문서가 너무 큽니다(1 MiB)
+      - properties:
+          code:
+            const: unsupported_media_type
+          status:
+            const: 415
+          detail:
+            const: 버그
+      - properties:
+          code:
+            const: secret_detected
+          status:
+            const: 422
+          detail:
+            const: '저장 거절: 비밀로 보이는 값'
+      - properties:
+          code:
+            const: expected_version_required
+          status:
+            const: 428
+          detail:
+            const: 버그
+      - properties:
+          code:
+            const: too_many_requests
+          status:
+            const: 429
+          detail:
+            const: 저장이 잠시 밀렸습니다
+      - properties:
+          code:
+            const: write_rate_limited
+          status:
+            const: 429
+          detail:
+            const: 저장이 잠시 밀렸습니다
+      - properties:
+          code:
+            const: byte_quota_exceeded
+          status:
+            const: 429
+          detail:
+            const: 저장이 잠시 밀렸습니다
+      - properties:
+          code:
+            const: review_trust_unavailable
+          status:
+            const: 503
+          detail:
+            const: 본인 확인을 사용할 수 없습니다
+      - properties:
+          code:
+            const: not_ready
+          status:
+            const: 503
+          detail:
+            const: KB가 바쁩니다
+      - properties:
+          code:
+            const: gate_busy
+          status:
+            const: 503
+          detail:
+            const: KB가 바쁩니다
+      - properties:
+          code:
+            const: spool_full
+          status:
+            const: 503
+          detail:
+            const: KB가 바쁩니다
+      allOf:
+      - if:
+          properties:
+            code:
+              const: secret_detected
+        then:
+          required:
+          - stored
+          - hits
+      - if:
+          properties:
+            code:
+              const: not_found
+        then:
+          not:
+            anyOf:
+            - required:
+              - current
+            - required:
+              - hits
+
+x-first-party-paths:
+  /v1/records:
+    post:
+      operationId: createRecord
+      summary: 승인된 first_party 계약 (아직 배포되지 않음)
+      x-implemented: false
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: dry_run
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - '1'
+      responses:
+        '201':
+          description: '승인된 계약, 미배포. Cache-Control: no-store.'
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordWriteResult'
+        '202':
+          description: '승인된 계약, 미배포. Cache-Control: no-store.'
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordWriteResult'
+        '400':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '401':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '403':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '404':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '409':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '410':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '413':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '415':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '422':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '428':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '429':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+          headers:
+            Retry-After:
+              required: true
+              schema:
+                type: string
+        '503':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+          headers:
+            Retry-After:
+              required: true
+              schema:
+                type: string
+        '200':
+          description: 'dry_run=1: 메모리 검사만 한다. 원장/CAS/스풀/보류/추출 큐/영속 캐시/입력 로그에 쓰지 않는다. 일반 PUT은 RecordWriteResult.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DryRunResult'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordWriteRequest'
+  /v1/records/{id}:
+    put:
+      operationId: replaceRecord
+      summary: 승인된 first_party 계약 (아직 배포되지 않음)
+      x-implemented: false
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: dry_run
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - '1'
+      responses:
+        '200':
+          description: 'dry_run=1: 메모리 검사만 한다. 원장/CAS/스풀/보류/추출 큐/영속 캐시/입력 로그에 쓰지 않는다. 일반 PUT은 RecordWriteResult.'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/DryRunResult'
+                - $ref: '#/components/schemas/RecordWriteResult'
+        '202':
+          description: '승인된 계약, 미배포. Cache-Control: no-store.'
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordWriteResult'
+        '400':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '401':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '403':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '404':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '409':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '410':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '413':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '415':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '422':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '428':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '429':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+          headers:
+            Retry-After:
+              required: true
+              schema:
+                type: string
+        '503':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+          headers:
+            Retry-After:
+              required: true
+              schema:
+                type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordWriteRequest'
+  /v1/records/{id}/tombstone:
+    post:
+      operationId: tombstoneRecord
+      summary: 승인된 first_party 계약 (아직 배포되지 않음)
+      x-implemented: false
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: '승인된 계약, 미배포. Cache-Control: no-store.'
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordWriteResult'
+        '202':
+          description: '승인된 계약, 미배포. Cache-Control: no-store.'
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordWriteResult'
+        '400':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '401':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '403':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '404':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '409':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '410':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '413':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '415':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '422':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '428':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '429':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+          headers:
+            Retry-After:
+              required: true
+              schema:
+                type: string
+        '503':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+          headers:
+            Retry-After:
+              required: true
+              schema:
+                type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TombstoneRequest'
+  /v1/records/{id}/promote:
+    post:
+      operationId: promoteRecord
+      summary: 승인된 first_party 계약 (아직 배포되지 않음)
+      x-implemented: false
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '201':
+          description: '승인된 계약, 미배포. Cache-Control: no-store.'
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordWriteResult'
+        '400':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '401':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '403':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '404':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '409':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '410':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '413':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '415':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '422':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '428':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '429':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+          headers:
+            Retry-After:
+              required: true
+              schema:
+                type: string
+        '503':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+          headers:
+            Retry-After:
+              required: true
+              schema:
+                type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PromoteRequest'
+  /v1/topics/{id}/research:
+    post:
+      operationId: requestResearch
+      summary: 승인된 first_party 계약 (아직 배포되지 않음)
+      x-implemented: false
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: '승인된 계약, 미배포. Cache-Control: no-store.'
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResearchRequestResult'
+        '201':
+          description: '승인된 계약, 미배포. Cache-Control: no-store.'
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResearchRequestResult'
+        '400':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '401':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '403':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '404':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '409':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '410':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '413':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '415':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '422':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '428':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '429':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+          headers:
+            Retry-After:
+              required: true
+              schema:
+                type: string
+        '503':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+          headers:
+            Retry-After:
+              required: true
+              schema:
+                type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResearchRequest'
+    get:
+      operationId: getResearch
+      summary: 승인된 first_party 계약 (아직 배포되지 않음)
+      x-implemented: false
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: '승인된 계약, 미배포. Cache-Control: no-store.'
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResearchStatusEnvelope'
+        '400':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '401':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '403':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '404':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '409':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '410':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '413':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '415':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '422':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '428':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '429':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+          headers:
+            Retry-After:
+              required: true
+              schema:
+                type: string
+        '503':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+          headers:
+            Retry-After:
+              required: true
+              schema:
+                type: string
+  /v1/topics/{id}/research/{run}/stop:
+    post:
+      operationId: stopResearch
+      summary: 승인된 first_party 계약 (아직 배포되지 않음)
+      x-implemented: false
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: run
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: '승인된 계약, 미배포. Cache-Control: no-store.'
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StopResearchResult'
+        '400':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '401':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '403':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '404':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '409':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '410':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '413':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '415':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '422':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '428':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '429':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+          headers:
+            Retry-After:
+              required: true
+              schema:
+                type: string
+        '503':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+          headers:
+            Retry-After:
+              required: true
+              schema:
+                type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StopResearchRequest'
+  /v1/writes/{ref}:
+    get:
+      operationId: getWrite
+      summary: 승인된 first_party 계약 (아직 배포되지 않음)
+      x-implemented: false
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: ref
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: include
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - body
+      responses:
+        '200':
+          description: '승인된 계약, 미배포. Cache-Control: no-store.'
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WriteReferenceEnvelope'
+        '400':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '401':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '403':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '404':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '409':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '410':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '413':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '415':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '422':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '428':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '429':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+          headers:
+            Retry-After:
+              required: true
+              schema:
+                type: string
+        '503':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+          headers:
+            Retry-After:
+              required: true
+              schema:
+                type: string
+    delete:
+      operationId: discardWrite
+      summary: 승인된 first_party 계약 (아직 배포되지 않음)
+      x-implemented: false
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: ref
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: '승인된 계약, 미배포. Cache-Control: no-store.'
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WriteReferenceEnvelope'
+        '400':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '401':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '403':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '404':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '409':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '410':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '413':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '415':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '422':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '428':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '429':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+          headers:
+            Retry-After:
+              required: true
+              schema:
+                type: string
+        '503':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+          headers:
+            Retry-After:
+              required: true
+              schema:
+                type: string
+  /v1/nodes/{id}/reviews:
+    get:
+      operationId: listClaimReviews
+      summary: 승인된 first_party 계약 (아직 배포되지 않음)
+      x-implemented: false
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: '승인된 계약, 미배포. Cache-Control: no-store.'
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimReviewListEnvelope'
+        '400':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '401':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '403':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '404':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '409':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '410':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '413':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '415':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '422':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '428':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        '429':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+          headers:
+            Retry-After:
+              required: true
+              schema:
+                type: string
+        '503':
+          description: ADR-0005 7.5 고정 오류. 입력을 되풀이하지 않는다.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+          headers:
+            Retry-After:
+              required: true
+              schema:
+                type: string
+x-first-party-errors:
+  bad_json:
+    status: 400
+    detail: 저장 요청이 깨졌습니다
+  schema_invalid:
+    status: 400
+    detail: 저장할 수 없는 값이 있습니다
+  bad_param:
+    status: 400
+    detail: 저장할 수 없는 값이 있습니다
+  token_required:
+    status: 401
+    detail: KB 쓰기 권한이 없습니다. 토큰을 다시 설정하세요
+  token_invalid:
+    status: 401
+    detail: KB 쓰기 권한이 없습니다. 토큰을 다시 설정하세요
+  scope_denied:
+    status: 403
+    detail: KB 쓰기 권한이 없습니다. 토큰을 다시 설정하세요
+  type_not_allowed:
+    status: 403
+    detail: 이 종류는 편집기에서 만들 수 없습니다
+  sensitivity_not_allowed:
+    status: 403
+    detail: 이 공개 범위는 쓸 수 없습니다
+  declassify_requires_review:
+    status: 403
+    detail: 공개 범위를 낮추려면 검토 확인이 필요합니다
+  external_consent_required:
+    status: 403
+    detail: 외부 정제에 먼저 본인 확인이 필요합니다
+  review_unverified:
+    status: 403
+    detail: 본인 확인에 실패했습니다
+  not_found:
+    status: 404
+    detail: 문서를 찾을 수 없습니다
+  version_conflict:
+    status: 409
+    detail: 다른 곳에서 먼저 고쳤습니다
+  idem_conflict:
+    status: 409
+    detail: 저장 충돌. 다시 저장합니다
+  redacted_payload:
+    status: 409
+    detail: 삭제된 내용과 같아 저장할 수 없습니다
+  write_in_flight:
+    status: 409
+    detail: 아직 처리 중입니다
+  review_stale:
+    status: 409
+    detail: 항목이 바뀌었습니다
+  research_running:
+    status: 409
+    detail: 조사 중인 주제입니다. 먼저 멈추세요
+  budget_unavailable:
+    status: 409
+    detail: KB가 아직 이 조사를 받을 수 없습니다
+  slug_taken:
+    status: 409
+    detail: 같은 이름의 주제가 있습니다
+  content_removed:
+    status: 410
+    detail: 보관한 초안 본문이 삭제됐습니다
+  body_too_large:
+    status: 413
+    detail: 문서가 너무 큽니다(1 MiB)
+  unsupported_media_type:
+    status: 415
+    detail: 버그
+  secret_detected:
+    status: 422
+    detail: '저장 거절: 비밀로 보이는 값'
+  expected_version_required:
+    status: 428
+    detail: 버그
+  too_many_requests:
+    status: 429
+    detail: 저장이 잠시 밀렸습니다
+  write_rate_limited:
+    status: 429
+    detail: 저장이 잠시 밀렸습니다
+  byte_quota_exceeded:
+    status: 429
+    detail: 저장이 잠시 밀렸습니다
+  review_trust_unavailable:
+    status: 503
+    detail: 본인 확인을 사용할 수 없습니다
+  not_ready:
+    status: 503
+    detail: KB가 바쁩니다
+  gate_busy:
+    status: 503
+    detail: KB가 바쁩니다
+  spool_full:
+    status: 503
+    detail: KB가 바쁩니다

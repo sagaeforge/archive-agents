@@ -1,0 +1,44 @@
+{
+  "headers": {
+    "cache-control": "no-store"
+  },
+  "id": "quarantine-save",
+  "method": "POST",
+  "path_template": "/v1/records",
+  "request": {
+    "change": "save",
+    "idempotency_key": "loupe:c:synthetic-draft",
+    "on_secret": "quarantine",
+    "record": {
+      "body": "한글😀-----BEGIN PRIVATE KEY-----",
+      "body_format": "markdown",
+      "links": [],
+      "props": {},
+      "sensitivity": "private",
+      "title": "합성 문서",
+      "type": "Page"
+    }
+  },
+  "response": {
+    "actor": "app:loupe",
+    "claimed_author": "user:sagae",
+    "generated_by": "app:loupe:save",
+    "held": false,
+    "id": "f-fixture-page",
+    "payload_sha": "383ef845b7c12722d81fbbb5315e5437e0440ba672d79af8af63be92d25e77df",
+    "projected": true,
+    "quarantined": true,
+    "reason": null,
+    "replayed": false,
+    "sensitivity": "secret",
+    "seq": 101,
+    "spooled": false,
+    "unchanged": false,
+    "version": 1,
+    "warnings": [
+      "secret_detected:kb-private-key-header"
+    ],
+    "write_ref": null
+  },
+  "status": 201
+}
