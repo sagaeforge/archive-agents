@@ -144,6 +144,9 @@ def _hold(evs: list[dict]) -> WriteResult:
             try:
                 with fpquota.lock():
                     fpquota.reserve(led, evs, body, name, "fp-held")
+                    # A pending retry uses the first durable payload/authored_at.
+                    import json as _json
+                    evs = _json.loads((spool.dir_of("fp-held") / f"{name}.json").read_bytes())["events"]
             finally:
                 led.close()
         else:
@@ -286,7 +289,7 @@ def _write_chunk(led, chunk: list[dict], *, dry_run: bool = False, stored: bool 
         ledger.validate_batch(led, [{**ev, "payload": storage_payload(ev["payload"])} for ev in keep])
         if dry_run:
             return []
-        if any(e["origin"] == "first_party" for e in keep) and not fp_is_open(led):
+        if any(e["origin"] == "first_party" and not prior_event(led, e["idem_key"]) for e in keep) and not fp_is_open(led):
             held = True
             return []
         # 큰 본문은 가시성/재생/판/무연산을 확인한 뒤에만 CAS에 둔다.
@@ -374,6 +377,11 @@ def commit(events, actor: str | None = None, *, timeout: float = GATE_TIMEOUT_S,
                 try:
                     if info:
                         with fpquota.lock():
+                            replayed, rest = _committed_items(led, rest)
+                            items.extend(replayed)
+                            if not rest:
+                                projected = False
+                                break
                             write_ref = fpquota.reserve(led, rest, _queued(rest), _spool_name(rest), "in")
                     else:
                         spool.put("in", _queued(rest), _spool_name(rest))
@@ -429,6 +437,27 @@ def commit(events, actor: str | None = None, *, timeout: float = GATE_TIMEOUT_S,
             led.close()
         if identity_token is not None:
             fpquota.identity.reset(identity_token)
+
+
+def _committed_items(led, events):
+    """Read committed replays after gate timeout; never append or reserve them.
+
+    Current visibility and payload/attribution equivalence still apply. Quota
+    locking serializes editor reservations, without acquiring a gate underneath.
+    """
+    from kb.write.record import editor_guard
+    replayed, fresh = [], []
+    for ev in events:
+        prior = prior_event(led, ev["idem_key"])
+        if prior is None:
+            fresh.append(ev)
+            continue
+        if _is_editor(ev):
+            editor_guard(led, ev)
+        ledger.validate_batch(led, [{**ev, "payload": storage_payload(ev["payload"])}])
+        version = ledger._record_version(led, ev["subject"], prior["seq"]) if ev["kind"] in ledger.RECORD_KINDS else None
+        replayed.append({"seq": prior["seq"], "version": version, "replayed": True})
+    return replayed, fresh
 
 
 def project_pending(*, timeout: float = GATE_TIMEOUT_S, max_rounds: int = 50) -> dict:

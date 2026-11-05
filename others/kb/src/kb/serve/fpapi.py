@@ -30,9 +30,9 @@ DETAILS = {
 }
 
 
-def error(status, code, path, *, current=None, retry=None):
+def error(status, code, path, *, current=None, retry=None, cfg=None, max_sens="internal"):
     from kb.serve.http import Resp, dumps, problem_dict, error_instance
-    instance = error_instance(path) if WRITE_PATH.fullmatch(path) else path
+    instance = error_instance(path, cfg, max_sens)
     value = problem_dict(status, code, DETAILS.get(code, "저장 요청을 처리할 수 없습니다"), instance)
     if current is not None:
         value["current"] = current

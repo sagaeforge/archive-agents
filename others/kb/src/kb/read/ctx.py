@@ -255,14 +255,14 @@ def visibility_sql(ctx: ReadCtx, a: str = "n", *, kind: str = "node", mode: str 
             p.extend(ver)
             w.append(f"({a}.claim_id IS NULL OR EXISTS(SELECT 1 FROM node cn WHERE cn.id={a}.claim_id AND cn.expired_at IS NULL "
                      f"AND cn.verification IN ({','.join('?' * len(ver))})))")
+    if kind == "node" and ctx.trash_ids is not None:
+        if ctx.trash_ids:
+            w.append(_in(f"{a}.id", ctx.trash_ids, p))
+        else:
+            w.append("0")
     if mode != "list":
         return " AND ".join(w), p
     if kind == "node":
-        if ctx.trash_ids is not None:
-            if ctx.trash_ids:
-                w.append(_in(f"{a}.id", ctx.trash_ids, p))
-            else:
-                w.append("0")
         if ctx.status != "all":
             w.append(f"{a}.eff_status = ?")
             p.append(ctx.status)

@@ -79,14 +79,22 @@ def event_bytes(payload):
     return size
 
 
+def uncommitted(led, events):
+    """Committed keys are never capacity reservations, including timeout retries."""
+    return [ev for ev in events if not led.execute("SELECT 1 FROM event WHERE idem_key=?",
+                                                  (ev["idem_key"],)).fetchone()]
+
+
 def receiving(led, events, *, extra_bytes=None, exclude_ref=None, now_ms=None):
     from kb.write.engine import storage_payload
+    fresh = uncommitted(led, events)
+    if not fresh:
+        return []
     now = now_ms if now_ms is not None else int(time.time() * 1000)
     pending = [value for path, value in rows()
-               if path.stem != exclude_ref and value["state"] in ("pending", "held")]
-    for ev in events:
-        if led.execute("SELECT 1 FROM event WHERE idem_key=?", (ev["idem_key"],)).fetchone():
-            continue
+               if path.stem != exclude_ref and value["state"] in ("pending", "held")
+               and uncommitted(led, [{"idem_key": key} for key in value["idem_keys"]])]
+    for ev in fresh:
         actor, subject = ev["actor"], ev["subject"]
         actor_size = sum(r["bytes"] for r in pending if r["actor"] == actor)
         record_size = sum(r["bytes"] for r in pending if r["subject"] == subject)
@@ -128,6 +136,7 @@ def receiving(led, events, *, extra_bytes=None, exclude_ref=None, now_ms=None):
             retry = max(release_after(actor_size + incoming - TOKEN_BYTES, "actor", actor),
                         release_after(record_size + incoming - RECORD_BYTES, "record", subject))
             reject("byte_quota_exceeded", 429, retry)
+    return fresh
 
 
 def retention(tok_id, incoming):
@@ -149,15 +158,28 @@ def retention(tok_id, incoming):
 def reserve(led, events, body, name, spool_kind):
     """Caller owns quota lock throughout durable ref → durable spool body."""
     from kb.core import spool
-    info = identity.get()
-    if info is None:
-        spool.put(spool_kind, body, name)
-        return None
     path = refs_dir() / (name + ".json")
     if path.exists():
-        # Let spool's conflict check validate the retry against its durable body.
-        spool.put(spool_kind, body, name)
+        value = json.loads(path.read_bytes())
+        if value["state"] not in ("pending", "held"):
+            reject("content_removed", 410)
+    fresh = uncommitted(led, events)
+    if not fresh:
+        return None
+    if path.exists():
+        from kb.write.engine import core_of
+        existing_path = spool.dir_of(value.get("spool_kind", spool_kind)) / path.name
+        existing = json.loads(existing_path.read_bytes())
+        if canon_json(core_of(existing["events"])) != canon_json(core_of(events)):
+            raise spool.SpoolConflict("기존 예약과 다른 쓰기")
+        # A retry returns the original durable reservation/body, never a rewrite.
         return name
+    info = identity.get()
+    if info is None:
+        spool.put(spool_kind, {**body, "events": fresh}, name)
+        return None
+    events = fresh
+    body = {**body, "events": events}
     size = len(canon_json(body))
     receiving(led, events, extra_bytes=size)
     retention(info["tok_id"], size)

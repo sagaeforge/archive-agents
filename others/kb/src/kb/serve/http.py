@@ -18,6 +18,7 @@ import sqlite3
 import sys
 import time
 from dataclasses import dataclass, field
+from contextvars import ContextVar
 from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qsl
 
@@ -32,6 +33,7 @@ RE = importlib.import_module("kb.read.envelope")  # kb.read.envelope는 함수 �
 
 CT_PROBLEM = "application/problem+json"
 RETRY_AFTER = {"read_timeout": "2", "not_ready": "5", "too_many_requests": "1"}
+_error_config = ContextVar("http_error_config", default=None)
 
 
 def problem_dict(status: int, code: str, detail: str, instance: str, param: str | None = None, title: str | None = None) -> dict:
@@ -59,6 +61,9 @@ def problem_response(status: int, code: str, detail: str, instance: str, param: 
 
 async def send_problem(send, status: int, code: str, detail: str, instance: str, extra_headers=None) -> None:
     """ASGI 미들웨어용 problem+json 응답."""
+    cfg = _error_config.get()
+    if cfg is not None:
+        instance = error_instance(instance, cfg)
     st, hdr, body = problem_response(status, code, detail, instance, extra_headers=extra_headers)
     hdr = [(k.encode("latin-1"), v.encode("latin-1")) for k, v in hdr] + [(b"content-length", str(len(body)).encode())]
     await send({"type": "http.response.start", "status": st, "headers": hdr})
@@ -342,7 +347,7 @@ def _csv_hash(items) -> str:
 
 def _build_ctx(route: Route, p: dict, cfg: ServeConfig, max_sens: str) -> RC.ReadCtx:
     kw = {CTX_KEYS[k]: v for k, v in p.items() if k in CTX_KEYS and k in route.params}
-    if p.get("status") == "dead":
+    if p.get("status") in ("dead", "all"):
         from kb.write import fpquota
         info = fpquota.identity.get()
         if route.op != "listNodes" or not info or info["scope"] != "editor":
@@ -725,8 +730,9 @@ def respond(target: str, headers=None, cfg: ServeConfig | None = None, max_sens:
 class TokenAuth:
     """쓰기는 Bearer 필수. 인증된 소켓 읽기도 토큰 범위를 적용한다."""
 
-    def __init__(self, app):
+    def __init__(self, app, cfg: ServeConfig | None = None):
         self.app = app
+        self.cfg = cfg
 
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http":
@@ -744,18 +750,22 @@ class TokenAuth:
                 break
         info = None
         response = None
+        def auth_error(status, code, *, retry=None):
+            sensitivity = scope_sensitivity(info["scope"]) if info else "internal"
+            return fpapi.error(status, code, scope["path"], retry=retry, cfg=self.cfg, max_sens=sensitivity)
+
         if auth is not None:
             if auth.lower().startswith("bearer "):
                 info = token_info(auth[7:].strip())
             if info is None:
-                response = fpapi.error(401, "token_invalid", scope["path"])
+                response = auth_error(401, "token_invalid")
         elif not unix or write:
-            response = fpapi.error(401, "token_required", scope["path"])
+            response = auth_error(401, "token_required")
         if ref and (not info or info["scope"] != "editor"):
             # Unauthenticated, invalid and unauthorized reference probes share 404.
-            response = fpapi.error(404, "not_found", scope["path"])
+            response = auth_error(404, "not_found")
         if response is None and info and not self.app.allow(info["tok_id"]):
-            response = fpapi.error(429, "too_many_requests", scope["path"], retry=1)
+            response = auth_error(429, "too_many_requests", retry=1)
         if response:
             await send({"type": "http.response.start", "status": response.status,
                         "headers": [(k.encode(), v.encode()) for k, v in response.headers]})
@@ -803,19 +813,21 @@ def build_app(cfg: ServeConfig | None = None, *, idle=None):
         extra = [(k, v) for k, v in (exc.headers or {}).items()]
         if exc.status_code == 405 and not extra:
             extra = [("allow", "GET, HEAD")]
-        r = _problem(exc.status_code, code, "없는 경로" if exc.status_code == 404 else "GET, HEAD만 받는다", request.url.path, extra=extra)
+        r = _problem(exc.status_code, code, "없는 경로" if exc.status_code == 404 else "GET, HEAD만 받는다", request.url.path,
+                     extra=extra, cfg=cfg, max_sens=request.scope.get("kb_max_sens", "internal"))
         return Response(r.body, r.status, headers=_dedupe(r.headers))
 
     async def on_error(request, exc):
         print(f"kb serve: 처리 중 예외 {type(exc).__name__}", file=sys.stderr)
-        r = _problem(500, "internal", "처리 중 예외", request.url.path)
+        r = _problem(500, "internal", "처리 중 예외", request.url.path, cfg=cfg,
+                     max_sens=request.scope.get("kb_max_sens", "internal"))
         return Response(r.body, r.status, headers=_dedupe(r.headers))
 
     routes = [SRoute(r.template, make(r), methods=["GET", "HEAD"], name=r.op) for r in ROUTES]
     star = Starlette(routes=routes, exception_handlers={404: on_http_exc, 405: on_http_exc, HTTPException: on_http_exc, Exception: on_error})
     star.router.redirect_slashes = False
     from kb.serve.fpapi import Adapter
-    app = TokenAuth(Adapter(star))
+    app = TokenAuth(Adapter(star), cfg)
     authenticated = app
     read_limit = ConcurrencyLimit(authenticated, cfg.max_concurrent)
 
@@ -827,8 +839,17 @@ def build_app(cfg: ServeConfig | None = None, *, idle=None):
 
     app = read_limited
     app = HostGuard(app, cfg.allowed_hosts)
+    guarded = app
+
+    async def configured_errors(scope, receive, send):
+        context = _error_config.set(cfg)
+        try:
+            return await guarded(scope, receive, send)
+        finally:
+            _error_config.reset(context)
+
     tracker = idle if idle is not None else IdleTracker(None, cfg.idle_s)
-    tracker.app = app
+    tracker.app = configured_errors
     return tracker
 
 

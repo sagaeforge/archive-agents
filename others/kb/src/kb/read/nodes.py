@@ -563,7 +563,7 @@ def list_nodes(con, ctx: ReadCtx, *, type: str | None = None, ids=None, filter=N
                 continue
             seen.add(i)
             try:
-                found.append(target_row(con, ctx, i))
+                found.append(target_row(con, ctx, i, mode="list" if ctx.trash_ids is not None else "target"))
             except NotFound:
                 continue
         return {"items": node_objs(con, found)}, page_obj(None, len(found), False)
