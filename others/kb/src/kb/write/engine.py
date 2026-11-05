@@ -145,6 +145,9 @@ def _hold(evs: list[dict]) -> WriteResult:
         prior = _json.loads(old.read_bytes())
         if canon_json(core_of(prior["events"])) != canon_json(core_of(evs)):
             raise IdemConflict(f"fp-held {name[:12]}: 같은 키에 내용이 다른 보류 항목이 있음") from None
+        # 겹친 재시도가 만든 시각이 아니라 실제 보관된 이벤트로 응답을 만든다.
+        # 비교에서 authored_at을 빼더라도 저장 시각과 응답 해시는 같아야 한다.
+        evs = prior["events"]
     first = evs[0]
     primary = next((e for e in evs if e["kind"] in ledger.RECORD_KINDS), first)
     return WriteResult(id=first.get("subject") or first["payload"].get("id"), held=True, reason=HELD_REASON,
@@ -238,6 +241,9 @@ def _write_chunk(led, chunk: list[dict], *, dry_run: bool = False) -> tuple[list
                 editor_guard(led, ev)
                 warns.extend(editor_dangling(led, ev))
         keep, skipped = _prefilter(led, events)
+        # 후속 이벤트가 같은 대상/키를 다시 쓰는 경우까지 전체 배치를 먼저 검사한다.
+        # 해시는 메모리에서만 계산하며 이 단계에는 CAS/원장 행 쓰기가 없다.
+        ledger.validate_batch(led, [{**ev, "payload": storage_payload(ev["payload"])} for ev in keep])
         if dry_run:
             return []
         if any(e["origin"] == "first_party" for e in keep) and not fp_is_open(led):
@@ -246,10 +252,6 @@ def _write_chunk(led, chunk: list[dict], *, dry_run: bool = False) -> tuple[list
         # 큰 본문은 가시성/재생/판/무연산을 확인한 뒤에만 CAS에 둔다.
         for ev in keep:
             view = storage_payload(ev["payload"])
-            sha = sha256_hex(canon_json(view))
-            if not led.execute("SELECT 1 FROM payload WHERE sha=?", (sha,)).fetchone() \
-                    and led.execute("SELECT 1 FROM event WHERE payload_sha=? LIMIT 1", (sha,)).fetchone():
-                raise RedactedPayload("지운 본문과 같은 내용")
             if prior_event(led, ev["idem_key"]):
                 ev["payload"] = view
             else:

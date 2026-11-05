@@ -216,7 +216,8 @@ def _tail(c: sqlite3.Connection) -> dict:
     return {"seq": last[0], "hash": last[1], "at": last[2]} if last else {"seq": 0, "hash": GENESIS, "at": 0}
 
 
-def _append_one(c: sqlite3.Connection, ev: dict, st: dict, now_ms: int | None) -> dict:
+def _event_parts(ev: dict):
+    """입력 구조와 정규 해시. 배치 사전 검사와 실제 append가 공유한다."""
     kind = ev.get("kind")
     if kind not in KINDS:
         raise LedgerError(f"알 수 없는 kind: {kind!r}")
@@ -239,6 +240,57 @@ def _append_one(c: sqlite3.Connection, ev: dict, st: dict, now_ms: int | None) -
         raise LedgerError("record.* 는 subject(레코드 ID) 필수")
     body = canon_json(payload)
     psha = sha256_hex(body)
+    return kind, actor, origin, idem, payload, subject, body, psha
+
+
+def validate_batch(c: sqlite3.Connection, events: Iterable[dict]) -> None:
+    """같은 BEGIN IMMEDIATE 안에서 CAS 생성 전에 배치 전체를 읽기만 하며 검사한다.
+
+    실제 append의 검사를 대체하지 않는다. 앞 이벤트가 올릴 판과 사용할 멱등 키를
+    메모리에서 반영하여 후속 이벤트의 충돌도 파일/원장 쓰기 전에 찾는다.
+    """
+    heads, idems, event_ids, payloads = {}, {}, set(), set()
+    for ev in events:
+        kind, actor, origin, idem, payload, subject, _, sha = _event_parts(ev)
+        fingerprint = (kind, subject, sha, actor, origin, ev.get("on_behalf_of"), ev.get("generated_by"))
+        if idem not in idems:
+            row = c.execute("SELECT kind, subject, payload_sha, actor, origin, on_behalf_of, generated_by, v "
+                            "FROM event WHERE idem_key=?", (idem,)).fetchone()
+            idems[idem] = (row[:7], row[7]) if row else None
+        prior = idems[idem]
+        if prior is not None:
+            if fingerprint != prior[0] or ev.get("v") not in (None, prior[1]):
+                raise IdemConflict("같은 키의 쓰기 내용이 다르다")
+            continue
+        if kind in RECORD_KINDS:
+            if subject not in heads:
+                head = record_head(c, subject)
+                heads[subject] = head[0] if head else 0
+            expected = ev.get("expected_version")
+            if expected is not None and expected != heads[subject]:
+                raise VersionConflict()
+            heads[subject] += 1
+        version = ev.get("v")
+        if version is None:
+            version = upcast.current_v(kind)
+        elif isinstance(version, bool) or not isinstance(version, int) or not 1 <= version <= upcast.current_v(kind):
+            raise LedgerError("이벤트 판 형식 위반")
+        if ev.get("at") is not None:
+            int(ev["at"])  # 실제 append의 시각 변환 오류도 CAS보다 먼저 확인한다.
+        event_id = ev.get("event_id")
+        if event_id:
+            if event_id in event_ids or c.execute("SELECT 1 FROM event WHERE event_id=?", (event_id,)).fetchone():
+                raise LedgerError("이미 사용된 이벤트 ID")
+            event_ids.add(event_id)
+        if sha not in payloads and not c.execute("SELECT 1 FROM payload WHERE sha=?", (sha,)).fetchone() \
+                and c.execute("SELECT 1 FROM event WHERE payload_sha=? LIMIT 1", (sha,)).fetchone():
+            raise RedactedPayload("지운 본문과 같은 내용")
+        payloads.add(sha)
+        idems[idem] = (fingerprint, version)
+
+
+def _append_one(c: sqlite3.Connection, ev: dict, st: dict, now_ms: int | None) -> dict:
+    kind, actor, origin, idem, payload, subject, body, psha = _event_parts(ev)
 
     row = c.execute("SELECT seq,event_id,hash,at,kind,subject,payload_sha,actor,origin,on_behalf_of,generated_by,v "
                     "FROM event WHERE idem_key=?", (idem,)).fetchone()

@@ -4,14 +4,16 @@
 WriteRejected.status는 HTTP 매핑용 정수, VersionConflict.current는 구조화 객체다.
 """
 import hashlib
+import json
 import sqlite3
 
 import pytest
 
 from kb.core import ledger, opsdb
+from kb.core.canon import canon_json, sha256_hex
 from kb.extract import tick_stage
 from kb.write import author, engine, record, types
-from kb.write.errors import WriteRejected
+from kb.write.errors import IdemConflict, VersionConflict, WriteRejected
 
 REC = {"type": "Note", "title": "FW3 합성 메모", "body": "합성 본문", "sensitivity": "internal"}
 
@@ -167,3 +169,62 @@ def test_extraction_merges_versions_to_latest_reference(core, typ):
                                     "payload": dict(REC, id=record_id, type=typ)})
     assert queue_rows() == [(tick_stage.QUEUE_SENSITIVE, f"{rid}|15"),
                             (tick_stage.QUEUE_SENSITIVE, f"{other}|11")]
+
+
+def large_batch(second_expected, *, same_key=False):
+    rid = "f-" + "a" * 26
+    return [{"kind": "record.put", "origin": "first_party", "actor": "user:sagae", "subject": rid,
+             "idem_key": "fw3:batch:" + ("0" if same_key else str(index)),
+             "expected_version": expected, "noop_if_same": True,
+             "payload": dict(REC, id=rid, body=letter * 70000)}
+            for index, (expected, letter) in enumerate([(0, "a"), (second_expected, "b")])]
+
+
+@pytest.mark.parametrize("conflict", ["version", "idempotency"])
+def test_batch_rejection_precedes_all_large_body_cas(core, monkeypatch, conflict):
+    batch = large_batch(0 if conflict == "version" else 1, same_key=conflict == "idempotency")
+    calls = []
+    original_put = engine.cas.put
+
+    def tracked_put(*args, **kw):
+        calls.append(1)
+        return original_put(*args, **kw)
+
+    monkeypatch.setattr(engine.cas, "put", tracked_put)
+    before = snapshot(core)
+    before_events = events()
+    with pytest.raises(VersionConflict if conflict == "version" else IdemConflict):
+        engine.commit(batch)
+    assert calls == []
+    assert not list((core / "raw" / "fp").rglob("*"))
+    assert events() == before_events
+    assert snapshot(core) == before
+
+
+@pytest.mark.parametrize("size", [20, 70000])
+def test_http_hold_retry_preserves_authored_at_and_response_hash(core, monkeypatch, size):
+    monkeypatch.setattr(engine, "fp_is_open", lambda _: False)
+    clock = iter([1000, 2000])
+    monkeypatch.setattr(engine, "_ms", lambda: next(clock))
+    rec = dict(REC, body="x" * size)
+    first = put(rec, "loupe:c:hold-retry")
+    assert first.held
+    holds = list((core / "spool" / "fp-held").glob("*.json"))
+    assert len(holds) == 1
+    original_bytes = holds[0].read_bytes()
+    stored = json.loads(original_bytes)
+    original_payload = stored["events"][0]["payload"]
+    assert original_payload["authored_at"] == 1000
+    expected_sha = sha256_hex(canon_json(engine.storage_payload(original_payload)))
+    assert first.payload_sha == expected_sha
+
+    retry = put(rec, "loupe:c:hold-retry")
+    assert retry.held and retry.id == first.id
+    assert holds[0].read_bytes() == original_bytes
+    assert retry.payload_sha == first.payload_sha == expected_sha
+    assert not [event for event in events() if event["kind"] == "record.put"]
+
+    monkeypatch.setattr(engine, "fp_is_open", lambda _: True)
+    committed = engine.commit(stored["events"], stored=True)
+    assert committed.payload_sha == expected_sha
+    assert payload(first.id)["authored_at"] == 1000
