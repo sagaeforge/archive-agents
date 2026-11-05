@@ -184,9 +184,22 @@ def security_state(g=None, led=None) -> dict[str, int]:
             if rtype == "PROMOTED_FROM":
                 deps[dst].add(src)
     if led is not None:
-        sql = ("SELECT e.kind, e.subject, e.origin, p.body FROM event e LEFT JOIN payload p ON p.sha=e.payload_sha "
+        # tail.skip_set과 같은 격리 - 해제 규칙. export에는 gold 연결이 없으므로
+        # 원장의 격리 기록도 확인하고, 제외 여부를 본문 필드 접근 전에 판정한다.
+        quarantined = {r[0] for r in g.execute("SELECT seq FROM quarantine")} if g is not None else set()
+        released: set[int] = set()
+        for kind, raw in led.execute(
+                "SELECT e.kind, p.body FROM event e LEFT JOIN payload p ON p.sha=e.payload_sha "
+                "WHERE e.kind IN ('system.projection_quarantined','system.projection_released') ORDER BY e.seq"):
+            seq = (jl(raw) or {}).get("seq")
+            if isinstance(seq, int):
+                (quarantined if kind == "system.projection_quarantined" else released).add(seq)
+        quarantined -= released
+        sql = ("SELECT e.seq, e.kind, e.subject, e.origin, p.body FROM event e LEFT JOIN payload p ON p.sha=e.payload_sha "
                "WHERE e.kind IN ('record.put','record.redact','claim.assert','claim.confirm','edge.put') ORDER BY e.seq")
-        for kind, subject, origin, raw in led.execute(sql):
+        for seq, kind, subject, origin, raw in led.execute(sql):
+            if seq in quarantined:
+                continue
             p = jl(raw) if raw is not None else None
             if kind == "record.redact" or (kind == "record.put" and p is None):
                 levels[subject] = 3

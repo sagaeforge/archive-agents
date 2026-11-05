@@ -141,3 +141,42 @@ def test_promoted_from_alone_does_not_downgrade_a_private_source(api):
         assert read.node_body(con, ctx, "f-fw5-copy")["text"] == MARKER
     export_markdown(commit=False)
     assert not (api.home / "export" / "first_party" / "records" / "f-fw5-copy.md").exists()
+
+
+@pytest.mark.parametrize("missing_field", ["sensitivity"], ids=["quarantined_event"])
+def test_quarantined_malformed_event_does_not_break_reads(api, missing_field):
+    seed(api, private_source=ORIGINALS[0])
+    w = api.world
+    copy_id = "f-fw5-quarantine-copy"
+    w.add(record(copy_id, "private-derived copy", "internal", body=MARKER,
+                 links=[{"rtype": "PROMOTED_FROM", "dst": ORIGINALS[0]}]))
+    malformed = record("f-fw5-malformed", "malformed synthetic record")
+    del malformed["payload"][missing_field]
+    ledger.append(w.led, [malformed])
+    bad_seq = ledger.head(w.led)[0]
+    # 격리 전에는 잘못된 확정 이벤트를 조용히 무시하지 않는다.
+    with pytest.raises(KeyError, match="sensitivity"):
+        with w.rd():
+            pass
+    projected = project_tail(w.led, w.gold, None, 10 ** 6)
+    assert projected.caught_up and bad_seq in projected.quarantined
+    assert w.gold.execute("SELECT seq FROM quarantine WHERE seq=?", (bad_seq,)).fetchone() is not None
+    assert w.gold.execute("SELECT 1 FROM node WHERE id=?", (malformed["subject"],)).fetchone() is None
+
+    response = api.call("GET", f"/v1/nodes/{ORIGINALS[1]}")
+    assert response.status == 200, response.body
+    assert data(response)["data"]["id"] == ORIGINALS[1]
+    found = api.call("GET", f"/v1/search?q={INTERNAL_MARKER}")
+    assert found.status == 200, found.body
+    assert any(item["id"] == ORIGINALS[1] and INTERNAL_MARKER in item["snippet"]
+               for item in data(found)["data"]["items"])
+    for rid in (ORIGINALS[0], CID, copy_id):
+        problem(api.call("GET", f"/v1/nodes/{rid}"), 404, "not_found")
+    hidden = api.call("GET", f"/v1/search?q={MARKER}")
+    assert hidden.status == 200 and MARKER.encode() not in hidden.body
+    exported = export_markdown(commit=False)
+    assert exported["records"] >= 1 and exported["committed"] is False
+    records_dir = api.home / "export" / "first_party" / "records"
+    assert (records_dir / f"{ORIGINALS[1]}.md").is_file()
+    assert not (records_dir / f"{copy_id}.md").exists()
+    assert all(MARKER not in path.read_text() for path in records_dir.glob("*.md"))
