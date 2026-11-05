@@ -188,7 +188,23 @@ def meta(con, ctx: ReadCtx, *, concurrent: int = 16) -> dict:
     edges = row(con, f"SELECT COUNT(*) c FROM edge e WHERE {ew}", ep)["c"]
     fw, fp = visibility_sql(pl.with_(origin=("first_party",)), "n")
     fpo = row(con, f"SELECT 1 x FROM node n WHERE {fw} LIMIT 1", fp) is not None
+    from kb.core import ledger
+    led = ledger.open_ledger()
+    try:
+        fp_gate = ledger.meta_get(led, "fp_open") is not None
+    finally:
+        led.close()
+    from kb.write.secrets_scan import editor_rule_contract
+    try:
+        rules = editor_rule_contract()
+    except (OSError, ValueError, KeyError):
+        rules = {"version": None, "sha": None}
     return {"contract": CONTRACT, "kb_version": _kb_version(),
+            "write": {"fp_gate": fp_gate,
+                      "editor_routes": ["POST /v1/records", "PUT /v1/records/{id}",
+                                        "POST /v1/records/{id}/tombstone", "GET /v1/writes/{ref}", "DELETE /v1/writes/{ref}"] if rules["sha"] else [],
+                      "private_open": False, "hitl": {"available": False, "trust_store": "missing", "rp_ids": []},
+                      "secret_rules": rules},
             "limits": {"overview_nodes": 100000, "overview_edges": 400000, "page": 500, "concurrent": concurrent},
             "changes_cursor": changes_cursor(con), "first_party_open": fpo,
             "counts": {"nodes": nodes, "edges": edges, "claims": claims}}

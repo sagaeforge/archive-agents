@@ -81,6 +81,25 @@ def remove(path: Path) -> None:
 
 
 def mark_failed(path: Path) -> Path:
+    """Editor transitions share the quota lock with retrieval and purge."""
+    from kb.write import fpquota
+    editor = (fpquota.refs_dir() / path.name).exists()
+    if not editor:
+        try:
+            first = json.loads(path.read_bytes())["events"][0]
+            editor = first.get("origin") == "first_party" and first.get("actor", "").startswith("app:")
+        except (ValueError, TypeError, KeyError, IndexError):
+            editor = False
+    if editor:
+        from kb.write.write_refs import failed_copy
+        with fpquota.lock():
+            dst = _mark_failed(path)
+            failed_copy(path, locked=True)
+            return dst
+    return _mark_failed(path)
+
+
+def _mark_failed(path: Path) -> Path:
     """재적재가 거부된 파일을 지우지 않고 .failed/로 옮긴다. 같은 이름의 앞선 기록을 덮어쓰지 않는다."""
     f = path.parent / ".failed"
     cas.make_dirs(f)

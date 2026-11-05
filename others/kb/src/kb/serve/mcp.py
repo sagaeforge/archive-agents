@@ -618,7 +618,12 @@ def build_server(profile: str = "default") -> MCPServer:
         """first_party 레코드(노트, 결정, 산출물)를 쓴다. 외부 사실(source_url, quote)은 받지 않는다. 작성자는 서버가 정한다."""
         t0 = time.monotonic()
         from kb.write import put_record
-        text = json.dumps(put_record(record, idempotency_key, "mcp").as_dict(), ensure_ascii=False, separators=(",", ":"))
+        result = put_record(record, idempotency_key, "mcp").as_dict()
+        # MCP keeps its original response contract; the HTTP adapter exposes
+        # the additional first-party editor fields from WriteResult.
+        baseline = {key: result[key] for key in ("id", "version", "seq", "replayed", "projected",
+                                                "spooled", "held", "warnings", "reason")}
+        text = json.dumps(baseline, ensure_ascii=False, separators=(",", ":"))
         log_query("kb_put", text, t0)
         return text
 

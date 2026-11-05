@@ -82,13 +82,10 @@ def test_secret_never_over_http_and_private_gated(world, tcp_client, client, cfg
         for t in probe:
             r = (client if who is None else tcp_client).get(t, A(who) if who else None)
             assert b"SECRET-BODY-XYZ" not in r.body and b'"f-sec"' not in r.body, (who, t)
-    # private: viewer와 소켓은 못 본다. owner도 결정 14 승인 전에는 못 본다(기본 (c))
-    assert client.get("/v1/nodes/f-priv").status == 404
-    assert tcp_client.get("/v1/nodes/f-priv", A(viewer)).status == 404
-    assert tcp_client.get("/v1/nodes/f-priv", A(owner)).status == 404
-    (cfgdir / "decisions.toml").write_text("approved = [14]\n")
-    assert tcp_client.get("/v1/nodes/f-priv", A(owner)).status == 200
-    assert tcp_client.get("/v1/nodes/f-priv", A(viewer)).status == 404
+    # ADR-0005: 인증된 editor 소켓은 private를 읽고, viewer·무토큰은 못 읽는다.
+    editor = create_token("editor", "private-reader")
+    assert client.get("/v1/nodes/f-priv", A(editor)).status == 200
+    assert client.get("/v1/nodes/f-priv", A(viewer)).status == 404
     assert client.get("/v1/nodes/f-priv").status == 404
     for who in (viewer, owner):
         for t in probe:

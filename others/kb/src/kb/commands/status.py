@@ -9,6 +9,8 @@ def cmd_status(args) -> int:
     from kb.guard import status as _st
 
     st = _st.build()
+    from kb.serve.fpapi import token_usage
+    st["api_tokens"] = token_usage()
     if args.json:
         print(json.dumps(st, ensure_ascii=False, sort_keys=True, default=str))
     elif args.critical:

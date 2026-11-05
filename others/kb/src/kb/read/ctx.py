@@ -43,6 +43,10 @@ class BadParam(ReadError):
     status, code = 400, "bad_param"
 
 
+class ScopeDenied(ReadError):
+    status, code = 403, "scope_denied"
+
+
 class LimitTooLarge(ReadError):
     status, code = 400, "limit_too_large"
 
@@ -130,6 +134,7 @@ class ReadCtx:
     authors: tuple | None = None
     edge_status: tuple | None = None
     db_path: str | None = None
+    trash_ids: tuple | None = None
 
     @property
     def max_sens(self) -> int:
@@ -146,7 +151,7 @@ class ReadCtx:
     @classmethod
     def build(cls, *, status: str = "active", as_of_valid=None, as_of_observed=None, types=None, origin=None,
               domain=None, source=None, author=None, edge_status=None, include_unverified=False,
-              max_sensitivity="internal", deadline_s: float = 5.0, exclude_types=(), db_path=None) -> "ReadCtx":
+              max_sensitivity="internal", deadline_s: float = 5.0, exclude_types=(), db_path=None, trash_ids=None) -> "ReadCtx":
         """문자열 파라미터(쉼표 목록, 시각)를 검증해 문맥을 만든다. 오류는 BadParam."""
         if status not in STATUSES + ("all",):
             raise BadParam(f"status 값 오류: {status!r}", "status")
@@ -164,7 +169,7 @@ class ReadCtx:
                    as_of_observed=parse_ts(as_of_observed, "as_of_observed"), status=status,
                    include_unverified=bool(include_unverified), deadline_s=deadline_s, types=_csv(types),
                    exclude_types=tuple(exclude_types), origin=og, domains=_csv(domain), sources=_csv(source),
-                   authors=_csv(author), edge_status=es, db_path=str(db_path) if db_path else None)
+                   authors=_csv(author), edge_status=es, db_path=str(db_path) if db_path else None, trash_ids=trash_ids)
 
     def verification_ok(self) -> tuple:
         return ALL_VERIFICATION if self.include_unverified else OK_VERIFICATION
@@ -253,6 +258,11 @@ def visibility_sql(ctx: ReadCtx, a: str = "n", *, kind: str = "node", mode: str 
     if mode != "list":
         return " AND ".join(w), p
     if kind == "node":
+        if ctx.trash_ids is not None:
+            if ctx.trash_ids:
+                w.append(_in(f"{a}.id", ctx.trash_ids, p))
+            else:
+                w.append("0")
         if ctx.status != "all":
             w.append(f"{a}.eff_status = ?")
             p.append(ctx.status)

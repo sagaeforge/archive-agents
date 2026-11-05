@@ -4,7 +4,7 @@
 - 응답 본문은 kb.read가 낸 값을 그대로 쓴다. 서빙 층은 필터를 만들지 않는다.
 - 핵심 로직은 `execute()` 하나다. Starlette 엔드포인트(동기 def, 스레드풀)와 `kb api`(프로세스 안 호출)가 같은 함수를 부른다.
 - 이 모듈의 최상위는 starlette, uvicorn을 임포트하지 않는다(`kb api`가 가볍게 뜬다). `build_app()`이 안에서 임포트한다.
-- 쓰기 메서드는 없다. ops.db는 mode=ro로만 연다.
+- 편집기 쓰기는 fpapi 어댑터와 공통 엔진으로 보낸다. 토큰 사용 지표만 ops.db에 남긴다.
 """
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ import sqlite3
 import sys
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qsl
 
 from kb import read as R
@@ -155,44 +155,108 @@ def tokens_path():
     return _paths.config_dir() / "api-tokens"
 
 
-SCOPES = ("viewer", "owner")
+SCOPES = ("viewer", "owner", "editor", "reviewer")
 
 
-def create_token(scope: str, label: str = "") -> str:
+def create_token(scope: str, label: str = "", expires: str | None = None) -> str:
     """토큰 문자열은 이 호출의 반환값으로만 보인다. 파일에는 sha256만 쓴다(0600)."""
     if scope not in SCOPES:
         raise ValueError(f"scope는 {SCOPES} 중 하나")
+    if (label or scope in ("editor", "reviewer")) and not re.fullmatch(r"[a-z][a-z0-9-]{0,31}", label):
+        raise ValueError("잘못된 앱 라벨")
+    from kb.core.ids import uuid7
+    from kb.core.gatelock import Gate
+    gate = Gate(tokens_path().with_suffix(".lock"))
+    fd = gate.acquire()
+    try:
+        if label and any(info["label"] == label for info in active_tokens()):
+            raise ValueError("이미 사용 중인 앱 라벨")
+        return _issue_token(scope, label, expires, uuid7())
+    finally:
+        gate.release(fd)
+
+
+def _issue_token(scope, label, expires, tok_id):
+    from kb.core import cas
+    now = datetime.now(timezone.utc)
+    until = datetime.fromisoformat(expires.replace("Z", "+00:00")) if expires else now + timedelta(days=180)
+    if until.tzinfo is None or until <= now:
+        raise ValueError("만료 시각은 시간대가 있는 미래 시각이어야 한다")
     tok = f"kbt_{scope[0]}_" + secrets.token_urlsafe(32)
     p = tokens_path()
     p.parent.mkdir(parents=True, exist_ok=True)
-    line = f"{scope}\t{hashlib.sha256(tok.encode()).hexdigest()}\t{datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')}\t{label.replace(chr(9), ' ')}\n"
+    line = f"{scope}\t{hashlib.sha256(tok.encode()).hexdigest()}\t{now.isoformat()}\t{label}\t{tok_id}\t{until.isoformat()}\n"
     fd = os.open(p, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
     try:
-        os.write(fd, line.encode())
+        cas.write_all(fd, line.encode())
+        os.fsync(fd)
     finally:
         os.close(fd)
     os.chmod(p, 0o600)
+    cas.fsync_dir(p.parent)
     return tok
 
 
-def token_scope(token: str) -> str | None:
+def active_tokens() -> list[dict]:
     try:
         text = tokens_path().read_text(encoding="utf-8")
     except OSError:
-        return None
-    h = hashlib.sha256(token.encode()).hexdigest()
-    found = None
+        return []
+    entries, revoked = [], set()
     for ln in text.splitlines():
         parts = ln.split("\t")
-        if len(parts) >= 2 and hmac.compare_digest(parts[1], h):
-            found = parts[0]
-    return found
+        if parts[0] == "revoked" and len(parts) >= 2:
+            revoked.add(parts[1])
+        elif len(parts) >= 4 and parts[0] in SCOPES:
+            info = dict(zip(("scope", "hash", "issued_at", "label", "tok_id", "expires_at"), parts))
+            info.setdefault("tok_id", info["hash"])
+            entries.append(info)
+    now = datetime.now(timezone.utc)
+    result = []
+    for info in entries:
+        try:
+            valid = not info.get("expires_at") or datetime.fromisoformat(info["expires_at"].replace("Z", "+00:00")) > now
+        except (ValueError, TypeError):
+            valid = False
+        if valid and info["tok_id"] not in revoked:
+            result.append(info)
+    return result
+
+
+def token_info(token: str) -> dict | None:
+    digest = hashlib.sha256(token.encode()).hexdigest()
+    return next((info for info in active_tokens() if hmac.compare_digest(info["hash"], digest)), None)
+
+
+def token_scope(token: str) -> str | None:
+    info = token_info(token)
+    return info["scope"] if info else None
+
+
+def change_token(label: str, *, rotate=False) -> str | None:
+    from kb.core.gatelock import Gate
+    from kb.core.ids import uuid7
+    gate = Gate(tokens_path().with_suffix(".lock"))
+    fd = gate.acquire()
+    try:
+        info = next((item for item in active_tokens() if item["label"] == label), None)
+        if info is None:
+            raise ValueError("살아 있는 토큰 라벨을 찾을 수 없다")
+        # Append-only invalidation; token values never enter the file.
+        with tokens_path().open("a") as output:
+            output.write(f'revoked\t{info["tok_id"]}\t{datetime.now(timezone.utc).isoformat()}\n')
+            output.flush()
+            os.fsync(output.fileno())
+        if rotate:
+            return _issue_token(info["scope"], label, None, uuid7())
+        return None
+    finally:
+        gate.release(fd)
 
 
 def scope_sensitivity(scope: str) -> str:
-    """viewer는 internal, owner는 private. secret은 어떤 토큰으로도 HTTP로 나가지 않는다.
-    private 읽기 경로는 결정 14가 승인된 뒤에만 연다(기본 (c): 뷰어가 private를 보지 않는다)."""
-    if scope == "owner" and _config.decision_ok(14):
+    """ADR-0005 §3.6: editor/reviewer만 private, 나머지는 internal 이하."""
+    if scope in ("editor", "reviewer"):
         return "private"
     return "internal"
 
@@ -217,7 +281,56 @@ def _lower(h) -> dict:
     return {str(k).lower(): v for k, v in (h.items() if hasattr(h, "items") else h)}
 
 
-def _problem(e_status: int, code: str, detail: str, path: str, param: str | None = None, extra=None) -> Resp:
+def error_instance(path: str, cfg: ServeConfig | None = None, max_sens: str = "internal") -> str:
+    """없는 ID는 요청 경로를 유지하고, 숨은/private 대상은 템플릿만 낸다."""
+    route, nid = match_route(path)
+    if route is not None and nid is not None:
+        ctx = RC.ReadCtx(max_sensitivity=max_sens, db_path=cfg.db_path if cfg else None,
+                         deadline_s=cfg.deadline_s if cfg else 5.0)
+        try:
+            with RC.reading(ctx) as con:
+                head = RC.row(con, "SELECT sensitivity FROM head WHERE id=?", (nid,))
+                if head is None:
+                    return path
+                if head["sensitivity"] >= RC.SENS["private"] or head["sensitivity"] > ctx.max_sens:
+                    return route.template
+                node = RC.row(con, "SELECT props,label FROM node WHERE id=? AND expired_at IS NULL", (nid,))
+                if node:
+                    props = json.loads(node["props"]) if node["props"] else {}
+                    if not isinstance(props, dict) or props.get("quarantine") or node["label"] == "[redacted]":
+                        return route.template
+        except (RC.ReadError, sqlite3.Error, OSError, ValueError):
+            # Classification failure must not cause an error response to echo an ID.
+            return route.template
+        return path
+    write = re.fullmatch(r"/v1/records/([^/]+)(/tombstone)?", path)
+    if write:
+        template = "/v1/records/{id}" + (write[2] or "")
+        from kb.core import ledger
+        from kb.write.record import _record_state
+        from kb.write.errors import WriteRejected
+        led = None
+        try:
+            led = ledger.open_ledger()
+            if ledger.record_head(led, write[1]) is None:
+                return path
+            try:
+                _, _, payload = _record_state(led, write[1])
+            except WriteRejected:
+                return template
+            return template if payload["sensitivity"] == "private" else path
+        except (sqlite3.Error, OSError, ValueError):
+            return template
+        finally:
+            if led is not None:
+                led.close()
+    return path
+
+
+def _problem(e_status: int, code: str, detail: str, path: str, param: str | None = None, extra=None,
+             *, cfg: ServeConfig | None = None, max_sens: str = "internal") -> Resp:
+    if cfg is not None:
+        path = error_instance(path, cfg, max_sens)
     st, hdr, body = problem_response(e_status, code, detail, path, param, extra)
     hdr.append(("vary", "Authorization"))
     return Resp(st, hdr, body)
@@ -229,6 +342,29 @@ def _csv_hash(items) -> str:
 
 def _build_ctx(route: Route, p: dict, cfg: ServeConfig, max_sens: str) -> RC.ReadCtx:
     kw = {CTX_KEYS[k]: v for k, v in p.items() if k in CTX_KEYS and k in route.params}
+    if p.get("status") == "dead":
+        from kb.write import fpquota
+        info = fpquota.identity.get()
+        if route.op != "listNodes" or not info or info["scope"] != "editor":
+            raise RC.ScopeDenied("KB 쓰기 권한이 없습니다. 토큰을 다시 설정하세요")
+        from kb.core import ledger
+        from kb.write.record import _record_state
+        from kb.write.errors import WriteRejected
+        led = ledger.open_ledger()
+        try:
+            owned = []
+            for rid, actor in led.execute("SELECT subject,actor FROM event WHERE seq IN "
+                    "(SELECT MIN(seq) FROM event WHERE kind='record.put' GROUP BY subject)"):
+                if ledger.created_app(led, rid) != "app:" + info["label"]:
+                    continue
+                try:
+                    _record_state(led, rid)
+                except WriteRejected:
+                    continue
+                owned.append(rid)
+            kw["trash_ids"] = tuple(owned)
+        finally:
+            led.close()
     return RC.ReadCtx.build(max_sensitivity=max_sens, deadline_s=cfg.deadline_s, db_path=cfg.db_path, **kw)
 
 
@@ -488,7 +624,8 @@ def execute(route: Route, nid: str | None, query_items, headers, cfg: ServeConfi
     h = _lower(headers)
     try:
         if method not in ("GET", "HEAD"):
-            return _problem(405, "method_not_allowed", "GET, HEAD만 받는다", path, extra=[("allow", "GET, HEAD")])
+            return _problem(405, "method_not_allowed", "GET, HEAD만 받는다", path, extra=[("allow", "GET, HEAD")],
+                            cfg=cfg, max_sens=max_sens)
         p = parse_query(route, query_items)
         ctx = _build_ctx(route, p, cfg, max_sens)
         inm = h.get("if-none-match")
@@ -515,10 +652,10 @@ def execute(route: Route, nid: str | None, query_items, headers, cfg: ServeConfi
             et = RE.etag(env)[:-1] + f'-{_csv_hash(env["degraded"])}"'
         return Resp(200, [("content-type", "application/json")] + _headers(route, et), dumps(env))
     except RC.ReadError as e:
-        return _problem(e.status, e.code, e.detail, path, getattr(e, "param", None))
+        return _problem(e.status, e.code, e.detail, path, getattr(e, "param", None), cfg=cfg, max_sens=max_sens)
     except Exception as e:  # noqa: BLE001
-        print(f"kb serve: 처리 중 예외 {path}: {type(e).__name__}: {e}", file=sys.stderr)
-        return _problem(500, "internal", "처리 중 예외", path)
+        print(f"kb serve: 처리 중 예외 {type(e).__name__}", file=sys.stderr)
+        return _problem(500, "internal", "처리 중 예외", path, cfg=cfg, max_sens=max_sens)
 
 
 def _snapshot_binary(route, ctx, sid, p, h, path) -> Resp:
@@ -586,7 +723,7 @@ def respond(target: str, headers=None, cfg: ServeConfig | None = None, max_sens:
 # ------------------------------------------------------------------ ASGI 앱
 
 class TokenAuth:
-    """TCP는 Bearer 필수. Unix 소켓은 파일 권한이 인증이고 범위는 internal 이하다."""
+    """쓰기는 Bearer 필수. 인증된 소켓 읽기도 토큰 범위를 적용한다."""
 
     def __init__(self, app):
         self.app = app
@@ -596,27 +733,45 @@ class TokenAuth:
             return await self.app(scope, receive, send)
         srv = scope.get("server")
         unix = srv is None or srv[1] is None
-        if unix:
-            scope["kb_max_sens"] = "internal"
-            return await self.app(scope, receive, send)
+        from kb.serve import fpapi
+        from kb.write import fpquota
+        write = bool(fpapi.WRITE_PATH.fullmatch(scope["path"]))
+        ref = bool(fpapi.REF_PATH.fullmatch(scope["path"]))
         auth = None
         for k, v in scope.get("headers") or []:
             if k == b"authorization":
                 auth = v.decode("latin-1")
                 break
-        if not auth or not auth.lower().startswith("bearer "):
-            return await send_problem(send, 401, "token_required", "Bearer 토큰이 필요하다", scope["path"],
-                                      extra_headers=[("www-authenticate", "Bearer")])
-        sc = token_scope(auth[7:].strip())
-        if sc is None:
-            return await send_problem(send, 401, "token_invalid", "토큰이 맞지 않는다", scope["path"],
-                                      extra_headers=[("www-authenticate", "Bearer")])
-        scope["kb_max_sens"] = scope_sensitivity(sc)
-        return await self.app(scope, receive, send)
+        info = None
+        response = None
+        if auth is not None:
+            if auth.lower().startswith("bearer "):
+                info = token_info(auth[7:].strip())
+            if info is None:
+                response = fpapi.error(401, "token_invalid", scope["path"])
+        elif not unix or write:
+            response = fpapi.error(401, "token_required", scope["path"])
+        if ref and (not info or info["scope"] != "editor"):
+            # Unauthenticated, invalid and unauthorized reference probes share 404.
+            response = fpapi.error(404, "not_found", scope["path"])
+        if response is None and info and not self.app.allow(info["tok_id"]):
+            response = fpapi.error(429, "too_many_requests", scope["path"], retry=1)
+        if response:
+            await send({"type": "http.response.start", "status": response.status,
+                        "headers": [(k.encode(), v.encode()) for k, v in response.headers]})
+            return await send({"type": "http.response.body", "body": response.body})
+        scope["kb_max_sens"] = scope_sensitivity(info["scope"]) if info else "internal"
+        context = fpquota.identity.set(info)
+        try:
+            if info:
+                fpapi.usage(info)
+            return await self.app(scope, receive, send)
+        finally:
+            fpquota.identity.reset(context)
 
 
 def build_app(cfg: ServeConfig | None = None, *, idle=None):
-    """미들웨어 순서: IdleTracker > HostGuard > ConcurrencyLimit > TokenAuth > Starlette."""
+    """유휴/Host 검사 뒤 읽기 동시 상한, 토큰 인증, 편집기 어댑터/읽기 라우터."""
     from starlette.applications import Starlette
     from starlette.exceptions import HTTPException
     from starlette.responses import Response
@@ -652,15 +807,25 @@ def build_app(cfg: ServeConfig | None = None, *, idle=None):
         return Response(r.body, r.status, headers=_dedupe(r.headers))
 
     async def on_error(request, exc):
-        print(f"kb serve: 처리 중 예외 {request.url.path}: {type(exc).__name__}: {exc}", file=sys.stderr)
+        print(f"kb serve: 처리 중 예외 {type(exc).__name__}", file=sys.stderr)
         r = _problem(500, "internal", "처리 중 예외", request.url.path)
         return Response(r.body, r.status, headers=_dedupe(r.headers))
 
     routes = [SRoute(r.template, make(r), methods=["GET", "HEAD"], name=r.op) for r in ROUTES]
     star = Starlette(routes=routes, exception_handlers={404: on_http_exc, 405: on_http_exc, HTTPException: on_http_exc, Exception: on_error})
     star.router.redirect_slashes = False
-    app = TokenAuth(star)
-    app = ConcurrencyLimit(app, cfg.max_concurrent)
+    from kb.serve.fpapi import Adapter
+    app = TokenAuth(Adapter(star))
+    authenticated = app
+    read_limit = ConcurrencyLimit(authenticated, cfg.max_concurrent)
+
+    async def read_limited(scope, receive, send):
+        from kb.serve.fpapi import WRITE_PATH, REF_PATH
+        if scope["type"] == "http" and (WRITE_PATH.fullmatch(scope["path"]) or REF_PATH.fullmatch(scope["path"])):
+            return await authenticated(scope, receive, send)
+        return await read_limit(scope, receive, send)
+
+    app = read_limited
     app = HostGuard(app, cfg.allowed_hosts)
     tracker = idle if idle is not None else IdleTracker(None, cfg.idle_s)
     tracker.app = app

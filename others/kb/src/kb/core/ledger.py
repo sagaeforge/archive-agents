@@ -67,6 +67,8 @@ TABLES = (
     "CREATE TABLE meta(k TEXT PRIMARY KEY, v TEXT NOT NULL) WITHOUT ROWID",
     "CREATE INDEX event_subject ON event(subject, seq)",
     "CREATE INDEX event_payload ON event(payload_sha)",
+    "CREATE INDEX event_actor_at ON event(actor, at)",
+    "CREATE INDEX event_subject_at ON event(subject, at)",
 )
 TRIGGERS = {
     "event_no_update": "CREATE TRIGGER event_no_update BEFORE UPDATE ON event BEGIN SELECT RAISE(ABORT, 'event는 추가 전용'); END",
@@ -159,6 +161,8 @@ def open_ledger(path: str | Path | None = None) -> sqlite3.Connection:
 
 def _ensure(c: sqlite3.Connection) -> None:
     if c.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='event'").fetchone():
+        c.execute("CREATE INDEX IF NOT EXISTS event_actor_at ON event(actor, at)")
+        c.execute("CREATE INDEX IF NOT EXISTS event_subject_at ON event(subject, at)")
         return
     for ddl in TABLES:
         c.execute(ddl)
@@ -454,6 +458,25 @@ def get_payload(c: sqlite3.Connection, sha: str) -> dict | None:
 def record_head(c: sqlite3.Connection, record_id: str) -> tuple[int, str] | None:
     r = c.execute("SELECT version, content_sha FROM record_head WHERE id=?", (record_id,)).fetchone()
     return (r[0], r[1]) if r else None
+
+
+def created_app(c: sqlite3.Connection, record_id: str) -> str | None:
+    """First creation attribution, reconstructed from immutable ledger provenance.
+
+    Rotation retains the actor label. Later puts/tombstones cannot change it.
+    A verified user action retains the originating app in generated_by.
+    """
+    row = c.execute("SELECT actor,generated_by FROM event WHERE subject=? AND kind='record.put' ORDER BY seq LIMIT 1",
+                    (record_id,)).fetchone()
+    if not row:
+        return None
+    actor, generated = row
+    if actor.startswith("app:"):
+        return actor
+    if generated and generated.startswith("app:"):
+        parts = generated.split(":")
+        return ":".join(parts[:2])
+    return None
 
 
 def head(c: sqlite3.Connection) -> tuple[int, str]:

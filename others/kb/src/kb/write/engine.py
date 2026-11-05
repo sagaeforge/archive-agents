@@ -37,7 +37,7 @@ COLLECTOR_TIMEOUT_S = 60.0
 BIG_BODY_BYTES = 64 * 1024
 HELD_REASON = "offsite_path_missing"
 EVENT_KEYS = ("kind", "actor", "origin", "idem_key", "subject", "payload", "on_behalf_of", "generated_by", "v",
-              "event_id", "expected_version", "at", "noop_if_same", "editor_create", "editor_slug_missing")
+              "event_id", "expected_version", "at", "noop_if_same", "editor_create", "editor_slug_missing", "fpapi_tok_id")
 
 
 @dataclass
@@ -138,7 +138,16 @@ def _hold(evs: list[dict]) -> WriteResult:
     body = _queued(evs)
     name = hold_name(evs)
     try:
-        spool.put("fp-held", body, name)
+        from kb.write import fpquota
+        if fpquota.identity.get():
+            led = ledger.open_ledger()
+            try:
+                with fpquota.lock():
+                    fpquota.reserve(led, evs, body, name, "fp-held")
+            finally:
+                led.close()
+        else:
+            spool.put("fp-held", body, name)
     except spool.SpoolConflict:
         old = spool.dir_of("fp-held") / f"{name}.json"
         import json as _json
@@ -151,6 +160,7 @@ def _hold(evs: list[dict]) -> WriteResult:
     first = evs[0]
     primary = next((e for e in evs if e["kind"] in ledger.RECORD_KINDS), first)
     return WriteResult(id=first.get("subject") or first["payload"].get("id"), held=True, reason=HELD_REASON,
+                       write_ref=name if fpquota.identity.get() else None,
                        payload_sha=sha256_hex(canon_json(storage_payload(primary["payload"]))),
                        actor=primary["actor"], claimed_author=primary.get("on_behalf_of"),
                        generated_by=primary.get("generated_by"),
@@ -228,7 +238,7 @@ def _prefilter(led, chunk: list[dict]) -> tuple[list[dict], dict[int, dict]]:
     return keep, skipped
 
 
-def _write_chunk(led, chunk: list[dict], *, dry_run: bool = False) -> tuple[list[dict], bool, list[str], bool]:
+def _write_chunk(led, chunk: list[dict], *, dry_run: bool = False, stored: bool = False) -> tuple[list[dict], bool, list[str], bool]:
     keep, skipped = [], {}
     warns: list[str] = []
     held = False
@@ -237,10 +247,40 @@ def _write_chunk(led, chunk: list[dict], *, dry_run: bool = False) -> tuple[list
         nonlocal keep, skipped, held
         for ev in events:
             if _is_editor(ev):
+                if stored and ev.get("editor_create") and not prior_event(led, ev["idem_key"]):
+                    # Reloaded creates conflict identically regardless of visibility.
+                    if led.execute("SELECT 1 FROM record_head WHERE id=?", (ev["subject"],)).fetchone():
+                        from kb.write.fpquota import reject
+                        reject("create_conflict", 409)
                 from kb.write.record import editor_guard, editor_dangling
                 editor_guard(led, ev)
                 warns.extend(editor_dangling(led, ev))
         keep, skipped = _prefilter(led, events)
+        from kb.write import fpquota
+        if fpquota.identity.get() and not dry_run:
+            fresh = [e for e in keep if not prior_event(led, e["idem_key"])]
+            for ev in fresh:
+                if ev.get("generated_by", "").endswith((":auto", ":autosave")):
+                    previous = led.execute("SELECT at FROM event WHERE subject=? AND kind='record.put' ORDER BY seq DESC LIMIT 1",
+                                           (ev["subject"],)).fetchone()
+                    if previous and _ms() - previous[0] < 30_000:
+                        fpquota.reject("write_rate_limited", 429, max(1, (previous[0] + 30_000 - _ms() + 999) // 1000))
+            excluded = None
+            keys = {e["idem_key"] for e in events}
+            for path, value in fpquota.rows():
+                if keys == set(value["idem_keys"]) and value["tok_id"] == fpquota.identity.get()["tok_id"]:
+                    excluded = path.stem
+                    break
+            fpquota.receiving(led, fresh, exclude_ref=excluded)
+        if fpquota.identity.get():
+            from kb.write.record import _record_state
+            for ev in events:
+                if ev["kind"] != "record.put" or ev.get("editor_create") or prior_event(led, ev["idem_key"]):
+                    continue
+                _, _, previous = _record_state(led, ev["subject"])
+                rank = {"public": 0, "internal": 1, "private": 2, "secret": 3}
+                if rank[ev["payload"]["sensitivity"]] < rank[previous["sensitivity"]]:
+                    fpquota.reject("declassify_requires_review", 403)
         # 후속 이벤트가 같은 대상/키를 다시 쓰는 경우까지 전체 배치를 먼저 검사한다.
         # 해시는 메모리에서만 계산하며 이 단계에는 CAS/원장 행 쓰기가 없다.
         ledger.validate_batch(led, [{**ev, "payload": storage_payload(ev["payload"])} for ev in keep])
@@ -277,6 +317,17 @@ def commit(events, actor: str | None = None, *, timeout: float = GATE_TIMEOUT_S,
            stored: bool = False, _led=None, dry_run: bool = False) -> WriteResult:
     """이벤트를 원장에 쓴다. 입력 검증 실패는 WriteRejected, 멱등 충돌과 버전 불일치는 원장 예외 그대로다.
     stored=True는 스풀에서 꺼낸 이벤트다. 입력 검증은 건너뛰고 잠금 안 대상/판/CAS 검사는 반복한다."""
+    from kb.write import fpquota
+    info = fpquota.identity.get()
+    events = list(events)
+    identity_token = None
+    recovered_identity = False
+    if stored and not info and events and _is_editor(events[0]):
+        first = events[0]
+        info = {"scope": "editor", "tok_id": first.get("fpapi_tok_id", "legacy:" + first["actor"]), "label": first["actor"][4:]}
+        recovered_identity = True
+    if info:
+        events = [{**ev, "fpapi_tok_id": info["tok_id"]} if _is_editor(ev) else ev for ev in events]
     evs = prepare(events, actor)
     if not evs:
         raise WriteRejected("schema_invalid", "이벤트가 없다")
@@ -286,6 +337,8 @@ def commit(events, actor: str | None = None, *, timeout: float = GATE_TIMEOUT_S,
         policy.lint_events(evs)
     led = _led or ledger.open_ledger()
     try:
+        if recovered_identity:
+            identity_token = fpquota.identity.set(info)
         if not dry_run and not any(_is_editor(e) for e in evs) \
                 and any(e["origin"] == "first_party" for e in evs) and not fp_is_open(led):
             return _hold(evs)
@@ -293,6 +346,7 @@ def commit(events, actor: str | None = None, *, timeout: float = GATE_TIMEOUT_S,
         items: list[dict] = []
         warns: list[str] = []
         projected, spooled, reason = True, False, None
+        write_ref = None
         gate = Gate(gate_path())
         for ci, chunk in enumerate(chunks):
             if ci:
@@ -318,13 +372,21 @@ def commit(events, actor: str | None = None, *, timeout: float = GATE_TIMEOUT_S,
                 for e in rest:
                     e.pop("noop_if_same", None)
                 try:
-                    spool.put("in", _queued(rest), _spool_name(rest))
+                    if info:
+                        with fpquota.lock():
+                            write_ref = fpquota.reserve(led, rest, _queued(rest), _spool_name(rest), "in")
+                    else:
+                        spool.put("in", _queued(rest), _spool_name(rest))
                 except spool.SpoolConflict:  # 이름이 이벤트의 해시다. 같은 이벤트가 먼저 대기 중이고 그 순서를 지킨다
                     pass
                 spooled, projected, reason = True, False, "gate_timeout"
                 break
             try:
-                out, proj, w, held = _write_chunk(led, chunk, dry_run=dry_run)
+                if info:
+                    with fpquota.lock():
+                        out, proj, w, held = _write_chunk(led, chunk, dry_run=dry_run, stored=stored)
+                else:
+                    out, proj, w, held = _write_chunk(led, chunk, dry_run=dry_run, stored=stored)
                 if held:
                     return _hold(chunk)
             finally:
@@ -339,7 +401,11 @@ def commit(events, actor: str | None = None, *, timeout: float = GATE_TIMEOUT_S,
         ver = next((i["version"] for i in items if i.get("version") is not None), None)
         row = led.execute("SELECT payload_sha, actor, on_behalf_of, generated_by FROM event WHERE seq=?",
                           (items[-1]["seq"],)).fetchone() if items else None
+        if stored and info:
+            from kb.write.write_refs import mark_events
+            mark_events(evs, "committed")
         return WriteResult(id=first.get("subject") or first["payload"].get("id"), version=ver,
+                           write_ref=write_ref,
                            seq=items[-1]["seq"] if items else None,
                            replayed=bool(items) and all(i["replayed"] for i in items) and not spooled,
                            projected=projected, spooled=spooled, warnings=warns, reason=reason,
@@ -350,9 +416,19 @@ def commit(events, actor: str | None = None, *, timeout: float = GATE_TIMEOUT_S,
                            generated_by=row[3] if row else primary.get("generated_by"),
                            quarantined=bool((primary["payload"].get("props") or {}).get("quarantine")),
                            events=[{"seq": i["seq"], "version": i.get("version"), "replayed": i["replayed"]} for i in items])
+    except (WriteRejected, IdemConflict, VersionConflict) as exc:
+        if stored and info:
+            from kb.write.write_refs import mark_events
+            code = getattr(exc, "code", "idem_conflict" if isinstance(exc, IdemConflict) else "version_conflict")
+            if evs and evs[0].get("editor_create") and code in ("not_found", "version_conflict", "idem_conflict"):
+                code = "create_conflict"
+            mark_events(evs, "failed", code)
+        raise
     finally:
         if _led is None:
             led.close()
+        if identity_token is not None:
+            fpquota.identity.reset(identity_token)
 
 
 def project_pending(*, timeout: float = GATE_TIMEOUT_S, max_rounds: int = 50) -> dict:
