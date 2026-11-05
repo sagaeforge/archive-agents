@@ -4,15 +4,18 @@
   "x-kb-kind": "node",
   "x-kb-group": "user",
   "x-kb-overview": true,
-  "x-kb-version": 1,
+  "x-kb-version": 2,
   "type": "object",
   "properties": {
     "tags": {
       "type": "array",
+      "maxItems": 50,
       "items": {
         "type": "string"
       }
-    }
+    },
+    "pinned": {"type": "boolean"},
+    "title_locked": {"type": "boolean"}
   },
   "additionalProperties": true
 }

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Page",
+  "x-kb-kind": "node",
+  "x-kb-group": "user",
+  "x-kb-overview": true,
+  "x-kb-version": 1,
+  "type": "object",
+  "properties": {
+    "tags": {"type": "array", "maxItems": 50, "items": {"type": "string"}},
+    "order": {"type": "string"},
+    "icon": {"type": "string", "maxLength": 8},
+    "title_locked": {"type": "boolean"}
+  },
+  "additionalProperties": true
+}

@@ -20,7 +20,7 @@ def test_sync_registers_types_and_predicates_once(wk):
         assert rows[t]["x-kb-overview"] is False, t
     ov = sorted(k for k, v in rows.items() if v["x-kb-overview"])
     assert ov == sorted("Platform Product Feature Tool Model Org Concept Technique Policy Note Decision Artifact "
-                        "Learning Project Record Series".split())
+                        "Learning Project Record Series Page".split())
 
 
 def test_missing_overview_key_defaults_by_group():

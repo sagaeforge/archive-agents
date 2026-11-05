@@ -13,7 +13,8 @@
       "enum": [
         "done",
         "unanswerable",
-        "blocked_policy"
+        "blocked_policy",
+        "cancelled"
       ]
     },
     "note": {

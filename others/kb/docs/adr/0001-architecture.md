@@ -1511,7 +1511,7 @@ env -i HOME="$HOME" PATH="<node 절대경로>:/usr/bin:/bin" LANG=C.UTF-8 KB_JOB
 | 11 | **[결정됨: 허용. Codex `codex exec`도 같은 범위(ADR-0002)]** 실제 `claude -p`가 `~/.claude.json`, `~/.claude/`에 남기는 기록을 사고에서 뺄지. 도구의 기본 동작이고 비로그인 가짜 HOME에서도 재현된다 | 실제 호출 시험과 L2는 돌리지 않고 `done_pending_user`로 둔다 | WP-12, 16, 17, 19의 실제 호출 시험, WP-21의 L2와 에이전트 수집 |
 | 12 | **[기본값 확정: 1차 수집 뒤]** `eval/golden/` 표본을 사람이 언제 확인할지 | 평가기 시험만 통과 | 프롬프트 변경 게이트, WP-18의 골든 시험 |
 | 13 | **[기본값 확정: 불허]** `export/first_party` 자동 로컬 커밋 허용. 22장 규칙은 사용자 요청 때만이다 | 작업 트리까지만 쓴다. 앵커는 핑과 머신 밖 경로에 맡긴다 | 내보내기 이력, git의 앵커 |
-| 14 | **[기본값 확정: (c)]** `private` 읽기 경로. (a) 소켓에서 선택적 Bearer, (b) 소켓을 `owner`로 취급, (c) v1 뷰어는 `private`를 보지 않는다. 7.8대로 같은 UID 앞 필터는 보안 경계가 아니다. (b)는 `loupe serve`가 소켓을 무인증 4812로 다시 내므로 `private`가 샌다. (c)를 바꾸려면 먼저 sagae-tools에 알린다 | (c). `kb owner read`만. 결정 전까지 소켓은 `internal` 이하 | 뷰어의 `private` 노트 |
+| 14 | **[ADR-0005 3.6으로 대체, 사용자 결정 2026-11-04]** 기존 (c)의 뷰어 `private` 제외를 변경한다. 인증한 `editor`·`reviewer`는 HTTP·Unix 소켓의 허용된 편집기 읽기 경로에서 `private`를 읽는다. MCP·에이전트·다른 HTTP 범위·무토큰 소켓은 `internal` 이하이고, 잘못된 토큰은 401이다. 같은 UID 앞 필터는 보안 경계가 아니다. 7.9의 종전 읽기 경로 서술보다 이 결정과 ADR-0005가 우선한다 | 새 `Page`·`Note`·`TopicSpec`·`Review` 기본 `private`. `private` 외부 전송은 ADR-0005 5.10의 사전 WebAuthn 동의가 있는 publish만 예외다 | 뷰어의 `private` 노트; sagae-tools 연동 계약은 ADR-0005 |
 | 15 | **[기본값 확정: 안 1]** 구현 방식. 안 1은 커밋 없이 한 작업 트리, 안 2는 파동별 커밋 + `worktree.baseRef=head` + 전담 병합 에이전트 | 계획은 안 1로 쓰여 있다 | 없음. 안 2를 고르면 빌드 계획 구현 규칙과 2.1을 고친다 |
 
 ### 23.1 결정 1 경로표

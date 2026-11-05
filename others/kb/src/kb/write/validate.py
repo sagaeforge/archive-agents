@@ -5,6 +5,7 @@ import json
 from functools import lru_cache
 
 from kb.core import paths
+from kb.core.canon import CanonError, canon_json
 from kb.write.errors import WriteRejected
 
 
@@ -67,12 +68,45 @@ def validate_event(ev: dict) -> None:
 
 
 def validate_props(schema: dict, props: dict, type_name: str) -> None:
+    first_party = (type_name in {"Page", "Note", "TopicSpec", "Review"}
+                   and (schema or {}).get("x-kb-kind", "node") == "node")
+    if first_party:
+        if not isinstance(props, dict):
+            raise WriteRejected("schema_invalid", "props는 객체")
+        try:
+            size = len(canon_json(props))
+        except (CanonError, TypeError, ValueError, RecursionError):
+            raise WriteRejected("schema_invalid", "props JSON 자료형 위반") from None
+        if size > 16 * 1024:
+            raise WriteRejected("schema_invalid", "props 크기 제한 위반")
+        if type_name == "Review" and "source_url" in props:
+            _validate_review_url(props["source_url"])
     if not available() or not schema:
         return
     import jsonschema
     s = {k: v for k, v in schema.items() if not k.startswith("x-kb-")}
     s.pop("$schema", None)
-    errs = sorted(jsonschema.Draft202012Validator(s).iter_errors(props), key=lambda e: list(e.path))
+    checker = jsonschema.Draft202012Validator.FORMAT_CHECKER if first_party else None
+    errs = sorted(jsonschema.Draft202012Validator(s, format_checker=checker).iter_errors(props),
+        key=lambda e: list(e.path))
     if errs:
         e = errs[0]
         raise WriteRejected("schema_invalid", f"{type_name}.props/{'/'.join(_safe_path(e))}: {_why(e)}")
+
+
+def _validate_review_url(value) -> None:
+    """ADR-0005 6.5 공개 출처 후보. 기존 intake 정책을 쓰며 네트워크를 호출하지 않는다."""
+    from urllib.parse import urlsplit
+    from kb.intake.urls import skip_reason
+
+    valid = False
+    if isinstance(value, str) and not any(ch.isspace() or ord(ch) < 32 for ch in value):
+        try:
+            parts = urlsplit(value)
+            valid = (parts.scheme in {"http", "https"} and bool(parts.hostname)
+                     and (parts.port is None or 0 < parts.port <= 65535)
+                     and skip_reason(value) is None)
+        except ValueError:
+            pass
+    if not valid:
+        raise WriteRejected("schema_invalid", "Review 출처 URL 형식 위반")

@@ -192,17 +192,17 @@ kb topic pause|retire topic:youtube-shorts     # 수집기는 지우지 않는�
 - 다른 세션은 MCP `kb_request(topic, reason, url)`(`src/kb/serve/mcp.py:606`)에 `kind="topic"`을 더해 요청한다. 이 경로는 티켓만 열고 `Topic`을 만들지 않는다. 사용자 승인 뒤 `kb topic add --from-ticket <t-id>`가 만든다. `kb_request`는 호출마다 사용자 확인을 받는다(ADR-0001 15.4, `docs/adr/0001-architecture.md:1226-1232`).
 - 기존 `kb-first-collect`는 도메인별 시드 문자열을 인자로 받는다(`.claude/workflows/kb-first-collect.js:56,66`). 그 자리를 `Topic` 노드가 대신한다.
 
-**외부 작성자가 보낸 주제(예: sagae-tools 편집기).** 다른 세션이 전한 소유자 결정(검증 전, 2026-11-04 리드 경유)에 맞춘 입력 형태다. 편집기 자체는 설계하지 않는다.
+**외부 작성자가 보낸 주제(예: sagae-tools 편집기).** ADR-0005 3.6, 4.1–4.2, 5.7, 6.6의 사용자 결정(2026-11-04)에 맞춘 입력 형태다. 편집기 자체는 설계하지 않는다.
 
-- 형태: first_party `record` 하나다. `type: Topic`, `title`이 라벨, `body`가 범위 설명, `props`에 `aliases`, `domain`, `parent`, `exclude`, `collect_mode`, `promoted_from`이 들어간다. 묶음 머리의 `producer`는 `user:*`이어야 한다. 에이전트 묶음의 `record`는 `E_POLICY`로 거부된다(ADR-0001 7.8, 9.2, `docs/adr/0001-architecture.md:551-563`).
+- 형태: first_party `record`의 타입은 `TopicSpec`이고, 수집의 닻인 `Topic` 엔티티 `e:topic:<slug>`를 `DEFINES` 엣지로 정의한다. `title`은 라벨, `body`는 범위 설명이며 사실 주장으로 투영하지 않는다. `props`는 `slug`, `aliases`, `domain`, `parent`, `exclude`, `export_llm`, `export_query`만 받는다. 생략 slug는 새 spec ID로 ADR-0005 4.2의 결정적 해시를 계산하며 PUT 생략은 기존 slug 유지다. 엔진·수집 방식·예산은 편집기 입력이 아니다. 적재 묶음의 `producer`는 `user:*`이어야 하며 에이전트 묶음의 `record`는 `E_POLICY`로 거부된다(ADR-0001 7.8, 9.2).
 - 작성자: 서버가 전송 계층에서 정한다. MCP `kb_put`으로 오면 `agent:<세션>` + `on_behalf_of=user:sagae`이고, tower 뒤에서는 `agent:tower`다(ADR-0001 7.8). `kb_put`은 호출마다 사용자 확인을 받는다(ADR-0001 15.4). 그래서 확인을 거친 기록만 `Topic.status=active`가 된다. 확인 없이 들어온 에이전트 기록은 `proposed`로 두고 수집을 돌리지 않는다. 주제는 유료 수집을 여는 스위치이기 때문이다. [설정값]
-- 메모에서 승격: 메모는 first_party `Note`다. 승격하면 새 `Topic` 기록을 만들고 `Topic -LINKS_TO-> Note`(`props.role=promoted_from`) 엣지를 단다. 메모는 지우지 않는다(사용자 기록은 자동 삭제가 없다, ADR-0001 7.9).
-- 수집 방식 `props.collect_mode`:
+- 메모에서 승격: 메모는 first_party `Note`다. 새 `TopicSpec`에서 원본 메모로 `PROMOTED_FROM`을 연결하고 `DEFINES`로 `Topic` 엔티티를 정의한다. 메모는 지우지 않는다. 승격은 원본 민감도를 상속하며 생략으로 낮추지 않는다(ADR-0005 5.7).
+- KB 운영 설정의 수집 방식 `collect_mode`(편집기 `TopicSpec.props`에는 받지 않는다):
   - `kb`: 이 장의 생애 주기(T.2~T.9)가 돈다. 기존 경로로는 `kb_request(kind="topic")` 티켓이 같은 결과를 낸다.
   - `workspace`: 외부 연구 작업 공간(agent-run)이 조사한다. KB는 발견(T.2)과 등록(T.4)을 돌리지 않는다. 결과는 `kb-ingest/1` 묶음으로 돌아오고, 머리의 새 선택 필드 `topic`(`ticket`과 같은 방식, ADR-0001 9.1)이 있으면 수락된 주장과 엔티티마다 서버가 `IN_TOPIC` 엣지를 단다. 같은 인용 게이트를 지난다. 작업 공간이 찾은 출처 URL은 `source_candidate`로 들어와 T.3 평가를 받는다.
   - `both`: 둘 다. 비용 귀속(T.8)은 KB 쪽 호출만 센다.
 - first_party 게이트: 원장 `meta.fp_open`이 열려 있어야 쓰인다. 닫혀 있으면 `H_FP_CLOSED`로 보류된다(`src/kb/ingest/process.py:432-435`). 2026-11-04 원장 `meta`에 `fp_open`이 있다. [실측, `mode=ro`]
-- 민감도: 사용자 기록의 기본 민감도를 따르고, 주제 기록의 기본값은 `internal`이다 [설정값]. 쓰기 시 비밀 탐지를 지난다(ADR-0001 7.9). 범위 설명과 시드어를 외부 LLM 프롬프트(산문 발견, 관계 분류)에 싣기 전에 비밀 탐지와 내부 주소 제거를 다시 하고, `private`이나 `secret`이면 외부로 보내지 않는다(6.3). 비밀 값은 외부 KMS에 있고 KB는 그 값을 받지 않는다. 기록에 KMS 참조 문자열이 실려 와도 지식으로 투영하지 않는다.
+- 민감도: 새 `TopicSpec`은 기본 `private`이며 주제 엔티티·연구 티켓·실행 기록은 spec 민감도를 상속한다(ADR-0005 3.6, 6.1). `export_llm` 기본은 `false`이며 허가 없이 제목·별칭·제외 표현·slug를 외부 LLM이나 수집 프로필에 싣지 않는다. `export_query`는 public/internal에서 기본 `true`이고 private에서는 두 export 플래그 모두 생략 시 `false`, 명시한 `true`는 `schema_invalid`다. private spec은 외부 검색·외부 LLM을 호출하지 않는다. 쓰기 시 비밀 탐지를 지나고 외부 전송 허가가 있어도 비밀 탐지·내부 주소 제거를 적용한다. private 메모의 publish 예외는 ADR-0005 5.10의 전송 전 WebAuthn 동의에 묶인다. 비밀 값은 외부 KMS에 있고 KB는 그 값을 받지 않으며 KMS 참조 문자열을 지식으로 투영하지 않는다.
 
 ### T.2 주제의 출처 발견(결정적 우선)
 

@@ -1,12 +1,13 @@
 """타입과 술어 등록(schemas/types, schemas/predicates.yaml, schemas/predicates.d).
 
-- schemas/types/*.json: 노드 타입은 props의 JSON Schema(2020-12, additionalProperties true)이고 x-kb-* 키를 더한다.
+- schemas/types/*.json: 노드 타입은 props의 JSON Schema(2020-12)이고 x-kb-* 키를 더한다.
   x-kb-kind(node|edge), x-kb-group, x-kb-overview, x-kb-version. 엣지 타입 파일은 edge-<이름>.json이다.
 - x-kb-overview가 없으면 사용자 타입(group=user)과 provisional로 새로 등록된 사용자 타입은 true, 그 밖은 false로 본다.
 - sync_schema()가 schema.type_defined, schema.predicate_defined 이벤트를 쓴다. 내용이 같으면 쓰지 않는다.
 """
 from __future__ import annotations
 
+import copy
 import json
 import re
 import time
@@ -14,9 +15,41 @@ from pathlib import Path
 
 from kb.core import ledger, paths
 from kb.core.canon import canon_json, sha256_hex
+from kb.write.errors import WriteRejected
 
 TYPE_NAME_RE = re.compile(r"[A-Za-z][A-Za-z0-9_]{0,63}")
 SYNC_ACTOR = "system:schema-sync"
+FIRST_PARTY_TYPES = frozenset({"Page", "Note", "TopicSpec", "Review"})
+
+
+def normalize_first_party(rec: dict, rid: str, *, existing_props: dict | None = None) -> dict:
+    """ADR-0005 3.6/4.2 기본값. FW3는 ID 확정 뒤 호출하고 PUT에는 기존 props를 준다.
+
+    저장이나 충돌 판정은 하지 않으며 입력을 바꾸지 않는다.
+    """
+    from kb.write.validate import validate_props
+
+    if not isinstance(rec, dict) or not isinstance(rec.get("type"), str) or rec["type"] not in FIRST_PARTY_TYPES:
+        raise WriteRejected("schema_invalid", "정의된 first_party 타입이 필요하다")
+    out = copy.deepcopy(rec)
+    out.setdefault("sensitivity", "private")
+    if out["sensitivity"] not in ("public", "internal", "private"):
+        raise WriteRejected("schema_invalid", "민감도 형식 위반")
+    props = out.setdefault("props", {})
+    if not isinstance(props, dict):
+        raise WriteRejected("schema_invalid", "props는 객체")
+    if out["type"] == "TopicSpec":
+        if "slug" not in props:
+            props["slug"] = (existing_props or {}).get("slug")
+            if props["slug"] is None:
+                props["slug"] = "t-" + sha256_hex("kb-topic-slug-v1\0" + rid)[:16]
+        private = out["sensitivity"] == "private"
+        props.setdefault("export_llm", False)
+        props.setdefault("export_query", not private)
+        if private and (props["export_llm"] is not False or props["export_query"] is not False):
+            raise WriteRejected("schema_invalid", "private의 외부 전송은 허용하지 않는다")
+    validate_props(node_types()[out["type"]], props, out["type"])
+    return out
 
 
 def types_dir() -> Path:
