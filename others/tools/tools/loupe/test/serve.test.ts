@@ -2,15 +2,17 @@
 // Sockets go under LOUPE_SOCKET_DIR (default: a fresh directory in the OS temp dir). TCP uses 127.0.0.1:4832 and 4834.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createAdaptorServer } from '@hono/node-server';
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import http, { type Server } from 'node:http';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { zstdDecompressSync } from 'node:zlib';
 import { createKbMock } from '../dev/kb-mock/app.ts';
-import { createLoupeApp, unsafeSegment } from '../server/serve.ts';
-import { login, startIdp, writeAuthConfig, type Idp } from '../e2e/support/oidc.ts';
+import { createLoupeApp, KB_WRITE_ROUTES, unsafeSegment } from '../server/serve.ts';
+import { AUTH_ROUTES } from '../server/auth/index.ts';
+import { summarizeWrite } from '../server/status.ts';
+import { AUTH_HEADERS, CLIENT, login, startIdp, writeAuthConfig, type Idp } from '../e2e/support/oidc.ts';
 
 // Unix socket paths are limited to 107 bytes, so the names are short and sit directly in the socket directory.
 const sockDir = process.env.LOUPE_SOCKET_DIR ?? os.tmpdir();
@@ -273,5 +275,183 @@ describe('failure mapping (design 7.4)', () => {
     const t0 = Date.now();
     const r = await status({ kind: 'tcp', https: false, host: '127.0.0.1', port: 1 }, { connectMs: 300 });
     expect(r.status).toBeGreaterThanOrEqual(502); expect(Date.now() - t0).toBeLessThan(3000);
+  });
+});
+
+// Design v2 2.8 (M0e): the read-only status behind the avatar and the settings window.
+describe('status path (design v2 2.8)', () => {
+  const STATUS = '/auth/status/detail';
+  const KB_TOKEN = 'kbtok-7f3a9c1e5b2d4a60';
+  const apps: { port: number; close: () => void }[] = [];
+  const start = async (target: Parameters<typeof createLoupeApp>[0]['kb'], extra = {}) => {
+    let app: ReturnType<typeof createLoupeApp> | undefined;
+    const s = createAdaptorServer({ fetch: (r: Request) => app!.fetch(r) }) as Server;
+    const port = await new Promise<number>((resolve) => s.listen(0, '127.0.0.1', () => resolve((s.address() as net.AddressInfo).port)));
+    app = createLoupeApp({ kb: target, dist, port, auth: authCfg(), token: KB_TOKEN, ...extra });
+    const session = await login(`http://localhost:${port}`);
+    tokens.set(port, session);
+    const a = { port, session, origin: `http://localhost:${port}`, close: () => s.close() };
+    apps.push(a);
+    return a;
+  };
+  afterAll(() => { for (const a of apps) a.close(); });
+  const json = (r: { body: Buffer }) => JSON.parse(r.body.toString()) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+
+  it('is 401 without a session, with an expired one or a made-up one', async () => {
+    const a = await start({ kind: 'unix', path: mockSock });
+    const none = await raw(a.port, STATUS, {}, 'GET', false);
+    expect(none.status).toBe(401);
+    expect(json(none).code).toBe('session_required');
+    expect((await raw(a.port, STATUS, { authorization: `Bearer ${'A'.repeat(43)}` }, 'GET', false)).status).toBe(401);
+    expect((await raw(a.port, STATUS)).status).toBe(200);
+  });
+
+  it('carries no token value, file path, host name or e-mail, in any field, to a signed-in reader', async () => {
+    const a = await start({ kind: 'unix', path: mockSock });
+    const r = await raw(a.port, STATUS);
+    expect(r.status).toBe(200);
+    const text = r.body.toString();
+    const banned: [string, string | RegExp][] = [
+      ['loupe session', a.session], ['KB token', KB_TOKEN], ['client secret', CLIENT.client_secret], ['client id', CLIENT.client_id],
+      ['config dir', authDir], ['cache dir', dir], ['socket path', mockSock], ['os temp dir', os.tmpdir()], ['the user home', os.homedir()],
+      ['machine host name', os.hostname()], ['localhost', 'localhost'], ['loopback address', '127.0.0.1'], ['origin', a.origin],
+      ['mock RP origin', 'http://'], ['e-mail from the provider', 'owner@example.test'],
+      ['an e-mail shape', /[\w.+-]+@[\w-]+\.[\w.-]+/], ['an absolute path', /["'\s]\/(home|tmp|var|etc|usr|run|mnt)\//],
+      ['a token shape', /[A-Za-z0-9_-]{32,}/], ['a socket file', /\.sock/],
+    ];
+    for (const [what, b] of banned) expect(typeof b === 'string' ? text.includes(b) : b.test(text), `the status leaks ${what}`).toBe(false);
+    // The headers of the answer must not keep it around either.
+    expect(r.headers['cache-control']).toBe('no-store');
+  });
+
+  it('says what the settings cards show: account, session clocks, KB write state, break-glass, secret window', async () => {
+    const a = await start({ kind: 'unix', path: mockSock });
+    const b = json(await raw(a.port, STATUS));
+    expect(b.account).toEqual({ allowed: 1, via: 'google' });
+    expect(b.session.idle_ms).toBe(3_600_000);
+    expect(b.session.max_ms).toBe(43_200_000);
+    expect(b.session.idle_left_ms).toBeGreaterThan(3_500_000);
+    expect(b.session.max_left_ms).toBeGreaterThan(43_100_000);
+    expect(b.kb.connected).toBe(true);
+    expect(b.kb.data_as_of).toMatch(/^\d{4}-\d\d-\d\dT/);
+    expect(b.kb.write).toEqual({
+      fp_gate: true, editor_routes: 2, private_open: true,
+      hitl: { available: true, trust_store: 'ready', registered: false }, secret_rules: { version: 'fp-secret-rules-v1' },
+    });
+    expect(b.tokens).toEqual({ editor: { days_left: null }, reviewer: { days_left: null } });
+    expect(b.breakglass).toEqual({ open: false, last_opened: null, last_used: null });
+    expect(b.secret_window).toEqual({ socket_fd: false, port: 4814, lock_idle_ms: 180_000, clipboard_clear_ms: 20_000 });
+    expect(b.socket_activated).toBe(false);
+  });
+
+  it('counts a device as registered only for the RP entry of this origin, and passes no origin or key on', () => {
+    const w = { fp_gate: true, editor_routes: ['a'], private_open: false, hitl: { available: true, trust_store: 'ready', rp_ids: [{ rp_id: 'localhost', allowed_origins: ['http://localhost:4812'], registered: true }, { rp_id: 'x', allowed_origins: ['http://localhost:9'], registered: false }] }, secret_rules: { version: 'v1', sha: 'a'.repeat(64) } };
+    expect(summarizeWrite(w, 'http://localhost:4812')?.hitl.registered).toBe(true);
+    expect(summarizeWrite(w, 'http://localhost:9')?.hitl.registered).toBe(false);
+    expect(summarizeWrite(w, 'http://localhost:4830')?.hitl.registered).toBe(false);
+    expect(JSON.stringify(summarizeWrite(w, 'http://localhost:4812'))).not.toMatch(/localhost|sha|aaaa/);
+    expect(summarizeWrite({ hitl: { trust_store: 'C:/secret/store' } }, 'o')?.hitl.trust_store).toBe('unknown');
+    expect(summarizeWrite(undefined, 'o')).toBeNull();
+  });
+
+  it('answers while the KB is out of reach and says so', async () => {
+    const a = await start({ kind: 'unix', path: sockPath('gone.sock') }, { connectMs: 200, firstByteMs: 300 });
+    const r = await raw(a.port, STATUS);
+    expect(r.status).toBe(200);
+    const b = json(r);
+    expect(b.kb).toEqual({ connected: false, data_as_of: null, write: null });
+    expect(r.body.toString()).not.toContain('gone.sock');
+    expect(r.body.toString()).not.toMatch(/ENOENT|ECONN/);
+  });
+
+  it('a poll does not restart the idle clock, a request marked as input does', async () => {
+    const a = await start({ kind: 'unix', path: mockSock }, { auth: { ...authCfg(), idleMs: 4000 } });
+    await new Promise((r) => setTimeout(r, 1500));
+    const poll = json(await raw(a.port, STATUS));
+    expect(poll.session.idle_left_ms, 'a poll leaves the clock running').toBeLessThanOrEqual(2600);
+    const input = json(await raw(a.port, STATUS, { 'x-loupe-activity': '1' }));
+    expect(input.session.idle_left_ms, 'a request after input restarts it').toBeGreaterThan(3800);
+  });
+
+  it('lock clears the session: the status, the data path and the session check all turn 401', async () => {
+    const a = await start({ kind: 'unix', path: mockSock });
+    expect((await raw(a.port, STATUS)).status).toBe(200);
+    const lock = await raw(a.port, '/auth/lock', AUTH_HEADERS(a.origin), 'POST');
+    expect(lock.status).toBe(204);
+    expect((await raw(a.port, STATUS)).status).toBe(401);
+    expect((await raw(a.port, '/auth/session')).status).toBe(401);
+    expect((await raw(a.port, '/kb/v1/meta')).status).toBe(401);
+  });
+
+  it('shows when the break-glass path is open, when it was opened and when it was last used, without the hash', async () => {
+    const bgDir = path.join(dir, 'auth-bg');
+    writeAuthConfig(bgDir, { breakglass: '$argon2id$v=19$m=65536,t=3,p=4$c2FsdA$aGFzaA' });
+    const a = await start({ kind: 'unix', path: mockSock }, { auth: { ...authCfg(), dir: bgDir, verify: async () => true } });
+    expect(json(await raw(a.port, STATUS)).breakglass).toEqual({ open: false, last_opened: null, last_used: null });
+    const until = Date.now() + 30 * 60_000;
+    const f = path.join(bgDir, 'breakglass-open.json');
+    writeFileSync(f, JSON.stringify({ until })); chmodSync(f, 0o600);
+    const open = json(await raw(a.port, STATUS));
+    expect(open.breakglass.open).toBe(true);
+    expect(Date.parse(open.breakglass.last_opened)).toBe(until - 3_600_000);
+    expect(open.breakglass.last_used).toBeNull();
+    // A password login on the open path is the "last used"; the new session is a break-glass one.
+    const bg = await fetch(`${a.origin}/auth/breakglass`, { method: 'POST', headers: AUTH_HEADERS(a.origin), body: JSON.stringify({ password: 'correct horse battery' }) });
+    expect(bg.status).toBe(200);
+    const session = ((await bg.json()) as { session: string }).session;
+    const r = await raw(a.port, STATUS, { authorization: `Bearer ${session}` }, 'GET', false);
+    const b = json(r);
+    expect(b.account.via).toBe('breakglass');
+    expect(Date.parse(b.breakglass.last_used)).toBeGreaterThan(Date.now() - 5000);
+    expect(r.body.toString()).not.toMatch(/argon|c2FsdA|aGFzaA/);
+  });
+});
+
+// Done when 2: nothing on the web changes the allowed account, the break-glass path, a token or the lock time.
+describe('what the web can change (design v2 2.8: security settings are terminal-only)', () => {
+  // The only state a web request may change is a session: make one (a login) or end one (lock). Nothing else is listed.
+  const SESSION_ONLY = new Set(['POST /auth/google/start', 'POST /auth/google/finish', 'POST /auth/breakglass', 'POST /auth/lock']);
+  const route = (r: { method: string; path: string }) => `${r.method} ${r.path}`;
+
+  it('every state-changing entry of /auth/* and /kb-write/* is a session-only entry', () => {
+    expect(Array.isArray(AUTH_ROUTES)).toBe(true);
+    expect(Array.isArray(KB_WRITE_ROUTES)).toBe(true);
+    for (const r of [...AUTH_ROUTES, ...KB_WRITE_ROUTES]) {
+      if (r.method === 'GET' || r.method === 'HEAD') continue;
+      expect(SESSION_ONLY.has(route(r)), `${route(r)} changes state and is not session-only`).toBe(true);
+    }
+    // The table is complete: the session-only POSTs are all there, and the status is a read.
+    expect(AUTH_ROUTES.map(route)).toEqual(expect.arrayContaining([...SESSION_ONLY, 'GET /auth/status', 'GET /auth/status/detail', 'GET /auth/session']));
+    expect(KB_WRITE_ROUTES, 'no write route exists before M1').toEqual([]);
+  });
+
+  it('no method on any other /auth/* or /kb-write/* path does anything, and the config files stay byte for byte', async () => {
+    const mock = await unixMock('sw.sock');
+    let app: ReturnType<typeof createLoupeApp> | undefined;
+    const s = createAdaptorServer({ fetch: (r: Request) => app!.fetch(r) }) as Server;
+    const port = await new Promise<number>((resolve) => s.listen(0, '127.0.0.1', () => resolve((s.address() as net.AddressInfo).port)));
+    app = createLoupeApp({ kb: { kind: 'unix', path: mock }, dist, port, auth: authCfg() });
+    const origin = `http://localhost:${port}`;
+    tokens.set(port, await login(origin));
+    const snapshot = () => Object.fromEntries(readdirSync(authDir).sort().map((n) => [n, readFileSync(path.join(authDir, n), 'utf8')]));
+    const before = snapshot();
+    const paths = [
+      '/auth', '/auth/', '/auth/account', '/auth/allowed-account', '/auth/sub', '/auth/enroll', '/auth/google/enroll', '/auth/google/setup',
+      '/auth/breakglass/open', '/auth/breakglass/set', '/auth/breakglass/close', '/auth/token', '/auth/tokens', '/auth/kb-token', '/auth/lock-time', '/auth/idle',
+      '/auth/settings', '/auth/status/detail', '/auth/status', '/auth/session',
+      '/kb-write', '/kb-write/', '/kb-write/auth', '/kb-write/token', '/kb-write/v1/reviewer/enroll', '/kb-write/v1/records', '/kb-write/settings',
+    ];
+    const results: string[] = [];
+    try {
+      for (const p of paths) for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) {
+        if (SESSION_ONLY.has(`${method} ${p}`)) continue;
+        const marker: Record<string, string> = p.startsWith('/kb-write') ? { 'x-loupe-write': '1' } : { 'x-loupe-auth': '1' };
+        const r = await raw(port, p, { origin, 'content-type': 'application/json', 'sec-fetch-site': 'same-origin', ...marker }, method);
+        results.push(`${method} ${p} ${r.status}`);
+        expect([404, 405], `${method} ${p} answered ${r.status}`).toContain(r.status);
+      }
+    } finally { s.close(); }
+    expect(snapshot()).toEqual(before);
+    expect(results.length).toBeGreaterThan(80);
   });
 });

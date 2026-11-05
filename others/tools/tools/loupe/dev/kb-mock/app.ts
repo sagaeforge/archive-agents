@@ -37,6 +37,15 @@ const cp = (s: string) => [...s];
 const byIdAsc = (a: Row, b: Row) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 const sha1 = (s: string, n = 12) => createHash('sha1').update(s).digest('hex').slice(0, n);
 
+/** `/v1/meta` `data.write` in the single shape of ADR-0005 8.1 (design v2 2.8). A summary the settings window reads; this mock writes nothing. */
+const MOCK_WRITE_STATE = {
+  fp_gate: true,
+  editor_routes: ['POST /v1/records', 'PUT /v1/records/{id}'],
+  private_open: true,
+  hitl: { available: true, trust_store: 'ready', rp_ids: [{ rp_id: 'localhost', allowed_origins: ['http://localhost:4812', 'http://localhost:4830'], registered: true }] },
+  secret_rules: { version: 'fp-secret-rules-v1', sha: '0'.repeat(64) },
+};
+
 export function createKbMock(opts: MockOptions = {}): Hono {
   const fx: any = JSON.parse(readFileSync(opts.fixturePath ?? defaultFixture, 'utf8'));
   const bug = opts.bug;
@@ -250,7 +259,7 @@ export function createKbMock(opts: MockOptions = {}): Hono {
       const degraded: string[] = [];
       return envelope(op, c, ctx, {
         etag: `"${epoch}-${fx.meta.applied_seq}-${fx.meta.build_id}-${sha1(JSON.stringify(degraded), 8)}"`,
-        data: { ...fx.meta.data, changes_cursor: changesCursor(fx.meta.applied_seq), counts: { nodes: hs.filter((r) => !NON_WORLD.has(r.type)).length, edges: edgeHeads(NOW, 'all').length, claims: hs.filter((r) => r.type === 'Claim').length } },
+        data: { ...fx.meta.data, ...(fx.meta.data.first_party_open ? { write: MOCK_WRITE_STATE } : {}), changes_cursor: changesCursor(fx.meta.applied_seq), counts: { nodes: hs.filter((r) => !NON_WORLD.has(r.type)).length, edges: edgeHeads(NOW, 'all').length, claims: hs.filter((r) => r.type === 'Claim').length } },
       });
     },
     getSchema: (c, _q, ctx, op) => envelope(op, c, ctx, { data: fx.schema }),

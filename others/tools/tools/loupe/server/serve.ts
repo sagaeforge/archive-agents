@@ -10,6 +10,7 @@ import type { Server } from 'node:http';
 import { APP_CSP_HEADER, KB_CSP_HEADER } from './csp.ts';
 import { DEFAULT_KB_URL, kbRequest, mapFailure, parseKbUrl, readTokenFile, type Target } from './upstream.ts';
 import { createAuth, problem, type AuthOptions } from './auth/index.ts';
+import { kbStatus } from './status.ts';
 import { configDir } from './auth/files.ts';
 import { check, kindOf, loopbackAlias, originForHost } from './auth/guard.ts';
 
@@ -40,6 +41,12 @@ export const unsafeSegment = (pathname: string) => pathname.split('/').some((s) 
   try { const d = decodeURIComponent(s); return d === '.' || d === '..' || /[/\\\u0000-\u001f\u007f]/.test(d); } catch { return true; }
 });
 
+/**
+ * The /kb-write/* routes loupe serve answers. There are none until M1 (design v2 5.1); when they come they carry record writes
+ * only: like /auth/*, no entry may change the allowed account, the break-glass path, a token or the idle limit.
+ */
+export const KB_WRITE_ROUTES: readonly { readonly method: string; readonly path: string }[] = [];
+
 const PASS_RESPONSE = ['etag', 'retry-after', 'cache-control', 'content-type', 'content-encoding', 'content-length'];
 const PASS_REQUEST = ['accept', 'accept-encoding', 'if-none-match'];
 
@@ -50,8 +57,8 @@ const MIME: Record<string, string> = {
 
 export function createLoupeApp(cfg: ServeConfig): Hono {
   const app = new Hono();
-  const auth = createAuth({ ...cfg.auth, port: cfg.port });
   const firstByteMs = cfg.firstByteMs ?? 7_000, connectMs = cfg.connectMs ?? 1_000;
+  const auth = createAuth({ ...cfg.auth, port: cfg.port, kb: (origin) => kbStatus({ kb: cfg.kb, token: cfg.token, firstByteMs, connectMs }, origin) });
 
   // 1. The checks of design v2 6.3, the session and the security headers wrap the whole app (below), so they also cover a path the
   //    router matches to nothing.
@@ -189,6 +196,7 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env): ServeConfig
       issuer: env.LOUPE_OIDC_ISSUER || undefined,
       idleMs: env.LOUPE_SESSION_IDLE_MS ? Number(env.LOUPE_SESSION_IDLE_MS) : undefined,
       socketActivated: env.LISTEN_PID === String(process.pid) && Number(env.LISTEN_FDS) >= 1,
+      secretFd: env.LISTEN_PID === String(process.pid) && (env.LISTEN_FDNAMES ?? '').split(':').includes('secret'),
     },
   };
 }

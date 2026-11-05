@@ -1,10 +1,12 @@
 import { useRef, useState, type PointerEvent, type ReactNode } from 'react';
 import { useNodeBrief } from '../data/hooks.ts';
+import { SETTINGS_ID } from '../settings/id.ts';
 import type { Action, Rect, WindowState } from './model.ts';
 export const recordKind=(type:string|undefined)=>({Page:'문서',Note:'메모',TopicSpec:'주제',Topic:'주제'}[type??'']??'엔티티');
 type Props={window:WindowState;front:boolean;z:number;dispatch:(a:Action)=>void;onMove:()=>void;children:ReactNode;dirty?:boolean;onClose:()=>void};
 export function WindowFrame({window:w,front,z,dispatch,onMove,children,dirty=false,onClose}:Props){
-  const n=useNodeBrief(w.id).data;
+  const settings=w.id===SETTINGS_ID;
+  const n=useNodeBrief(settings?undefined:w.id).data;
   const [menu,setMenu]=useState(false);
   const gesture=useRef<{x:number;y:number;rect:Rect;edge:string;ready:number}|null>(null);
   const begin=(e:PointerEvent<HTMLElement>,edge:string)=>{
@@ -32,12 +34,12 @@ export function WindowFrame({window:w,front,z,dispatch,onMove,children,dirty=fal
     else if(e.clientX>=innerWidth-12)dispatch({type:'snap',id:w.id,side:'right'});
   };
   const pointer={onPointerMove:move,onPointerUp:end,onPointerCancel:()=>{const g=gesture.current;gesture.current=null;if(g)dispatch({type:'rect',id:w.id,rect:g.rect});}};
-  return <section role="region" aria-label={`${recordKind(n?.type)} 창`} tabIndex={-1} className="wm-window" data-testid="wm-window" data-id={w.id} data-front={front}
+  return <section role="region" aria-label={`${settings?'설정':recordKind(n?.type)} 창`} tabIndex={-1} className="wm-window" data-testid="wm-window" data-id={w.id} data-front={front}
     style={{left:w.x,top:w.y,width:w.width,height:w.height,zIndex:z}}
     onPointerDownCapture={()=>{if(!front)dispatch({type:'front',id:w.id});}}
     onFocusCapture={()=>{if(!front)dispatch({type:'front',id:w.id});}}>
     <div className="wm-titlebar" data-testid="wm-titlebar" onPointerDown={e=>begin(e,'')} {...pointer} onDoubleClick={e=>{if(!(e.target as HTMLElement).closest('button'))dispatch({type:'maximize',id:w.id});}}>
-      <span dir="auto">{n?.label??recordKind(n?.type)}{dirty?' · 저장 안 됨':''}</span>
+      <span dir="auto">{settings?'설정':n?.label??recordKind(n?.type)}{dirty?' · 저장 안 됨':''}</span>
       <button type="button" aria-label="창 메뉴" onClick={()=>setMenu(!menu)}>⋯</button>
       <button type="button" aria-label="내리기" onClick={()=>dispatch({type:'minimize',id:w.id})}>−</button>
       <button type="button" aria-label={w.restore?'복원':'최대화'} onClick={()=>dispatch({type:'maximize',id:w.id})}>□</button>

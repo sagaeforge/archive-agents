@@ -673,7 +673,7 @@ test.describe('break-glass and the terminal commands', () => {
     // From the browser: the right password signs in.
     await page.getByTestId('breakglass-input').fill(PASSWORD);
     await page.getByTestId('breakglass-submit').click();
-    await expect(page.getByTestId('lock-button')).toBeVisible();
+    await expect(page.getByTestId('avatar')).toBeVisible();
     keep(await page.evaluate(() => sessionStorage.getItem('loupe.session')));
     expect(serve!.log()).toMatch(/break-glass login$/m);
     // Four misses are free; the fifth sets 30 s; within it even the right password waits.
@@ -815,7 +815,7 @@ test.describe('origin allowlist', () => {
       expect(b.height, `${id} tall enough to tap`).toBeGreaterThanOrEqual(28);
     }
     await page.getByTestId('google-login').click();
-    await expect(page.getByTestId('lock-button')).toBeVisible();
+    await expect(page.getByTestId('avatar')).toBeVisible();
     keep(await page.evaluate(() => sessionStorage.getItem('loupe.session')));
   });
 });

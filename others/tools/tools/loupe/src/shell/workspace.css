@@ -4,7 +4,6 @@
 .workspace-tools .palette-trigger { width:230px; border-radius:24px; }
 .workspace-tools button { background:var(--color-paper,#fff); }
 .workspace-find { position:absolute; left:80px; top:44px; width:min(560px,calc(100vw - 100px)); z-index:2147483601; border:1px solid #c4c8cb; border-radius:16px; background:var(--color-paper,#fff); box-shadow:0 8px 32px #0002; }
-.workspace-lock { position:fixed; top:12px; right:16px; z-index:2147483600; }
 .workspace-status { position:absolute; top:2px; left:45%; z-index:2147483600; max-width:50%; }
 .node-preview { position:absolute; top:96px; right:24px; width:min(320px,40vw); padding:16px; z-index:2147483599; pointer-events:none; background:var(--color-paper,#fff); border:1px solid #aab1ba; border-radius:12px; box-shadow:0 4px 18px #0001; font-size:13px; }
 .node-preview strong,.node-preview small { display:block; }

@@ -1,0 +1,52 @@
+/* Dark theme: only the tokens change (design v2 appendix C). Light stays the default in index.css. */
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: oklch(0.2 0.006 85);
+  --surface: oklch(0.24 0.006 85);
+  --wash: oklch(0.29 0.006 85);
+  --ink: oklch(0.93 0.004 90);
+  --ink-soft: oklch(0.82 0.005 90);
+  --ink-faint: oklch(0.72 0.006 90);
+  --line: oklch(0.34 0.006 85);
+  --line-strong: oklch(0.44 0.006 85);
+  --accent: oklch(0.76 0.1 245);
+  --accent-wash: oklch(0.3 0.04 245);
+  --time-ink: oklch(0.85 0.1 80);
+  --time-wash: oklch(0.32 0.05 80);
+  --time-line: oklch(0.7 0.14 72);
+  --quote: oklch(0.45 0.08 100);
+  --danger: oklch(0.74 0.15 27);
+  --danger-wash: oklch(0.3 0.05 27);
+  --warn-ink: oklch(0.82 0.09 70);
+  --warn-wash: oklch(0.3 0.04 60);
+  --ok: oklch(0.76 0.13 155);
+  --primary: oklch(0.9 0.01 85);
+  --primary-foreground: oklch(0.2 0 0);
+}
+html[data-theme="light"] { color-scheme: light; }
+/* The window manager's fixed greys (workspace.css) in the dark theme. */
+html[data-theme="dark"] .wm-window,
+html[data-theme="dark"] .wm-menu,
+html[data-theme="dark"] .window-dock button,
+html[data-theme="dark"] .move-hint,
+html[data-theme="dark"] .window-mode button { border-color: var(--line-strong); }
+html[data-theme="dark"] .wm-window[data-front="true"] { border-color: var(--accent); }
+html[data-theme="dark"] .wm-window[data-front="false"] .wm-titlebar { background: var(--wash); color: var(--ink-faint); }
+html[data-theme="dark"] .wm-titlebar { border-bottom-color: var(--line); }
+html[data-theme="dark"] .wm-titlebar button:hover { background: var(--wash); }
+html[data-theme="dark"] .window-relations { border-top-color: var(--line); }
+html[data-theme="dark"] .node-preview,
+html[data-theme="dark"] .workspace-find,
+html[data-theme="dark"] .graph-accessibility:focus-within { border-color: var(--line-strong); }
+
+html[data-text-size="small"] { font-size: 14px; }
+html[data-text-size="large"] { font-size: 18px; }
+
+html[data-motion="reduce"] *, html[data-motion="reduce"] *::before, html[data-motion="reduce"] *::after {
+  animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-motion="system"] *, html[data-motion="system"] *::before, html[data-motion="system"] *::after {
+    animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important;
+  }
+}

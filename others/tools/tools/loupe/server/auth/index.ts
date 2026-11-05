@@ -23,8 +23,32 @@ export type AuthOptions = {
   /** May only shorten the 1 h idle limit (tests). */
   idleMs?: number | undefined;
   socketActivated?: boolean | undefined;
+  /** True when systemd passed the `secret` socket (design v2 8.1). */
+  secretFd?: boolean | undefined;
+  /** The KB part of the status (design v2 2.8). Given by serve.ts, which owns the KB connection. */
+  kb?: ((origin: string) => Promise<Record<string, unknown>>) | undefined;
   log?: ((line: string) => void) | undefined;
 };
+
+/**
+ * Every route /auth/* answers, and the only list it dispatches from. `effect` names what a request may change in loupe serve:
+ * nothing (`read`), or only a session or a login in flight (`session`). The allowed account, the break-glass hash and its opening,
+ * the KB tokens and the idle limit are files and flags a terminal owns (design v2 2.8, 6.2, 6.5): no entry here writes them.
+ */
+export type RouteEntry = { readonly method: 'GET' | 'POST'; readonly path: string; readonly effect: 'read' | 'session' };
+export const AUTH_ROUTES: readonly RouteEntry[] = [
+  { method: 'GET', path: '/auth/status', effect: 'read' },
+  { method: 'GET', path: '/auth/status/detail', effect: 'read' },
+  { method: 'GET', path: '/auth/session', effect: 'read' },
+  { method: 'GET', path: '/auth/google/callback', effect: 'session' },
+  { method: 'POST', path: '/auth/google/start', effect: 'session' },
+  { method: 'POST', path: '/auth/google/finish', effect: 'session' },
+  { method: 'POST', path: '/auth/breakglass', effect: 'session' },
+  { method: 'POST', path: '/auth/lock', effect: 'session' },
+];
+
+/** The secret window's fixed numbers (design v2 8.1, 8.2). The settings window shows them; nothing on the web sets them. */
+const SECRET_WINDOW = { port: 4814, lock_idle_ms: 180_000, clipboard_clear_ms: 20_000 } as const;
 
 export const LOGIN_TTL_MS = 5 * 60_000;
 export const STARTS_PER_MINUTE = 10;
@@ -144,10 +168,13 @@ export function createAuth(o: AuthOptions) {
   };
   const ready = (s: ReturnType<typeof setup>) => !!s.client && !!s.sub;
   let seenOpen = 0;
+  // Remembered while the server runs, for the settings card; a restart forgets them.
+  let lastOpened: number | null = null, lastUsed: number | null = null;
   const breakglassOpen = () => {
     const v = readOpen().value;
     const t = now();
     const open = !!v && typeof v.until === 'number' && v.until > t && v.until - t <= OPEN_MS;
+    if (open) lastOpened = v.until - OPEN_MS;
     // Opening is logged (time only) the first time the server sees it (6.5).
     if (open && v.until !== seenOpen) { seenOpen = v.until; log(`auth ${new Date(t).toISOString()}: break-glass path open until ${new Date(v.until).toISOString()}`); }
     return open;
@@ -191,7 +218,7 @@ export function createAuth(o: AuthOptions) {
     const plain = new Response(null, { status: 303, headers: { location: `${origin}/#/auth/finish`, ...NO_STORE } });
     let done = plain;
     prune();
-    // Only `state`, `code` and an error flag are read; everything else is ignored (6.3).
+    // Only `state`, `code`, `iss` and an error flag are read; everything else is ignored (6.3).
     const q = new URL(req.url).searchParams;
     const state = q.get('state'), code = q.get('code');
     const id = state ? byState.get(state) : undefined;
@@ -210,7 +237,7 @@ export function createAuth(o: AuthOptions) {
     // The redirect_uri of a login started on origin A is A's callback; arriving on B means something rerouted it.
     if (origin !== login.origin) return fail('origin_mismatch');
     let claims;
-    try { claims = await oidc.finish({ code, state }, login); } catch (e) {
+    try { claims = await oidc.finish({ code, state, iss: q.get('iss') ?? undefined }, login); } catch (e) {
       return fail(e instanceof LoginFailure ? e.code : 'exchange_failed');
     }
     // The nonce was compared with this login's own by oauth4webapi; a login is used once, so an old nonce cannot match.
@@ -296,29 +323,65 @@ export function createAuth(o: AuthOptions) {
       return problem(401, 'password_wrong', 'Wrong password', w ? { retry_after: w } : {}, w ? { 'retry-after': String(w) } : {});
     }
     delay.succeed();
+    lastUsed = now();
     log(`auth ${stamp()}: break-glass login`);
     return json(200, { session: sessions.issue('breakglass'), idle_ms: sessions.idleMs, max_ms: sessions.maxMs });
   }
 
-  /** Every /auth/* request, after check(). */
-  async function handle(req: Request, pathname: string, origin: string): Promise<Response> {
-    const m = req.method;
-    if (pathname === '/auth/status' && (m === 'GET' || m === 'HEAD')) {
+  /** The settings window's read-only status (design v2 2.8): fixed words and numbers, never a token, path, host name or address. */
+  async function detail(req: Request, origin: string): Promise<Response> {
+    const s = setup();
+    // sessionOf restarts the idle clock only for a request marked as following input; the settings window's poll is not one.
+    const live = sessionOf(req) ? sessions.info(bearer(req.headers.get('authorization'))) : null;
+    if (!live) return problem(401, 'session_required', 'Sign in first');
+    const t = now();
+    const iso = (ms: number | null) => (ms === null ? null : new Date(ms).toISOString());
+    const open = ready(s) && !!s.breakglass && breakglassOpen();
+    return json(200, {
+      account: { allowed: s.sub ? 1 : 0, via: live.via },
+      session: { idle_ms: sessions.idleMs, max_ms: sessions.maxMs, idle_left_ms: live.idleLeftMs, max_left_ms: live.maxLeftMs },
+      kb: o.kb ? await o.kb(origin) : { connected: false, data_as_of: null, write: null },
+      // Days left of the editor and reviewer tokens come with their token files (M1); until then there is nothing to count.
+      tokens: { editor: { days_left: null }, reviewer: { days_left: null } },
+      breakglass: { open, last_opened: iso(lastOpened), last_used: iso(lastUsed) },
+      secret_window: { socket_fd: !!o.secretFd, ...SECRET_WINDOW },
+      socket_activated: !!o.socketActivated,
+      at: new Date(t).toISOString(),
+    });
+  }
+
+  const refused = (e: unknown) => {
+    if (e instanceof BodyRefused) return problem(e.status, e.status === 408 ? 'body_timeout' : 'body_too_large', 'Request body refused');
+    throw e;
+  };
+  /** Every other POST reads its body too, under the same 4 KiB / 5 s limits, though it has no use for it. */
+  const afterBody = (run: (req: Request, origin: string) => Response | Promise<Response>) => async (req: Request, origin: string) => {
+    try { await body(req); } catch (e) { return refused(e); }
+    return run(req, origin);
+  };
+  const runners: Record<string, (req: Request, origin: string) => Response | Promise<Response>> = {
+    'GET /auth/status': () => {
       const s = setup();
       return json(200, { ready: ready(s), setup: { client: !!s.client, account: !!s.sub, problems: s.problems }, breakglass_open: ready(s) && !!s.breakglass && breakglassOpen(), socket_activated: !!o.socketActivated });
-    }
-    if (pathname === '/auth/session' && (m === 'GET' || m === 'HEAD')) return sessionOf(req) ? json(200, { ok: true }) : problem(401, 'session_required', 'Sign in first');
-    if (pathname === '/auth/google/callback' && m === 'GET') return callback(req, origin);
-    if (m === 'POST') {
-      if (pathname === '/auth/google/finish') return finish(req, origin);
-      // breakglass takes its guard first and then reads the body under the same limits.
-      if (pathname === '/auth/breakglass') return breakglass(req);
-      // Every other POST reads its body too, under the same 4 KiB / 5 s limits, though it has no use for it.
-      try { await body(req); } catch (e) { if (e instanceof BodyRefused) return problem(e.status, e.status === 408 ? 'body_timeout' : 'body_too_large', 'Request body refused'); throw e; }
-      if (pathname === '/auth/google/start') return start(origin);
-      if (pathname === '/auth/lock') { sessions.revoke(bearer(req.headers.get('authorization'))); log(`auth ${stamp()}: locked`); return new Response(null, { status: 204, headers: NO_STORE }); }
-    }
-    return problem(404, 'not_found', 'Not found');
+    },
+    'GET /auth/status/detail': detail,
+    'GET /auth/session': (req) => (sessionOf(req) ? json(200, { ok: true }) : problem(401, 'session_required', 'Sign in first')),
+    'GET /auth/google/callback': callback,
+    'POST /auth/google/start': afterBody((_req, origin) => start(origin)),
+    'POST /auth/google/finish': finish,
+    // breakglass takes its guard first and then reads the body under the same limits.
+    'POST /auth/breakglass': breakglass,
+    'POST /auth/lock': afterBody((req) => { sessions.revoke(bearer(req.headers.get('authorization'))); log(`auth ${stamp()}: locked`); return new Response(null, { status: 204, headers: NO_STORE }); }),
+  };
+  for (const r of AUTH_ROUTES) if (!runners[`${r.method} ${r.path}`]) throw new Error(`no handler for ${r.method} ${r.path}`);
+
+  /** Every /auth/* request, after check(). Dispatches from AUTH_ROUTES and nothing else. */
+  async function handle(req: Request, pathname: string, origin: string): Promise<Response> {
+    const m = req.method;
+    const route = AUTH_ROUTES.find((r) => r.path === pathname && (r.method === m || (m === 'HEAD' && r.method === 'GET' && pathname !== '/auth/google/callback')));
+    if (route) return runners[`${route.method} ${route.path}`]!(req, origin);
+    // An unknown POST is refused after its body was read under the same limits, as every POST is.
+    return m === 'POST' ? afterBody(() => problem(404, 'not_found', 'Not found'))(req, origin) : problem(404, 'not_found', 'Not found');
   }
 
   return { origins, handle, sessionOf, sessions, breakglassOpen, setup };

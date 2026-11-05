@@ -38,6 +38,16 @@ export class Sessions {
     return true;
   }
 
+  /** What a live session has left, without touching its idle clock. Null when the token names no live session. */
+  info(token: string | null | undefined): { via: Entry['via']; idleLeftMs: number; maxLeftMs: number } | null {
+    if (!token || !SHAPE.test(token)) return null;
+    const e = this.map.get(digest(token));
+    if (!e) return null;
+    const t = this.now();
+    const idleLeftMs = this.idleMs - (t - e.seen), maxLeftMs = this.maxMs - (t - e.created);
+    return idleLeftMs < 0 || maxLeftMs < 0 ? null : { via: e.via, idleLeftMs, maxLeftMs };
+  }
+
   revoke(token: string | null | undefined) { if (token && SHAPE.test(token)) this.map.delete(digest(token)); }
   clear() { this.map.clear(); }
   get size() { return this.map.size; }
