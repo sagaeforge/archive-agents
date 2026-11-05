@@ -96,6 +96,13 @@ class IdemConflict(LedgerError):
 class VersionConflict(LedgerError):
     """expected_version 불일치."""
 
+    code = "version_conflict"
+    status = 409
+
+    def __init__(self, message: str = "expected_version이 현재 판과 다르다", *, current: dict | None = None):
+        super().__init__(message)
+        self.current = current
+
 
 class RedactedPayload(LedgerError):
     """record.redact로 지운 본문과 같은 내용을 다시 쓰려 했다. 지운 비밀이 되살아나지 않게 거부한다."""
@@ -181,7 +188,8 @@ def _record_version(c: sqlite3.Connection, subject: str, upto: int) -> int:
                      (subject, upto, *RECORD_KINDS)).fetchone()[0]
 
 
-def append(c: sqlite3.Connection, events: Iterable[dict], *, now_ms: int | None = None) -> list[dict]:
+def append(c: sqlite3.Connection, events: Iterable[dict], *, now_ms: int | None = None,
+           prepare_locked=None) -> list[dict]:
     """이벤트를 한 트랜잭션으로 덧붙인다. 이벤트 dict 키:
     kind, actor, origin, idem_key, payload(dict), subject, on_behalf_of, generated_by, v, event_id, expected_version, at(선택).
     반환: 이벤트마다 {seq, event_id, hash, at, replayed, version}. record.redact 줄에는 wal_cleared가 붙는다
@@ -189,6 +197,9 @@ def append(c: sqlite3.Connection, events: Iterable[dict], *, now_ms: int | None 
     events = list(events)
     out: list[dict] = []
     with _txn(c):
+        # 쓰기 엔진의 대상/판 검사와 CAS 준비도 같은 BEGIN IMMEDIATE 안에서 한다.
+        if prepare_locked is not None:
+            events = list(prepare_locked(events))
         st = _tail(c)
         for ev in events:
             out.append(_append_one(c, ev, st, now_ms))

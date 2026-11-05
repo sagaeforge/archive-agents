@@ -13,3 +13,5 @@ class WriteRejected(Exception):
         super().__init__(f"{code}: {message}" if message else code)
         self.code = code
         self.message = message
+        self.status = {"secret_detected": 422, "not_found": 404,
+                       "expected_version_required": 428, "body_too_large": 413}.get(code, 400)

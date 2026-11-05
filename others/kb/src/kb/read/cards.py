@@ -46,7 +46,9 @@ def _months_ago(ref_ms: int, months: int) -> int:
     return int(d.replace(year=y, month=m, day=day).timestamp() * 1000)
 
 
-def _author_mark(author: str | None) -> str:
+def _author_mark(author: str | None, on_behalf_of: str | None = None) -> str:
+    if author and author.startswith("app:"):
+        return "f:user~" + author if on_behalf_of == "user:sagae" else "f:" + author
     if author and author.startswith("agent:"):
         return "f:agent:" + author[6:]
     return "f:user"
@@ -151,7 +153,7 @@ def _card(con, ctx, r: dict, c: dict | None, evs: list, ref) -> str:
         elif ver == "parser_derived":
             marks.append("p")
         elif ver == "first_party":
-            marks.append(_author_mark(r["author"]))
+            marks.append(_author_mark(r["author"], r.get("on_behalf_of")))
         else:
             marks.append("u")
         if r["sensitivity"] == 1:
@@ -186,7 +188,7 @@ def _card(con, ctx, r: dict, c: dict | None, evs: list, ref) -> str:
         slug = "user" if a.startswith("user:") or not a else "agent"
         valid = _date(r["valid_from"])
         if ver == "first_party" or r["origin"] == "first_party":
-            marks.append(_author_mark(r["author"]))
+            marks.append(_author_mark(r["author"], r.get("on_behalf_of")))
         elif ver == "quote_found":
             marks.append("q")
         elif ver == "parser_derived":

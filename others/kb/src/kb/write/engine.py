@@ -1,7 +1,7 @@
 """모든 쓰기가 지나는 함수 하나(ADR 8장). ledger.db에 쓰는 코드는 이 모듈뿐이다.
 
-순서: 검증(스키마, R6) -> 큰 본문 CAS -> first_party 게이트 -> Gate.acquire(5초, 수집기 60초)
-      -> ledger BEGIN IMMEDIATE(멱등, 버전, 내용 해시) -> COMMIT(FULL) -> 투영(NORMAL) -> 해제.
+순서: 검증(스키마, R6) -> first_party 게이트 -> Gate.acquire(5초, 수집기 60초)
+      -> ledger BEGIN IMMEDIATE(가시성, 멱등, 버전, 내용 해시, CAS) -> COMMIT(FULL) -> 투영 -> 해제.
 
 - 투영 실패나 문단 예산 초과는 쓰기 성공이다(projected=False). tick의 recover 단계가 잇는다.
 - 게이트 시간 초과면 spool/in에 fsync로 남기고 spooled=True다. 재적재는 저장된 이벤트를 그대로 쓴다.
@@ -27,7 +27,7 @@ from kb.core.canon import canon_json, sha256_hex
 from kb.core.gatelock import Gate
 from kb.project import current_gold_path, gate_path, open_gold, project_tail
 from kb.write import policy, validate
-from kb.write.errors import IdemConflict, RedactedPayload, WriteRejected
+from kb.write.errors import IdemConflict, RedactedPayload, VersionConflict, WriteRejected
 
 MAX_EVENTS = 100
 PARA_BUDGET = 200
@@ -37,7 +37,7 @@ COLLECTOR_TIMEOUT_S = 60.0
 BIG_BODY_BYTES = 64 * 1024
 HELD_REASON = "offsite_path_missing"
 EVENT_KEYS = ("kind", "actor", "origin", "idem_key", "subject", "payload", "on_behalf_of", "generated_by", "v",
-              "event_id", "expected_version", "at", "noop_if_same")
+              "event_id", "expected_version", "at", "noop_if_same", "editor_create", "editor_slug_missing")
 
 
 @dataclass
@@ -52,11 +52,20 @@ class WriteResult:
     warnings: list[str] = field(default_factory=list)
     reason: str | None = None
     events: list[dict] = field(default_factory=list)  # 이벤트별 {seq, version, replayed}. as_dict에는 없다
+    unchanged: bool = False
+    write_ref: str | None = None
+    payload_sha: str | None = None
+    quarantined: bool = False
+    actor: str | None = None
+    claimed_author: str | None = None
+    generated_by: str | None = None
 
     def as_dict(self) -> dict:
         return {"id": self.id, "version": self.version, "seq": self.seq, "replayed": self.replayed,
                 "projected": self.projected, "spooled": self.spooled, "held": self.held,
-                "warnings": list(self.warnings), "reason": self.reason}
+                "warnings": list(self.warnings), "reason": self.reason, "unchanged": self.unchanged,
+                "write_ref": self.write_ref, "payload_sha": self.payload_sha, "quarantined": self.quarantined,
+                "actor": self.actor, "claimed_author": self.claimed_author, "generated_by": self.generated_by}
 
 
 def _ms() -> int:
@@ -137,7 +146,12 @@ def _hold(evs: list[dict]) -> WriteResult:
         if canon_json(core_of(prior["events"])) != canon_json(core_of(evs)):
             raise IdemConflict(f"fp-held {name[:12]}: 같은 키에 내용이 다른 보류 항목이 있음") from None
     first = evs[0]
-    return WriteResult(id=first.get("subject") or first["payload"].get("id"), held=True, reason=HELD_REASON)
+    primary = next((e for e in evs if e["kind"] in ledger.RECORD_KINDS), first)
+    return WriteResult(id=first.get("subject") or first["payload"].get("id"), held=True, reason=HELD_REASON,
+                       payload_sha=sha256_hex(canon_json(storage_payload(primary["payload"]))),
+                       actor=primary["actor"], claimed_author=primary.get("on_behalf_of"),
+                       generated_by=primary.get("generated_by"),
+                       quarantined=bool((primary["payload"].get("props") or {}).get("quarantine")))
 
 
 def _done(led, r) -> bool:
@@ -160,47 +174,107 @@ def _project(led, budget: int = PARA_BUDGET) -> tuple[bool, list[str]]:
     return _done(led, r), []
 
 
+def storage_payload(payload: dict) -> dict:
+    """CAS를 만들지 않고 원장에 들어갈 본문 해시 표현을 계산한다."""
+    p = dict(payload)
+    if isinstance(p.get("body"), str) and len(p["body"].encode()) > BIG_BODY_BYTES:
+        p["body_sha"] = sha256_hex(p.pop("body").encode())
+    return p
+
+
+def comparable_payload(payload: dict) -> dict:
+    """보류 시각을 제외한 내용을 비교한다. 입력/CAS를 바꾸지 않는다."""
+    return storage_payload({k: v for k, v in payload.items() if k != "authored_at"})
+
+
+def _is_editor(ev):
+    return ev.get("origin") == "first_party" and str(ev.get("actor", "")).startswith("app:") \
+        and ev.get("kind") in ("record.put", "record.tombstone")
+
+
 def _prefilter(led, chunk: list[dict]) -> tuple[list[dict], dict[int, dict]]:
     keep, skipped = [], {}
+    pending_subjects = set()
     for i, ev in enumerate(chunk):
-        flag = ev.pop("noop_if_same", False)
+        if ev["kind"] in ledger.RECORD_KINDS and ev["subject"] in pending_subjects:
+            # 같은 묶음 앞쪽에서 머리가 바뀔 대상은 append의 순차 판정에 맡긴다.
+            keep.append(ev)
+            continue
+        flag = ev.get("noop_if_same", False)
+        prior = prior_event(led, ev["idem_key"])
+        if not prior and ev["kind"] in ledger.RECORD_KINDS:
+            head = ledger.record_head(led, ev["subject"])
+            expected = ev.get("expected_version")
+            current = head[0] if head else 0
+            if expected is not None and expected != current:
+                raise VersionConflict()
         if flag and ev["kind"] == "record.put":
             head = ledger.record_head(led, ev["subject"])
             # 지운(redact) 본문은 같은 내용이어도 무연산으로 넘기지 않는다. 원장이 RedactedPayload로 거부하게 둔다
-            same = bool(head) and head[1] == sha256_hex(canon_json(ev["payload"])) \
-                and ledger.get_payload(led, head[1]) is not None
+            old = ledger.get_payload(led, head[1]) if head else None
+            same = old is not None and comparable_payload(old) == comparable_payload(ev["payload"])
             # 같은 idem_key의 이벤트가 이미 있으면 멱등 판정(귀속 포함)은 원장에 맡긴다
-            if same and not led.execute("SELECT 1 FROM event WHERE idem_key=?", (ev["idem_key"],)).fetchone():
+            if same and not prior:
                 r = led.execute("SELECT seq FROM event WHERE subject=? AND kind IN ('record.put','record.tombstone',"
                                 "'record.redact') ORDER BY seq DESC LIMIT 1", (ev["subject"],)).fetchone()
-                skipped[i] = {"seq": r[0] if r else None, "version": head[0], "replayed": True}
+                skipped[i] = {"seq": r[0] if r else None, "version": head[0], "replayed": True, "unchanged": True}
                 continue
         keep.append(ev)
+        if ev["kind"] in ledger.RECORD_KINDS:
+            pending_subjects.add(ev["subject"])
     return keep, skipped
 
 
-def _write_chunk(led, chunk: list[dict]) -> tuple[list[dict], bool, list[str]]:
-    keep, skipped = _prefilter(led, chunk)
+def _write_chunk(led, chunk: list[dict], *, dry_run: bool = False) -> tuple[list[dict], bool, list[str], bool]:
+    keep, skipped = [], {}
     warns: list[str] = []
-    done: list[dict] = []
-    if keep:
-        try:
-            done = ledger.append(led, keep)
-        except RedactedPayload as e:
-            raise WriteRejected("redacted_payload", str(e)) from e
-        for r in done:
-            if r.get("wal_cleared") is False:
-                warns.append("wal_not_cleared")
+    held = False
+
+    def prepare_locked(events):
+        nonlocal keep, skipped, held
+        for ev in events:
+            if _is_editor(ev):
+                from kb.write.record import editor_guard, editor_dangling
+                editor_guard(led, ev)
+                warns.extend(editor_dangling(led, ev))
+        keep, skipped = _prefilter(led, events)
+        if dry_run:
+            return []
+        if any(e["origin"] == "first_party" for e in keep) and not fp_is_open(led):
+            held = True
+            return []
+        # 큰 본문은 가시성/재생/판/무연산을 확인한 뒤에만 CAS에 둔다.
+        for ev in keep:
+            view = storage_payload(ev["payload"])
+            sha = sha256_hex(canon_json(view))
+            if not led.execute("SELECT 1 FROM payload WHERE sha=?", (sha,)).fetchone() \
+                    and led.execute("SELECT 1 FROM event WHERE payload_sha=? LIMIT 1", (sha,)).fetchone():
+                raise RedactedPayload("지운 본문과 같은 내용")
+            if prior_event(led, ev["idem_key"]):
+                ev["payload"] = view
+            else:
+                _cas_bodies([ev])
+        return keep
+
+    try:
+        done = ledger.append(led, chunk, prepare_locked=prepare_locked)
+    except RedactedPayload as e:
+        raise WriteRejected("redacted_payload", str(e)) from e
+    if dry_run or held:
+        return [], False, warns, held
+    for r in done:
+        if r.get("wal_cleared") is False:
+            warns.append("wal_not_cleared")
     it = iter(done)
     out = [skipped[i] if i in skipped else next(it) for i in range(len(chunk))]
     proj, w = _project(led)
-    return out, proj, warns + w
+    return out, proj, warns + w, False
 
 
 def commit(events, actor: str | None = None, *, timeout: float = GATE_TIMEOUT_S, spool_on_timeout: bool = True,
-           stored: bool = False, _led=None) -> WriteResult:
+           stored: bool = False, _led=None, dry_run: bool = False) -> WriteResult:
     """이벤트를 원장에 쓴다. 입력 검증 실패는 WriteRejected, 멱등 충돌과 버전 불일치는 원장 예외 그대로다.
-    stored=True는 스풀에서 꺼낸 이벤트다. 검증과 CAS는 이미 했으므로 건너뛴다."""
+    stored=True는 스풀에서 꺼낸 이벤트다. 입력 검증은 건너뛰고 잠금 안 대상/판/CAS 검사는 반복한다."""
     evs = prepare(events, actor)
     if not evs:
         raise WriteRejected("schema_invalid", "이벤트가 없다")
@@ -208,10 +282,10 @@ def commit(events, actor: str | None = None, *, timeout: float = GATE_TIMEOUT_S,
         for ev in evs:
             validate.validate_event(ev)
         policy.lint_events(evs)
-        _cas_bodies(evs)
     led = _led or ledger.open_ledger()
     try:
-        if any(e["origin"] == "first_party" for e in evs) and not fp_is_open(led):
+        if not dry_run and not any(_is_editor(e) for e in evs) \
+                and any(e["origin"] == "first_party" for e in evs) and not fp_is_open(led):
             return _hold(evs)
         chunks = [evs[i:i + MAX_EVENTS] for i in range(0, len(evs), MAX_EVENTS)]
         items: list[dict] = []
@@ -221,10 +295,22 @@ def commit(events, actor: str | None = None, *, timeout: float = GATE_TIMEOUT_S,
         for ci, chunk in enumerate(chunks):
             if ci:
                 time.sleep(BATCH_SLEEP_S)
+            if dry_run:
+                # SQLite의 BEGIN IMMEDIATE가 검증 스냅샷을 고정한다. 읽기뿐인
+                # 검증에는 파일을 만드는 flock 게이트/투영/스풀이 필요하지 않다.
+                out, proj, w, held = _write_chunk(led, chunk, dry_run=True)
+                warns += w
+                projected = False
+                continue
+            if not gate.path.exists():
+                # 첫 게이트 파일은 대상/재생/판 검사를 통과한 후보에만 만든다.
+                # 사전 검사는 권한 부여가 아니다. 게이트 획득 뒤 같은 검사를
+                # 다시 실행해 그 사이의 변경도 확인한다. 잠금 파일은 지우지 않는다.
+                _write_chunk(led, chunk, dry_run=True)
             try:
                 fd = gate.acquire(timeout)
             except TimeoutError:
-                if not spool_on_timeout:
+                if not spool_on_timeout or dry_run:
                     raise
                 rest = [e for c in chunks[ci:] for e in c]
                 for e in rest:
@@ -236,7 +322,9 @@ def commit(events, actor: str | None = None, *, timeout: float = GATE_TIMEOUT_S,
                 spooled, projected, reason = True, False, "gate_timeout"
                 break
             try:
-                out, proj, w = _write_chunk(led, chunk)
+                out, proj, w, held = _write_chunk(led, chunk, dry_run=dry_run)
+                if held:
+                    return _hold(chunk)
             finally:
                 gate.release(fd)
             items.extend(out)
@@ -245,11 +333,20 @@ def commit(events, actor: str | None = None, *, timeout: float = GATE_TIMEOUT_S,
         if not items and not spooled:
             projected = False
         first = evs[0]
+        primary = next((e for e in evs if e["kind"] in ledger.RECORD_KINDS), first)
         ver = next((i["version"] for i in items if i.get("version") is not None), None)
+        row = led.execute("SELECT payload_sha, actor, on_behalf_of, generated_by FROM event WHERE seq=?",
+                          (items[-1]["seq"],)).fetchone() if items else None
         return WriteResult(id=first.get("subject") or first["payload"].get("id"), version=ver,
                            seq=items[-1]["seq"] if items else None,
                            replayed=bool(items) and all(i["replayed"] for i in items) and not spooled,
                            projected=projected, spooled=spooled, warnings=warns, reason=reason,
+                           unchanged=any(i.get("unchanged", False) for i in items),
+                           payload_sha=row[0] if row else sha256_hex(canon_json(comparable_payload(primary["payload"]))),
+                           actor=row[1] if row else primary["actor"],
+                           claimed_author=row[2] if row else primary.get("on_behalf_of"),
+                           generated_by=row[3] if row else primary.get("generated_by"),
+                           quarantined=bool((primary["payload"].get("props") or {}).get("quarantine")),
                            events=[{"seq": i["seq"], "version": i.get("version"), "replayed": i["replayed"]} for i in items])
     finally:
         if _led is None:

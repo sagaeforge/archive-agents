@@ -307,3 +307,63 @@ def scan_record(record: dict) -> list[str]:
                 if any(a < c and b > c + len(sep) for c in cuts):   # 비밀값이 두 필드에 걸친다
                     ids.add(h.rule)
     return sorted(ids)
+
+
+def editor_hits(record: dict) -> list[dict]:
+    """입력 이름/값을 되풀이하지 않는 순번 경로와 CP/UTF-16 구간(ADR-0005 7.2).
+
+    단일 필드와 필드 경계에 걸친 비밀을 기존 scan_record와 같은 규칙으로 검사한다.
+    캐시에는 규칙만 남기고 입력이나 결과를 저장하지 않는다.
+    """
+    def walk(obj, prefix):
+        if isinstance(obj, str):
+            yield prefix, obj
+        elif isinstance(obj, dict):
+            for i, (key, val) in enumerate(obj.items()):
+                yield f"{prefix}[{i}].name", str(key)
+                yield from walk(val, f"{prefix}[{i}].value")
+        elif isinstance(obj, (list, tuple)):
+            for i, val in enumerate(obj):
+                yield from walk(val, f"{prefix}[{i}]")
+
+    fields = [(f"record.{k}", record[k]) for k in ("title", "body") if isinstance(record.get(k), str)]
+    fields.extend(walk(record.get("props") or {}, "record.props"))
+    fields.extend(walk(record.get("links") or [], "record.links"))
+    found = {}
+
+    def add(field, text, rule, start, end):
+        key = field, rule, start, end
+        found[key] = {"field": field, "rule": rule, "start": start, "end": end,
+                      "start_u16": len(text[:start].encode("utf-16-le")) // 2,
+                      "end_u16": len(text[:end].encode("utf-16-le")) // 2}
+
+    rs = load_rules()
+    for field, text in fields:
+        for hit in scan_text(text, None, rs):
+            add(field, text, hit.rule, hit.start, hit.end)
+    fields = [(f, t) for f, t in fields if t]
+    if len(fields) > 1:
+        for sep in ("", "\n"):
+            spans, cuts, pos = [], [], 0
+            for field, text in fields:
+                spans.append((field, text, pos, pos + len(text)))
+                pos += len(text)
+                cuts.append(pos)
+                pos += len(sep)
+            for hit, a, b in _scan(sep.join(t for _, t in fields), None, rs):
+                if not any(a < cut and b > cut + len(sep) for cut in cuts[:-1]):
+                    continue
+                for field, text, start, end in spans:
+                    left, right = max(start, hit.start), min(end, hit.end)
+                    if left < right:
+                        add(field, text, hit.rule, left - start, right - start)
+    return list(found.values())
+
+
+def editor_rule_contract() -> dict:
+    """FW1 공개 산출물의 판/정규 해시. 요청 데이터는 포함하지 않는다."""
+    import hashlib
+    import json
+    artifact = json.loads((paths.share_dir() / "docs/contracts/first-party-secret-rules-v1.json").read_text())
+    blob = json.dumps(artifact, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return {"version": artifact["version"], "sha": hashlib.sha256(blob).hexdigest()}

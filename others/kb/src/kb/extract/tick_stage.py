@@ -17,11 +17,34 @@ def _enqueue_record(e: dict) -> bool:
     """first_party 레코드 -> 민감 범위 큐. secret과 세션 자료(작성자 agent:*)는 추출하지 않는다(ADR-0003 3장).
     처리 시점에 sensitive.run이 가드로 다시 본다."""
     p = e["payload"]
-    if e.get("origin") != "first_party" or p.get("sensitivity") == "secret" or str(e.get("actor") or "").startswith("agent:"):
+    if e.get("origin") != "first_party" or p.get("sensitivity") == "secret" \
+            or (p.get("props") or {}).get("quarantine") \
+            or str(e.get("actor") or "").startswith("agent:") \
+            or p.get("type") in ("TopicSpec", "Review") \
+            or str(e.get("generated_by") or "").endswith(":auto"):
         return False
     c = opsdb.connect()
     try:
-        return opsdb.queue_put(c, QUEUE_SENSITIVE, f"{p['id']}|{e['seq']}")
+        if p.get("type") not in ("Page", "Note"):
+            return opsdb.queue_put(c, QUEUE_SENSITIVE, f"{p['id']}|{e['seq']}")
+        # 참조 형식은 id|seq를 유지하며 ID별 최신 seq만 남긴다(ADR-0005, 컨트롤러 판정).
+        # 큐의 판 병합과 늦게 재생된 이전 판의 배제를 한 트랜잭션으로 한다.
+        c.execute("BEGIN IMMEDIATE")
+        prefix = p["id"] + "|"
+        rows = c.execute("SELECT id, ref FROM queue WHERE kind=? AND substr(ref,1,?)=?",
+                         (QUEUE_SENSITIVE, len(prefix), prefix)).fetchall()
+        if any(int(ref.rsplit("|", 1)[1]) >= e["seq"] for _, ref in rows):
+            c.execute("COMMIT")
+            return False
+        for row_id, _ in rows:
+            c.execute("DELETE FROM queue WHERE id=?", (row_id,))
+        added = opsdb.queue_put(c, QUEUE_SENSITIVE, f"{p['id']}|{e['seq']}")
+        c.execute("COMMIT")
+        return added
+    except BaseException:
+        if c.in_transaction:
+            c.execute("ROLLBACK")
+        raise
     finally:
         c.close()
 

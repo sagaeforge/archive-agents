@@ -17,7 +17,7 @@ from kb.write import tty as _tty
 from kb.write.errors import WriteRejected
 
 USER = "user:sagae"
-TRANSPORTS = ("mcp", "inbox", "cli", "intake")
+TRANSPORTS = ("mcp", "inbox", "cli", "intake", "http")
 _SESSION_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9:._-]{0,127}")
 _PROC_SESSION = "s-" + uuid7()
 
@@ -26,6 +26,7 @@ _PROC_SESSION = "s-" + uuid7()
 class Author:
     actor: str
     on_behalf_of: str | None
+    generated_by: str | None = None
 
 
 def clean_session(s: str | None) -> str | None:
@@ -43,7 +44,14 @@ def process_session() -> str:
     return clean_session(env) if env else _PROC_SESSION
 
 
-def resolve(transport: str, session: str | None = None, *, tty: bool | None = None) -> Author:
+def resolve(transport: str, session: str | None = None, *, tty: bool | None = None,
+            token_label: str | None = None, change: str = "save") -> Author:
+    if transport == "http":
+        if not isinstance(token_label, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}", token_label) \
+                or change not in ("save", "autosave", "auto"):
+            raise WriteRejected("schema_invalid", "쓰기 귀속 형식 위반")
+        actor = f"app:{token_label}"
+        return Author(actor, USER if change != "auto" else None, f"{actor}:{change}")
     if transport not in TRANSPORTS:
         raise WriteRejected("bad_transport", "알 수 없는 전송(mcp|inbox|cli|intake)")
     if transport == "mcp":
