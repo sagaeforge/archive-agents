@@ -11,6 +11,8 @@ CREATE TABLE edge(vid INTEGER PRIMARY KEY, id TEXT NOT NULL, version INT NOT NUL
   valid_from INT, valid_to INT, recorded_at INT NOT NULL, expired_at INT, seq INT NOT NULL, UNIQUE(id, version));
 CREATE INDEX edge_src ON edge(src, rtype) WHERE expired_at IS NULL;
 CREATE INDEX edge_dst ON edge(dst, rtype) WHERE expired_at IS NULL;
+CREATE INDEX edge_claim ON edge(claim_id);
+CREATE INDEX edge_promotion ON edge(dst, src) WHERE rtype='PROMOTED_FROM';
 CREATE TABLE claim(vid INTEGER PRIMARY KEY REFERENCES node(vid), subject TEXT NOT NULL, predicate TEXT, object TEXT,
   value TEXT, unit TEXT, qualifiers BLOB, statement TEXT NOT NULL, kind TEXT NOT NULL, stance TEXT NOT NULL,
   speaker TEXT, method TEXT NOT NULL, slot TEXT, conflict_group TEXT, change_claim TEXT, extractor TEXT);
@@ -20,6 +22,7 @@ CREATE TABLE evidence(id TEXT PRIMARY KEY, claim_id TEXT NOT NULL, snapshot_id T
   evidence_state TEXT NOT NULL DEFAULT 'live', support_check TEXT,
   gate_version TEXT NOT NULL, last_confirmed_at INT, seq INT NOT NULL);
 CREATE INDEX evidence_claim ON evidence(claim_id);
+CREATE INDEX evidence_snapshot ON evidence(snapshot_id, claim_id);
 CREATE TABLE content(sha TEXT PRIMARY KEY, body TEXT NOT NULL) WITHOUT ROWID;
 CREATE TABLE unit(rid INTEGER PRIMARY KEY, sha TEXT NOT NULL UNIQUE, kind TEXT NOT NULL);
 CREATE TABLE span(sid INTEGER PRIMARY KEY, unit_rid INT NOT NULL, ref_id TEXT NOT NULL, ref_kind TEXT NOT NULL,
@@ -77,3 +80,5 @@ CREATE TABLE head(id TEXT PRIMARY KEY, kind TEXT NOT NULL, version INT NOT NULL,
   merged_into_final TEXT) WITHOUT ROWID;
 CREATE TABLE quarantine(seq INTEGER PRIMARY KEY, reason TEXT NOT NULL, at INT NOT NULL);
 CREATE TABLE meta(k TEXT PRIMARY KEY, v TEXT NOT NULL) WITHOUT ROWID;
+-- 검증이 끝나기 전에 private 읽기 준비 완료를 선언하지 않는다.
+INSERT INTO meta(k,v) VALUES('fp_projection','5'), ('private_open','false');

@@ -7,7 +7,7 @@ import unicodedata
 from kb.core import ids as _ids
 from kb.read.catalog import type_properties
 from kb.read.ctx import (NEIGHBOR_EXCLUDED, SENS_NAME, BadParam, ContentRemoved, LimitTooLarge, NotFound, ReadCtx,
-                         chunks, finals, group_of, iso, row, rows, touching_sql, visibility_sql)
+                         chunks, effective_sensitivity, finals, group_of, iso, row, rows, touching_sql, visibility_sql)
 from kb.read.envelope import clamp_limit, make_cursor, page_obj, read_cursor
 
 INCLUDE_ALL = ("claims", "edges", "backlinks", "body")
@@ -82,7 +82,7 @@ def node_objs(con, noderows: list[dict], *, evidence: bool = True, fin: dict | N
     for r in noderows:
         d = {"id": r["id"], "type": r["type"], "label": r["label"], "origin": r["origin"], "status": r["eff_status"],
              "liveness": r["liveness"], "verification": r["verification"], "link_status": r["link_status"],
-             "sensitivity": SENS_NAME[r["sensitivity"]], "domain": doms[r["id"]], "version": r["version"],
+             "sensitivity": SENS_NAME[effective_sensitivity(r["id"], r["sensitivity"])], "domain": doms[r["id"]], "version": r["version"],
              "merged_into": r["merged_into"], "merged_into_final": fin.get(r["id"]) if r["merged_into"] else None,
              "valid": valid_obj(r), "recorded_at": iso(r["recorded_at"]), "expired_at": iso(r["expired_at"]),
              "author": r["author"], "generated_by": r["generated_by"], "on_behalf_of": r["on_behalf_of"],
@@ -279,7 +279,7 @@ def get_claim(con, ctx: ReadCtx, cid: str) -> dict:
 
 def _edge_obj(e: dict) -> dict:
     return {"id": e["id"], "src": e["src"], "dst": e["dst"], "rtype": e["rtype"], "status": e["status"],
-            "sensitivity": SENS_NAME[e["sensitivity"]], "version": e["version"], "claim_id": e["claim_id"],
+            "sensitivity": SENS_NAME[effective_sensitivity(e["id"], e["sensitivity"])], "version": e["version"], "claim_id": e["claim_id"],
             "valid": valid_obj({"valid_from": e["valid_from"], "valid_to": e["valid_to"], "valid_precision": None}),
             "recorded_at": iso(e["recorded_at"]), "expired_at": iso(e["expired_at"]), "props": _json(e["props"])}
 

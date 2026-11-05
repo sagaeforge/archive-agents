@@ -156,8 +156,11 @@ def rebuild(allow_missing: bool = False, *, batch: int = 2000, para_budget: int 
                     old_path = None
                 if og is not None:
                     try:
+                        # FW5 이전 DB는 같은 schema 3이어도 큰 본문/파생 민감도/묘비
+                        # 투영이 다르다. 새 빌드를 채택하며 옛 지문과 같다고 주장하지 않는다.
+                        legacy_fp = meta_get(og, "fp_projection") != "5"
                         _catch_up(led, og, "quarantine")
-                        forced = meta_get(og, "rebuild_required_seq") is not None
+                        forced = legacy_fp or meta_get(og, "rebuild_required_seq") is not None
                     finally:
                         og.close()
             miss += _catch_up(led, g, mode)
@@ -256,6 +259,8 @@ def verify_projection(led: sqlite3.Connection | None = None) -> dict:
     ro, seq = _read_txn(cur)
     tmp = gold_root() / (".verify-" + uuid7().replace("-", ""))
     try:
+        if meta_get(ro, "fp_projection") != "5":
+            return {"ok": True, "rebuild_pending": True, "reason": "fp_projection_upgrade", "applied_seq": seq}
         pending = meta_get(ro, "rebuild_required_seq")
         if pending is not None:  # 증분이 할 수 없는 변경이 남아 있다. 실패가 아니라 재구축 대기다.
             return {"ok": True, "rebuild_pending": True, "rebuild_required_seq": int(pending), "applied_seq": seq}

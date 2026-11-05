@@ -20,7 +20,7 @@ from typing import Iterator
 from kb.core import cas, config
 from kb.core.text import nfc, query_tokens
 from kb.read import aliases
-from kb.read.ctx import SENS_NAME, BadParam, ReadCtx, iso, reading, rows, visibility_sql
+from kb.read.ctx import SENS_NAME, BadParam, ReadCtx, effective_sensitivity, iso, reading, rows, visibility_sql
 from kb.read.envelope import clamp_limit, envelope, make_cursor, page_obj, read_cursor
 from kb.read.facets import facets as _facets
 from kb.read.snapshots import source_ref
@@ -331,10 +331,14 @@ def _items(con, ctx: ReadCtx, hits: list[dict], plan: Plan) -> list[dict]:
             out.append(_order(base))
             continue
         n = nodes.get(h["ref_id"])
+        if n is None:
+            continue
         label = (n or {}).get("label") or ""
         text = label
         if kind == "record" and h["ukind"] == "body" and n:
             text = _body(con, n.get("content_sha")) or label
+            if h["start_cp"] is not None:
+                text = text[h["start_cp"]:h["end_cp"]]
         base.update(title=label, **make_snippet(text, plan.words, toks), highlight_unit="codepoint",
                     origin=h["origin"], status=h["eff_status"])
         rec = iso(n["recorded_at"]) if n else None
@@ -342,7 +346,8 @@ def _items(con, ctx: ReadCtx, hits: list[dict], plan: Plan) -> list[dict]:
             base.update(subject=h["subject"] or "", source=src(h["source_id"]), verification=h["verification"] or "",
                         recorded_at=rec)
         elif kind == "record":
-            base.update(author=(n or {}).get("author"), sensitivity=SENS_NAME.get(h["sensitivity"], "internal"), recorded_at=rec)
+            base.update(author=n.get("author"), sensitivity=SENS_NAME.get(
+                effective_sensitivity(h["ref_id"], h["sensitivity"]), "internal"), recorded_at=rec)
         else:
             base.update(liveness=(n or {}).get("liveness"))
         out.append(_order(base))

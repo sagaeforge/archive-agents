@@ -4,9 +4,11 @@
 """
 from __future__ import annotations
 
+import json
 import sqlite3
 from contextlib import contextmanager
-from dataclasses import dataclass, replace
+from contextvars import ContextVar
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -19,6 +21,34 @@ OK_VERIFICATION = ("quote_found", "parser_derived", "first_party")
 ALL_VERIFICATION = OK_VERIFICATION + ("needs_review", "unverified")
 NEIGHBOR_EXCLUDED = ("Claim", "Snapshot", "Source", "Document", "Ticket")
 NEG_INF = -9e18
+
+
+@dataclass
+class _SecuritySnapshot:
+    levels: dict[str, int]
+    blocked: dict[int, str] = field(default_factory=dict)
+
+
+# 요청을 벗어나거나 중첩 읽기가 끝나면 복원한다. DB나 전역 캐시에 민감도 판정을 남기지 않는다.
+_security: ContextVar[_SecuritySnapshot | None] = ContextVar("kb_read_security", default=None)
+
+
+def effective_sensitivity(nid: str, fallback: int) -> int:
+    snapshot = _security.get()
+    return max(fallback, snapshot.levels.get(nid, 0)) if snapshot else fallback
+
+
+def _current_visibility(ctx, id_col: str) -> tuple[str, list]:
+    snapshot = _security.get()
+    if snapshot is None:
+        return "1", []
+    ceiling = ctx.max_sens
+    if ceiling not in snapshot.blocked:
+        snapshot.blocked[ceiling] = json.dumps(sorted(nid for nid, level in snapshot.levels.items() if level > ceiling))
+    blocked = snapshot.blocked[ceiling]
+    if blocked == "[]":
+        return "1", []
+    return f"({id_col} IS NULL OR {id_col} NOT IN (SELECT value FROM json_each(?)))", [blocked]
 
 
 # ------------------------------------------------------------------ 오류
@@ -200,8 +230,8 @@ def visibility_sql(ctx: ReadCtx, a: str = "n", *, kind: str = "node", mode: str 
     kind: node | edge | span | series_obs | change.
     mode: list(모든 필터) | direct(민감도 + 두 시간축, id 직접 조회) | target(민감도 + 관측축, 상세의 대상)
           | history(민감도 + 검증, 시간축과 상태 없음) | versions(민감도만, 한 ID의 전 버전).
-    민감도는 ID별 최신 값(head.sensitivity)으로 판단한다. 현재 행만 보는 조회는 행의 값이 곧 그 값이라 head를 읽지 않는다
-    (투영이 새 버전과 head, 엣지 전파와 head를 같은 트랜잭션에서 함께 쓴다. tests/http/test_node_fact.py가 대조한다).
+    head/현재 행의 민감도에 더해 원장의 확정된 원본 민감도를 확인한다. 이 추가 조건은
+    현재·옛 시점·이력·피드에 똑같이 적용하며, 낡은 gold나 복사된 근거로 우회할 수 없다.
     """
     S = ctx.max_sens
     w: list[str] = []
@@ -211,8 +241,14 @@ def visibility_sql(ctx: ReadCtx, a: str = "n", *, kind: str = "node", mode: str 
         p.append(S)
         w.append(f"(COALESCE((SELECT h.sensitivity FROM head h WHERE h.id={a}.id),0) <= ? OR {a}.kind='visibility.revoked')")
         p.append(S)
+        live, lp = _current_visibility(ctx, f"{a}.id")
+        w.append(f"({live} OR {a}.kind='visibility.revoked')")
+        p.extend(lp)
         return " AND ".join(w), p
     idc = {"node": f"{a}.id", "edge": f"{a}.id", "span": f"{a}.ref_id", "series_obs": f"{a}.series_id"}[kind]
+    live, lp = _current_visibility(ctx, idc)
+    w.append(live)
+    p.extend(lp)
     if kind in ("node", "edge") and mode in ("list", "direct", "target") and ctx.as_of_observed is None:
         w.append(f"{a}.sensitivity <= ?")   # 아래에서 현재 행(expired_at IS NULL)으로 좁힌다. 현재 행의 민감도는 head 값과 같다
     else:
@@ -313,6 +349,9 @@ def fact_groups(con, ctx: ReadCtx, *, match_sources: bool = False) -> list[dict]
     if row(con, "SELECT 1 x FROM sqlite_master WHERE name='node_fact'") is None:
         return None
     w, p = "f.sensitivity <= ?", [ctx.max_sens]
+    live, lp = _current_visibility(ctx, "f.id")
+    w += " AND " + live
+    p.extend(lp)
     if match_sources:
         ph = ",".join("?" * len(ctx.sources))
         w += f" AND (f.id IN (SELECT s.ref_id FROM span s WHERE s.rec_to IS NULL AND s.source_id IN ({ph})) OR f.psrc IN ({ph}))"
@@ -348,17 +387,30 @@ def gold_path(ctx: ReadCtx) -> Path:
 
 @contextmanager
 def reading(ctx: ReadCtx):
-    """요청 하나의 읽기 연결. 읽기 트랜잭션 1개 안에서 봉투와 본문을 만든다."""
+    """gold와 원장의 읽기 스냅샷. 확정된 상향은 projector를 기다리지 않는다."""
+    from kb.core import ledger
+    from kb.project.apply import security_state
     con = _conn.connect_ro(gold_path(ctx), ctx.deadline_s)
     con.row_factory = sqlite3.Row
+    led, token = None, None
     try:
         con.execute("BEGIN")
+        # gold를 먼저 고정한 뒤 더 최신일 수 있는 원장의 제한을 합친다.
+        con.execute("SELECT v FROM meta WHERE k='applied_seq'").fetchone()
+        if ledger.ledger_path().exists():
+            led = _conn.connect_ro(ledger.ledger_path(), ctx.deadline_s)
+            led.execute("BEGIN")
+        token = _security.set(_SecuritySnapshot(security_state(con, led)))
         yield con
     except sqlite3.OperationalError as e:
         if "interrupt" in str(e).lower():
             raise ReadTimeout("읽기 시간 초과") from e
         raise
     finally:
+        if token is not None:
+            _security.reset(token)
+        if led is not None:
+            led.close()
         con.close()
 
 
@@ -392,7 +444,10 @@ def chunks(seq, n: int = 500):
 # ------------------------------------------------------------------ head 조회(병합 묶음)
 
 def head_of(con, nid: str) -> dict | None:
-    return row(con, "SELECT id, kind, version, sensitivity, merged_into_final FROM head WHERE id=?", (nid,))
+    h = row(con, "SELECT id, kind, version, sensitivity, merged_into_final FROM head WHERE id=?", (nid,))
+    if h:
+        h["sensitivity"] = effective_sensitivity(nid, h["sensitivity"])
+    return h
 
 
 def final_of(con, nid: str) -> str:

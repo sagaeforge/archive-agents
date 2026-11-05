@@ -16,6 +16,7 @@ from kb.core import cas, config, ledger, paths
 from kb.core import conn as _conn
 from kb.guard import anchor
 from kb.guard.redact import _git
+from kb.project.apply import security_state
 
 EXPORTABLE = ("public", "internal")
 MAX_NAME = 200
@@ -48,12 +49,14 @@ def render(pl: dict, version: int, body: str) -> str:
 
 def _records(c) -> dict[str, tuple[int, dict]]:
     out = {}
+    sensitivity = security_state(led=c)
     for rid, ver, sha in c.execute("SELECT id, version, content_sha FROM record_head ORDER BY id"):
         last = c.execute("SELECT kind, origin FROM event WHERE subject=? ORDER BY seq DESC LIMIT 1", (rid,)).fetchone()
         if not last or last[0] != "record.put" or last[1] != "first_party":
             continue
         pl = ledger.get_payload(c, sha)
-        if not pl or pl.get("sensitivity") not in EXPORTABLE or (pl.get("props") or {}).get("quarantine"):
+        if not pl or pl.get("sensitivity") not in EXPORTABLE or (pl.get("props") or {}).get("quarantine") \
+                or sensitivity.get(rid, 3) > 1:
             continue
         out[rid] = (ver, pl)
     return out
@@ -68,6 +71,7 @@ def export_markdown(*, commit: bool | None = None) -> dict:
     if p.exists():
         c = _conn.connect_ro(p, 60.0)
         try:
+            c.execute("BEGIN")
             recs = _records(c)
             lead = ledger.head(c)
         finally:

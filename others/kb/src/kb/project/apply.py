@@ -1,6 +1,6 @@
 """이벤트 하나를 gold에 적용한다(ADR 7.2, 8, 13). 현재 시각, 난수, 네트워크를 읽지 않는다.
 
-입력은 이벤트의 `at`, `seq`와 페이로드, CAS 객체뿐이다. 파서와 LLM을 부르지 않는다.
+입력은 이벤트의 `at`, `seq`와 페이로드, CAS 객체뿐이다. 본문 문단 분할은 결정적 순수 함수를 재사용한다.
 이벤트가 호출하는 순서만 결과를 정하므로 증분 투영과 전체 재구축의 결과가 같다.
 """
 from __future__ import annotations
@@ -8,11 +8,13 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
+from collections import defaultdict, deque
 from datetime import datetime, timezone
 
 from kb.core import cas, ids
 from kb.core.canon import canon_json, sha256_hex
 from kb.core.text import index_tokens, nfc
+from kb.parse.paragraphs import paragraphs
 
 SENS = {"public": 0, "internal": 1, "private": 2, "secret": 3}
 NO_GRAPH = {"extract.run", "extract.rejected", "system.fp_opened"}
@@ -148,6 +150,76 @@ def head_sens(g, nid: str) -> int:
     return r[0] if r else 0
 
 
+def sensitivity_closure(levels: dict[str, int], dependents: dict[str, set[str]]) -> dict[str, int]:
+    """원본 -> 파생물 방향으로만 최댓값을 전파한다. 순환과 다중 원본도 하향 없이 수렴한다."""
+    pending = deque(levels)
+    while pending:
+        source = pending.popleft()
+        for child in dependents.get(source, ()):
+            if levels[source] > levels.get(child, 0):
+                levels[child] = levels[source]
+                pending.append(child)
+    return levels
+
+
+def security_state(g=None, led=None) -> dict[str, int]:
+    """읽기/내보내기의 민감도 스냅샷. 원장 확정은 낡은 gold보다 먼저 적용한다.
+
+    근거와 PROMOTED_FROM의 옛 연결도 남긴다. 연결 제거는 민감도 하향 권한이 아니다.
+    원장과 gold는 호출자가 연 읽기 트랜잭션으로 고정하며 이 함수는 쓰지 않는다.
+    """
+    levels: dict[str, int] = {}
+    deps: dict[str, set[str]] = defaultdict(set)
+    if g is not None:
+        levels.update((r[0], r[1]) for r in g.execute("SELECT id, sensitivity FROM head"))
+        for cid, source in g.execute("SELECT claim_id, snapshot_id FROM evidence"):
+            deps[source].add(cid)
+        for cid, source in g.execute("SELECT n.id, c.subject FROM claim c JOIN node n ON n.vid=c.vid"):
+            deps[source].add(cid)
+        for eid, src, dst, cid, rtype in g.execute("SELECT id, src, dst, claim_id, rtype FROM edge"):
+            deps[src].add(eid)
+            deps[dst].add(eid)
+            if cid:
+                deps[cid].add(eid)
+            if rtype == "PROMOTED_FROM":
+                deps[dst].add(src)
+    if led is not None:
+        sql = ("SELECT e.kind, e.subject, e.origin, p.body FROM event e LEFT JOIN payload p ON p.sha=e.payload_sha "
+               "WHERE e.kind IN ('record.put','record.redact','claim.assert','claim.confirm','edge.put') ORDER BY e.seq")
+        for kind, subject, origin, raw in led.execute(sql):
+            p = jl(raw) if raw is not None else None
+            if kind == "record.redact" or (kind == "record.put" and p is None):
+                levels[subject] = 3
+                continue
+            if p is None:
+                continue
+            if kind == "record.put" and origin == "first_party":
+                rid = p["id"]
+                sens = 3 if (p.get("props") or {}).get("quarantine") else SENS[p["sensitivity"]]
+                levels[rid] = max(levels.get(rid, 0), sens)
+                for link in p.get("links") or []:
+                    if link["rtype"] == "PROMOTED_FROM":
+                        deps[link["dst"]].add(rid)
+            elif kind == "claim.assert":
+                cid = p["id"]
+                levels[cid] = max(levels.get(cid, 0), int(p.get("sensitivity_floor") or 0))
+                deps[p["subject"]].add(cid)
+                for ev in p["evidence"]:
+                    deps[ev["snapshot"]].add(cid)
+            elif kind == "claim.confirm":
+                deps[p["snapshot"]].add(p["id"])
+            elif kind == "edge.put":
+                eid = p["id"]
+                deps[p["src"]].add(eid)
+                deps[p["dst"]].add(eid)
+                levels[eid] = max(levels.get(eid, 0), SENS.get(p.get("sensitivity"), 0))
+                if p.get("claim_id"):
+                    deps[p["claim_id"]].add(eid)
+                if p["rtype"] == "PROMOTED_FROM":
+                    deps[p["dst"]].add(p["src"])
+    return sensitivity_closure(levels, deps)
+
+
 def add_change(c: Ctx, id_, version, typ, sens, kind=None) -> None:
     e = c.e
     c.g.execute("INSERT OR REPLACE INTO change(seq,sub,at,kind,id,version,origin,type,sensitivity) VALUES(?,0,?,?,?,?,?,?,?)",
@@ -193,22 +265,51 @@ def node_new(c: Ctx, nid: str, prev: dict | None = None, **o) -> dict:
         if row["sensitivity"] != h["sensitivity"]:
             if row["sensitivity"] > h["sensitivity"]:
                 revoke(c, nid, row["version"], row["type"])
-            _propagate_sens(c, nid)
+    _propagate_sens(c, nid)
     return row
 
 
 def _propagate_sens(c: Ctx, nid: str) -> None:
+    """현재 행/헤드/색인과 파생물을 같은 투영 트랜잭션에서 올린다. 판은 늘리지 않는다."""
     g = c.g
-    for ed in many(g, "SELECT * FROM edge WHERE (src=? OR dst=?) AND expired_at IS NULL", (nid, nid)):
-        explicit = SENS.get((jl(ed["props"]) or {}).get("sensitivity"), 0) if isinstance(jl(ed["props"]), dict) else 0
-        new = edge_sens(c, ed["src"], ed["dst"], ed["claim_id"], explicit)
-        old = head_sens(g, ed["id"])
-        if new == old:
+    pending = deque([nid])
+    while pending:
+        source = pending.popleft()
+        level = head_sens(g, source)
+        if level == 0:
             continue
-        g.execute("UPDATE edge SET sensitivity=? WHERE vid=?", (new, ed["vid"]))
-        g.execute("UPDATE head SET sensitivity=? WHERE id=?", (new, ed["id"]))
-        if new > old:
-            revoke(c, ed["id"], ed["version"], ed["rtype"])
+        children = {r[0] for r in g.execute(
+            "SELECT claim_id FROM evidence WHERE snapshot_id=? UNION "
+            "SELECT n.id FROM claim cl JOIN node n ON n.vid=cl.vid WHERE cl.subject=? UNION "
+            "SELECT src FROM edge WHERE dst=? AND rtype='PROMOTED_FROM' UNION "
+            "SELECT id FROM edge WHERE expired_at IS NULL AND (src=? OR dst=? OR claim_id=?)",
+            (source, source, source, source, source, source))}
+        for child in sorted(children):
+            if head_sens(g, child) >= level:
+                continue
+            n, ed = cur_node(g, child), cur_edge(g, child)
+            if n is None and ed is None:
+                continue
+            g.execute("UPDATE head SET sensitivity=? WHERE id=?", (level, child))
+            if n:
+                g.execute("UPDATE node SET sensitivity=? WHERE vid=?", (level, n["vid"]))
+                g.execute("UPDATE node_fact SET sensitivity=? WHERE id=?", (level, child))
+                g.execute("UPDATE span SET sensitivity=? WHERE ref_id=? AND rec_to IS NULL", (level, child))
+                if level == 3:
+                    _purge_secret_content(g, child)
+            if ed:
+                g.execute("UPDATE edge SET sensitivity=? WHERE vid=?", (level, ed["vid"]))
+            row = n or ed
+            revoke(c, child, row["version"], row.get("type") or row["rtype"])
+            pending.append(child)
+
+
+def _purge_secret_content(g, rid: str) -> None:
+    # 옛 판의 평문도 secret 원본만 참조한다면 content에 남기지 않는다.
+    # 같은 본문의 독립적인 비-secret 원본은 계속 읽을 수 있어야 한다.
+    g.execute("DELETE FROM content WHERE sha IN (SELECT content_sha FROM node WHERE id=?) "
+              "AND NOT EXISTS(SELECT 1 FROM node n JOIN head h ON h.id=n.id "
+              "WHERE n.content_sha=content.sha AND n.id<>? AND h.sensitivity<3)", (rid, rid))
 
 
 def edge_new(c: Ctx, eid: str, src: str, rtype: str, dst: str, *, props=None, claim_id=None, status="active",
@@ -216,7 +317,7 @@ def edge_new(c: Ctx, eid: str, src: str, rtype: str, dst: str, *, props=None, cl
     """같은 내용이면 새 버전을 만들지 않는다(None)."""
     g = c.g
     prev = cur_edge(g, eid)
-    sens = edge_sens(c, src, dst, claim_id, explicit)
+    sens = max(edge_sens(c, src, dst, claim_id, explicit), head_sens(g, eid))
     pb = jb(props)
     if prev and (prev["src"], prev["rtype"], prev["dst"], prev["props"], prev["claim_id"], prev["status"],
                  prev["valid_from"], prev["valid_to"], prev["sensitivity"]) == \
@@ -236,6 +337,8 @@ def edge_new(c: Ctx, eid: str, src: str, rtype: str, dst: str, *, props=None, cl
         g.execute("UPDATE head SET version=?, sensitivity=? WHERE id=?", (ver, sens, eid))
         if sens > h["sensitivity"]:
             revoke(c, eid, ver, rtype)
+    if rtype == "PROMOTED_FROM":
+        _propagate_sens(c, dst)
     return {"vid": cur.lastrowid, "id": eid, "version": ver, "sensitivity": sens}
 
 
@@ -345,27 +448,43 @@ def _redacted_put(c: Ctx, e: dict) -> int:
 def h_record_put(c: Ctx, p: dict) -> None:
     e, g = c.e, c.g
     rid = p["id"]
-    sens = SENS[p["sensitivity"]]
+    sens = max(SENS[p["sensitivity"]], head_sens(g, rid),
+               *(head_sens(g, ln["dst"]) for ln in p.get("links") or [] if ln["rtype"] == "PROMOTED_FROM"))
     body = p.get("body")
+    sha = p.get("body_sha")
+    if body is None and sha and sens < 3:
+        try:
+            raw = c.obj(sha, "fp")
+        except (cas.CasMissing, cas.CasCorrupt) as exc:
+            # 저장소 장애는 이벤트 결함이 아니다. 호출자가 투영 실패로 보고하고 재시도한다.
+            raise MissingObject([sha]) from exc
+        if raw is not None:
+            try:
+                body = raw.decode("utf-8")
+            except UnicodeDecodeError as exc:
+                raise MissingObject([sha]) from exc
     if body is not None:
         sha = sha256_hex(body)
         if sens < 3:
             g.execute("INSERT OR IGNORE INTO content(sha,body) VALUES(?,?)", (sha, body))
-    else:
-        sha = p.get("body_sha")
     vf = p.get("authored_at")
     row = node_new(c, rid, type=p["type"], origin=e["origin"], status="active", eff_status="active",
                    verification="first_party", sensitivity=sens, retention=p.get("retention") or "permanent",
                    label=p["title"], content_sha=sha, body_format=p.get("body_format") or ("markdown" if body is not None else None),
                    props=jb(p.get("props")), author=e["actor"], generated_by=e["generated_by"],
                    on_behalf_of=e["on_behalf_of"], merged_into=None, valid_from=vf, valid_to=None)
+    if sens == 3:
+        _purge_secret_content(g, rid)
     close_spans(c, rid)
     common = dict(ref_id=rid, ref_kind="record", type=p["type"], origin=e["origin"], status="active",
                   eff_status="active", verification="first_party", sensitivity=sens, valid_from=vf)
-    span_open(c, unit_rid=unit_for(c, p["title"], "label"), **common)
+    if sens < 3:
+        span_open(c, unit_rid=unit_for(c, p["title"], "label"), **common)
     if body and sens < 3:
-        span_open(c, unit_rid=unit_for(c, body, "body"), **common)
-        c.cost += 1
+        for para in paragraphs(body, p.get("body_format") or "markdown"):
+            span_open(c, unit_rid=unit_for(c, body[para.start_cp:para.end_cp], "body"),
+                      start_cp=para.start_cp, end_cp=para.end_cp, **common)
+            c.cost += 1
     # 링크: 이 레코드가 만든 엣지만 관리한다
     want = {}
     for ln in p.get("links") or []:
@@ -384,6 +503,10 @@ def h_record_tombstone(c: Ctx, p: dict) -> None:
         return add_change(c, p["id"], None, None, 0)
     row = node_new(c, p["id"], prev, status="dead", eff_status="dead")
     respan(c, p["id"], status="dead", eff_status="dead")
+    for ed in many(c.g, "SELECT * FROM edge WHERE src=? AND expired_at IS NULL AND claim_id IS NULL ORDER BY id", (p["id"],)):
+        if (jl(ed["props"]) or {}).get("record") == p["id"]:
+            edge_new(c, ed["id"], ed["src"], ed["rtype"], ed["dst"], props=jl(ed["props"]),
+                     status="dead", valid_from=ed["valid_from"], valid_to=ed["valid_to"])
     add_change(c, p["id"], row["version"], row["type"], row["sensitivity"])
 
 
@@ -647,7 +770,8 @@ def h_claim_confirm(c: Ctx, p: dict) -> None:
                   "VALUES(?,?,?,?,?,?,?,?,?,?,?,'live',?,?,?,?)",
                   (nid, cid, p["snapshot"], tsha, ev["selector_kind"], exact, prefix, suffix, p.get("start_cp") if located else None,
                    p.get("end_cp") if located else None, ev["json_pointer"], ev["support_check"], ev["gate_version"], c.at, c.seq))
-    add_change(c, cid, prev["version"], "Claim", prev["sensitivity"])
+    _propagate_sens(c, p["snapshot"])
+    add_change(c, cid, prev["version"], "Claim", head_sens(g, cid))
 
 
 def _claim_event(c: Ctx, p: dict, status: str, **kw) -> None:
