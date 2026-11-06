@@ -32,12 +32,14 @@ DETAILS = {
 }
 
 
-def error(status, code, path, *, current=None, retry=None, cfg=None, max_sens="internal"):
+def error(status, code, path, *, current=None, retry=None, cfg=None, max_sens="internal", hits=None):
     from kb.serve.http import Resp, dumps, problem_dict, error_instance
     instance = error_instance(path, cfg, max_sens)
     value = problem_dict(status, code, DETAILS.get(code, "저장 요청을 처리할 수 없습니다"), instance)
     if current is not None:
         value["current"] = current
+    if status == 422 and code == "secret_detected" and hits is not None:
+        value.update(hits=hits, stored=False)
     headers = [("content-type", "application/problem+json"), ("cache-control", "no-store")]
     if retry is not None:
         headers.append(("retry-after", str(retry)))
@@ -160,8 +162,8 @@ def dispatch(method, path, query, raw):
     except WriteRejected as exc:
         metadata = Q.rejection.get()
         if metadata and metadata["code"] == exc.code:
-            return error(metadata["status"], exc.code, path, retry=metadata["retry"])
-        return error(exc.status, exc.code, path, retry=getattr(exc, "retry_after", None))
+            return error(metadata["status"], exc.code, path, retry=metadata["retry"], hits=getattr(exc, "hits", None))
+        return error(exc.status, exc.code, path, retry=getattr(exc, "retry_after", None), hits=getattr(exc, "hits", None))
     except Exception as exc:
         print(f"kb serve: {type(exc).__name__}", file=sys.stderr)
         return error(500, "internal", path)

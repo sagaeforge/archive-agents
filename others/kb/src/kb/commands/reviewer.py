@@ -70,6 +70,13 @@ def install_candidate(request_id, *, filesystem=None, effective_uid=None):
     def install(credentials):
         credentials[candidate['credential_id']] = dict(public_key=candidate['public_key'], rp_id=candidate['rp_id'])
     _replace(filesystem, install)
+    def consume(con):
+        current = actions.load(con, 'enroll:' + request_id)
+        if current is not None:
+            current['consumed'] = True
+            actions.save(con, 'enroll:' + request_id, current)
+        return []
+    actions.transaction(consume)
 
 
 def revoke_credential(credential_id, *, filesystem=None, effective_uid=None):

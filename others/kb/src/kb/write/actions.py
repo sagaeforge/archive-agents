@@ -21,6 +21,8 @@ from kb.write import engine, fpquota as Q, record, reviewer, secrets_scan
 from kb.write.errors import WriteRejected
 
 KINDS = {'topic_ambiguity', 'source_policy', 'liveness_unresolved', 'gate_unresolved'}
+ENROLL_MAX_BYTES = 16 * 1024
+ENROLL_TTL_S = 15 * 60
 _pool = None
 _runtime = dict(clock=time.time, submit=None, local_refine=None, select_engine=None,
                 external_transport=None, before_external_send=lambda: None, reserve_external=None)
@@ -168,17 +170,19 @@ def submit(job):
     return _pool.submit(job)
 
 
-def _capacity(con, action):
+def _capacity(con, action, *, key=None):
+    current_key = key if key is not None else 'action:' + action['action_id']
     retained = len(json.dumps(action, ensure_ascii=False).encode())
     own = total = 0
-    for _, other in rows(con, 'action:'):
-        if other['action_id'] == action['action_id']:
+    for other_key, other, size in Q.retained_reviews(con):
+        if other_key == current_key:
             continue
-        size = len(json.dumps(other, ensure_ascii=False).encode())
         total += size
-        if other['tok_id'] == action['tok_id']:
+        if other.get('tok_id') == action['tok_id']:
             own += size
     for _, value in Q.rows():
+        if value['state'] not in ('pending', 'held', 'failed'):
+            continue
         total += value.get('bytes', 0)
         if value.get('tok_id') == action['tok_id']:
             own += value.get('bytes', 0)
@@ -292,6 +296,10 @@ def maintenance():
             save(con, key, action)
         for key, challenge in rows(con, 'challenge:'):
             if now() - challenge['created_at'] >= 120:
+                con.execute('DELETE FROM reviewer_state WHERE k=?', (key,))
+        for key, candidate in rows(con, 'enroll:'):
+            expires = candidate.get('expires_at', candidate.get('created_at', 0) + ENROLL_TTL_S)
+            if candidate.get('consumed') or now() >= expires:
                 con.execute('DELETE FROM reviewer_state WHERE k=?', (key,))
         return []
     transaction(build)
@@ -661,6 +669,13 @@ def get_hitl(item_id):
         return value
 
 
+def require_hitl_visibility(con, item):
+    if item['target'].startswith('f-'):
+        source(con, item['target'])
+    elif item['target'].startswith('c-'):
+        record.require_current_visibility(con, item['target'])
+
+
 def list_hitl(kind=None):
     identity()
     reviewer.require_trust()
@@ -669,11 +684,10 @@ def list_hitl(kind=None):
         for _, value in rows(con, 'hitl:'):
             if value['state'] != 'open' or (kind is not None and value['kind'] != kind):
                 continue
-            if value['target'].startswith('f-'):
-                try:
-                    source(con, value['target'])
-                except WriteRejected:
-                    continue
+            try:
+                require_hitl_visibility(con, value)
+            except WriteRejected:
+                continue
             item = copy.deepcopy(value)
             item['created_at'] = public_time(item['created_at'])
             items.append(item)
@@ -694,7 +708,10 @@ def hitl_challenge(obj):
     def build(con):
         reviewer.require_trust()
         item = load(con, 'hitl:' + str(obj.get('item')))
-        if not item or item['state'] != 'open':
+        if not item:
+            fail('review_stale', 409)
+        require_hitl_visibility(con, item)
+        if item['state'] != 'open':
             fail('review_stale', 409)
         if item['verdict'] != load(con, 'verdict:' + digest([item['kind'], item['target']])):
             fail('review_stale', 409)
@@ -718,8 +735,11 @@ def resolve_hitl(item_id, obj):
         item = load(con, 'hitl:' + item_id)
         if not item:
             fail('not_found', 404)
+        require_hitl_visibility(con, item)
         replay = load(con, namespace)
         if replay:
+            if replay.get('item') != item_id:
+                fail('idem_conflict', 409)
             result.update(replay)
             return []
         if item['state'] != 'open' or item['verdict'] != load(con, 'verdict:' + digest([item['kind'], item['target']])):
@@ -756,13 +776,24 @@ def resolve_hitl(item_id, obj):
 
 
 def enroll(obj):
-    identity()
+    info = identity()
     reviewer.require_trust(require_registered=False)
     if obj.get('rp_id') != 'localhost' or obj.get('origin') != 'http://localhost:4812':
         fail('review_unverified', 403)
+    if any(not isinstance(obj.get(key), str) or not obj[key] for key in ('credential_id', 'public_key')):
+        fail('schema_invalid', 400)
+    candidate = {key: obj[key] for key in ('rp_id', 'origin', 'credential_id', 'public_key')}
+    try:
+        size = len(json.dumps(candidate, ensure_ascii=False).encode('utf-8'))
+    except UnicodeError:
+        fail('schema_invalid', 400)
+    if size > ENROLL_MAX_BYTES:
+        fail('body_too_large', 413)
     request_id = 'reg-' + secrets.token_hex(16)
+    candidate.update(tok_id=info['tok_id'], created_at=now(), expires_at=now() + ENROLL_TTL_S)
     def build(con):
-        save(con, 'enroll:' + request_id, {k: obj[k] for k in ('rp_id', 'origin', 'credential_id', 'public_key')})
+        _capacity(con, candidate, key='enroll:' + request_id)
+        save(con, 'enroll:' + request_id, candidate)
         return []
     transaction(build)
     return dict(request_id=request_id)

@@ -20,7 +20,7 @@ import time
 from dataclasses import dataclass, field
 from contextvars import ContextVar
 from datetime import datetime, timedelta, timezone
-from urllib.parse import parse_qsl
+from urllib.parse import parse_qsl, unquote
 
 from kb import read as R
 from kb.core import config as _config
@@ -313,6 +313,9 @@ def error_instance(path: str, cfg: ServeConfig | None = None, max_sens: str = "i
     write = re.fullmatch(r"/v1/records/([^/]+)(/tombstone)?", path)
     if write:
         template = "/v1/records/{id}" + (write[2] or "")
+        from kb.write import secrets_scan
+        if secrets_scan.scan_key(unquote(write[1])):
+            return template
         from kb.core import ledger
         from kb.write.record import _record_state
         from kb.write.errors import WriteRejected

@@ -417,6 +417,13 @@ def _editor_tombstone(rid, reason, key, label, change, on_secret, expected):
     return commit([ev], au.actor)
 
 
+def require_current_visibility(led, rid):
+    """The committed dependency closure is authoritative even before projection."""
+    from kb.project.apply import security_state
+    if security_state(led=led).get(rid, 3) >= 3:
+        raise _editor_error("not_found")
+
+
 def _record_state(led, rid):
     head = ledger.record_head(led, rid)
     last = led.execute("SELECT kind, origin, payload_sha, actor, on_behalf_of, generated_by, at, seq "
@@ -429,6 +436,7 @@ def _record_state(led, rid):
             or p.get("type") not in types.FIRST_PARTY_TYPES or p.get("sensitivity") not in ("public", "internal", "private") \
             or (p.get("props") or {}).get("quarantine"):
         raise _editor_error("not_found")
+    require_current_visibility(led, rid)
     return head, last, p
 
 

@@ -149,13 +149,30 @@ def receiving(led, events, *, extra_bytes=None, exclude_ref=None, now_ms=None):
     return fresh
 
 
-def retention(tok_id, incoming):
+def retained_reviews(led=None):
+    """One byte inventory for action candidates and pending reviewer enrollments."""
+    own = led is None
+    con = ledger.open_ledger() if own else led
+    try:
+        if not con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='reviewer_state'").fetchone():
+            return []
+        return [(key, json.loads(raw), len(raw.encode('utf-8'))) for key, raw in con.execute(
+            "SELECT k,v FROM reviewer_state WHERE k LIKE 'action:%' OR k LIKE 'enroll:%'")]
+    finally:
+        if own:
+            con.close()
+
+
+def retention(tok_id, incoming, *, led=None):
     from kb.write.write_refs import purge_one
     while True:
         retained = [(p, v) for p, v in rows() if v["state"] in ("pending", "held", "failed")]
         own = [(p, v) for p, v in retained if v["tok_id"] == tok_id]
-        own_full = len(own) + 1 > 200 or sum(v["bytes"] for _, v in own) + incoming > TOKEN_RETAINED
-        all_full = len(retained) + 1 > 400 or sum(v["bytes"] for _, v in retained) + incoming > GLOBAL_RETAINED
+        reviews = retained_reviews(led)
+        own_reviews = sum(size for _, value, size in reviews if value.get('tok_id') == tok_id)
+        all_reviews = sum(size for _, _, size in reviews)
+        own_full = len(own) + 1 > 200 or sum(v["bytes"] for _, v in own) + own_reviews + incoming > TOKEN_RETAINED
+        all_full = len(retained) + 1 > 400 or sum(v["bytes"] for _, v in retained) + all_reviews + incoming > GLOBAL_RETAINED
         if not own_full and not all_full:
             return
         candidates = [(p, v) for p, v in (retained if all_full else own) if v["state"] == "failed"]
@@ -192,7 +209,7 @@ def reserve(led, events, body, name, spool_kind):
     body = {**body, "events": events}
     size = len(canon_json(body))
     receiving(led, events, extra_bytes=size)
-    retention(info["tok_id"], size)
+    retention(info["tok_id"], size, led=led)
     primary = events[0]
     value = {"state": "pending", "tok_id": info["tok_id"], "actor": primary["actor"],
              "subject": primary["subject"], "kind": "create" if primary.get("editor_create") else "edit",
