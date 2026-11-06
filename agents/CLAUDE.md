@@ -25,7 +25,7 @@ sh tests/project-hooks/run.sh
 - New dependencies must be in `package-lock.json`.
 - User-facing docs are in Korean; code, comments, and commits are in English.
 - The main session does no work itself. Its role is limited to facilitating collaboration between teams: monitoring and coordinating them, and improving itself. All work is started by forming a team in separate sessions.
-- The main session never waits in the foreground: no `orchestration check --wait`, `terminal wait`, or `sleep` loops. After starting Orca workers, launch the `team-watcher` subagent in the background and end the turn. Workflows need no watcher. The watcher only reports; the main session reads each batch and does every ack, reply, release, stop, and retry. See `docs/team-operations.md`.
+- The main session never waits in the foreground: no `orchestration check --wait`, `terminal wait`, or `sleep` loops. After starting Orca workers, run `node "$(git rev-parse --show-toplevel)/.claude/hooks/team-watcher-wait.mjs" run=<run_id> legs=<n> leg=1` with Bash `run_in_background: true` and end the turn. Workflows need no wait. The wait script only reports; the main session reads each batch and does every ack, reply, release, stop, and retry. See `docs/team-operations.md`.
 - Continuously find and remove bottlenecks in how teams and agents collaborate. The main session looks for them while it monitors, and fixes the cause in instructions or tooling rather than working around it once.
 
 ## Model tiers

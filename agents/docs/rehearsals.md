@@ -204,4 +204,4 @@
 - GitHub Actions의 첫 실행, `promote`, `rollback.yml`, `GITHUB_TOKEN` 제약은 [stable 게이트의 확인한 범위](stable-gate.md#확인한-범위)에 있습니다.
 - 러너 LXC, `live-smoke`, 실패 알림의 도달은 [라이브 스모크의 확인한 범위](live-smoke.md#확인한-범위)에 있습니다.
 - 러너 재구축 시간은 `infra/runner/provision.sh`를 승인받아 실행할 때 잽니다. 끝날 때 나오는 `Took <초>s.`를 목표 30분과 비교합니다.
-- `team-watcher`의 Run 재연결은 [팀 운영](team-operations.md#주의할-점)에 있습니다.
+- 대기 스크립트의 Run 재연결은 [팀 운영](team-operations.md#주의할-점)에 있습니다.

@@ -1,11 +1,11 @@
-// One bounded wait on an Orca Run inbox for the team-watcher subagent. It prints
-// one JSON line: the watcher's report, or a request to wait again. The model only
-// passes that line on, so it counts nothing, judges nothing, and never sees a
-// message subject or body.
+// One bounded wait on an Orca Run inbox run by the main session as a background
+// Bash command. It prints one JSON line: the report, or a request to wait again.
+// The model only reads that line, so it counts nothing, judges nothing, and never
+// sees a message subject or body.
 //
 // This also keeps a real event readable. Bash shows the model only a preview of
 // output over 30,000 characters, and one batch can pass that: 50 heartbeats and a
-// worker_done, or a few long reports. The watcher cannot open the saved output,
+// worker_done, or a few long reports. The model never opens the saved output,
 // and a Delivery replays until it is acked, so raw output would turn that event
 // into the same error on every relaunch.
 
