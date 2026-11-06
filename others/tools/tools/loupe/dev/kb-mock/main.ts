@@ -14,6 +14,12 @@ const opts: MockOptions = {
   epoch: env.KB_MOCK_EPOCH ? Number(env.KB_MOCK_EPOCH) : undefined,
   exportStyle: env.KB_MOCK_EXPORT_STYLE === 'encoding' ? 'encoding' : 'ctype',
   totalNull: env.KB_MOCK_TOTAL_NULL === '1',
+  // The task center's fixtures (design v2 11.2, M0f): `KB_MOCK_TASKS=1 npm run mock`. See dev/kb-mock/tasks.ts.
+  tasks: env.KB_MOCK_TASKS === '1',
+  // The first-party write path (design v2 11.2, M1): `KB_MOCK_WRITE=1`. Tokens come from KB_MOCK_EDITOR_TOKEN / KB_MOCK_REVIEWER_TOKEN; `KB_MOCK_PRIVATE_OPEN=0` closes `private`.
+  write: env.KB_MOCK_WRITE === '1' ? { editorToken: env.KB_MOCK_EDITOR_TOKEN || 'kbt_e_mock-editor', reviewerToken: env.KB_MOCK_REVIEWER_TOKEN || 'kbt_r_mock-reviewer', privateOpen: env.KB_MOCK_PRIVATE_OPEN !== '0' } : undefined,
+  // The database view's fixtures (design v2 11.3, M4): `KB_MOCK_DB=1` with `KB_MOCK_WRITE=1`. See dev/kb-mock/db.ts.
+  db: env.KB_MOCK_DB === '1',
   onAccess: accessLog ? (line) => appendFileSync(accessLog, line + '\n') : undefined,
 };
 const app = createKbMock(opts);

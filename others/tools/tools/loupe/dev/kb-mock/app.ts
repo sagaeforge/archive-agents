@@ -10,11 +10,21 @@ import { Hono, type Context } from 'hono';
 import { topicFixtures as m0cFixtures, topicEdges } from './topics.ts';
 import { gizmoFixtures, gizmoEdges } from './gizmo.ts';
 import { editorFixtures } from './editor.ts';
+import { createRecordStore, registerWriteRoutes, writeMeta, type WriteOptions } from './write.ts';
+import { writtenView } from './docs.ts';
+import { databaseRows, seedDatabase } from './db.ts';
+import { CLAIM_IDS, claimCountOf, edgesOf, isTaskTopic, registerTaskRoutes, taskNodes, taskSpecs } from './tasks.ts';
 import { fixturePath as defaultFixture, schemaOf, compileParam, operations, type Op } from './spec.ts';
 
 type Row = Record<string, any>;
 export type MockOptions = {
   topics?: boolean;
+  /** M0f: the task center's fixtures and its five first-party read routes (design v2 11.2). Off by default, so every other read and test stays as it was. */
+  tasks?: boolean;
+  /** M1: the first-party write path (POST/PUT records, tombstone, /v1/writes/{ref}) and the 9th-revision `meta.write` (design v2 11.2). Off by default. See dev/kb-mock/write.ts. */
+  write?: WriteOptions;
+  /** M4: the database view's fixtures (a document with two view blocks and the records they list). Needs `write`. See dev/kb-mock/db.ts. */
+  db?: boolean;
   fixturePath?: string;
   /** Negative controls for the contract flow. Schemathesis or the mock tests must fail on each of these. */
   bug?: 'drop_field' | 'wrong_error_type' | 'ignore_as_of' | 'no_cursor_check' | 'leak_private' | undefined;
@@ -259,7 +269,7 @@ export function createKbMock(opts: MockOptions = {}): Hono {
       const degraded: string[] = [];
       return envelope(op, c, ctx, {
         etag: `"${epoch}-${fx.meta.applied_seq}-${fx.meta.build_id}-${sha1(JSON.stringify(degraded), 8)}"`,
-        data: { ...fx.meta.data, ...(fx.meta.data.first_party_open ? { write: MOCK_WRITE_STATE } : {}), changes_cursor: changesCursor(fx.meta.applied_seq), counts: { nodes: hs.filter((r) => !NON_WORLD.has(r.type)).length, edges: edgeHeads(NOW, 'all').length, claims: hs.filter((r) => r.type === 'Claim').length } },
+        data: { ...fx.meta.data, ...(fx.meta.data.first_party_open ? { write: opts.write ? writeMeta(opts.write) : MOCK_WRITE_STATE } : {}), changes_cursor: changesCursor(fx.meta.applied_seq), counts: { nodes: hs.filter((r) => !NON_WORLD.has(r.type)).length, edges: edgeHeads(NOW, 'all').length, claims: hs.filter((r) => r.type === 'Claim').length } },
       });
     },
     getSchema: (c, _q, ctx, op) => envelope(op, c, ctx, { data: fx.schema }),
@@ -629,6 +639,52 @@ export function createKbMock(opts: MockOptions = {}): Hono {
     }
   }
 
+  // M0f: the task center's fixtures. Task nodes are readable by ID, and one exact query (`types=TopicSpec`) lists the specs to follow (none
+  // unless `tasks` is on, so the task center has nothing to follow and reads nothing first-party); every other typed read, the graph and the
+  // palette stay as they were.
+  if (opts.topics !== false) {
+    const page = { next_cursor: null, total: null, truncated: false };
+    const outer = { ...H };
+    H.getNode = (c, q, ctx, op) => { const row = opts.tasks ? taskNodes.find((n) => n.id === idParam(c)) : undefined; return row ? envelope(op, c, ctx, { data: row, etag: null }) : outer.getNode!(c, q, ctx, op); };
+    H.listNodes = (c, q, ctx, op) => q.get('types') === 'TopicSpec' ? envelope(op, c, ctx, { data: { items: opts.tasks ? taskSpecs : [] }, page, etag: null }) : outer.listNodes!(c, q, ctx, op);
+    H.listNodeEdges = (c, q, ctx, op) => {
+      if (!opts.tasks || !isTaskTopic(idParam(c))) return outer.listNodeEdges!(c, q, ctx, op);
+      const items = edgesOf(idParam(c));
+      return envelope(op, c, ctx, { data: { items }, page: { next_cursor: null, total: items.length, truncated: false }, etag: null });
+    };
+    H.listNodeClaims = (c, q, ctx, op) => {
+      if (!opts.tasks || !isTaskTopic(idParam(c))) return outer.listNodeClaims!(c, q, ctx, op);
+      const items = CLAIM_IDS.slice(0, claimCountOf(idParam(c))).map((id) => pick(id, ctx)).filter((r): r is Row => !!r).map((r) => outRow(r, ctx));
+      return envelope(op, c, ctx, { data: { items }, page: { next_cursor: null, total: items.length, truncated: false }, etag: null });
+    };
+  }
+
+  // M2: what the write imitation accepted can be read back by ID, followed through its versions, and listed when dead (the trash window). The typed
+  // fixture reads above stay as they were: only a written ID, a `/history` of one, and `status=dead` for first-party records come here first.
+  const writeStore = opts.write ? createRecordStore() : undefined;
+  if (writeStore) {
+    const written = writtenView(writeStore);
+    const outer = { ...H };
+    H.getNode = (c, q, ctx, op) => {
+      const at = q.get('as_of_observed');
+      const row = written.detail(idParam(c), at ? ts(at) : undefined);
+      return row ? envelope(op, c, ctx, { data: row, etag: null }) : outer.getNode!(c, q, ctx, op);
+    };
+    H.getNodeHistory = (c, q, ctx, op) => {
+      const row = written.history(idParam(c));
+      return row ? envelope(op, c, ctx, { data: row, etag: null }) : outer.getNodeHistory!(c, q, ctx, op);
+    };
+    if (opts.db) seedDatabase(writeStore);
+    H.listNodes = (c, q, ctx, op) => {
+      // M4: the list a database block reads (db.ts); anything else it does not recognise goes on to the reads below.
+      const rows = opts.db ? databaseRows(written, q) : null;
+      if (rows) return envelope(op, c, ctx, { data: { items: rows }, page: { next_cursor: null, total: null, truncated: false }, etag: null });
+      if (q.get('status') !== 'dead' || q.get('origin') !== 'first_party') return outer.listNodes!(c, q, ctx, op);
+      const types = list(q.get('types') ?? q.get('type'));
+      return envelope(op, c, ctx, { data: { items: written.list('dead', types) }, page: { next_cursor: null, total: null, truncated: false }, etag: null });
+    };
+  }
+
   // ---- routing and the common checks
   const app = new Hono();
   // Over HTTP the Host header is always there. app.request() in tests has none, so the URL host stands in.
@@ -638,12 +694,18 @@ export function createKbMock(opts: MockOptions = {}): Hono {
 
   app.use(async (c, next) => {
     await next();
-    opts.onAccess?.(`${c.req.method} ${c.req.routePath} ${c.res.status}`);
+    // A write route that read a token names its scope, so a test can count the editor tokens that reached a reviewer path.
+    const scope = (c as unknown as { get(k: string): unknown }).get('scope');
+    opts.onAccess?.(`${c.req.method} ${c.req.routePath} ${c.res.status}${scope ? ` scope=${String(scope)}` : ''}`);
   });
 
   for (const op of operations()) {
     if (op.method !== 'get') continue;
     const route = op.path.replace(/\{(\w+)\}/g, ':$1');
+    // The reviewer paths (GET /v1/actions/{id}, GET /v1/hitl) are first-party routes, not KB reads. The KB's openapi.yaml now lists them in `paths`
+    // (it used to keep them outside), and tasks.ts serves them when `tasks` is on. They have no read handler here, and a contract that grows
+    // one is not a startup error. Without `tasks` they answer 404.
+    if (!H[op.operationId] && op.op.security?.some((s: Record<string, unknown>) => 'reviewerBearer' in s)) continue;
     const handler = H[op.operationId];
     if (!handler) throw new Error(`no handler for ${op.operationId}`);
     const known = new Map<string, { in: string; required: boolean; check: (x: unknown) => boolean; schema: any }>();
@@ -672,6 +734,22 @@ export function createKbMock(opts: MockOptions = {}): Hono {
     });
     app.all(route, (c) => problem(c, 405, 'method_not_allowed', 'method not allowed', undefined, { Allow: 'GET, HEAD' }));
   }
+  // M1 write routes, before the M0f reads so that `GET /v1/writes/{ref}` of a write made here is answered here and any other ref falls through.
+  if (opts.write) registerWriteRoutes(app, { hostOk: (c) => hostOk(hostOf(c)), options: opts.write, ...(writeStore ? { records: writeStore } : {}) });
+  // M0f read routes outside the OpenAPI file's `paths` (they sit under x-first-party-paths there, or in ADR-0005). Same checks as above.
+  if (opts.topics !== false && opts.tasks) registerTaskRoutes(app, {
+    gate: (c) => {
+      if (!hostOk(hostOf(c))) return problem(c, 403, 'host_rejected', 'host rejected');
+      if (opts.token && c.req.header('authorization') !== `Bearer ${opts.token}`) return problem(c, 401, c.req.header('authorization') ? 'token_invalid' : 'token_required', 'token required');
+      if (opts.notReadyMs && started() < opts.notReadyMs) return problem(c, 503, 'not_ready', 'starting', undefined, { 'Retry-After': String(Math.max(1, Math.ceil((opts.notReadyMs - started()) / 1000))) });
+      return null;
+    },
+    problem: (c, status, code, title, detail) => problem(c, status, code, title, detail),
+    json: (_c, data, pg) => new Response(JSON.stringify({
+      schema_version: fx.meta.schema_version, epoch, build_id: fx.meta.build_id, data_as_of: fx.meta.data_as_of, applied_seq: fx.meta.applied_seq,
+      as_of: { valid: null, observed: null }, degraded: [], data, ...(pg ? { page: pg } : {}),
+    }), { status: 200, headers: { 'content-type': 'application/json', 'cache-control': 'no-store', vary: 'Authorization' } }),
+  });
   app.notFound((c) => (hostOk(hostOf(c)) ? problem(c, 404, 'not_found', 'not found') : problem(c, 403, 'host_rejected', 'host rejected')));
   app.onError((e, c) => problem(c, 500, 'internal', 'internal error', String(e).slice(0, 200)));
   return app;

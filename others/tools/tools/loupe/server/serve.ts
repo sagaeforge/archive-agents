@@ -2,7 +2,7 @@
 // Binds 127.0.0.1 only. Does not log paths or queries (?q= carries search terms).
 import { createAdaptorServer } from '@hono/node-server';
 import { Hono } from 'hono';
-import { createReadStream, statSync } from 'node:fs';
+import { createReadStream, existsSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { Readable } from 'node:stream';
 import { createZstdDecompress } from 'node:zlib';
@@ -11,7 +11,8 @@ import { APP_CSP_HEADER, KB_CSP_HEADER } from './csp.ts';
 import { DEFAULT_KB_URL, kbRequest, mapFailure, parseKbUrl, readTokenFile, type Target } from './upstream.ts';
 import { createAuth, problem, type AuthOptions } from './auth/index.ts';
 import { kbStatus } from './status.ts';
-import { configDir } from './auth/files.ts';
+import { checkDir, configDir } from './auth/files.ts';
+import { handleWrite, readScope, WRITE_ROUTES } from './write.ts';
 import { check, kindOf, loopbackAlias, originForHost } from './auth/guard.ts';
 
 export type ServeConfig = {
@@ -19,6 +20,12 @@ export type ServeConfig = {
   /** Directory with the built SPA. */
   dist: string;
   token?: string | undefined;
+  /** `kb-editor.token` (design v2 5.1): on every /kb/* read and on the editor /kb-write/* paths. Unset, the write paths answer 503 and reads go as before. */
+  editorToken?: string | undefined;
+  /** `kb-reviewer.token`: on the reviewer-only reads and the reviewer /kb-write/* paths, and nowhere else. */
+  reviewerToken?: string | undefined;
+  /** How long a write waits for the KB's first byte. The KB's own gate waits 5 s (ADR-0005 2.2), so this is longer than a read's. */
+  writeFirstByteMs?: number | undefined;
   firstByteMs?: number | undefined;
   connectMs?: number | undefined;
   /** The local port. The default origin allowlist is http://localhost:<port>; loupe.json may list more (design v2 6.3). The socket stays on 127.0.0.1. */
@@ -33,6 +40,8 @@ const KB_ALLOW = [
   `/v1/nodes/${SEG}/neighbors`, `/v1/nodes/${SEG}/history`,
   `/v1/claims/${SEG}`, `/v1/edges/${SEG}`, '/v1/search', '/v1/facets', '/v1/counts', `/v1/series/${SEG}`,
   `/v1/snapshots/${SEG}`, `/v1/snapshots/${SEG}/text`, `/v1/snapshots/${SEG}/raw`, '/v1/changes', '/v1/export/graph/manifest', '/v1/export/graph',
+  // Task center reads (design v2 5.1): first-party status only. Every write verb on these is refused by the method guard above.
+  `/v1/topics/${SEG}/research`, `/v1/writes/${SEG}`, `/v1/actions/${SEG}`, '/v1/hitl', `/v1/nodes/${SEG}/reviews`,
 ].map((p) => new RegExp(`^${p}$`));
 // The allowlist looks at the percent-encoded path, but the KB's router decodes it. A segment is refused when what it decodes to could
 // reach a different route: `.` or `..`, a `/` or `\` (so `n-1%2Fraw` cannot be read as `n-1/raw`, which would skip the /raw header),
@@ -42,10 +51,10 @@ export const unsafeSegment = (pathname: string) => pathname.split('/').some((s) 
 });
 
 /**
- * The /kb-write/* routes loupe serve answers. There are none until M1 (design v2 5.1); when they come they carry record writes
- * only: like /auth/*, no entry may change the allowed account, the break-glass path, a token or the idle limit.
+ * The /kb-write/* routes loupe serve answers (design v2 5.1), from server/write.ts. They carry record writes only: like /auth/*, no entry
+ * may change the allowed account, the break-glass path, a token or the idle limit.
  */
-export const KB_WRITE_ROUTES: readonly { readonly method: string; readonly path: string }[] = [];
+export const KB_WRITE_ROUTES: readonly { readonly method: string; readonly path: string }[] = WRITE_ROUTES;
 
 const PASS_RESPONSE = ['etag', 'retry-after', 'cache-control', 'content-type', 'content-encoding', 'content-length'];
 const PASS_REQUEST = ['accept', 'accept-encoding', 'if-none-match'];
@@ -79,7 +88,11 @@ export function createLoupeApp(cfg: ServeConfig): Hono {
     const headers: Record<string, string> = {};
     for (const k of PASS_REQUEST) { const v = c.req.header(k); if (v) headers[k] = v; }
     // Host stays unset: Node's default (localhost for sockets) passes the KB allow-list.
-    if (cfg.token && cfg.kb.kind === 'tcp') headers.authorization = `Bearer ${cfg.token}`;
+    // One token per request (design v2 5.1): the editor's on reads, the reviewer's on the reviewer-only reads, never both. The browser's
+    // Authorization is the loupe session and is not forwarded. The viewer token stays for a KB on TCP that has no editor token set up.
+    const scoped = readScope(pathname) === 'reviewer' ? cfg.reviewerToken : cfg.editorToken;
+    const bearer = scoped ?? (cfg.kb.kind === 'tcp' ? cfg.token : undefined);
+    if (bearer) headers.authorization = `Bearer ${bearer}`;
 
     let up;
     try {
@@ -156,8 +169,9 @@ export function createLoupeApp(cfg: ServeConfig): Hono {
       else if (p.startsWith('/auth/')) res = await auth.handle(req, p, origin);
       else if (p === '/kb' || p.startsWith('/kb/') || p === '/kb-write' || p.startsWith('/kb-write/')) {
         if (!auth.sessionOf(req)) res = problem(401, 'session_required', 'Sign in first');
-        // The write path arrives with M1. Until then it has the checks and the session, and nothing behind them.
-        else if (p.startsWith('/kb-write')) res = problem(404, 'path_not_allowed', 'Path is not served');
+        else if (p.startsWith('/kb-write')) {
+          res = await handleWrite(req, p, { kb: cfg.kb, editorToken: cfg.editorToken, reviewerToken: cfg.reviewerToken, firstByteMs: cfg.writeFirstByteMs ?? 15_000, connectMs, unsafeSegment });
+        }
         else res = await inner(...args);
       } else res = await inner(...args);
     }
@@ -181,9 +195,19 @@ function secured(res: Response, data: boolean): Response {
   return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
 }
 
+/** `kb-editor.token` or `kb-reviewer.token` in the config directory (mode 600, directory not writable by others). Missing or unsafe → none, and the paths that need it answer 503. */
+function kbTokenFile(dir: string, name: string): string | undefined {
+  const file = path.join(dir, name);
+  if (!existsSync(file) || checkDir(dir)) return undefined;
+  try { return readTokenFile(file) || undefined; } catch { return undefined; }
+}
+
 export function configFromEnv(env: NodeJS.ProcessEnv = process.env): ServeConfig {
   const token = env.KB_TOKEN_FILE ? readTokenFile(env.KB_TOKEN_FILE) : undefined;
+  const dir = configDir(env);
   return {
+    editorToken: kbTokenFile(dir, 'kb-editor.token'),
+    reviewerToken: kbTokenFile(dir, 'kb-reviewer.token'),
     kb: parseKbUrl(env.KB_URL ?? DEFAULT_KB_URL),
     dist: path.resolve(env.LOUPE_DIST ?? new URL('../dist/', import.meta.url).pathname),
     token,
@@ -191,7 +215,7 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env): ServeConfig
     connectMs: env.LOUPE_CONNECT_MS ? Number(env.LOUPE_CONNECT_MS) : undefined,
     port: Number(env.LOUPE_PORT ?? 4812),
     auth: {
-      dir: configDir(env),
+      dir,
       // A test provider on this machine (e2e). Unset, it is Google.
       issuer: env.LOUPE_OIDC_ISSUER || undefined,
       idleMs: env.LOUPE_SESSION_IDLE_MS ? Number(env.LOUPE_SESSION_IDLE_MS) : undefined,

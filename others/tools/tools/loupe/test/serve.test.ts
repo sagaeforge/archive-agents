@@ -11,6 +11,7 @@ import { zstdDecompressSync } from 'node:zlib';
 import { createKbMock } from '../dev/kb-mock/app.ts';
 import { createLoupeApp, KB_WRITE_ROUTES, unsafeSegment } from '../server/serve.ts';
 import { AUTH_ROUTES } from '../server/auth/index.ts';
+import { WRITE_ROUTES } from '../server/write.ts';
 import { summarizeWrite } from '../server/status.ts';
 import { AUTH_HEADERS, CLIENT, login, startIdp, writeAuthConfig, type Idp } from '../e2e/support/oidc.ts';
 
@@ -167,6 +168,32 @@ describe('what the proxy refuses', () => {
     // The mock would reject a bad Authorization with 401 only if it required a token; here we check Host instead:
     const r = await raw(4832, '/kb/v1/meta', { 'x-forwarded-host': 'evil.example', cookie: 'a=b' });
     expect(r.status).toBe(200);
+  });
+});
+
+// Design v2 5.1: the five read-only first-party paths of the task center go through loupe serve, GET only.
+describe('task center read paths (design v2 5.1)', () => {
+  const TASK_PATHS = [
+    '/kb/v1/topics/f-m0f-queued/research', '/kb/v1/writes/w-m0f-pending', '/kb/v1/actions/a-m0f-preparing', '/kb/v1/hitl', '/kb/v1/nodes/e%3Atopic%3Am0f-queued/reviews',
+  ];
+  let port = 0;
+  beforeAll(async () => {
+    const mock = await unixMock('t.sock', { tasks: true });
+    port = 4835;
+    await serve({ kind: 'unix', path: mock }, port);
+  });
+  it.each(TASK_PATHS)('GET %s is forwarded to the KB', async (p) => {
+    const r = await raw(port, p);
+    expect(r.status).toBe(200);
+    expect(JSON.parse(r.body.toString()).data).toBeTruthy();
+  });
+  it.each(TASK_PATHS)('POST %s is 405 like the other read paths', async (p) => {
+    expect((await raw(port, p, {}, 'POST')).status).toBe(405);
+  });
+  it.each(['/kb/v1/topics/f-m0f-queued/research/extra', '/kb/v1/topics/f-m0f-queued', '/kb/v1/writes', '/kb/v1/writes/w-m0f-pending/body', '/kb/v1/actions', '/kb/v1/actions/a-m0f-preparing/execute', '/kb/v1/hitl/x', '/kb/v1/hitl/challenge', '/kb/v1/nodes/e%3Atopic%3Am0f-queued/reviews/extra'])('%s is 404 path_not_allowed', async (p) => {
+    const r = await raw(port, p);
+    expect(r.status).toBe(404);
+    expect(JSON.parse(r.body.toString()).code).toBe('path_not_allowed');
   });
 });
 
@@ -413,16 +440,65 @@ describe('what the web can change (design v2 2.8: security settings are terminal
   const SESSION_ONLY = new Set(['POST /auth/google/start', 'POST /auth/google/finish', 'POST /auth/breakglass', 'POST /auth/lock']);
   const route = (r: { method: string; path: string }) => `${r.method} ${r.path}`;
 
-  it('every state-changing entry of /auth/* and /kb-write/* is a session-only entry', () => {
+  // The write-capable /kb-write/* routes of design v2 5.1 (the path table), each with the KB token it carries. This is the whole set:
+  // a route added to server/write.ts without a row here, or without a session guard, fails below.
+  const KB_WRITE_EXPECTED = [
+    'POST /kb-write/records editor',
+    'POST /kb-write/records/{id} editor',
+    'POST /kb-write/records/{id}/tombstone editor',
+    'POST /kb-write/records/{id}/promote editor',
+    'POST /kb-write/topics/{spec}/research editor',
+    'POST /kb-write/topics/{spec}/research/{run}/stop editor',
+    'POST /kb-write/writes/{ref}/discard editor',
+    'POST /kb-write/actions reviewer',
+    'POST /kb-write/actions/challenge reviewer',
+    'POST /kb-write/actions/{id}/external-refine reviewer',
+    'POST /kb-write/actions/{id}/execute reviewer',
+    'POST /kb-write/hitl/challenge reviewer',
+    'POST /kb-write/hitl/{item}/resolve reviewer',
+    'POST /kb-write/reviewer/enroll reviewer',
+  ];
+  const withScope = (rs: readonly { method: string; path: string; scope?: string }[]) => rs.map((r) => `${route(r)} ${r.scope}`);
+
+  it('every state-changing entry of /auth/* is a session-only entry, and /kb-write/* is exactly the 14 documented write routes', () => {
     expect(Array.isArray(AUTH_ROUTES)).toBe(true);
-    expect(Array.isArray(KB_WRITE_ROUTES)).toBe(true);
-    for (const r of [...AUTH_ROUTES, ...KB_WRITE_ROUTES]) {
-      if (r.method === 'GET' || r.method === 'HEAD') continue;
+    for (const r of AUTH_ROUTES) {
+      const method: string = r.method;
+      if (method === 'GET' || method === 'HEAD') continue;
       expect(SESSION_ONLY.has(route(r)), `${route(r)} changes state and is not session-only`).toBe(true);
     }
     // The table is complete: the session-only POSTs are all there, and the status is a read.
     expect(AUTH_ROUTES.map(route)).toEqual(expect.arrayContaining([...SESSION_ONLY, 'GET /auth/status', 'GET /auth/status/detail', 'GET /auth/session']));
-    expect(KB_WRITE_ROUTES, 'no write route exists before M1').toEqual([]);
+    // Every /kb-write/* entry is a POST, and the set and each route's token are exactly the design table. A new write route fails here.
+    expect(KB_WRITE_ROUTES.every((r) => r.method === 'POST')).toBe(true);
+    expect(withScope(WRITE_ROUTES)).toEqual(KB_WRITE_EXPECTED);
+    expect(KB_WRITE_ROUTES.map(route)).toEqual(WRITE_ROUTES.map(route));
+  });
+
+  it('no /kb-write/* route answers without a session, and none does anything for a session without its KB token', async () => {
+    const mock = await unixMock('sw-nosession.sock');
+    let app: ReturnType<typeof createLoupeApp> | undefined;
+    const s = createAdaptorServer({ fetch: (r: Request) => app!.fetch(r) }) as Server;
+    const port = await new Promise<number>((resolve) => s.listen(0, '127.0.0.1', () => resolve((s.address() as net.AddressInfo).port)));
+    // No editor or reviewer token is configured, so a request that does pass the session check stops at 503 and reaches no KB.
+    app = createLoupeApp({ kb: { kind: 'unix', path: mock }, dist, port, auth: authCfg() });
+    const origin = `http://localhost:${port}`;
+    tokens.set(port, await login(origin));
+    const headers = { origin, 'content-type': 'application/json', 'sec-fetch-site': 'same-origin', 'x-loupe-write': '1' };
+    const concrete = (p: string) => p.replace(/\{[a-z]+\}/g, 'x-1');
+    // `session` is the one input that decides the answer: the test passes it false for every route.
+    const probe = (p: string, session: boolean) => raw(port, concrete(p), headers, 'POST', session);
+    const answers: string[] = [];
+    try {
+      for (const r of WRITE_ROUTES) {
+        const without = await probe(r.path, false);
+        answers.push(`${route(r)} ${without.status}`);
+        expect(without.status, `${route(r)} answered ${without.status} without a session`).toBe(401);
+        const withSession = await probe(r.path, true);
+        expect(withSession.status, `${route(r)} with a session but no KB token`).toBe(503);
+      }
+    } finally { s.close(); }
+    expect(answers).toHaveLength(14);
   });
 
   it('no method on any other /auth/* or /kb-write/* path does anything, and the config files stay byte for byte', async () => {
