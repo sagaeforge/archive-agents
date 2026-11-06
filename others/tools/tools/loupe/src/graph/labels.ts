@@ -40,7 +40,12 @@ export class LabelSelector {
     const x = m.a * this.gx[i]! + m.b * this.gy[i]! + m.c, y = m.d * this.gx[i]! + m.e * this.gy[i]! + m.f;
     if (x < -50 || x > view.width || y < 0 || y > view.height) return false;
     const { grid, gw, gh } = this;
-    const tw = this.width(i), lx = x + this.sizes[i]! * sizeScale + 3, ly = y - LABEL_PX * 0.6;
+    const tw = this.width(i), off = this.sizes[i]! * sizeScale + 3, ly = y - LABEL_PX * 0.6;
+    // The label (with its 2 px backing on each side) sits right of the disc; at the right edge it flips to the left, and one that fits neither way is dropped.
+    let lx = x + off;
+    if (lx + tw + 2 > view.width) lx = x - off - tw;
+    if (lx < 2 && x >= 0) return false;
+    if (lx + tw + 2 > view.width || y - (LABEL_PX + 4) / 2 < 0 || y + (LABEL_PX + 4) / 2 > view.height) return false;
     const c0 = Math.max(0, (lx / CELL_W) | 0), c1 = Math.min(gw - 1, ((lx + tw) / CELL_W) | 0);
     const r0 = Math.max(0, (ly / CELL_H) | 0), r1 = Math.min(gh - 1, ((ly + LABEL_PX * 1.2) / CELL_H) | 0);
     for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) if (grid[r * gw + c]) return false;

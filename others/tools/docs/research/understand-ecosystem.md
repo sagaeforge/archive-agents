@@ -7,10 +7,10 @@ Labels: **[verified]** means I read the file or ran the command. **[inferred]** 
 ## 0. Findings that change the plan
 
 1. **There is no KB database to read yet.** `sagae-knowloge-base` has no commits. It holds only `CLAUDE.md` and `docs/research/*.md` (`git log` fails with "does not have any commits yet"). Every `.db`, `.duckdb` and `.lbug` file found is a throwaway prototype in another session's scratchpad on tmpfs (`df -T /tmp` = tmpfs), so it disappears on reboot. The storage engine is still undecided: the KB session has SQLite, DuckDB, LadybugDB and FalkorDB trials side by side.
-2. **The native UX for this user is a loopback web page in an Orca browser tab.** `pixel-wt` already does this: a server on `127.0.0.1`, opened with `orca-ide tab create --url`, and supervised by a systemd user unit.
+2. **The native UX for this user is a loopback web page in an Orca browser tab.** `pixel-wt` (pixel-wt removed 2026-11-05) already did this: a server on `127.0.0.1`, opened with `orca-ide tab create --url`, and supervised by a systemd user unit.
 3. **Nothing exposes internal services today.** There is no Tailscale, WireGuard, reverse proxy or tunnel on PATH, in Windows Program Files, or in any repo doc or memory. The one access rule on record is "내부망(192.168.x.x/24)에 접근할 수 있어야 합니다" (`sagae-claude-plugins/README.md`).
 4. **The KB forbids visualization inside itself** (`sagae-knowloge-base/CLAUDE.md`, 지침 5). That rule is why this tool must be separate, and it means the viewer must never write derived scores back into the KB.
-5. **WSL runs in Mirrored networking, so eth0 is the real LAN address 192.168.x.x.** Binding to `0.0.0.0` could put a server on the LAN (not tested, and Windows firewall behaviour is unverified). Bind to `127.0.0.1` by default, as `pixel-wt` does.
+5. **WSL runs in Mirrored networking, so eth0 is the real LAN address 192.168.x.x.** Binding to `0.0.0.0` could put a server on the LAN (not tested, and Windows firewall behaviour is unverified). Bind to `127.0.0.1` by default, as `pixel-wt` (pixel-wt removed 2026-11-05) did.
 
 ## 1. sagae-claude-plugins
 
@@ -49,7 +49,7 @@ Uncommitted edits on main add the rule "The main session does no work itself" to
 
 **How Orca is launched [verified].** The command is `orca-ide`, not `orca`.
 - `~/.local/bin/orca-ide` calls `powershell.exe` with `~/.local/share/orca/orca-wsl-bridge.ps1`, which runs `C:\Users\user\AppData\Local\Programs\orca\resources\bin\orca.exe`.
-- `pixel-wt` honours `ORCA_CLI_COMMAND` and defaults to `orca-ide`.
+- `pixel-wt` (pixel-wt removed 2026-11-05) honoured `ORCA_CLI_COMMAND` and defaults to `orca-ide`.
 - Orca runs on Windows (`host list`: `sagae-windows`, `win32`). Paths come back as UNC, such as `\\wsl.localhost\Ubuntu\home\sagae\sagae-tools`.
 - **Trap:** `orca-ide` reads stdin. In a heredoc-driven script it swallows the rest of the script, which happened during this survey. Always pass `</dev/null`.
 
@@ -62,7 +62,7 @@ Uncommitted edits on main add the rule "The main session does no work itself" to
 
 **Other pieces.**
 - `~/.zshrc` and `~/.tmux.conf` run one tmux session per Orca worktree and keep Korean text intact over OSC 52.
-- `pixel-wt.service` watches for new worktrees and gives each its own Pixel Agents office on a port from 4700 to 4799.
+- `pixel-wt.service` (pixel-wt removed 2026-11-05) watched for new worktrees and gave each its own Pixel Agents office on a port from 4700 to 4799.
 
 ## 3. Durable preferences
 
@@ -97,7 +97,7 @@ From `~/.claude/projects/*/memory/`. There is no global `~/.claude/CLAUDE.md`, a
 
 | Runtime or tool | Version or state | Actual use |
 |---|---|---|
-| node | v26.13.0 via nvm | All the user's own code: proxmox MCP, `pixel-wt`, Orca hook relay |
+| node | v26.13.0 via nvm | All the user's own code: proxmox MCP, `pixel-wt` (pixel-wt removed 2026-11-05), Orca hook relay |
 | bun | 1.4.4 in `~/.bun/bin` | Only third-party `claude-hud` statusline; no bun use in proxmox |
 | python3 | 3.14.4 | KB prototypes; `harness.md` notes no `ensurepip` and no uv on default PATH |
 | rtk | 1.1.0 | Bash output only (`compression.md`) |
@@ -105,15 +105,15 @@ From `~/.claude/projects/*/memory/`. There is no global `~/.claude/CLAUDE.md`, a
 | gh | 2.103.3 | Authenticated; `sagaeforge` lists the private plugin repo and public repos |
 | Absent | docker, pnpm, uv, sqlite3, psql, orca | Per task; confirmed where tested |
 
-**Global tools are single hand-installed files in `~/.local/bin`, with pinned packages under `~/.local/share/<tool>/`.** Both are outside any git repo: `pixel-wt` and the `trail` wrapper have no version control, so moving them here is a natural follow-up [inferred; not requested].
+**Global tools are single hand-installed files in `~/.local/bin`, with pinned packages under `~/.local/share/<tool>/`.** Both are outside any git repo: `pixel-wt` (pixel-wt removed 2026-11-05) and the `trail` wrapper had no version control, so moving them here is a natural follow-up [inferred; not requested].
 
-**Trap:** nvm's `node` is not on PATH for non-interactive contexts. It broke the proxmox MCP once, and the failure was cached for 15 minutes (`harness.md` section 6, T0, T18). `pixel-wt.service` avoids this by hardcoding the full node path and `Environment=PATH`. Any new unit must do the same.
+**Trap:** nvm's `node` is not on PATH for non-interactive contexts. It broke the proxmox MCP once, and the failure was cached for 15 minutes (`harness.md` section 6, T0, T18). `pixel-wt.service` (pixel-wt removed 2026-11-05) avoided this by hardcoding the full node path and `Environment=PATH`. Any new unit must do the same.
 
 **Ports in use (`ss -ltnp`) [verified].**
 
 | Port | Owner | Lifetime |
 |---|---|---|
-| 127.0.0.1:4700-4703 | Pixel Agents, one per worktree; `pixel-wt` owns 4700-4799 | Long-running |
+| 127.0.0.1:4700-4703 | Pixel Agents, one per worktree (removed 2026-11-05); `pixel-wt` owned 4700-4799 | Long-running |
 | 127.0.0.1:18933 | KB prototype `kb_http_logged.py` (not contacted) | Scratch |
 | *:18090, *:50051, *:37625 | Java, gone minutes later. Probably a Kestra trial, from `server_kestra_local3.log` in the KB scratchpad [inferred] | Transient, bound to all interfaces |
 | 127.0.0.1:5xxxx | Node processes, including the Orca hook relay (57489) | Ephemeral |
@@ -131,8 +131,8 @@ From `~/.claude/projects/*/memory/`. There is no global `~/.claude/CLAUDE.md`, a
 
 | Option | Verdict | Reasoning |
 |---|---|---|
-| Local web app | **Core** | Graph, table and document views need a real UI. Exact precedent in `pixel-wt`. Also works in a Windows browser |
-| CLI + browser | **Launcher for the web app** | `<name> serve`, `open`, `status`, `install`. Matches `pixel-wt` commands. Not a separate product |
+| Local web app | **Core** | Graph, table and document views need a real UI. Exact precedent was `pixel-wt` (pixel-wt removed 2026-11-05). Also works in a Windows browser |
+| CLI + browser | **Launcher for the web app** | `<name> serve`, `open`, `status`, `install`. Matched `pixel-wt` (pixel-wt removed 2026-11-05) commands. Not a separate product |
 | Claude plugin skill | **Later, thin only** | Useful for `open this node`. Wrong home for the app: push-to-main deploys it, install paths change per version, and only Node deps auto-install (`harness.md` section 6) |
 | MCP | **Do not build for v1** | The KB plans its own plugin with MCP and skill (`harness.md` section 6). A second one duplicates it. Agents should query the KB directly |
 | Desktop (Electron, Tauri) | **Reject** | Orca already gives an Electron shell with a browser tab. Packaging across WSL and Windows adds cost with no gain |
@@ -143,7 +143,7 @@ From `~/.claude/projects/*/memory/`. There is no global `~/.claude/CLAUDE.md`, a
 - **Honour KB semantics.** Show sources on every claim. Hide superseded (죽은 데이터) records by default with a toggle, matching the KB's default search. Keep third-party recommendations attributed. Keep derived views in the viewer and never write them back.
 - **Read-only by construction.** Open the DB read-only and expose GET routes only.
 - **Loopback safety.** Bind `127.0.0.1` and check the `Host` header to resist DNS rebinding [my recommendation].
-- **One global instance.** Unlike `pixel-wt`, a single KB means one server, not one per worktree. Use a systemd user unit with a hardcoded node path. Make the Orca tab idempotent with `orca-ide tab list --worktree all` before `tab create --url`.
+- **One global instance.** Unlike `pixel-wt` (pixel-wt removed 2026-11-05), a single KB means one server, not one per worktree. Use a systemd user unit with a hardcoded node path. Make the Orca tab idempotent with `orca-ide tab list --worktree all` before `tab create --url`.
 
 **Monorepo layout for sagae-tools.**
 
@@ -173,7 +173,7 @@ sagae-tools/
 
 ## 7. Name candidates
 
-Local style [verified]: short lowercase words (`trail`, `graft`, `orca`, `rtk`, `proxmox`), or a plain descriptive hyphenated form (`pixel-wt`). All five candidates are unused on PATH. Public registries were not checked, which matters little for a `private: true` package.
+Local style [verified]: short lowercase words (`trail`, `graft`, `orca`, `rtk`, `proxmox`), or a plain descriptive hyphenated form (`pixel-wt` (pixel-wt removed 2026-11-05)). All five candidates are unused on PATH. Public registries were not checked, which matters little for a `private: true` package.
 
 | Name | Rationale | Drawback |
 |---|---|---|
@@ -193,7 +193,7 @@ Local style [verified]: short lowercase words (`trail`, `graft`, `orca`, `rtk`, 
 4. Does the user want LAN or remote access at all? Nothing exposes services today.
 5. Which UI style? No preference is recorded. Obsidian-like graph and notes, Notion-like database views, or both?
 6. Does "trailing" mean Trail-Code? `compression.md` records this as unconfirmed.
-7. Should `pixel-wt` and other `~/.local/bin` scripts move into sagae-tools later? Not requested.
+7. Should `pixel-wt` (pixel-wt removed 2026-11-05) and other `~/.local/bin` scripts move into sagae-tools later? Not requested.
 
 ## 9. Method and limits
 

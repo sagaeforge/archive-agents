@@ -401,7 +401,7 @@ Core spike conclusions hold, but S1's "passes every check" does not. Reruns repr
 ### Leftovers
 
 - Nothing running: 0 spike processes, 0 listeners in 18000-18999, 0 s2lc-* or rv-* transient units, Linger=no, /home/user/sagae-tools shows only the existing untracked CLAUDE.md.
-- No stray browser tabs: the 3 Orca tabs are the user's Pixel Agents pages. My one bench tab is closed and Pixel Agents is the active tab again.
+- No stray browser tabs: the 3 Orca tabs were the user's Pixel Agents pages (Pixel Agents removed 2026-11-05). My one bench tab is closed and Pixel Agents is the active tab again.
 - 13 directories under ~/.cache/claude-cli-nodejs (12 from S1, 1 from S2), 396 KB of MCP logs from real Claude Code runs. S1 and S2 did not report them. Left in place.
 - ~/.claude/projects entry for s2-lifecycle-cc-cwd: empty directory tree from S2. Left in place.
 - /tmp/playwright-artifacts-* (3) and /tmp/playwright_chromiumdev_profile-* (3) from S3, 144 KB total. Left in place.

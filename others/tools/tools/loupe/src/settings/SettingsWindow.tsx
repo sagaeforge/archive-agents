@@ -6,7 +6,7 @@ import { useState, useSyncExternalStore, type ReactNode } from 'react';
 import { Instant } from '../components/bits.tsx';
 import { authStore } from '../auth/session.ts';
 import { connection } from '../data/connection.ts';
-import { appearance, readDefaults, useAppearance, writeDefaults, type Defaults, type Motion, type TextSize, type Theme, type Visibility } from './appearance.ts';
+import { appearance, readDefaults, useAppearance, writeDefaults, type Defaults, type GraphMode, type Motion, type TextSize, type Theme, type Visibility } from './appearance.ts';
 import { lock } from './lock.ts';
 import { idleText, maxText, useSettingsStatus, type SettingsStatus } from './statusApi.ts';
 
@@ -160,6 +160,10 @@ function AppearanceCard() {
         {radio<TextSize>('size', 'small', a.size, '작게', (size) => appearance.set({ size }))}
         {radio<TextSize>('size', 'normal', a.size, '보통', (size) => appearance.set({ size }))}
         {radio<TextSize>('size', 'large', a.size, '크게', (size) => appearance.set({ size }))}
+      </fieldset>
+      <fieldset><legend>홈 그래프</legend>
+        {radio<GraphMode>('graph', '3d', a.graph, '3D (기본)', (graph) => appearance.set({ graph }))}
+        {radio<GraphMode>('graph', '2d', a.graph, '2D', (graph) => appearance.set({ graph }))}
       </fieldset>
       <label><input type="checkbox" data-testid="motion-reduce" checked={a.motion === 'reduce'} onChange={(e) => appearance.set({ motion: (e.target.checked ? 'reduce' : 'system') as Motion })} />움직임 줄이기</label>
       <p>이 브라우저에만 저장한다.</p>

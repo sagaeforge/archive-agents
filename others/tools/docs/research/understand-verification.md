@@ -115,7 +115,7 @@ The consumer doc says "읽기 전용 DB 파일 직접 접근은 원하지 않는
 "Read-only by construction" holds for the viewer's own data but not for the file underneath it. A read-only DuckDB connection blocks writers. SQLite `mode=ro` on a WAL database creates files beside it. Details are in section 2, item 4. The task brief's `mode=ro` tip has the same caveat, so I opened only byte copies.
 
 **C16. A systemd user unit does not keep the viewer available. Incomplete.**
-`Linger=no`, and per `etl-orchestration.md:22,181-190` WSL stops about 15 s after the last Windows client, without counting systemd services. That report derives this from source analysis and did not measure it. `pixel-wt` shows that a unit runs, not that it survives this. The unit needs an absolute `bun` path too: neither `bun` nor `node` is on a bare PATH. Changing Linger needs the user's approval (`retrieval-serving.md:71`).
+`Linger=no`, and per `etl-orchestration.md:22,181-190` WSL stops about 15 s after the last Windows client, without counting systemd services. That report derives this from source analysis and did not measure it. `pixel-wt` (pixel-wt removed 2026-11-05) showed that a unit ran, not that it survives this. The unit needs an absolute `bun` path too: neither `bun` nor `node` is on a bare PATH. Changing Linger needs the user's approval (`retrieval-serving.md:71`).
 
 **C17. Named paths are stale in both reports. Overtaken.**
 
@@ -321,7 +321,7 @@ Ecosystem:
 | # | Claim | Evidence |
 |---|---|---|
 | 40 | Plugin rules, `package.json`, file sizes 93, 77, 54, CI steps, 3 commits, dirty main | Files, `git`, `wc -l` |
-| 41 | `pixel-wt` ports, loopback URL, tab logic; unit with hardcoded node and PATH, active | Lines 31-32, 83-87; `systemctl` |
+| 41 | `pixel-wt` ports, loopback URL, tab logic; unit with hardcoded node and PATH, active at measurement (pixel-wt removed 2026-11-05) | Lines 31-32, 83-87; `systemctl` |
 | 42 | `orca-ide` launcher path and tab commands | Script head, `--help` |
 | 43 | 4 repos registered, automations empty, `~/orca/workspaces` has no files | `orca-ide`, `find` |
 | 44 | Mirrored networking; eth0 192.168.x.x/24 | `.wslconfig`, `ip` |

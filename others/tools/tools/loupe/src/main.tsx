@@ -8,6 +8,7 @@ import { AuthGate } from './auth/AuthGate.tsx';
 import { isUrlError } from './screens/ErrorScreens.tsx';
 import './index.css';
 import './settings/appearance.ts';
+import './design/index.ts';
 
 const queryClient = makeQueryClient();
 createRoot(document.getElementById('root') as HTMLElement, {

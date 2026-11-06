@@ -1,0 +1,129 @@
+/* loupe design tokens (spec: docs/design/loupe-design-system.md).
+   Every value is copied from a value the app already uses. The names carry the --ds- prefix so that
+   nothing in index.css, appearance.css or any screen's CSS is redefined or restyled. Screens migrate later. */
+:root {
+  /* Colour: light (index.css) */
+  --ds-paper: oklch(0.985 0.002 95);
+  --ds-surface: oklch(0.998 0.001 95);
+  --ds-wash: oklch(0.962 0.003 95);
+  --ds-ink: oklch(0.255 0.008 85);
+  --ds-ink-soft: oklch(0.42 0.008 85);
+  --ds-ink-faint: oklch(0.525 0.008 85);
+  --ds-line: oklch(0.915 0.004 90);
+  --ds-line-strong: oklch(0.85 0.006 90);
+  --ds-accent: oklch(0.45 0.09 245);
+  --ds-accent-wash: oklch(0.95 0.018 245);
+  --ds-time-ink: oklch(0.4 0.095 62);
+  --ds-time-wash: oklch(0.945 0.055 88);
+  --ds-time-line: oklch(0.74 0.15 72);
+  --ds-quote: oklch(0.905 0.1 100);
+  --ds-danger: oklch(0.47 0.16 27);
+  --ds-danger-wash: oklch(0.955 0.025 27);
+  --ds-warn-ink: oklch(0.42 0.09 50);
+  --ds-warn-wash: oklch(0.955 0.03 60);
+  --ds-ok: oklch(0.46 0.1 155);
+  --ds-primary: oklch(0.32 0.01 85);
+  --ds-primary-foreground: oklch(0.985 0 0);
+
+  /* Colour: fixed hex values the window, memo and task-centre CSS use today. No dark value exists yet (spec section 7). */
+  --ds-control-border: #aab1ba;
+  --ds-control-hover: #dde4eb;
+  --ds-control-active: #536f8b;
+  --ds-chip-border: #c4c8cb;
+  --ds-state-saved: #4f8a5b;
+  --ds-state-error: #b3472f;
+  --ds-state-error-wash: #fbf1ee;
+  --ds-state-warn: #b08a2e;
+  --ds-state-warn-wash: #fbf6e8;
+  --ds-badge-neutral-bg: #eef1f4;
+  --ds-badge-neutral-fg: #2f3a45;
+  --ds-badge-attention-bg: #facc15;
+  --ds-badge-attention-fg: #1f1a00;
+  --ds-badge-error-bg: #dc2626;
+  --ds-badge-error-fg: #fff;
+
+  /* Focus and disabled */
+  --ds-focus-width: 2px;
+  --ds-focus-offset: 2px;
+  --ds-disabled-opacity: 0.5;
+
+  /* Type */
+  --ds-font-body: "Malgun Gothic", "Noto Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif;
+  --ds-font-code: ui-monospace, "Cascadia Code", "D2Coding", Consolas, "Noto Sans KR", monospace;
+  --ds-text-2xs: 11px;
+  --ds-text-xs: 12px;
+  --ds-text-sm: 13px;
+  --ds-text-md: 15px;
+  --ds-text-lg: 1.35rem;
+  --ds-text-xl: 1.65rem;
+  --ds-leading-body: 1.7;
+  --ds-leading-title: 1.35;
+  --ds-weight-regular: 400;
+  --ds-weight-strong: 600;
+  --ds-weight-title: 700;
+
+  /* Spacing and radius */
+  --ds-space-1: 4px;
+  --ds-space-2: 6px;
+  --ds-space-3: 8px;
+  --ds-space-4: 12px;
+  --ds-space-5: 16px;
+  --ds-radius-xs: 4px;
+  --ds-radius-sm: 6px;
+  --ds-radius-md: 8px;
+  --ds-radius-lg: 10px;
+  --ds-radius-xl: 12px;
+  --ds-radius-pill: 999px;
+}
+
+/* Dark: the OS asks for dark and the user has not chosen light. appearance.ts also sets data-theme, so the block below is the same set. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ds-paper: oklch(0.2 0.006 85);
+    --ds-surface: oklch(0.24 0.006 85);
+    --ds-wash: oklch(0.29 0.006 85);
+    --ds-ink: oklch(0.93 0.004 90);
+    --ds-ink-soft: oklch(0.82 0.005 90);
+    --ds-ink-faint: oklch(0.72 0.006 90);
+    --ds-line: oklch(0.34 0.006 85);
+    --ds-line-strong: oklch(0.44 0.006 85);
+    --ds-accent: oklch(0.76 0.1 245);
+    --ds-accent-wash: oklch(0.3 0.04 245);
+    --ds-time-ink: oklch(0.85 0.1 80);
+    --ds-time-wash: oklch(0.32 0.05 80);
+    --ds-time-line: oklch(0.7 0.14 72);
+    --ds-quote: oklch(0.45 0.08 100);
+    --ds-danger: oklch(0.74 0.15 27);
+    --ds-danger-wash: oklch(0.3 0.05 27);
+    --ds-warn-ink: oklch(0.82 0.09 70);
+    --ds-warn-wash: oklch(0.3 0.04 60);
+    --ds-ok: oklch(0.76 0.13 155);
+    --ds-primary: oklch(0.9 0.01 85);
+    --ds-primary-foreground: oklch(0.2 0 0);
+  }
+}
+
+/* Dark: the user chose dark. */
+:root[data-theme="dark"] {
+  --ds-paper: oklch(0.2 0.006 85);
+  --ds-surface: oklch(0.24 0.006 85);
+  --ds-wash: oklch(0.29 0.006 85);
+  --ds-ink: oklch(0.93 0.004 90);
+  --ds-ink-soft: oklch(0.82 0.005 90);
+  --ds-ink-faint: oklch(0.72 0.006 90);
+  --ds-line: oklch(0.34 0.006 85);
+  --ds-line-strong: oklch(0.44 0.006 85);
+  --ds-accent: oklch(0.76 0.1 245);
+  --ds-accent-wash: oklch(0.3 0.04 245);
+  --ds-time-ink: oklch(0.85 0.1 80);
+  --ds-time-wash: oklch(0.32 0.05 80);
+  --ds-time-line: oklch(0.7 0.14 72);
+  --ds-quote: oklch(0.45 0.08 100);
+  --ds-danger: oklch(0.74 0.15 27);
+  --ds-danger-wash: oklch(0.3 0.05 27);
+  --ds-warn-ink: oklch(0.82 0.09 70);
+  --ds-warn-wash: oklch(0.3 0.04 60);
+  --ds-ok: oklch(0.76 0.13 155);
+  --ds-primary: oklch(0.9 0.01 85);
+  --ds-primary-foreground: oklch(0.2 0 0);
+}

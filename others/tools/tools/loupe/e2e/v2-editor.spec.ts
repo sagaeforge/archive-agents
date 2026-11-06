@@ -16,6 +16,9 @@ const FORBIDDEN = 'img:not(.ProseMirror-separator),img[src],svg,iframe,frame,obj
 
 /** Design 4.5 "Trusted Types": the target policy is measured in report-only mode, so a sink the editor uses without a policy is counted, not blocked. */
 async function measureTrustedTypes(page: Page) {
+  // The home draws its graph behind the editor window. The default 3D graph's library assigns innerHTML = '' when it mounts, which would count as an
+  // editor sink: this measurement is about the editor, so it runs with the 2D graph. The 3D sinks are measured in graph3d.spec.ts.
+  await page.addInitScript(() => localStorage.setItem('loupe.appearance', JSON.stringify({ theme: 'light', size: 'normal', motion: 'system', graph: '2d' })));
   await page.addInitScript(() => {
     const seen: { directive: string; sample: string }[] = ((window as unknown as { __tt?: unknown[] }).__tt = []) as never;
     document.addEventListener('securitypolicyviolation', (e) => { seen.push({ directive: e.violatedDirective, sample: e.sample }); });

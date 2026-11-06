@@ -3,7 +3,7 @@
 import { LABEL_PX, LabelSelector, type Affine } from './labels.ts';
 import { labelBudget, type GraphProfile } from './gpuProfile.ts';
 
-const FONT = `500 ${LABEL_PX}px "Malgun Gothic","Noto Sans KR",sans-serif`;
+export const LABEL_FONT = `500 ${LABEL_PX}px "Malgun Gothic","Noto Sans KR",sans-serif`;
 
 export type OverlayNodes = { keys: string[]; xs: Float32Array; ys: Float32Array; sizes: Float32Array; labels: string[] };
 type Projector = {
@@ -36,7 +36,7 @@ export class LabelOverlay {
     host.appendChild(this.canvas);
     this.ctx = this.canvas.getContext('2d')!;
     this.measure = document.createElement('canvas').getContext('2d')!;
-    this.measure.font = FONT;
+    this.measure.font = LABEL_FONT;
     this.resize();
   }
 
@@ -110,7 +110,7 @@ export class LabelOverlay {
     if (!s || !nodes) return;
     s.select(this.affine(), { width: this.w, height: this.h }, this.sigma.scaleSize(1));
     const n = s.selN;
-    ctx.font = FONT; ctx.textBaseline = 'middle';
+    ctx.font = LABEL_FONT; ctx.textBaseline = 'middle';
     ctx.fillStyle = 'rgba(255,255,255,.82)';
     const h = LABEL_PX + 4;
     for (let i = 0; i < n; i++) ctx.fillRect(s.selX[i]! - 2, s.selY[i]! - h / 2, this.widths[s.sel[i]!]! + 4, h);

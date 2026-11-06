@@ -6,18 +6,19 @@ import './appearance.css';
 export type Theme = 'system' | 'light' | 'dark';
 export type TextSize = 'small' | 'normal' | 'large';
 export type Motion = 'system' | 'reduce';
-export type Appearance = { theme: Theme; size: TextSize; motion: Motion };
+export type GraphMode = '3d' | '2d';
+export type Appearance = { theme: Theme; size: TextSize; motion: Motion; graph: GraphMode };
 
 export const APPEARANCE_KEY = 'loupe.appearance';
-const DEFAULT: Appearance = { theme: 'system', size: 'normal', motion: 'system' };
-const THEMES: readonly Theme[] = ['system', 'light', 'dark'], SIZES: readonly TextSize[] = ['small', 'normal', 'large'], MOTIONS: readonly Motion[] = ['system', 'reduce'];
+const DEFAULT: Appearance = { theme: 'system', size: 'normal', motion: 'system', graph: '3d' };
+const THEMES: readonly Theme[] = ['system', 'light', 'dark'], SIZES: readonly TextSize[] = ['small', 'normal', 'large'], MOTIONS: readonly Motion[] = ['system', 'reduce'], GRAPHS: readonly GraphMode[] = ['3d', '2d'];
 const pick = <T extends string>(all: readonly T[], v: unknown, d: T): T => (all as readonly unknown[]).includes(v) ? v as T : d;
 
 function read(): Appearance {
   try {
     const v: unknown = JSON.parse(localStorage.getItem(APPEARANCE_KEY) ?? 'null');
     const o = v && typeof v === 'object' ? v as Record<string, unknown> : {};
-    return { theme: pick(THEMES, o.theme, DEFAULT.theme), size: pick(SIZES, o.size, DEFAULT.size), motion: pick(MOTIONS, o.motion, DEFAULT.motion) };
+    return { theme: pick(THEMES, o.theme, DEFAULT.theme), size: pick(SIZES, o.size, DEFAULT.size), motion: pick(MOTIONS, o.motion, DEFAULT.motion), graph: pick(GRAPHS, o.graph, DEFAULT.graph) };
   } catch { return DEFAULT; }
 }
 

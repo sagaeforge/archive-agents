@@ -608,7 +608,7 @@ base-uri 'none'; form-action 'none'
 
 ## 10. 전달
 
-**pixel-wt 선례를 따른다.** 127.0.0.1 서버, systemd user 유닛이고 열리는 곳은 브라우저 탭이다. 그래프는 전용 Chrome 창이 기본이고 Orca 탭도 쓸 수 있다(6.1절). Windows 쪽 브라우저에서 미러 네트워킹으로 닿는 것은 확인됐다(`understand-verification.md`). 단 뷰어는 worktree당이 아니라 전역 하나다.
+**pixel-wt 선례를 따른다(선례 코드는 2026-11-05 제거됨).** 127.0.0.1 서버, systemd user 유닛이고 열리는 곳은 브라우저 탭이다. 그래프는 전용 Chrome 창이 기본이고 Orca 탭도 쓸 수 있다(6.1절). Windows 쪽 브라우저에서 미러 네트워킹으로 닿는 것은 확인됐다(`understand-verification.md`). 단 뷰어는 worktree당이 아니라 전역 하나다.
 
 | 방식 | 제공자 | URL | 용도 |
 |---|---|---|---|
