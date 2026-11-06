@@ -1,0 +1,21 @@
+/* The database view (design v2 4.3). It sits inside the editor as a block, so it sets its own white space and font. */
+.dbv { margin:10px 0; padding:8px 10px; border:1px solid #c4c8cb; border-radius:8px; background:var(--color-paper,#fff); font-size:12px; white-space:normal; overflow-x:auto; }
+.dbv-bar { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:6px; }
+.dbv-bar strong { margin-right:4px; }
+.dbv-bar input,.dbv-bar select { padding:1px 6px; border:1px solid #aab1ba; border-radius:6px; font-size:12px; background:var(--color-paper,#fff); }
+.dbv-filter { width:9em; }
+.dbv-bar button { padding:1px 10px; border:1px solid #536f8b; border-radius:8px; background:var(--color-paper,#fff); font-size:12px; }
+.dbv-count { margin-left:auto; color:#5a6470; }
+.dbv-table { width:100%; border-collapse:collapse; }
+.dbv-table th,.dbv-table td { padding:3px 8px; border-bottom:1px solid #e1e3e5; text-align:left; vertical-align:middle; }
+.dbv-table th { font-weight:600; color:#3d4650; white-space:nowrap; }
+.dbv-table td input[type=text] { width:100%; min-width:6em; padding:1px 4px; border:1px solid transparent; border-radius:4px; background:transparent; font-size:12px; }
+.dbv-table td input[type=text]:hover,.dbv-table td input[type=text]:focus { border-color:#aab1ba; background:var(--color-paper,#fff); }
+.dbv-table td input[aria-invalid=true] { border-color:#b3472f; background:#fbf1ee; }
+.dbv-table td input:disabled { color:#5a6470; }
+.dbv-title { cursor:pointer; text-decoration:underline dotted; }
+.dbv-chip { width:8em; color:#5a6470; white-space:nowrap; }
+.dbv-table tr[data-state=conflict],.dbv-table tr[data-state=rejected],.dbv-table tr[data-state=blocked],.dbv-table tr[data-state=invalid] { background:#fbf1ee; }
+.dbv-table tr[data-state=offline],.dbv-table tr[data-state=pending],.dbv-table tr[data-state=throttled] { background:#fbf6e8; }
+.dbv-band-row > td { padding:0; }
+.dbv-empty { margin:6px 0 0; color:#5a6470; }

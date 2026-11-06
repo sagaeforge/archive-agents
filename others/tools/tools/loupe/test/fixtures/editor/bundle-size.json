@@ -1,30 +1,62 @@
 {
   "tiptap": "3.32.0",
-  "editorGzBytes": 215739,
-  "editorGzKB": 210.7,
-  "firstScreenGzBytes": 239826,
+  "editorGzBytes": 234821,
+  "editorGzKB": 229.3,
+  "firstScreenGzBytes": 251982,
   "editorChunks": [
     {
-      "name": "EditorWindow.css",
-      "gzBytes": 1138
+      "name": "api.js",
+      "gzBytes": 934
+    },
+    {
+      "name": "doc.js",
+      "gzBytes": 447
+    },
+    {
+      "name": "DocWindow.js",
+      "gzBytes": 1929
     },
     {
       "name": "EditorWindow.js",
-      "gzBytes": 214601
+      "gzBytes": 469
+    },
+    {
+      "name": "MarkdownEditor.css",
+      "gzBytes": 1578
+    },
+    {
+      "name": "MarkdownEditor.js",
+      "gzBytes": 219169
+    },
+    {
+      "name": "MemoWindow.js",
+      "gzBytes": 10295
     }
   ],
   "firstScreenChunks": [
     {
+      "name": "columns.js",
+      "gzBytes": 1955
+    },
+    {
       "name": "index.css",
-      "gzBytes": 14922
+      "gzBytes": 16833
     },
     {
       "name": "index.js",
-      "gzBytes": 198525
+      "gzBytes": 198775
+    },
+    {
+      "name": "kbFetch.js",
+      "gzBytes": 5575
+    },
+    {
+      "name": "useQuery.js",
+      "gzBytes": 7585
     },
     {
       "name": "useTimeBasis.js",
-      "gzBytes": 26379
+      "gzBytes": 21259
     }
   ]
 }

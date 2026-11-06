@@ -97,3 +97,23 @@ img.ProseMirror-separator {
 .loupe-editor-warn { color:var(--warn-ink, #8a5a00); background:var(--warn-wash, #fdf3dc); padding:0 8px; border-radius:8px; }
 .loupe-editor-source { margin-top:8px; font-size:12px; }
 .loupe-editor-source pre { max-height:200px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; font-family:var(--font-code, monospace); }
+.loupe-editor .wiki-link[role=link] { cursor:pointer; }
+.loupe-editor .wiki-link[role=link]:hover { text-decoration:underline; }
+.loupe-editor-size { padding:0 8px; border-radius:8px; border:1px solid transparent; }
+.loupe-editor-size[data-level=note] { color:var(--warn-ink, #8a5a00); background:var(--warn-wash, #fdf3dc); border-color:#b08a2e; }
+.loupe-editor-size[data-level=block],.loupe-editor-size[data-level=max] { color:#8a2f1d; background:#fbf1ee; border-color:#b3472f; font-weight:600; }
+.loupe-editor-warn[data-tone=stop] { color:#8a2f1d; background:#fbf1ee; }
+.loupe-editor[data-readonly=true] .ProseMirror { color:var(--ink-soft, #555); }
+/* The quoted claim (design v2 4.4): the statement, and where it comes from. */
+.loupe-editor .claim-quote { margin:.7em 0; padding:8px 12px; border:1px solid var(--line-strong, #ccc); border-left:4px solid var(--accent, #447aa3); border-radius:6px; background:var(--wash, #f6f7f8); }
+.loupe-editor .claim-quote[data-selected=true] { outline:2px solid var(--accent, #447aa3); }
+.loupe-editor .claim-quote blockquote { margin:0; padding:0; border:0; color:inherit; }
+.loupe-editor .claim-quote-source,.loupe-editor .claim-quote-missing { margin:4px 0 0; font-size:12px; color:var(--ink-faint, #666); overflow-wrap:anywhere; }
+.loupe-editor .claim-quote-open { margin-left:8px; padding:0 8px; font-size:12px; border:1px solid #536f8b; border-radius:8px; background:var(--color-paper, #fff); }
+/* The menus of "/" and "[[" (portal on the body, above every window). */
+.suggest { position:fixed; z-index:2147483200; width:300px; max-height:min(320px, 50vh); overflow:auto; padding:4px; border:1px solid #aab1ba; border-radius:8px; background:var(--color-paper, #fff); box-shadow:0 6px 22px #0003; font-size:13px; }
+.suggest-option { display:flex; flex-direction:column; gap:1px; padding:5px 8px; border-radius:6px; cursor:pointer; }
+.suggest-option[aria-selected=true] { background:#dde4eb; }
+.suggest-option small { color:#5a6470; font-size:11px; }
+.suggest-title { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
+.suggest-hint { padding:4px 8px; font-size:11px; color:#5a6470; }

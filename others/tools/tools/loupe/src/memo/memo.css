@@ -1,0 +1,28 @@
+.memo { display:flex; flex-direction:column; height:100%; min-height:0; font-size:13px; }
+.memo-head { display:flex; align-items:center; gap:8px; padding:6px 12px; border-bottom:1px solid #e1e3e5; flex-wrap:wrap; }
+.memo-mode { display:inline-flex; border:1px solid #aab1ba; border-radius:14px; overflow:hidden; }
+.memo-mode button { padding:2px 12px; font-size:12px; background:var(--color-paper,#fff); }
+.memo-mode button[aria-pressed=true] { background:#dde4eb; font-weight:600; }
+.memo-mode button:disabled { opacity:.5; }
+.memo-private { font-size:12px; color:#5a6470; }
+.memo-chip { margin-left:auto; font-size:12px; padding:2px 10px; border:1px solid #c4c8cb; border-radius:12px; min-height:20px; min-width:8px; }
+.memo[data-status=saved] .memo-chip,.memo[data-status=unchanged] .memo-chip { border-color:#4f8a5b; }
+.memo[data-status=blocked] .memo-chip,.memo[data-status=rejected] .memo-chip,.memo[data-status=failed] .memo-chip,.memo[data-status=conflict] .memo-chip,.memo[data-status=token] .memo-chip,.memo[data-status=invalid] .memo-chip { border-color:#b3472f; font-weight:600; }
+.memo[data-status=offline] .memo-chip,.memo[data-status=pending] .memo-chip,.memo[data-status=throttled] .memo-chip,.memo[data-status=closed] .memo-chip { border-color:#b08a2e; }
+.memo-save { padding:2px 14px; border:1px solid #536f8b; border-radius:8px; background:var(--color-paper,#fff); }
+.memo-save:disabled { opacity:.45; }
+.memo-band { margin:8px 12px 0; padding:8px 10px; border:1px solid #c4c8cb; border-radius:8px; background:#f6f7f8; }
+.memo-band[data-tone=error] { border-color:#b3472f; background:#fbf1ee; }
+.memo-band[data-tone=warn] { border-color:#b08a2e; background:#fbf6e8; }
+.memo-band strong { display:block; margin-bottom:4px; }
+.memo-band ul { margin:2px 0 6px 16px; list-style:disc; }
+.memo-band .memo-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
+.memo-band button { padding:2px 12px; border:1px solid #536f8b; border-radius:8px; background:var(--color-paper,#fff); }
+.memo-band button:disabled { opacity:.5; }
+.memo-cols { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.memo-cols pre { white-space:pre-wrap; word-break:break-word; max-height:7em; overflow:auto; margin:0; padding:4px 6px; background:var(--color-paper,#fff); border:1px solid #ddd; border-radius:6px; }
+.memo-body { flex:1; min-height:0; overflow:auto; }
+.memo-locked { margin:12px; padding:14px; border:1px dashed #8a949f; border-radius:8px; }
+/* A span a secret check matched: unreadable on screen. The text itself is the editor's own. */
+.memo-hit { background:#222; color:#222; border-radius:2px; text-shadow:none; }
+.memo-hit::selection { background:#222; color:#222; }

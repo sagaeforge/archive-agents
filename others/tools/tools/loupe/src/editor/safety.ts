@@ -3,11 +3,11 @@ import type { JSONContent } from '@tiptap/core';
 import { Slice, type Schema } from '@tiptap/pm/model';
 import type { createMarkdownCodec } from './index.ts';
 
-/** Design 4.5 "schema": the allow-list. `literal*`, `sourceEntity`, `sourceImage` and `referenceDefinition` hold Markdown the editor does not
+/** Design 4.5 "schema": the allow-list. `claimQuote` is the "주장 인용 블록" of a document (an id, drawn from the KB). `loupeView` is its "보기 블록" (the text of a view definition; the table is drawn from the KB). `literal*`, `sourceEntity`, `sourceImage` and `referenceDefinition` hold Markdown the editor does not
  *  interpret (raw HTML, entities, images, link definitions). They render a text child only, so those spellings fall to plain text. */
 export const ALLOWED_NODES: ReadonlySet<string> = new Set(['doc', 'text', 'paragraph', 'heading', 'blockquote', 'bulletList', 'orderedList',
   'listItem', 'taskList', 'taskItem', 'codeBlock', 'horizontalRule', 'hardBreak', 'table', 'table_row', 'table_header', 'table_cell', 'wikiLink',
-  'literalInline', 'literalBlock', 'sourceEntity', 'sourceImage', 'referenceDefinition']);
+  'literalInline', 'literalBlock', 'sourceEntity', 'sourceImage', 'referenceDefinition', 'claimQuote', 'loupeView']);
 export const ALLOWED_MARKS: ReadonlySet<string> = new Set(['bold', 'italic', 'strike', 'code', 'link', 'sourceSyntax']);
 
 /** Node and mark names in a document that are not on the allow-list. Empty means the document is inside it. */

@@ -2,9 +2,9 @@ import { getSchema, type JSONContent } from '@tiptap/core';
 import { tiptapExtensions } from './tiptap-extensions.js';
 import { MarkdownManager } from '@tiptap/markdown';
 
-/** Use the same extensions for the editor UI and the headless persistence path. */
-export function createMarkdownCodec() {
-  const extensions = tiptapExtensions();
+/** Use the same extensions for the editor UI and the headless persistence path. `doc: true` is a document (design v2 4.5: it adds the quoted claim block). */
+export function createMarkdownCodec({ doc = false }: { doc?: boolean } = {}) {
+  const extensions = tiptapExtensions({ doc });
   const manager = new MarkdownManager({ extensions, marked: extensions.find(extension => extension.name === 'markdown')!.options.marked });
   const schema = getSchema(extensions);
   return {
