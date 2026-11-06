@@ -158,7 +158,7 @@ blog.youtube 행이 경로 분기의 근거다. 정적 추출이 772자에 그�
 
 ### 5.1 systemd 타이머 실측
 
-실제 사용자 매니저는 건드리지 않았다. `XDG_*`를 scratchpad로 돌린 비공개 매니저를 사적 namespace와 전용 하위 cgroup에서 돌렸다. 시험 후 하위 cgroup이 제거됐고, `Linger=no`, 타이머 3개, `~/.config/systemd/user` 없음을 재확인했다 [M19]. 그 뒤 15:39:50에 다른 도구가 같은 경로에 `pixel-wt.service`(Orca worktree용)를 만들었다. 이 시험의 산출물이 아니며 건드리지 않았다.
+실제 사용자 매니저는 건드리지 않았다. `XDG_*`를 scratchpad로 돌린 비공개 매니저를 사적 namespace와 전용 하위 cgroup에서 돌렸다. 시험 후 하위 cgroup이 제거됐고, `Linger=no`, 타이머 3개, `~/.config/systemd/user` 없음을 재확인했다 [M19]. 그 뒤 15:39:50에 다른 도구가 같은 경로에 `pixel-wt.service`(Orca worktree용, 2026-11-05 제거됨)를 만들었다. 이 시험의 산출물이 아니며 건드리지 않았다.
 
 | 시나리오 | 결과 |
 |---|---|

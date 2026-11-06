@@ -26,7 +26,7 @@
 판단: `~/.local/bin/trail`(trailhq/Trail-Code, 내부 이름 graft)이다. 근거는 정황이며 사용자가 직접 확인한 것은 아니다.
 
 - `~/.claude/history.jsonl`에서 사용자는 순서대로 "graft나 rtk 같은 도구 효용성 검토해줘.", "현재 워크트리 대상으로, trailhq/Trail-Code 및 rtk 세팅해줘.", 그리고 "rtk 및 trailing을 통해 토큰과 데이터 압축을 통해"라고 썼다. "trailing"은 기록 전체에서 이 1회뿐이다 [M0].
-- `trailing`이라는 실행 파일은 없다. `~/.local/bin`에는 `claude orca-ide pixel-wt rtk trail`만 있다 [M0].
+- `trailing`이라는 실행 파일은 없다. `~/.local/bin`에는 `claude orca-ide pixel-wt rtk trail`만 있었다 [M0]. pixel-wt는 2026-11-05에 제거됐다.
 - Trail-Code README는 "Trail-code는 graft의 새 이름"이라고 밝힌다 [S13].
 
 ## 3. 과거 세션 회수 결과
