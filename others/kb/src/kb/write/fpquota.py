@@ -85,6 +85,14 @@ def uncommitted(led, events):
                                                   (ev["idem_key"],)).fetchone()]
 
 
+def _budget_actor(actor, generated_by=None):
+    # Human attribution does not merge the authenticated applications' budgets.
+    if actor == 'user:sagae' and isinstance(generated_by, str) and generated_by.startswith('app:') \
+            and generated_by.endswith((':action', ':hitl')):
+        return generated_by.rsplit(':', 1)[0]
+    return actor
+
+
 def receiving(led, events, *, extra_bytes=None, exclude_ref=None, now_ms=None):
     from kb.write.engine import storage_payload
     fresh = uncommitted(led, events)
@@ -95,13 +103,15 @@ def receiving(led, events, *, extra_bytes=None, exclude_ref=None, now_ms=None):
                if path.stem != exclude_ref and value["state"] in ("pending", "held")
                and uncommitted(led, [{"idem_key": key} for key in value["idem_keys"]])]
     for ev in fresh:
-        actor, subject = ev["actor"], ev["subject"]
+        actor, subject = _budget_actor(ev['actor'], ev.get('generated_by')), ev["subject"]
         actor_size = sum(r["bytes"] for r in pending if r["actor"] == actor)
         record_size = sum(r["bytes"] for r in pending if r["subject"] == subject)
         expirations = []
-        for other_actor, other_subject, sha, at in led.execute(
-                "SELECT actor,subject,payload_sha,at FROM event WHERE at>? AND (actor=? OR subject=?)",
-                (now - DAY, actor, subject)):
+        for other_actor, other_subject, sha, at, generated_by in led.execute(
+                "SELECT actor,subject,payload_sha,at,generated_by FROM event WHERE at>? "
+                "AND (actor=? OR subject=? OR (actor='user:sagae' AND generated_by LIKE ?))",
+                (now - DAY, actor, subject, actor + ':%')):
+            other_actor = _budget_actor(other_actor, generated_by)
             payload = ledger.get_payload(led, sha)
             if payload is None:
                 continue

@@ -2,6 +2,14 @@
 
 `docs/contracts/openapi.yaml`의 변경 기록이다. 파괴 변경은 major(0.x 동안은 minor)를 올리고 여기에 적은 뒤 sagae-tools 세션에 알린다(계약 8장). 기준선은 `docs/contracts/baseline/openapi.yaml`이고 올리는 것은 소비자 통지 뒤의 명시 절차다.
 
+## 0.5.0 (2026-11-06) ADR-0005 FW9 호환 추가
+
+- reviewer/HITL/사용자 동작 경로 9개와 상태·엔진·비용·시간·외부 전송 계획 스키마를 추가했다. publish 준비는 202/action_id, release/declassify 준비는 201이다. 상태 조회는 발급 tok_id만 허용한다.
+- publish_external_refine과 publish는 서로 대체할 수 없는 action_sha/증명이다. 120초 1회용 도전·UV·증가 카운터·정확한 RP/origin, 현재 판/결과 재검사, 403 review_unverified·409 review_stale·503 review_trust_unavailable을 명시했다. 기존 HitlReadiness의 안전한 meta 표현을 재사용한다.
+- 결정 9에 따라 새 FW9 POST 성공은 평면 객체를 유지한다(ADR-0005 628행, test_publish_async.py:226–228). GET 성공은 전체 Envelope와 RFC 3339 UTC 시각을 쓴다. POST에 대한 결정 7의 봉투 요구를 정정했다.
+- 기존 0.4.0 응답 모양은 하나도 바꾸지 않았다. 기존 경로·컴포넌트·x-first-party-paths·기존 응답 fixture를 보존하는 **호환 추가**다. 기준선은 올리지 않는다. 새 경로 선언은 운영 배포·실물 인증기 확인 완료를 뜻하지 않는다.
+- 기존 fixture 재생과 분리한 reviewer 합성 패킷과 operation별 성공/오류 예제를 추가했다. 생성기 패킷 버전과 소비자 검사기의 메서드별 조회를 갱신한다. 정적 스키마 검사는 동작 검증을 대신하지 않는다.
+
 ## 0.4.0 (2026-11-06) ADR-0005 FW1 승인 계약
 
 - `x-first-party-paths`에 편집·승격·연구·쓰기 참조·주장별 리뷰 Path Item 10개 operation을 고정했다. 미배포(`x-implemented:false`)이며 기존 `paths`의 읽기 GET 26개와 실서버 기준선을 유지한다. 일반 생성기는 확장 경로를 자동 생성하지 않는다. 후속 HTTP 배포에서 Path Item을 승격한다.

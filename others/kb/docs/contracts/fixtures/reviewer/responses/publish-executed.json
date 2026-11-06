@@ -1,0 +1,26 @@
+{
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/json"
+  },
+  "id": "publish-executed",
+  "method": "POST",
+  "path_template": "/v1/actions/{id}/execute",
+  "request": {
+    "assertion": {
+      "id": "synthetic-credential",
+      "response": {}
+    },
+    "challenge_id": "ch-fixture",
+    "idempotency_key": "loupe-review:a:execute"
+  },
+  "response": {
+    "action_id": "a-fixture-publish",
+    "result": {
+      "ids": [
+        "f-fixture-result"
+      ]
+    }
+  },
+  "status": 200
+}

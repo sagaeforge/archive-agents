@@ -195,6 +195,8 @@ def meta(con, ctx: ReadCtx, *, concurrent: int = 16) -> dict:
     finally:
         led.close()
     from kb.write.secrets_scan import editor_rule_contract
+    from kb.write import reviewer
+    hitl, _ = reviewer.trust_status()
     try:
         rules = editor_rule_contract()
     except (OSError, ValueError, KeyError):
@@ -203,7 +205,7 @@ def meta(con, ctx: ReadCtx, *, concurrent: int = 16) -> dict:
             "write": {"fp_gate": fp_gate,
                       "editor_routes": ["POST /v1/records", "PUT /v1/records/{id}",
                                         "POST /v1/records/{id}/tombstone", "GET /v1/writes/{ref}", "DELETE /v1/writes/{ref}"] if rules["sha"] else [],
-                      "private_open": False, "hitl": {"available": False, "trust_store": "missing", "rp_ids": []},
+                      "private_open": False, "hitl": hitl,
                       "secret_rules": rules},
             "limits": {"overview_nodes": 100000, "overview_edges": 400000, "page": 500, "concurrent": concurrent},
             "changes_cursor": changes_cursor(con), "first_party_open": fpo,

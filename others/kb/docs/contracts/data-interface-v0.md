@@ -1,7 +1,7 @@
 # KB 데이터 인터페이스 계약 v0
 
-- 상태: 0.4.0 (ADR-0005 FW1 계약 추가; HTTP 구현 전). sagae-tools 3차 회신(`docs/contracts/consumers/sagae-tools-reply-3.md`)을 항목별로 처리했고(`sagae-tools-reply-3-response.md`) 13장이 합의 상태다. 0.3.1은 호환 변경만 담는다. 남은 `[잠정]`은 v1 소비자가 쓰지 않는 구간이다(1장의 TCP와 Proxmox 주소, 4.13의 `/v1/ops/*`).
-- 날짜: 2026-10-31
+- 상태: 0.5.0 (ADR-0005 FW9 reviewer/HITL/사용자 동작의 호환 추가; 계약 검증과 운영 배포는 별도). sagae-tools 3차 회신(`docs/contracts/consumers/sagae-tools-reply-3.md`)을 항목별로 처리했고(`sagae-tools-reply-3-response.md`) 13장이 합의 상태다. 0.3.1은 호환 변경만 담는다. 남은 `[잠정]`은 v1 소비자가 쓰지 않는 구간이다(1장의 TCP와 Proxmox 주소, 4.13의 `/v1/ops/*`).
+- 날짜: 2026-11-06 (0.5.0 추가)
 - 기준: `docs/adr/0001-architecture.md`, `docs/contracts/consumers/sagae-tools.md`(잠정본), `docs/contracts/consumers/sagae-tools-reply-2.md`(2차 회신). 항목별 처리는 `docs/contracts/consumers/sagae-tools-reply-2-response.md`(이하 응답표)다.
 - 계약 형식: OpenAPI 3.1.1 + JSON Schema 2020-12. 기계 판독 원본은 `docs/contracts/openapi.yaml`이다. WP-23이 WP-04, WP-05, WP-10 전에 이 문서에서 만든다. 그 뒤로 두 문서가 어긋나면 `openapi.yaml`이 이긴다.
 - 성격: 저장소는 데이터 인터페이스만 제공한다. 가시화는 이 계약 밖이다. 점수와 추천을 내지 않는다.
@@ -1444,7 +1444,7 @@ links: [e:platform:youtube-shorts]
 
 ### 6.3 first_party 편집기 HTTP 계약 0.4.0 (ADR-0005 FW1)
 
-이 절은 승인된 계약이고 HTTP 구현 완료를 뜻하지 않는다. 요청·응답의 기계 판독 원본은 `openapi.yaml`의 `x-first-party-paths`(Path Item 모양), 자료형은 `components.schemas`다. 기존 `paths`는 배포된 읽기 GET 26개를 유지한다. 아직 없는 메서드를 실서버 재생 시험이나 일반 클라이언트 생성기에 배포된 경로로 넣지 않기 위해 별도로 공개한다. 일반 OpenAPI 생성기는 이 확장을 자동으로 경로로 생성하지 않는다. 소비자는 이를 명시적으로 읽어 구현하고, 후속 배포에서 해당 Path Item을 `paths`로 옮긴다. `x-implemented:false`는 계약의 배포 상태이며 기능 탐지는 반드시 `/v1/meta`의 실제 `data.write`로 한다. FW9 reviewer/HITL/사용자 동작 경로는 이 계약 패킷에서 제외한다.
+이 절은 승인된 계약이고 HTTP 구현 완료를 뜻하지 않는다. 요청·응답의 기계 판독 원본은 `openapi.yaml`의 `x-first-party-paths`(Path Item 모양), 자료형은 `components.schemas`다. 0.4.0의 기존 읽기 GET 26개는 보존한다. 0.5.0은 별도의 14장 reviewer 경로를 `paths`에 추가한다. 아직 없는 메서드를 실서버 재생 시험이나 일반 클라이언트 생성기에 배포된 경로로 넣지 않기 위해 별도로 공개한다. 일반 OpenAPI 생성기는 이 확장을 자동으로 경로로 생성하지 않는다. 소비자는 이를 명시적으로 읽어 구현하고, 후속 배포에서 해당 Path Item을 `paths`로 옮긴다. `x-implemented:false`는 계약의 배포 상태이며 기능 탐지는 반드시 `/v1/meta`의 실제 `data.write`로 한다. FW9 reviewer/HITL/사용자 동작 경로는 이 0.4.0 패킷에서 제외하며, 새 0.5.0 계약은 14장을 따른다.
 
 | 메서드·경로 | operationId | 요청 스키마 | 성공 스키마·상태 |
 |---|---|---|---|
@@ -1663,3 +1663,61 @@ links: [e:platform:youtube-shorts]
 남은 일은 둘이다. WP-23이 `openapi.yaml` 초안을 WP-04, WP-05, WP-10 전에 낸다. 메인 세션이 0.3.0의 파괴 변경과 응답표를 sagae-tools 세션에 전달하고 확인을 받는다.
 
 **3차 회신(0.3.1).** 파괴 변경 7건은 수용됐다. 보완 7건과 확인 a~f는 파괴 변경 없이 처리했고 항목별 처리는 `docs/contracts/consumers/sagae-tools-reply-3-response.md`다. `docs/contracts/baseline/openapi.yaml`은 0.3.0 그대로이고 0.3.1은 호환 변경이라 기준선을 올리는 것은 소비자 통지 뒤의 명시 절차다.
+
+## 14. reviewer·HITL·비동기 사용자 동작 계약 0.5.0 (FW9)
+
+0.5.0은 호환 추가다. **기존 0.4.0 응답 모양은 바꾸지 않는다.** 기존 일반 편집기 응답의 평면 객체도 유지한다. 새 FW9 경로는 소켓/TCP 모두 reviewer 범위 Bearer를 요구하며, 결정 9에 따라 **POST 성공은 평면 객체**, GET 성공은 2.1의 **전체 Envelope**이며 `data`에 아래 자료형을 넣는다. publish 202 본문은 `{action_id, state:"preparing", status_url}`이다(ADR-0005 628행, `tests/fpapi/test_publish_async.py:226–228`). 모든 시각은 2.2의 RFC 3339 UTC 문자열이며 숫자 Unix 시각을 내지 않는다. 120초/15분/30일은 기한이고, `duration_ms`는 큐 대기를 포함한 정수 밀리초다. 오류는 공통 RFC 9457 Problem 규칙을 따른다. 합성 사례와 문서는 구현·실물 인증기·운영 배포의 검증 완료를 뜻하지 않는다.
+
+| 메서드·경로 | operationId | 성공 상태와 본문(POST 평면 / GET data) |
+|---|---|---|
+| POST /v1/actions | prepareUserAction | publish: 202, release/declassify: 201; ReviewerPrepared |
+| GET /v1/actions/{id} | getUserAction | 200; ReviewerActionStatus |
+| POST /v1/actions/challenge | userActionChallenge | 201; ReviewerChallenge |
+| POST /v1/actions/{id}/external-refine | consentExternalRefine | 202; ReviewerActionAccepted |
+| POST /v1/actions/{id}/execute | executeUserAction | 200; ReviewerActionResult |
+| POST /v1/reviewer/enroll | enrollReviewer | 201; ReviewerEnrollment |
+| GET /v1/hitl | listHitl | 200; ReviewerHitlList |
+| POST /v1/hitl/challenge | hitlChallenge | 201; ReviewerChallenge |
+| POST /v1/hitl/{item}/resolve | resolveHitl | 200; ReviewerHitlResolved |
+
+### 14.1 준비·조회·기한
+
+준비 요청은 `{action,target,expected_version,idempotency_key}`이며 declassify는 목표 sensitivity도 받는다. publish 접수는 `action_id`, `state=preparing`, `status_url`과 Location, Retry-After: 1을 낸다. 이 요청과 로컬 준비만으로 외부 호출·공개는 0이다. 짧고 단순한 정제는 토큰 절약용 로컬, 복잡한 경우만 전송 계획을 만든다. 외부 엔진·예산·선행 E1/D5가 없으면 로컬로 대체한다. release 준비는 격리 내용을 응답에 싣지 않는다.
+
+상태 조회는 발급 tok_id만 허용하며 회전 토큰·다른 토큰·숨은 대상·없는 ID는 같은 404다. tok_id나 원시 토큰 값을 응답에 노출한다는 뜻이 아니다. 상태는 `preparing|ready|failed|expired`이고 `action_id,action,target,expected_version,created_at,expires_at,candidates,engine,cost_usd,duration_ms,code,refinement_mode,external_refine,executed`를 낸다. engine은 `{kind:local|external,backend,model}` 또는 null, cost_usd는 USD 십진 문자열(로컬 `"0"`, 보고 불가 null), duration_ms는 정수 또는 미확정 null이다. external_refine은 `{status,external_payload_sha,engine,request_preview}`이며 status는 `not_needed|consent_required|consented|unavailable`다. 후보와 요청 미리보기는 private이며 소유 reviewer에게만 보인다.
+
+| 상태 | 기한·본문 처리 |
+|---|---|
+| preparing | 로컬 준비와 동의 뒤 외부 준비 각각 큐 대기 포함 120초. 초과하면 failed/prepare_timeout. candidates는 빈 배열 |
+| ready | 완료 뒤 15분 확인 가능. 후보는 private. 동의 없는 로컬 결과만으로 두 번째 확인을 할 수도 있음 |
+| failed | 후보 없음, 고정 code와 알려진 엔진·비용·시간만. 외부 자동 재시도 없음 |
+| expired | 후보·본문·미리보기 제거. 상태·시각·엔진·비용 등 메타데이터는 30일 보존. 새 도전/실행은 409 review_stale |
+
+실행 성공은 expired/executed=true와 result를 남긴다. 같은 앱/준비 키는 같은 action_id 하나, 같은 실행 키는 같은 결과만 재생한다. 후보가 사라져도 성공 결과 재생은 보존하며 결과 기록·추출 요청을 중복 만들지 않는다. 준비 중 확인은 409 write_in_flight다.
+
+### 14.2 두 동의와 공개 경계
+
+첫 도전 `{action_id,action:publish_external_refine}`은 메모 ID/판과 **실제로 전송할 UTF-8 요청 본문 바이트의 SHA-256**, 선택 엔진/모델을 action_sha에 묶는다. 그 서명·UV·카운터·현재 상태를 external-refine이 검증한 뒤에만 예약/전송한다. 전송 직전 신뢰 저장소·원본 가시성·판·비밀 탐지·고정 바이트를 재검사한다. SDK 자동 재시도와 자동 엔진 전환은 끄고, 새 전송은 새 동의가 필요하며 불확실 예약은 유지한다. 다른 private 기록·링크된 private 제목·원본 비공개 근거를 보내지 않는다.
+
+두 번째 도전 `{action_id,action:publish}`은 확정할 결과별 타입·민감도·정확한 본문 해시를 묶는 **별도 action_sha/별도 증명**이다. 첫 증명으로 공개하거나 두 번째 증명으로 외부 전송하지 못한다. 외부 정제를 시작하면 기존 로컬 결과용 도전은 무효다. execute가 두 번째 증명을 검증한 뒤 독립적인 internal Note/Page와 PROMOTED_FROM을 확정한다. 원본 메모의 본문·private는 그대로 두며, 관계 자체가 민감도를 낮추는 권한은 아니다. 비공개 원본 링크는 읽기 범위 밖이면 ID·제목·판도 숨긴다. 주장 후보는 정상 게이트를 거치며 비공개 원본을 공개 근거로 끌어오지 않는다.
+
+### 14.3 HITL·신뢰·실패
+
+JSON 본문을 받는 모든 POST는 요청 `Content-Type: application/json`을 요구한다. 다른 Content-Type은 415 `unsupported_media_type`이며 `application/problem+json`과 `Cache-Control: no-store`로 반환한다. ADR 7.5의 고정 `detail`은 `버그`를 그대로 유지한다. 이 415 선언은 GET에는 추가하지 않는다.
+
+topic_ambiguity/source_policy/liveness_unresolved/gate_unresolved의 미해결 때만 항목을 만들고 같은 신호/대상/판은 중복하지 않는다. 자동 해소 시 닫으며 일반 연구 결과나 사용자가 시작한 동작은 HITL 항목이 아니다. gate 해결은 review_state만 user_accepted/user_rejected로 바꾸고 문장·인용·출처·verification을 유지한다.
+
+등록은 후보 접수이며 root 소유 신뢰 저장소의 특권 설치/폐기만 키를 활성화/폐기한다. 시작·준비·도전·실행에 파일과 부모의 root 소유, 실제 쓰기 가능성, ACL, 심볼릭 링크, 교체/누락을 검사한다. Meta.write.hitl은 기존 HitlReadiness를 그대로 쓰며 available/trust_store/rp_ids의 안전한 상태만 낸다. unsafe/missing/unreadable이면 available=false, rp_ids=[]이고 파일 경로·키·자격 증명 ID를 내지 않는다.
+
+모든 사람 동작은 reviewer 토큰에 더해 동작별 120초 1회용 도전, WebAuthn 서명, UV required, 엄격히 증가하는 카운터를 요구한다. RP ID는 localhost, origin은 정확히 http://localhost:4812다. 도전 소비·대상 재검사·사건 기록은 쓰기 잠금 안에서 원자적으로 이뤄진다. TTY·작성자·change·토큰 소지만으로 우회하지 못한다.
+
+| 실패 | 상태·code | 효과 |
+|---|---|---|
+| 잘못된 서명/RP/origin/UV/카운터/도전·다른 증명 혼용 | 403 review_unverified | 원장 변경 0 |
+| 외부 전송 동의 없음 | 403 external_consent_required | 외부 호출·예약 0 |
+| 대상 판/상태/결과 변경·준비 만료 | 409 review_stale | 원장 변경 0, 외부 호출 0 |
+| 불안전·누락·읽기 실패 신뢰 저장소 | 503 review_trust_unavailable | 사람 동작 차단, meta는 안전한 상태만 |
+
+### 14.4 계약 0.5.0 확인 항목
+
+POST 평면 성공 객체, GET 전체 Envelope/RFC 3339, publish 202와 release/declassify 201, 네 상태와 비용·시간·전송 계획, 토큰 소유 404, 서로 다른 두 도전, 403/409/503, 안전한 meta, 원본 private와 승인된 internal 결과의 독립 경계를 확인한다. `fixtures/reviewer.json` 및 `reviewer/responses/`는 OpenAPI operation의 `x-contract-cases`에서 생성되는 합성 사례다. 기존 0.4.0 response fixture는 보존한다. 스키마 통과는 실제 토큰 소유·서명·외부 호출·만료 처리의 동작 증거가 아니며, 그것은 FW9 집중 시험으로 별도 확인한다.

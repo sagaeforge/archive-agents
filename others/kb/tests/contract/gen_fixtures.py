@@ -21,7 +21,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import cfx_run as R   # noqa: E402
 import cfx_world as W   # noqa: E402
 
-CONTRACT_VERSION = "0.4.0"
+CONTRACT_VERSION = "0.5.0"
+LEGACY_FIRST_PARTY_VERSION = "0.4.0"  # Preserve the existing 0.4.0 response examples.
 
 # 태그 -> 계약 9장 사례. test_fixture_cases.py가 모두 있는지 본다.
 TAGS = {
@@ -354,7 +355,8 @@ def held_fixture(home: Path) -> dict:
         finally:
             led.close()
         rec = {"type": "Decision", "title": "합성 결정", "body": "합성 본문", "sensitivity": "internal", "props": {"status": "accepted"}}
-        r = put_record(rec, "fixture-held-1", "mcp", "s-fixture")
+        with R.fixed_clock(W.NOW_MS):
+            r = put_record(rec, "fixture-held-1", "mcp", "s-fixture")
         assert r.held, r.as_dict()
         return {"tool": "kb_put", "request": {"record": rec, "idempotency_key": "fixture-held-1"},
                 "response": r.as_dict(), "tags": ["held"], "note": "합성 데이터. first_party 게이트가 닫혀 있어 spool/fp-held에 남는다."}
@@ -383,7 +385,7 @@ def first_party_packet() -> dict:
              "hitl": {"available": True, "trust_store": "ready", "rp_ids": [
                  {"rp_id": "localhost", "allowed_origins": ["http://localhost:4812"], "registered": True}]},
              "secret_rules": {"version": artifact["version"], "sha": sha}}
-    packet = {"synthetic": True, "contract_version": CONTRACT_VERSION,
+    packet = {"synthetic": True, "contract_version": LEGACY_FIRST_PARTY_VERSION,
               "note": "승인된 계약 예시. 실제 HTTP 동작이나 현재 준비 상태의 실행 결과가 아니다.",
               "meta_unready": inactive, "meta_ready": ready,
               "deployment": copy.deepcopy(inactive), "cases": []}
@@ -398,7 +400,7 @@ def first_party_packet() -> dict:
             "actor": "app:loupe", "claimed_author": "user:sagae", "generated_by": "app:loupe:save"}
 
     def envelope(data):
-        return {"schema_version": CONTRACT_VERSION, "epoch": 1, "build_id": "g-fixture",
+        return {"schema_version": LEGACY_FIRST_PARTY_VERSION, "epoch": 1, "build_id": "g-fixture",
                 "data_as_of": "2026-11-05T00:00:00Z", "applied_seq": 101,
                 "as_of": {"valid": None, "observed": None}, "degraded": [], "data": data}
 
@@ -475,6 +477,38 @@ def first_party_packet() -> dict:
     return packet
 
 
+def reviewer_packet() -> dict:
+    """FW9 normative examples, separate from live replay until implementation aligns.
+
+    The OpenAPI operation extensions are the fixture source, not the checked-in
+    generated packet. No WebAuthn, server, UID or provider operation is invoked.
+    """
+    import copy
+    from datetime import datetime, timezone
+
+    def json_value(value):
+        # PyYAML resolves unquoted RFC 3339 examples to datetime objects.
+        if isinstance(value, datetime):
+            if value.tzinfo is None:
+                raise ValueError("Contract timestamps require a timezone")
+            return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+        if isinstance(value, dict):
+            return {key: json_value(nested) for key, nested in value.items()}
+        if isinstance(value, list):
+            return [json_value(nested) for nested in value]
+        return value
+
+    spec = yaml.safe_load((R.REPO / "docs/contracts/openapi.yaml").read_text(encoding="utf-8"))
+    cases = []
+    for item in spec["paths"].values():
+        for method, operation in item.items():
+            if method not in ("get", "post", "put", "delete", "patch", "head", "options", "trace"):
+                continue
+            cases.extend(json_value(copy.deepcopy(operation.get("x-contract-cases", []))))
+    return {"synthetic": True, "contract_version": CONTRACT_VERSION,
+            "note": "합성 계약 예시. 실제 WebAuthn/외부 전송/HTTP 실행 결과가 아니다.", "cases": cases}
+
+
 def generate(workdir: Path) -> dict[str, bytes]:
     """workdir 아래 임시 KB_HOME 둘을 쓰고 {상대경로: 바이트}를 돌려준다."""
     files: dict[str, bytes] = {}
@@ -515,6 +549,10 @@ def generate(workdir: Path) -> dict[str, bytes]:
     files["first-party.json"] = R.dump_json(packet).encode()
     for case in packet["cases"]:
         files[f"first-party/responses/{case['id']}.json"] = R.dump_json(case).encode()
+    reviewer = reviewer_packet()
+    files["reviewer.json"] = R.dump_json(reviewer).encode()
+    for case in reviewer["cases"]:
+        files[f"reviewer/responses/{case['id']}.json"] = R.dump_json(case).encode()
     return files
 
 

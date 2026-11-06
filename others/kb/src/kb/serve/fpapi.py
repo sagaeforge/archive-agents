@@ -13,6 +13,8 @@ from kb.write import fpquota as Q
 
 WRITE_PATH = re.compile(r"^/v1/records(?:/([^/]+)(/tombstone)?)?$")
 REF_PATH = re.compile(r"^/v1/writes/([^/]+)$")
+REVIEW_PATH = re.compile(r"^/v1/(?:hitl(?:/[^/]+(?:/resolve)?)?|actions(?:/[^/]+(?:/(?:execute|external-refine))?)?|reviewer/enroll)$")
+ACTION_POLL = re.compile(r"^/v1/actions/([^/]+)$")
 DETAILS = {
     "schema_invalid": "저장할 수 없는 값이 있습니다", "bad_param": "저장할 수 없는 값이 있습니다",
     "bad_json": "저장 요청이 깨졌습니다", "not_found": "문서를 찾을 수 없습니다",
@@ -93,6 +95,8 @@ def dispatch(method, path, query, raw):
     ref = REF_PATH.fullmatch(path)
     try:
         params = parse_qsl(query, keep_blank_values=True)
+        if REVIEW_PATH.fullmatch(path):
+            return dispatch_review(method, path, params, raw)
         if ref:
             if method not in ("GET", "DELETE"):
                 return error(405, "method_not_allowed", path)
@@ -173,6 +177,7 @@ class Adapter:
 
     def maintenance(self):
         from kb.write.write_refs import recover, purge
+        from kb.write import actions
         now = time.monotonic()
         with self.mu:
             if now - self.last_maintenance < 60:
@@ -180,6 +185,7 @@ class Adapter:
             self.last_maintenance = now
         recover()
         purge()
+        actions.maintenance()
 
     def allow(self, tok_id):
         now = time.monotonic()
@@ -197,7 +203,8 @@ class Adapter:
             return True
 
     async def __call__(self, scope, receive, send):
-        if scope["type"] != "http" or not (WRITE_PATH.fullmatch(scope["path"]) or REF_PATH.fullmatch(scope["path"])):
+        if scope["type"] != "http" or not (WRITE_PATH.fullmatch(scope["path"]) or REF_PATH.fullmatch(scope["path"])
+                                            or REVIEW_PATH.fullmatch(scope["path"])):
             return await self.app(scope, receive, send)
         from starlette.concurrency import run_in_threadpool
         await run_in_threadpool(self.maintenance)
@@ -229,3 +236,50 @@ class Adapter:
         await send({"type": "http.response.start", "status": response.status,
                     "headers": [(k.encode(), v.encode()) for k, v in response.headers]})
         await send({"type": "http.response.body", "body": response.body})
+
+
+def dispatch_review(method, path, params, raw):
+    from kb.serve.http import Resp, dumps, reviewer_envelope
+    from kb.write import actions
+    info = Q.identity.get()
+    poll = ACTION_POLL.fullmatch(path) if method == 'GET' else None
+    if poll:
+        if not info or info['scope'] != 'reviewer':
+            return error(404, 'not_found', '/v1/actions/{id}')
+    else:
+        actions.identity()
+    obj = {}
+    if method == 'POST':
+        if len(raw) > 2 * 1024 * 1024:
+            return error(413, 'body_too_large', path)
+        try:
+            obj = json.loads(raw)
+        except (ValueError, UnicodeError):
+            return error(400, 'bad_json', path)
+        if not isinstance(obj, dict):
+            return error(400, 'schema_invalid', path)
+    headers = [('content-type', 'application/json'), ('cache-control', 'no-store')]
+    status = 200
+    if poll:
+        value = reviewer_envelope(actions.get_action(poll[1], info))
+    elif method == 'GET' and path == '/v1/hitl':
+        if any(k not in ('kind', 'cursor') for k, _ in params):
+            return error(400, 'bad_param', path)
+        value = reviewer_envelope({'items': actions.list_hitl(dict(params).get('kind'))})
+    elif method == 'POST' and path == '/v1/actions':
+        status, value = actions.prepare(obj)
+        if status == 202:
+            headers += [('location', value['status_url']), ('retry-after', '1')]
+    elif method == 'POST' and path == '/v1/actions/challenge':
+        status, value = 201, actions.action_challenge(obj)
+    elif method == 'POST' and path == '/v1/hitl/challenge':
+        status, value = 201, actions.hitl_challenge(obj)
+    elif method == 'POST' and path == '/v1/reviewer/enroll':
+        status, value = 201, actions.enroll(obj)
+    elif method == 'POST' and (match := re.fullmatch(r'/v1/actions/([^/]+)/(execute|external-refine)', path)):
+        status, value = actions.execute(match[1], obj, external=match[2] == 'external-refine')
+    elif method == 'POST' and (match := re.fullmatch(r'/v1/hitl/([^/]+)/resolve', path)):
+        value = actions.resolve_hitl(match[1], obj)
+    else:
+        return error(405, 'method_not_allowed', path)
+    return Resp(status, headers, dumps(value))

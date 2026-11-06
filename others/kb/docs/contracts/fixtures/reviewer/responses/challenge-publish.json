@@ -1,0 +1,20 @@
+{
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/json"
+  },
+  "id": "challenge-publish",
+  "method": "POST",
+  "path_template": "/v1/actions/challenge",
+  "request": {
+    "action": "publish",
+    "action_id": "a-fixture-publish"
+  },
+  "response": {
+    "action_sha": "1111111111111111111111111111111111111111111111111111111111111111",
+    "challenge": "synthetic-challenge",
+    "challenge_id": "ch-fixture",
+    "rp_id": "localhost"
+  },
+  "status": 201
+}

@@ -1,0 +1,57 @@
+{
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/json"
+  },
+  "id": "publish-executed-status",
+  "method": "GET",
+  "path_template": "/v1/actions/{id}",
+  "response": {
+    "applied_seq": 101,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-fixture",
+    "data": {
+      "action": "publish",
+      "action_id": "a-fixture-publish",
+      "candidates": [],
+      "code": null,
+      "cost_usd": "0.0025",
+      "created_at": "2026-11-06T00:00:00Z",
+      "duration_ms": 29,
+      "engine": {
+        "backend": "synthetic",
+        "kind": "external",
+        "model": "synthetic"
+      },
+      "executed": true,
+      "expected_version": 1,
+      "expires_at": "2026-11-06T00:15:02Z",
+      "external_refine": {
+        "engine": {
+          "backend": "synthetic",
+          "kind": "external",
+          "model": "synthetic"
+        },
+        "external_payload_sha": "a7dff4f602caf34dbd08d411a3ea22bdcb9243e86a70a8ae0f07ac9938f832e8",
+        "request_preview": null,
+        "status": "consented"
+      },
+      "refinement_mode": "external_consented",
+      "result": {
+        "ids": [
+          "f-fixture-result"
+        ]
+      },
+      "state": "expired",
+      "target": "f-fixture-note"
+    },
+    "data_as_of": "2026-11-06T00:00:00Z",
+    "degraded": [],
+    "epoch": 1,
+    "schema_version": "0.5.0"
+  },
+  "status": 200
+}

@@ -1,0 +1,48 @@
+{
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/json"
+  },
+  "id": "publish-preparing",
+  "method": "GET",
+  "path_template": "/v1/actions/{id}",
+  "response": {
+    "applied_seq": 101,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-fixture",
+    "data": {
+      "action": "publish",
+      "action_id": "a-fixture-publish",
+      "candidates": [],
+      "code": null,
+      "cost_usd": null,
+      "created_at": "2026-11-06T00:00:00Z",
+      "duration_ms": null,
+      "engine": null,
+      "executed": false,
+      "expected_version": 1,
+      "expires_at": null,
+      "external_refine": {
+        "engine": {
+          "backend": "synthetic",
+          "kind": "external",
+          "model": "synthetic"
+        },
+        "external_payload_sha": "0000000000000000000000000000000000000000000000000000000000000000",
+        "request_preview": null,
+        "status": "consent_required"
+      },
+      "refinement_mode": "local_only",
+      "state": "preparing",
+      "target": "f-fixture-note"
+    },
+    "data_as_of": "2026-11-06T00:00:00Z",
+    "degraded": [],
+    "epoch": 1,
+    "schema_version": "0.5.0"
+  },
+  "status": 200
+}

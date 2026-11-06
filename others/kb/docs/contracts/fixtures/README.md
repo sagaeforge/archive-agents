@@ -31,3 +31,9 @@ ops/bin/dev python tests/contract/gen_fixtures.py --check   # 디스크와 비�
 ```
 
 파괴 변경은 계약 8장의 절차를 따른다. fixture를 고쳤으면 소비자(sagae-tools)에 알린다.
+
+## FW9 계약 0.5.0 합성 패킷
+
+`reviewer.json`과 `reviewer/responses/<id>.json`은 `first-party/responses/`와 같은 사례 모양(method/path_template/status/headers/request/response)을 쓴다. OpenAPI의 operation별 `x-contract-cases`가 생성 원천이다. POST 평면 성공 객체 및 GET 전체 Envelope와 RFC 3339 시각을 가진 규범적 예이며, 현재 서버 실행을 저장한 결과가 아니다. 실제 WebAuthn·특권 작업·외부 전송이나 실운영 데이터를 포함하지 않는다.
+
+기존 저널 재생 요청과 0.4.0 응답 fixture를 보존한다. `requests.yaml`의 패킷 버전만 계약 0.5.0으로 맞춘다. 소비자 검사기는 FW9 패킷을 메서드별로 스키마 검증하고, 실제 구현의 봉투·시각 정렬은 별도 GREEN 단계가 확인한다.

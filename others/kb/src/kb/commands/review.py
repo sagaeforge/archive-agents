@@ -17,14 +17,10 @@ def _list(args) -> int:
 
 
 def _decide(args) -> int:
-    from kb.live import decide
-    try:
-        out = decide.decide(args.id, args.liveness or "alive", by=args.by, successor=args.successor, keep=args.keep)
-    except decide.DecideError as e:
-        print(f"kb review decide: {e}", file=sys.stderr)
-        return 2
-    print(json.dumps(out, ensure_ascii=False, sort_keys=True) if args.json else " ".join(f"{k}={v}" for k, v in out.items()))
-    return 0
+    # A TTY and a caller-supplied --by value are not human verification.
+    # Manual decisions use the bound reviewer challenge/resolve path.
+    print('kb review decide: review_unverified; use the reviewer confirmation flow', file=sys.stderr)
+    return 2
 
 
 def _propose(args) -> int:

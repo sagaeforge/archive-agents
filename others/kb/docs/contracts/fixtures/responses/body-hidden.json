@@ -2,7 +2,7 @@
   "body": {
     "code": "not_found",
     "detail": "없음",
-    "instance": "/v1/nodes/f-priv/body",
+    "instance": "/v1/nodes/{id}/body",
     "status": 404,
     "title": "not found",
     "type": "https://kb.local/problems/not-found"

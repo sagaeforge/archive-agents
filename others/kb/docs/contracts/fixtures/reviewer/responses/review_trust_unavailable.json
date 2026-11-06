@@ -1,0 +1,24 @@
+{
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/problem+json"
+  },
+  "id": "review_trust_unavailable",
+  "method": "POST",
+  "path_template": "/v1/actions",
+  "request": {
+    "action": "publish",
+    "expected_version": 1,
+    "idempotency_key": "loupe-review:a:fixture",
+    "target": "f-fixture-note"
+  },
+  "response": {
+    "code": "review_trust_unavailable",
+    "detail": "본인 확인을 사용할 수 없습니다",
+    "instance": "/v1/actions/{id}",
+    "status": 503,
+    "title": "review trust unavailable",
+    "type": "https://kb.local/problems/review-trust-unavailable"
+  },
+  "status": 503
+}

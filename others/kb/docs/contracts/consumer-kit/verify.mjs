@@ -68,10 +68,11 @@ for (const name of discriminated) {
 }
 console.log(`discriminator 컴파일 성공: ${discriminated.join(', ')}`);
 
-function responseDef(template, status) {
-  let r = doc.paths[template].get.responses[String(status)];
+function responseDef(template, status, method = 'get') {
+  method = method.toLowerCase();
+  let r = doc.paths[template]?.[method]?.responses[String(status)];
   if (!r) return null;
-  let base = ['paths', template, 'get', 'responses', String(status)];
+  let base = ['paths', template, method, 'responses', String(status)];
   if (r.$ref) {
     const name = r.$ref.split('/').pop();
     r = doc.components.responses[name];
@@ -107,6 +108,59 @@ for (const c of req.cases) {
   });
 }
 console.log(`스키마 통과한 JSON 응답: ${validated}개`);
+
+// FW9 is a normative synthetic packet: schema checks, not fake live replay.
+const reviewer = JSON.parse(fs.readFileSync(path.join(fixDir, 'reviewer.json'), 'utf8'));
+assert.equal(reviewer.contract_version, doc.info.version);
+assert.equal(reviewer.synthetic, true);
+const reviewerCoverage = new Map();
+for (const c of reviewer.cases) {
+  check(`FW9 response schema: ${c.id}`, () => {
+    const operation = doc.paths[c.path_template]?.[c.method.toLowerCase()];
+    assert.ok(operation, 'Operation missing');
+    const disk = JSON.parse(fs.readFileSync(path.join(fixDir, 'reviewer', 'responses', c.id + '.json'), 'utf8'));
+    assert.deepEqual(disk, c, 'Packet and per-response fixture differ');
+    const def = responseDef(c.path_template, c.status, c.method);
+    assert.ok(def, 'Status missing');
+    const contentType = c.headers['content-type'];
+    const validate = ajv.getSchema(ptr(...def.base, 'content', contentType, 'schema'));
+    assert.ok(validate, 'Schema not compiled');
+    assert.ok(validate(c.response), JSON.stringify(validate.errors));
+    if (c.status < 400) {
+      if (c.method === 'GET')
+        for (const field of ['schema_version', 'epoch', 'build_id', 'data_as_of', 'applied_seq', 'as_of', 'degraded', 'data'])
+          assert.ok(Object.hasOwn(c.response, field), 'Full Envelope field missing: ' + field);
+      const checkTimes = value => {
+        if (!value || typeof value !== 'object') return;
+        for (const [key, nested] of Object.entries(value)) {
+          if (['created_at', 'expires_at', 'data_as_of'].includes(key) && nested !== null)
+            assert.ok(typeof nested === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(nested) && !Number.isNaN(Date.parse(nested)), 'RFC 3339 UTC required');
+          if (nested && typeof nested === 'object') checkTimes(nested);
+        }
+      };
+      checkTimes(c.response);
+      const payload = c.method === 'GET' ? c.response.data : c.response;
+      for (const candidate of payload.candidates ?? [])
+        assert.equal(candidate.body_sha, crypto.createHash('sha256').update(candidate.body, 'utf8').digest('hex'));
+      const plan = payload.external_refine;
+      if (plan?.request_preview !== null && plan?.request_preview !== undefined)
+        assert.equal(plan.external_payload_sha, crypto.createHash('sha256').update(plan.request_preview, 'utf8').digest('hex'));
+      assert.equal(c.headers['cache-control'], 'no-store');
+    }
+    const key = c.method.toLowerCase() + ' ' + c.path_template;
+    const covered = reviewerCoverage.get(key) ?? new Set();
+    covered.add(c.status < 400 ? 'success' : 'error');
+    reviewerCoverage.set(key, covered);
+  });
+}
+for (const [url, item] of Object.entries(doc.paths)) {
+  for (const [method, operation] of Object.entries(item)) {
+    if (!operation?.tags?.includes('reviewer')) continue;
+    check(`FW9 operation coverage: ${method} ${url}`, () => {
+      assert.deepEqual(reviewerCoverage.get(method + ' ' + url), new Set(['success', 'error']));
+    });
+  }
+}
 
 // 음성 확인: discriminator가 실제로 걸려 있다(kind를 망가뜨리면 실패해야 한다)
 check('discriminator가 걸려 있다', () => {

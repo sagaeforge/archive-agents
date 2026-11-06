@@ -1,0 +1,22 @@
+{
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/problem+json"
+  },
+  "id": "userActionChallenge-denied",
+  "method": "POST",
+  "path_template": "/v1/actions/challenge",
+  "request": {
+    "action": "publish_external_refine",
+    "action_id": "a-fixture-publish"
+  },
+  "response": {
+    "code": "scope_denied",
+    "detail": "KB 쓰기 권한이 없습니다. 토큰을 다시 설정하세요",
+    "instance": "/v1/actions/challenge",
+    "status": 403,
+    "title": "scope denied",
+    "type": "https://kb.local/problems/scope-denied"
+  },
+  "status": 403
+}

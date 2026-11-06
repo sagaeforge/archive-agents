@@ -71,12 +71,20 @@ def test_tags_declared_and_all_required_present(requests_doc):
 
 def test_every_path_has_a_success_and_an_error_case(requests_doc):
     seen = {t: {"ok": [], "err": []} for t in _templates()}
-    assert len(seen) == 26
+    assert len(seen) == 35  # Derived from openapi.yaml 0.5.0 paths.
     for c in requests_doc["cases"]:
-        if c.get("method", "GET") != "GET" or c.get("headers", {}).get("Host"):
-            continue
         t = _template_of(c["path"].split("?")[0])
-        if c["status"] in (200, 206):
+        if c.get("method", "GET").lower() not in OPENAPI["paths"][t] or c.get("headers", {}).get("Host"):
+            continue
+        if 200 <= c["status"] < 300:
+            seen[t]["ok"].append(c["id"])
+        elif 400 <= c["status"] < 500:
+            seen[t]["err"].append(c["id"])
+    for c in json.loads((R.FIX / "reviewer.json").read_text(encoding="utf-8"))["cases"]:
+        t = c["path_template"]
+        if c["method"].lower() not in OPENAPI["paths"][t]:
+            continue
+        if 200 <= c["status"] < 300:
             seen[t]["ok"].append(c["id"])
         elif 400 <= c["status"] < 500:
             seen[t]["err"].append(c["id"])
@@ -87,7 +95,7 @@ def test_every_path_has_a_success_and_an_error_case(requests_doc):
 def test_openapi_example_ids_are_in_fixtures(requests_doc):
     want = set()
     for t, item in OPENAPI["paths"].items():
-        for code, resp in item["get"]["responses"].items():
+        for code, resp in ((code, resp) for method, operation in item.items() if method in ("get", "post", "put", "patch", "delete", "head", "options", "trace") for code, resp in operation["responses"].items()):
             if "$ref" in resp:
                 continue
             for ctype, media in resp.get("content", {}).items():
@@ -98,6 +106,13 @@ def test_openapi_example_ids_are_in_fixtures(requests_doc):
     for c in requests_doc["cases"]:
         for ex in c.get("examples", []):
             have.add((_template_of(c["path"].split("?")[0]), c["status"], ex))
+    for c in json.loads((R.FIX / "reviewer.json").read_text(encoding="utf-8"))["cases"]:
+        t = c["path_template"]
+        resp = OPENAPI["paths"][t][c["method"].lower()]["responses"][str(c["status"])]
+        for media in resp.get("content", {}).values():
+            for ex, example in (media.get("examples") or {}).items():
+                if example.get("value") == c["response"]:
+                    have.add((t, c["status"], ex))
     assert want <= have, sorted(want - have)
 
 

@@ -1,0 +1,28 @@
+{
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/problem+json"
+  },
+  "id": "resolveHitl-denied",
+  "method": "POST",
+  "path_template": "/v1/hitl/{item}/resolve",
+  "request": {
+    "action": "accept",
+    "assertion": {
+      "id": "synthetic-credential",
+      "response": {}
+    },
+    "challenge_id": "ch-fixture",
+    "idempotency_key": "loupe-review:a:execute",
+    "params": {}
+  },
+  "response": {
+    "code": "scope_denied",
+    "detail": "KB 쓰기 권한이 없습니다. 토큰을 다시 설정하세요",
+    "instance": "/v1/hitl/{item}/resolve",
+    "status": 403,
+    "title": "scope denied",
+    "type": "https://kb.local/problems/scope-denied"
+  },
+  "status": 403
+}

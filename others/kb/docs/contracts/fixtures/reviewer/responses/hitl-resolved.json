@@ -1,0 +1,24 @@
+{
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/json"
+  },
+  "id": "hitl-resolved",
+  "method": "POST",
+  "path_template": "/v1/hitl/{item}/resolve",
+  "request": {
+    "action": "accept",
+    "assertion": {
+      "id": "synthetic-credential",
+      "response": {}
+    },
+    "challenge_id": "ch-fixture",
+    "idempotency_key": "loupe-review:a:execute",
+    "params": {}
+  },
+  "response": {
+    "item": "h-fixture",
+    "review_state": "user_accepted"
+  },
+  "status": 200
+}

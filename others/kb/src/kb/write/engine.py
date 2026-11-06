@@ -40,6 +40,46 @@ EVENT_KEYS = ("kind", "actor", "origin", "idem_key", "subject", "payload", "on_b
               "event_id", "expected_version", "at", "noop_if_same", "editor_create", "editor_slug_missing", "fpapi_tok_id")
 
 
+def review_transaction(build):
+    """One non-spooled human decision, including proof consumption.
+
+    build(ledger_connection) checks current state and writes operational rows
+    inside the very same transaction that appends the resulting events.
+    A failure rolls back both; proof material is never put in a spool.
+    """
+    from kb.write import fpquota
+    led = ledger.open_ledger()
+    gate = Gate(gate_path())
+    fd = None
+    try:
+        fd = gate.acquire(GATE_TIMEOUT_S)
+        with fpquota.lock():
+            def locked(_):
+                evs = prepare(build(led), None)
+                if len(evs) > MAX_EVENTS:
+                    raise WriteRejected("schema_invalid", "Too many reviewer result events")
+                for ev in evs:
+                    validate.validate_event(ev)
+                policy.lint_events(evs)
+                if evs and not fp_is_open(led):
+                    error = WriteRejected("write_in_flight")
+                    error.status = 409
+                    raise error
+                if fpquota.identity.get() and evs:
+                    fpquota.receiving(led, evs)
+                ledger.validate_batch(led, [{**e, "payload": storage_payload(e["payload"])} for e in evs])
+                _cas_bodies(evs)
+                return evs
+            result = ledger.append(led, [], prepare_locked=locked)
+        if result:
+            _project(led)
+        return result
+    finally:
+        if fd is not None:
+            gate.release(fd)
+        led.close()
+
+
 @dataclass
 class WriteResult:
     id: str | None = None

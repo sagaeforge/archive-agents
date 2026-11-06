@@ -200,8 +200,8 @@
           "highlight_unit": "codepoint",
           "highlights": [
             {
-              "end": 28,
-              "start": 26
+              "end": 19,
+              "start": 17
             }
           ],
           "id": "f-1",
@@ -209,7 +209,7 @@
           "origin": "first_party",
           "recorded_at": "2027-01-16T15:00:00Z",
           "sensitivity": "internal",
-          "snippet": "# 공개 메모  - 항목 하나 - 항목 둘 - 위젯 [도구 X](e:tool:x) ",
+          "snippet": "- 항목 하나 - 항목 둘 - 위젯 [도구 X](e:tool:x)",
           "status": "active",
           "title": "공개 메모",
           "type": "Note"

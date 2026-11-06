@@ -1,0 +1,19 @@
+{
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/json"
+  },
+  "id": "reviewer-enroll",
+  "method": "POST",
+  "path_template": "/v1/reviewer/enroll",
+  "request": {
+    "credential_id": "synthetic-credential",
+    "origin": "http://localhost:4812",
+    "public_key": "synthetic-public-key",
+    "rp_id": "localhost"
+  },
+  "response": {
+    "request_id": "reg-fixture"
+  },
+  "status": 201
+}

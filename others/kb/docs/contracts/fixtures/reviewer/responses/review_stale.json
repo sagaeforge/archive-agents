@@ -1,0 +1,26 @@
+{
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/problem+json"
+  },
+  "id": "review_stale",
+  "method": "POST",
+  "path_template": "/v1/actions/{id}/execute",
+  "request": {
+    "assertion": {
+      "id": "synthetic-credential",
+      "response": {}
+    },
+    "challenge_id": "ch-fixture",
+    "idempotency_key": "loupe-review:a:execute"
+  },
+  "response": {
+    "code": "review_stale",
+    "detail": "항목이 바뀌었습니다",
+    "instance": "/v1/actions/{id}",
+    "status": 409,
+    "title": "review stale",
+    "type": "https://kb.local/problems/review-stale"
+  },
+  "status": 409
+}

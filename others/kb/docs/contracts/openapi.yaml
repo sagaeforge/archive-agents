@@ -4,9 +4,9 @@
 openapi: 3.1.1
 info:
   title: KB 데이터 인터페이스
-  version: 0.4.0
+  version: 0.5.0
   summary: 지식 저장소 읽기 및 승인된 first_party 쓰기 계약 v0
-  description: 기계 판독 원본이다. `docs/contracts/data-interface-v0.md`는 설명 문서이고 둘이 어긋나면 이 파일이 이긴다. `paths`는 배포된 읽기 경로(GET/HEAD)다. 미배포 first_party 경로는 `x-first-party-paths`의 Path Item으로 고정한다. 준비 상태는 Meta.write 한 정의를 따른다. 서버 주소는 선언하지 않는다(Unix 소켓이 기본, TCP는 원격 이전 때). 저장소는 데이터만 제공하며 점수와 추천을 내지 않는다. 모르는 필드와 열린 값은 무시한다. `x-provisional`이 붙은 구간은 잠정이다(`/v1/ops/*`).
+  description: 기계 판독 원본이다. `docs/contracts/data-interface-v0.md`는 설명 문서이고 둘이 어긋나면 이 파일이 이긴다. `paths`는 기존 읽기 경로와 0.5.0 reviewer/HITL/사용자 동작 계약을 담는다. 계약 선언은 운영 배포나 실물 WebAuthn 검증 완료를 뜻하지 않는다. 미배포 first_party 경로는 `x-first-party-paths`의 Path Item으로 고정한다. 준비 상태는 Meta.write 한 정의를 따른다. 서버 주소는 선언하지 않는다(Unix 소켓이 기본, TCP는 원격 이전 때). 저장소는 데이터만 제공하며 점수와 추천을 내지 않는다. 모르는 필드와 열린 값은 무시한다. `x-provisional`이 붙은 구간은 잠정이다(`/v1/ops/*`).
 security:
 - {}
 - bearerAuth: []
@@ -25,6 +25,8 @@ tags:
   description: 전체 그래프 export
 - name: ops
   description: 운영 읽기 [잠정]
+- name: reviewer
+  description: ADR-0005 FW9 사람 증명·HITL·비동기 사용자 동작
 paths:
   /v1/meta:
     get:
@@ -2151,8 +2153,1436 @@ paths:
         '503':
           $ref: '#/components/responses/Unavailable'
       x-provisional: true
+  /v1/actions:
+    post:
+      operationId: prepareUserAction
+      tags:
+        - reviewer
+      summary: 사용자 동작 준비
+      x-shape-evidence: ADR-0005:628; tests/fpapi/test_publish_async.py:226-228
+      description: ADR-0005 5.10/6.8 및 결정 9. 소켓/TCP 모두 reviewer Bearer 필수. 성공은 평면 객체,
+        시각은 RFC 3339 UTC. 계약 사례는 합성이며 실행 증거가 아니다.
+      security:
+        - reviewerBearer: []
+      responses:
+        '415':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
+          description: Content-Type은 application/json이어야 한다. 415 unsupported_media_type의 고정 detail은 버그다(ADR-0005 7.5).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        "201":
+          description: release/declassify는 동기 준비 201. 내용은 release 응답에 싣지 않는다.
+          headers:
+            Cache-Control: &a1
+              required: true
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewerPrepared"
+              examples:
+                release-prepare:
+                  value: &a4
+                    action_id: a-fixture-publish
+                    state: ready
+                    status_url: /v1/actions/a-fixture-publish
+                declassify-prepare:
+                  value: &a5
+                    action_id: a-fixture-publish
+                    state: ready
+                    status_url: /v1/actions/a-fixture-publish
+        "202":
+          description: publish는 로컬 준비만 접수. 외부 호출/공개 0.
+          headers:
+            Cache-Control: *a1
+            Location:
+              required: true
+              schema:
+                type: string
+                pattern: ^/v1/actions/[^/]+$
+            Retry-After:
+              required: true
+              schema:
+                type: string
+                const: "1"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewerPrepared"
+              examples:
+                publish-prepare:
+                  value: &a3
+                    action_id: a-fixture-publish
+                    state: preparing
+                    status_url: /v1/actions/a-fixture-publish
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: 잘못된 증명은 review_unverified. 무동의 전송은 external_consent_required.
+          headers:
+            Cache-Control: &a2
+              required: true
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ReviewerProblem"
+              examples:
+                prepareUserAction-denied:
+                  value: &a8
+                    type: https://kb.local/problems/scope-denied
+                    title: scope denied
+                    status: 403
+                    code: scope_denied
+                    detail: KB 쓰기 권한이 없습니다. 토큰을 다시 설정하세요
+                    instance: /v1/actions
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: 대상 판/상태/결과 변경과 준비 만료는 review_stale; 준비 중은 write_in_flight.
+          headers:
+            Cache-Control: *a2
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ReviewerProblem"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          description: 불안전·누락·읽기 실패 신뢰 저장소는 review_trust_unavailable. 경로/키/자격 증명을 반사하지 않는다.
+          headers:
+            Cache-Control: *a2
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ReviewerProblem"
+              examples:
+                review_trust_unavailable:
+                  value: &a6
+                    type: https://kb.local/problems/review-trust-unavailable
+                    title: review trust unavailable
+                    status: 503
+                    code: review_trust_unavailable
+                    detail: 본인 확인을 사용할 수 없습니다
+                    instance: /v1/actions/{id}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewerActionRequest"
+      parameters: []
+      x-contract-cases:
+        - id: publish-prepare
+          method: POST
+          path_template: /v1/actions
+          status: 202
+          headers:
+            cache-control: no-store
+            content-type: application/json
+            location: /v1/actions/a-fixture-publish
+            retry-after: "1"
+          response: *a3
+          request: &a7
+            action: publish
+            target: f-fixture-note
+            expected_version: 1
+            idempotency_key: loupe-review:a:fixture
+        - id: release-prepare
+          method: POST
+          path_template: /v1/actions
+          status: 201
+          headers:
+            cache-control: no-store
+            content-type: application/json
+          response: *a4
+          request:
+            action: release
+            target: f-fixture-note
+            expected_version: 1
+            idempotency_key: loupe-review:a:fixture
+        - id: declassify-prepare
+          method: POST
+          path_template: /v1/actions
+          status: 201
+          headers:
+            cache-control: no-store
+            content-type: application/json
+          response: *a5
+          request:
+            action: declassify
+            target: f-fixture-note
+            expected_version: 1
+            idempotency_key: loupe-review:a:fixture
+            sensitivity: internal
+        - id: review_trust_unavailable
+          method: POST
+          path_template: /v1/actions
+          status: 503
+          headers:
+            cache-control: no-store
+            content-type: application/problem+json
+          response: *a6
+          request: *a7
+        - id: prepareUserAction-denied
+          method: POST
+          path_template: /v1/actions
+          status: 403
+          headers:
+            cache-control: no-store
+            content-type: application/problem+json
+          response: *a8
+          request:
+            action: publish
+            target: f-fixture-note
+            expected_version: 1
+            idempotency_key: loupe-review:a:fixture
+  /v1/actions/{id}:
+    get:
+      operationId: getUserAction
+      tags:
+        - reviewer
+      summary: 발급 tok_id 소유 작업 상태
+      description: ADR-0005 5.10/6.8 및 결정 9. 소켓/TCP 모두 reviewer Bearer 필수. 성공은 전체
+        Envelope, 시각은 RFC 3339 UTC. 계약 사례는 합성이며 실행 증거가 아니다. 다른 토큰(회전 포함)·숨은 대상·없는
+        ID는 같은 404. 응답에 tok_id나 토큰 값을 공개하지 않는다. 큐 포함 120초 준비 timeout, ready 뒤 15분
+        만료, 후보 제거, 메타데이터 30일. 엔진·USD 십진 비용·큐 포함 duration_ms·전송 계획을 낸다.
+      security:
+        - reviewerBearer: []
+      responses:
+        "200":
+          description: "전체 Envelope. Cache-Control: no-store."
+          headers:
+            Cache-Control: *a1
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewerActionStatusEnvelope"
+              examples:
+                publish-preparing:
+                  value: &a10
+                    schema_version: 0.5.0
+                    epoch: 1
+                    build_id: g-fixture
+                    data_as_of: "2026-11-06T00:00:00Z"
+                    applied_seq: 101
+                    as_of:
+                      valid: null
+                      observed: null
+                    degraded: []
+                    data:
+                      action_id: a-fixture-publish
+                      action: publish
+                      target: f-fixture-note
+                      expected_version: 1
+                      state: preparing
+                      created_at: "2026-11-06T00:00:00Z"
+                      expires_at: null
+                      candidates: []
+                      engine: null
+                      cost_usd: null
+                      duration_ms: null
+                      code: null
+                      refinement_mode: local_only
+                      external_refine:
+                        status: consent_required
+                        external_payload_sha: "00000000000000000000000000000000000000000000000000000000\
+                          00000000"
+                        engine:
+                          kind: external
+                          backend: synthetic
+                          model: synthetic
+                        request_preview: null
+                      executed: false
+                publish-ready:
+                  value: &a11
+                    schema_version: 0.5.0
+                    epoch: 1
+                    build_id: g-fixture
+                    data_as_of: "2026-11-06T00:00:00Z"
+                    applied_seq: 101
+                    as_of:
+                      valid: null
+                      observed: null
+                    degraded: []
+                    data:
+                      action_id: a-fixture-publish
+                      action: publish
+                      target: f-fixture-note
+                      expected_version: 1
+                      state: ready
+                      created_at: "2026-11-06T00:00:00Z"
+                      expires_at: "2026-11-06T00:15:01Z"
+                      candidates:
+                        - type: Note
+                          title: 합성 정제 결과
+                          body: 합성 결과
+                          sensitivity: private
+                          body_sha: 979a66ad8eb93f22477258746ca588e3b15457a69eee60c2ebce19f579cb3c5e
+                      engine:
+                        kind: local
+                        backend: local
+                        model: synthetic
+                      cost_usd: "0"
+                      duration_ms: 17
+                      code: null
+                      refinement_mode: local_only
+                      external_refine:
+                        status: consent_required
+                        external_payload_sha: a7dff4f602caf34dbd08d411a3ea22bdcb9243e86a70a8ae0f07ac9938f832e8
+                        engine:
+                          kind: external
+                          backend: synthetic
+                          model: synthetic
+                        request_preview: '{"engine":"synthetic","model":"synthetic","memo":{"title":"합성
+                          메모","body":"합성"},"parameters":{}}'
+                      executed: false
+                publish-failed:
+                  value: &a12
+                    schema_version: 0.5.0
+                    epoch: 1
+                    build_id: g-fixture
+                    data_as_of: "2026-11-06T00:00:00Z"
+                    applied_seq: 101
+                    as_of:
+                      valid: null
+                      observed: null
+                    degraded: []
+                    data:
+                      action_id: a-fixture-publish
+                      action: publish
+                      target: f-fixture-note
+                      expected_version: 1
+                      state: failed
+                      created_at: "2026-11-06T00:00:00Z"
+                      expires_at: "2026-11-06T00:15:01Z"
+                      candidates: []
+                      engine:
+                        kind: local
+                        backend: local
+                        model: synthetic
+                      cost_usd: "0"
+                      duration_ms: 17
+                      code: prepare_timeout
+                      refinement_mode: local_only
+                      external_refine:
+                        status: consent_required
+                        external_payload_sha: "00000000000000000000000000000000000000000000000000000000\
+                          00000000"
+                        engine:
+                          kind: external
+                          backend: synthetic
+                          model: synthetic
+                        request_preview: null
+                      executed: false
+                publish-expired:
+                  value: &a13
+                    schema_version: 0.5.0
+                    epoch: 1
+                    build_id: g-fixture
+                    data_as_of: "2026-11-06T00:00:00Z"
+                    applied_seq: 101
+                    as_of:
+                      valid: null
+                      observed: null
+                    degraded: []
+                    data:
+                      action_id: a-fixture-publish
+                      action: publish
+                      target: f-fixture-note
+                      expected_version: 1
+                      state: expired
+                      created_at: "2026-11-06T00:00:00Z"
+                      expires_at: "2026-11-06T00:15:01Z"
+                      candidates: []
+                      engine:
+                        kind: local
+                        backend: local
+                        model: synthetic
+                      cost_usd: "0"
+                      duration_ms: 17
+                      code: null
+                      refinement_mode: local_only
+                      external_refine:
+                        status: consent_required
+                        external_payload_sha: "00000000000000000000000000000000000000000000000000000000\
+                          00000000"
+                        engine:
+                          kind: external
+                          backend: synthetic
+                          model: synthetic
+                        request_preview: null
+                      executed: false
+                publish-external-ready:
+                  value: &a14
+                    schema_version: 0.5.0
+                    epoch: 1
+                    build_id: g-fixture
+                    data_as_of: "2026-11-06T00:00:00Z"
+                    applied_seq: 101
+                    as_of:
+                      valid: null
+                      observed: null
+                    degraded: []
+                    data:
+                      action_id: a-fixture-publish
+                      action: publish
+                      target: f-fixture-note
+                      expected_version: 1
+                      state: ready
+                      created_at: "2026-11-06T00:00:00Z"
+                      expires_at: "2026-11-06T00:15:02Z"
+                      candidates:
+                        - type: Note
+                          title: 합성 정제 결과
+                          body: 합성 결과
+                          sensitivity: private
+                          body_sha: 979a66ad8eb93f22477258746ca588e3b15457a69eee60c2ebce19f579cb3c5e
+                      engine:
+                        kind: external
+                        backend: synthetic
+                        model: synthetic
+                      cost_usd: "0.0025"
+                      duration_ms: 29
+                      code: null
+                      refinement_mode: external_consented
+                      external_refine:
+                        status: consented
+                        external_payload_sha: a7dff4f602caf34dbd08d411a3ea22bdcb9243e86a70a8ae0f07ac9938f832e8
+                        engine:
+                          kind: external
+                          backend: synthetic
+                          model: synthetic
+                        request_preview: '{"engine":"synthetic","model":"synthetic","memo":{"title":"합성
+                          메모","body":"합성"},"parameters":{}}'
+                      executed: false
+                publish-executed-status:
+                  value: &a15
+                    schema_version: 0.5.0
+                    epoch: 1
+                    build_id: g-fixture
+                    data_as_of: "2026-11-06T00:00:00Z"
+                    applied_seq: 101
+                    as_of:
+                      valid: null
+                      observed: null
+                    degraded: []
+                    data:
+                      action_id: a-fixture-publish
+                      action: publish
+                      target: f-fixture-note
+                      expected_version: 1
+                      state: expired
+                      created_at: "2026-11-06T00:00:00Z"
+                      expires_at: "2026-11-06T00:15:02Z"
+                      candidates: []
+                      engine:
+                        kind: external
+                        backend: synthetic
+                        model: synthetic
+                      cost_usd: "0.0025"
+                      duration_ms: 29
+                      code: null
+                      refinement_mode: external_consented
+                      external_refine:
+                        status: consented
+                        external_payload_sha: a7dff4f602caf34dbd08d411a3ea22bdcb9243e86a70a8ae0f07ac9938f832e8
+                        engine:
+                          kind: external
+                          backend: synthetic
+                          model: synthetic
+                        request_preview: null
+                      executed: true
+                      result:
+                        ids:
+                          - f-fixture-result
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: 잘못된 증명은 review_unverified. 무동의 전송은 external_consent_required.
+          headers:
+            Cache-Control: &a9
+              required: true
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ReviewerProblem"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: 대상 판/상태/결과 변경과 준비 만료는 review_stale; 준비 중은 write_in_flight.
+          headers:
+            Cache-Control: *a9
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ReviewerProblem"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          description: 불안전·누락·읽기 실패 신뢰 저장소는 review_trust_unavailable. 경로/키/자격 증명을 반사하지 않는다.
+          headers:
+            Cache-Control: *a9
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ReviewerProblem"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/PublicId"
+      x-contract-cases:
+        - id: publish-preparing
+          method: GET
+          path_template: /v1/actions/{id}
+          status: 200
+          headers:
+            cache-control: no-store
+            content-type: application/json
+          response: *a10
+        - id: publish-ready
+          method: GET
+          path_template: /v1/actions/{id}
+          status: 200
+          headers:
+            cache-control: no-store
+            content-type: application/json
+          response: *a11
+        - id: publish-failed
+          method: GET
+          path_template: /v1/actions/{id}
+          status: 200
+          headers:
+            cache-control: no-store
+            content-type: application/json
+          response: *a12
+        - id: publish-expired
+          method: GET
+          path_template: /v1/actions/{id}
+          status: 200
+          headers:
+            cache-control: no-store
+            content-type: application/json
+          response: *a13
+        - id: getUserAction-denied
+          method: GET
+          path_template: /v1/actions/{id}
+          status: 404
+          headers:
+            cache-control: no-store
+            content-type: application/problem+json
+          response:
+            type: https://kb.local/problems/not-found
+            title: not found
+            status: 404
+            code: not_found
+            detail: 문서를 찾을 수 없습니다
+            instance: /v1/actions/{id}
+        - id: publish-external-ready
+          method: GET
+          path_template: /v1/actions/{id}
+          status: 200
+          headers:
+            cache-control: no-store
+            content-type: application/json
+          response: *a14
+        - id: publish-executed-status
+          method: GET
+          path_template: /v1/actions/{id}
+          status: 200
+          headers:
+            cache-control: no-store
+            content-type: application/json
+          response: *a15
+  /v1/actions/challenge:
+    post:
+      operationId: userActionChallenge
+      tags:
+        - reviewer
+      summary: 동작별 120초 1회용 WebAuthn 도전
+      description: ADR-0005 5.10/6.8 및 결정 9. 소켓/TCP 모두 reviewer Bearer 필수. 성공은 평면 객체,
+        시각은 RFC 3339 UTC. 계약 사례는 합성이며 실행 증거가 아니다. publish_external_refine은 메모
+        ID/판, 실제 UTF-8 요청 바이트 SHA-256, 선택 엔진/모델을 묶고 publish는 결과별 타입/민감도/본문 해시를
+        묶는다. 각 action_sha/증명은 별개이며 서로 대체할 수 없다. RP localhost, origin
+        http://localhost:4812, UV required, 카운터 엄격 증가.
+      security:
+        - reviewerBearer: []
+      responses:
+        '415':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
+          description: Content-Type은 application/json이어야 한다. 415 unsupported_media_type의 고정 detail은 버그다(ADR-0005 7.5).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        "201":
+          description: "평면 성공 객체. Cache-Control: no-store."
+          headers:
+            Cache-Control: *a1
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewerChallenge"
+              examples:
+                challenge-publish_external_refine:
+                  value: &a17
+                    challenge_id: ch-fixture
+                    challenge: synthetic-challenge
+                    rp_id: localhost
+                    action_sha: "0000000000000000000000000000000000000000000000000000000000000000"
+                challenge-publish:
+                  value: &a18
+                    challenge_id: ch-fixture
+                    challenge: synthetic-challenge
+                    rp_id: localhost
+                    action_sha: "1111111111111111111111111111111111111111111111111111111111111111"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: 잘못된 증명은 review_unverified. 무동의 전송은 external_consent_required.
+          headers:
+            Cache-Control: &a16
+              required: true
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ReviewerProblem"
+              examples:
+                userActionChallenge-denied:
+                  value: &a19
+                    type: https://kb.local/problems/scope-denied
+                    title: scope denied
+                    status: 403
+                    code: scope_denied
+                    detail: KB 쓰기 권한이 없습니다. 토큰을 다시 설정하세요
+                    instance: /v1/actions/challenge
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: 대상 판/상태/결과 변경과 준비 만료는 review_stale; 준비 중은 write_in_flight.
+          headers:
+            Cache-Control: *a16
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ReviewerProblem"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          description: 불안전·누락·읽기 실패 신뢰 저장소는 review_trust_unavailable. 경로/키/자격 증명을 반사하지 않는다.
+          headers:
+            Cache-Control: *a16
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ReviewerProblem"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewerChallengeRequest"
+      parameters: []
+      x-contract-cases:
+        - id: challenge-publish_external_refine
+          method: POST
+          path_template: /v1/actions/challenge
+          status: 201
+          headers:
+            cache-control: no-store
+            content-type: application/json
+          response: *a17
+          request:
+            action_id: a-fixture-publish
+            action: publish_external_refine
+        - id: challenge-publish
+          method: POST
+          path_template: /v1/actions/challenge
+          status: 201
+          headers:
+            cache-control: no-store
+            content-type: application/json
+          response: *a18
+          request:
+            action_id: a-fixture-publish
+            action: publish
+        - id: userActionChallenge-denied
+          method: POST
+          path_template: /v1/actions/challenge
+          status: 403
+          headers:
+            cache-control: no-store
+            content-type: application/problem+json
+          response: *a19
+          request:
+            action_id: a-fixture-publish
+            action: publish_external_refine
+  /v1/actions/{id}/external-refine:
+    post:
+      operationId: consentExternalRefine
+      tags:
+        - reviewer
+      summary: 첫 동의 뒤 고정한 외부 정제 한 번 접수
+      description: ADR-0005 5.10/6.8 및 결정 9. 소켓/TCP 모두 reviewer Bearer 필수. 성공은 평면 객체,
+        시각은 RFC 3339 UTC. 계약 사례는 합성이며 실행 증거가 아니다. 서명·UV·카운터·도전·현재 판·전송 해시를 검증한 뒤에만
+        예약/전송한다. 전송 직전 재검사. SDK 자동 재시도/엔진 전환 없음. 새 전송은 새 동의. 불확실 예약은 유지하며 이 증명은
+        공개를 허가하지 않는다.
+      security:
+        - reviewerBearer: []
+      responses:
+        '415':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
+          description: Content-Type은 application/json이어야 한다. 415 unsupported_media_type의 고정 detail은 버그다(ADR-0005 7.5).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        "202":
+          description: "평면 성공 객체. Cache-Control: no-store."
+          headers:
+            Cache-Control: *a1
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewerActionAccepted"
+              examples:
+                external-consented:
+                  value: &a21
+                    action_id: a-fixture-publish
+                    state: preparing
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: 잘못된 증명은 review_unverified. 무동의 전송은 external_consent_required.
+          headers:
+            Cache-Control: &a20
+              required: true
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ReviewerProblem"
+              examples:
+                consentExternalRefine-denied:
+                  value: &a22
+                    type: https://kb.local/problems/scope-denied
+                    title: scope denied
+                    status: 403
+                    code: scope_denied
+                    detail: KB 쓰기 권한이 없습니다. 토큰을 다시 설정하세요
+                    instance: /v1/actions/{id}/external-refine
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: 대상 판/상태/결과 변경과 준비 만료는 review_stale; 준비 중은 write_in_flight.
+          headers:
+            Cache-Control: *a20
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ReviewerProblem"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          description: 불안전·누락·읽기 실패 신뢰 저장소는 review_trust_unavailable. 경로/키/자격 증명을 반사하지 않는다.
+          headers:
+            Cache-Control: *a20
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ReviewerProblem"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewerProofRequest"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/PublicId"
+      x-contract-cases:
+        - id: external-consented
+          method: POST
+          path_template: /v1/actions/{id}/external-refine
+          status: 202
+          headers:
+            cache-control: no-store
+            content-type: application/json
+          response: *a21
+          request: &a25
+            challenge_id: ch-fixture
+            assertion: &a39
+              id: synthetic-credential
+              response: {}
+            idempotency_key: loupe-review:a:execute
+        - id: consentExternalRefine-denied
+          method: POST
+          path_template: /v1/actions/{id}/external-refine
+          status: 403
+          headers:
+            cache-control: no-store
+            content-type: application/problem+json
+          response: *a22
+          request:
+            challenge_id: ch-fixture
+            assertion:
+              id: synthetic-credential
+              response: {}
+            idempotency_key: loupe-review:a:execute
+  /v1/actions/{id}/execute:
+    post:
+      operationId: executeUserAction
+      tags:
+        - reviewer
+      summary: 두 번째 확인 뒤 결과 확정
+      description: ADR-0005 5.10/6.8 및 결정 9. 소켓/TCP 모두 reviewer Bearer 필수. 성공은 평면 객체,
+        시각은 RFC 3339 UTC. 계약 사례는 합성이며 실행 증거가 아니다. publish 성공만 독립적인 internal
+        Note/Page와 PROMOTED_FROM을 확정한다. 원본은 private 유지. 다른 private 기록/제목/비공개 근거를
+        내보내지 않는다. 성공 뒤 expired/executed=true, 후보 제거. 동일 앱/키 재생은 같은 결과만 반환하고 중복
+        기록/전송 없음.
+      security:
+        - reviewerBearer: []
+      responses:
+        '415':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
+          description: Content-Type은 application/json이어야 한다. 415 unsupported_media_type의 고정 detail은 버그다(ADR-0005 7.5).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        "200":
+          description: "평면 성공 객체. Cache-Control: no-store."
+          headers:
+            Cache-Control: *a1
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewerActionResult"
+              examples:
+                publish-executed:
+                  value: &a24
+                    action_id: a-fixture-publish
+                    result:
+                      ids:
+                        - f-fixture-result
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: 잘못된 증명은 review_unverified. 무동의 전송은 external_consent_required.
+          headers:
+            Cache-Control: &a23
+              required: true
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ReviewerProblem"
+              examples:
+                review_unverified:
+                  value: &a26
+                    type: https://kb.local/problems/review-unverified
+                    title: review unverified
+                    status: 403
+                    code: review_unverified
+                    detail: 본인 확인에 실패했습니다
+                    instance: /v1/actions/{id}
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: 대상 판/상태/결과 변경과 준비 만료는 review_stale; 준비 중은 write_in_flight.
+          headers:
+            Cache-Control: *a23
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ReviewerProblem"
+              examples:
+                review_stale:
+                  value: &a27
+                    type: https://kb.local/problems/review-stale
+                    title: review stale
+                    status: 409
+                    code: review_stale
+                    detail: 항목이 바뀌었습니다
+                    instance: /v1/actions/{id}
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          description: 불안전·누락·읽기 실패 신뢰 저장소는 review_trust_unavailable. 경로/키/자격 증명을 반사하지 않는다.
+          headers:
+            Cache-Control: *a23
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ReviewerProblem"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewerProofRequest"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/PublicId"
+      x-contract-cases:
+        - id: publish-executed
+          method: POST
+          path_template: /v1/actions/{id}/execute
+          status: 200
+          headers:
+            cache-control: no-store
+            content-type: application/json
+          response: *a24
+          request: *a25
+        - id: review_unverified
+          method: POST
+          path_template: /v1/actions/{id}/execute
+          status: 403
+          headers:
+            cache-control: no-store
+            content-type: application/problem+json
+          response: *a26
+          request: *a25
+        - id: review_stale
+          method: POST
+          path_template: /v1/actions/{id}/execute
+          status: 409
+          headers:
+            cache-control: no-store
+            content-type: application/problem+json
+          response: *a27
+          request: *a25
+  /v1/reviewer/enroll:
+    post:
+      operationId: enrollReviewer
+      tags:
+        - reviewer
+      summary: 인증기 등록 후보 접수; 키 활성화 아님
+      description: ADR-0005 5.10/6.8 및 결정 9. 소켓/TCP 모두 reviewer Bearer 필수. 성공은 평면 객체,
+        시각은 RFC 3339 UTC. 계약 사례는 합성이며 실행 증거가 아니다. root 소유 저장소 설치/폐기는 별도 특권 단계다.
+        후보나 KB/에이전트 UID가 키를 활성화하지 못한다. 시작/준비/도전/실행에서 root 소유 부모·쓰기 가능성·ACL·심볼릭
+        링크·교체/누락을 확인한다. Meta.write.hitl은 기존 HitlReadiness만 사용한다.
+      security:
+        - reviewerBearer: []
+      responses:
+        '415':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
+          description: Content-Type은 application/json이어야 한다. 415 unsupported_media_type의 고정 detail은 버그다(ADR-0005 7.5).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        "201":
+          description: "평면 성공 객체. Cache-Control: no-store."
+          headers:
+            Cache-Control: *a1
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewerEnrollment"
+              examples:
+                reviewer-enroll:
+                  value: &a29
+                    request_id: reg-fixture
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: 잘못된 증명은 review_unverified. 무동의 전송은 external_consent_required.
+          headers:
+            Cache-Control: &a28
+              required: true
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ReviewerProblem"
+              examples:
+                enrollReviewer-denied:
+                  value: &a30
+                    type: https://kb.local/problems/scope-denied
+                    title: scope denied
+                    status: 403
+                    code: scope_denied
+                    detail: KB 쓰기 권한이 없습니다. 토큰을 다시 설정하세요
+                    instance: /v1/reviewer/enroll
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: 대상 판/상태/결과 변경과 준비 만료는 review_stale; 준비 중은 write_in_flight.
+          headers:
+            Cache-Control: *a28
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ReviewerProblem"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          description: 불안전·누락·읽기 실패 신뢰 저장소는 review_trust_unavailable. 경로/키/자격 증명을 반사하지 않는다.
+          headers:
+            Cache-Control: *a28
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ReviewerProblem"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewerEnrollmentRequest"
+      parameters: []
+      x-contract-cases:
+        - id: reviewer-enroll
+          method: POST
+          path_template: /v1/reviewer/enroll
+          status: 201
+          headers:
+            cache-control: no-store
+            content-type: application/json
+          response: *a29
+          request:
+            rp_id: localhost
+            origin: http://localhost:4812
+            credential_id: synthetic-credential
+            public_key: synthetic-public-key
+        - id: enrollReviewer-denied
+          method: POST
+          path_template: /v1/reviewer/enroll
+          status: 403
+          headers:
+            cache-control: no-store
+            content-type: application/problem+json
+          response: *a30
+          request:
+            rp_id: localhost
+            origin: http://localhost:4812
+            credential_id: synthetic-credential
+            public_key: synthetic-public-key
+  /v1/hitl:
+    get:
+      operationId: listHitl
+      tags:
+        - reviewer
+      summary: 미해결 의도 항목만 목록
+      description: ADR-0005 5.10/6.8 및 결정 9. 소켓/TCP 모두 reviewer Bearer 필수. 성공은 전체
+        Envelope, 시각은 RFC 3339 UTC. 계약 사례는 합성이며 실행 증거가 아니다. 같은 신호/대상/판은 중복 없음; 자동
+        해소 시 닫는다. 일반 연구 결과와 사용자가 시작한 release/declassify/publish는 HITL 항목이 아니다. 현재
+        원본 가시성을 유지한다.
+      security:
+        - reviewerBearer: []
+      responses:
+        "200":
+          description: "전체 Envelope. Cache-Control: no-store."
+          headers:
+            Cache-Control: *a1
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewerHitlListEnvelope"
+              examples:
+                hitl-open:
+                  value: &a32
+                    schema_version: 0.5.0
+                    epoch: 1
+                    build_id: g-fixture
+                    data_as_of: "2026-11-06T00:00:00Z"
+                    applied_seq: 101
+                    as_of:
+                      valid: null
+                      observed: null
+                    degraded: []
+                    data:
+                      items:
+                        - id: h-fixture
+                          kind: gate_unresolved
+                          target: c-fixture
+                          verdict: 1
+                          state: open
+                          reason: 자동 함의 판정 미해결
+                          attempted:
+                            - entailment
+                          candidates: []
+                          evidence: []
+                          proposed_state: null
+                          created_at: "2026-11-06T00:00:00Z"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: 잘못된 증명은 review_unverified. 무동의 전송은 external_consent_required.
+          headers:
+            Cache-Control: &a31
+              required: true
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ReviewerProblem"
+              examples:
+                listHitl-denied:
+                  value: &a33
+                    type: https://kb.local/problems/scope-denied
+                    title: scope denied
+                    status: 403
+                    code: scope_denied
+                    detail: KB 쓰기 권한이 없습니다. 토큰을 다시 설정하세요
+                    instance: /v1/hitl
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: 대상 판/상태/결과 변경과 준비 만료는 review_stale; 준비 중은 write_in_flight.
+          headers:
+            Cache-Control: *a31
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ReviewerProblem"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          description: 불안전·누락·읽기 실패 신뢰 저장소는 review_trust_unavailable. 경로/키/자격 증명을 반사하지 않는다.
+          headers:
+            Cache-Control: *a31
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ReviewerProblem"
+      parameters:
+        - name: kind
+          in: query
+          schema:
+            type: string
+            enum:
+              - topic_ambiguity
+              - source_policy
+              - liveness_unresolved
+              - gate_unresolved
+        - $ref: "#/components/parameters/Cursor"
+      x-contract-cases:
+        - id: hitl-open
+          method: GET
+          path_template: /v1/hitl
+          status: 200
+          headers:
+            cache-control: no-store
+            content-type: application/json
+          response: *a32
+        - id: listHitl-denied
+          method: GET
+          path_template: /v1/hitl
+          status: 403
+          headers:
+            cache-control: no-store
+            content-type: application/problem+json
+          response: *a33
+  /v1/hitl/challenge:
+    post:
+      operationId: hitlChallenge
+      tags:
+        - reviewer
+      summary: HITL 종류·대상·판·동작·매개변수에 묶인 도전
+      description: ADR-0005 5.10/6.8 및 결정 9. 소켓/TCP 모두 reviewer Bearer 필수. 성공은 평면 객체,
+        시각은 RFC 3339 UTC. 계약 사례는 합성이며 실행 증거가 아니다.
+      security:
+        - reviewerBearer: []
+      responses:
+        '415':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
+          description: Content-Type은 application/json이어야 한다. 415 unsupported_media_type의 고정 detail은 버그다(ADR-0005 7.5).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        "201":
+          description: "평면 성공 객체. Cache-Control: no-store."
+          headers:
+            Cache-Control: *a1
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewerChallenge"
+              examples:
+                hitl-challenge:
+                  value: &a35
+                    challenge_id: ch-fixture
+                    challenge: synthetic-challenge
+                    rp_id: localhost
+                    action_sha: "0000000000000000000000000000000000000000000000000000000000000000"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: 잘못된 증명은 review_unverified. 무동의 전송은 external_consent_required.
+          headers:
+            Cache-Control: &a34
+              required: true
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ReviewerProblem"
+              examples:
+                hitlChallenge-denied:
+                  value: &a36
+                    type: https://kb.local/problems/scope-denied
+                    title: scope denied
+                    status: 403
+                    code: scope_denied
+                    detail: KB 쓰기 권한이 없습니다. 토큰을 다시 설정하세요
+                    instance: /v1/hitl/challenge
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: 대상 판/상태/결과 변경과 준비 만료는 review_stale; 준비 중은 write_in_flight.
+          headers:
+            Cache-Control: *a34
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ReviewerProblem"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          description: 불안전·누락·읽기 실패 신뢰 저장소는 review_trust_unavailable. 경로/키/자격 증명을 반사하지 않는다.
+          headers:
+            Cache-Control: *a34
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ReviewerProblem"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewerHitlChallengeRequest"
+      parameters: []
+      x-contract-cases:
+        - id: hitl-challenge
+          method: POST
+          path_template: /v1/hitl/challenge
+          status: 201
+          headers:
+            cache-control: no-store
+            content-type: application/json
+          response: *a35
+          request:
+            item: h-fixture
+            action: accept
+            params: {}
+        - id: hitlChallenge-denied
+          method: POST
+          path_template: /v1/hitl/challenge
+          status: 403
+          headers:
+            cache-control: no-store
+            content-type: application/problem+json
+          response: *a36
+          request:
+            item: h-fixture
+            action: accept
+            params: {}
+  /v1/hitl/{item}/resolve:
+    post:
+      operationId: resolveHitl
+      tags:
+        - reviewer
+      summary: 사람 증명 뒤 HITL 해결
+      description: ADR-0005 5.10/6.8 및 결정 9. 소켓/TCP 모두 reviewer Bearer 필수. 성공은 평면 객체,
+        시각은 RFC 3339 UTC. 계약 사례는 합성이며 실행 증거가 아니다. gate_unresolved accept/reject는
+        review_state만 user_accepted/user_rejected로 바꾼다. 문장·인용·출처·verification은 불변.
+        토큰·TTY만으로 결정할 수 없다. 자동 판정 경로는 유지한다.
+      security:
+        - reviewerBearer: []
+      responses:
+        '415':
+          headers:
+            Cache-Control:
+              required: true
+              schema:
+                const: no-store
+          description: Content-Type은 application/json이어야 한다. 415 unsupported_media_type의 고정 detail은 버그다(ADR-0005 7.5).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/FirstPartyProblem'
+        "200":
+          description: "평면 성공 객체. Cache-Control: no-store."
+          headers:
+            Cache-Control: *a1
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewerHitlResolved"
+              examples:
+                hitl-resolved:
+                  value: &a38
+                    item: h-fixture
+                    review_state: user_accepted
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: 잘못된 증명은 review_unverified. 무동의 전송은 external_consent_required.
+          headers:
+            Cache-Control: &a37
+              required: true
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ReviewerProblem"
+              examples:
+                resolveHitl-denied:
+                  value: &a40
+                    type: https://kb.local/problems/scope-denied
+                    title: scope denied
+                    status: 403
+                    code: scope_denied
+                    detail: KB 쓰기 권한이 없습니다. 토큰을 다시 설정하세요
+                    instance: /v1/hitl/{item}/resolve
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: 대상 판/상태/결과 변경과 준비 만료는 review_stale; 준비 중은 write_in_flight.
+          headers:
+            Cache-Control: *a37
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ReviewerProblem"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          description: 불안전·누락·읽기 실패 신뢰 저장소는 review_trust_unavailable. 경로/키/자격 증명을 반사하지 않는다.
+          headers:
+            Cache-Control: *a37
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ReviewerProblem"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewerHitlResolveRequest"
+      parameters:
+        - name: item
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/PublicId"
+      x-contract-cases:
+        - id: hitl-resolved
+          method: POST
+          path_template: /v1/hitl/{item}/resolve
+          status: 200
+          headers:
+            cache-control: no-store
+            content-type: application/json
+          response: *a38
+          request:
+            challenge_id: ch-fixture
+            assertion: *a39
+            idempotency_key: loupe-review:a:execute
+            action: accept
+            params: {}
+        - id: resolveHitl-denied
+          method: POST
+          path_template: /v1/hitl/{item}/resolve
+          status: 403
+          headers:
+            cache-control: no-store
+            content-type: application/problem+json
+          response: *a40
+          request:
+            challenge_id: ch-fixture
+            assertion:
+              id: synthetic-credential
+              response: {}
+            idempotency_key: loupe-review:a:execute
+            action: accept
+            params: {}
+
 components:
   securitySchemes:
+    reviewerBearer:
+      type: http
+      scheme: bearer
+      description: 새 FW9 경로는 소켓/TCP 모두 reviewer 범위 Bearer가 필수다. 토큰만으로 외부 전송·결과 공개를 허가하지 않는다.
     bearerAuth:
       type: http
       scheme: bearer
@@ -2813,6 +4243,519 @@ components:
       enum:
       - live
       - archived_only
+    ReviewerEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/Envelope"
+        - type: object
+          properties:
+            schema_version:
+              type: string
+              const: 0.5.0
+          required:
+            - schema_version
+      description: FW9 GET 성공 응답의 전체 Envelope. 시각은 RFC 3339 UTC다. POST 성공은 평면 객체다(결정
+        9; ADR-0005:628).
+    ReviewerActionRequest:
+      type: object
+      properties:
+        action:
+          type: string
+          enum:
+            - publish
+            - release
+            - declassify
+        target:
+          $ref: "#/components/schemas/PublicId"
+        expected_version:
+          type: integer
+          minimum: 1
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 256
+        sensitivity:
+          type: string
+          enum:
+            - internal
+            - public
+      required:
+        - action
+        - target
+        - expected_version
+        - idempotency_key
+      additionalProperties: false
+      allOf:
+        - if:
+            properties:
+              action:
+                const: declassify
+            required:
+              - action
+          then:
+            required:
+              - sensitivity
+    ReviewerPrepared:
+      type: object
+      properties:
+        action_id:
+          $ref: "#/components/schemas/PublicId"
+        state:
+          type: string
+          enum:
+            - preparing
+            - ready
+        status_url:
+          type: string
+          pattern: ^/v1/actions/[^/]+$
+      required:
+        - action_id
+        - state
+        - status_url
+    ReviewerPreparedEnvelope:
+      $ref: "#/components/schemas/ReviewerPrepared"
+      description: POST 평면 성공 객체(결정 9). 이름의 Envelope 접미사는 응답 봉투를 뜻하지 않는다.
+    ReviewerEngine:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum:
+            - local
+            - external
+        backend: &reviewer_schema_a1
+          type: string
+        model: *reviewer_schema_a1
+      required:
+        - kind
+        - backend
+        - model
+    ReviewerCandidate:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - Note
+            - Page
+        title: *reviewer_schema_a1
+        body: *reviewer_schema_a1
+        sensitivity:
+          const: private
+          type: string
+        body_sha: &reviewer_schema_a2
+          type: string
+          pattern: ^[0-9a-f]{64}$
+      required:
+        - type
+        - title
+        - body
+        - sensitivity
+        - body_sha
+    ReviewerExternalPlan:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - not_needed
+            - consent_required
+            - consented
+            - unavailable
+        external_payload_sha:
+          anyOf:
+            - *reviewer_schema_a2
+            - type: "null"
+        engine:
+          anyOf:
+            - $ref: "#/components/schemas/ReviewerEngine"
+            - type: "null"
+        request_preview:
+          anyOf:
+            - *reviewer_schema_a1
+            - type: "null"
+      required:
+        - status
+        - external_payload_sha
+        - engine
+        - request_preview
+    ReviewerResult:
+      type: object
+      properties:
+        ids:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicId"
+      required:
+        - ids
+    ReviewerActionStatus:
+      type: object
+      properties:
+        action_id:
+          $ref: "#/components/schemas/PublicId"
+        action:
+          type: string
+          enum:
+            - publish
+            - release
+            - declassify
+        target:
+          $ref: "#/components/schemas/PublicId"
+        expected_version:
+          type: integer
+          minimum: 1
+        state:
+          type: string
+          enum:
+            - preparing
+            - ready
+            - failed
+            - expired
+        created_at: &reviewer_schema_a3
+          type: string
+          format: date-time
+          pattern: Z$
+        expires_at:
+          anyOf:
+            - *reviewer_schema_a3
+            - type: "null"
+        candidates:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReviewerCandidate"
+        engine:
+          anyOf:
+            - $ref: "#/components/schemas/ReviewerEngine"
+            - type: "null"
+        cost_usd:
+          anyOf:
+            - type: string
+              pattern: ^[0-9]+(\.[0-9]+)?$
+            - type: "null"
+        duration_ms:
+          anyOf:
+            - type: integer
+              minimum: 0
+            - type: "null"
+        code:
+          anyOf:
+            - *reviewer_schema_a1
+            - type: "null"
+        refinement_mode:
+          type: string
+          enum:
+            - local_only
+            - external_consented
+        external_refine:
+          $ref: "#/components/schemas/ReviewerExternalPlan"
+        executed:
+          type: boolean
+        result:
+          $ref: "#/components/schemas/ReviewerResult"
+      required:
+        - action_id
+        - action
+        - target
+        - expected_version
+        - state
+        - created_at
+        - expires_at
+        - candidates
+        - engine
+        - cost_usd
+        - duration_ms
+        - code
+        - refinement_mode
+        - external_refine
+        - executed
+      allOf:
+        - if:
+            properties:
+              state:
+                enum:
+                  - preparing
+                  - failed
+                  - expired
+            required:
+              - state
+          then:
+            properties:
+              candidates:
+                maxItems: 0
+    ReviewerActionStatusEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/ReviewerEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/ReviewerActionStatus"
+          required:
+            - data
+    ReviewerChallengeRequest:
+      type: object
+      properties:
+        action_id:
+          $ref: "#/components/schemas/PublicId"
+        action:
+          type: string
+          enum:
+            - publish_external_refine
+            - publish
+            - release
+            - declassify
+      required:
+        - action_id
+        - action
+    ReviewerChallenge:
+      type: object
+      properties:
+        challenge_id:
+          $ref: "#/components/schemas/PublicId"
+        challenge:
+          type: string
+          minLength: 1
+        rp_id:
+          type: string
+          const: localhost
+        action_sha: *reviewer_schema_a2
+      required:
+        - challenge_id
+        - challenge
+        - rp_id
+        - action_sha
+    ReviewerChallengeEnvelope:
+      $ref: "#/components/schemas/ReviewerChallenge"
+      description: POST 평면 성공 객체(결정 9). 이름의 Envelope 접미사는 응답 봉투를 뜻하지 않는다.
+    ReviewerProofRequest:
+      type: object
+      properties:
+        challenge_id:
+          $ref: "#/components/schemas/PublicId"
+        assertion:
+          type: object
+          description: WebAuthn navigator.credentials.get 응답. 서명/UV는 서버 라이브러리로 검증하며
+            fixture 문자열은 합성이다.
+        idempotency_key:
+          type: string
+          minLength: 1
+          maxLength: 256
+      required:
+        - challenge_id
+        - assertion
+        - idempotency_key
+    ReviewerActionAccepted:
+      type: object
+      properties:
+        action_id:
+          $ref: "#/components/schemas/PublicId"
+        state:
+          type: string
+          const: preparing
+      required:
+        - action_id
+        - state
+    ReviewerActionAcceptedEnvelope:
+      $ref: "#/components/schemas/ReviewerActionAccepted"
+      description: POST 평면 성공 객체(결정 9). 이름의 Envelope 접미사는 응답 봉투를 뜻하지 않는다.
+    ReviewerActionResult:
+      type: object
+      properties:
+        action_id:
+          $ref: "#/components/schemas/PublicId"
+        result:
+          $ref: "#/components/schemas/ReviewerResult"
+      required:
+        - action_id
+        - result
+    ReviewerActionResultEnvelope:
+      $ref: "#/components/schemas/ReviewerActionResult"
+      description: POST 평면 성공 객체(결정 9). 이름의 Envelope 접미사는 응답 봉투를 뜻하지 않는다.
+    ReviewerEnrollmentRequest:
+      type: object
+      properties:
+        rp_id:
+          type: string
+          const: localhost
+        origin:
+          type: string
+          const: http://localhost:4812
+        credential_id:
+          type: string
+          minLength: 1
+        public_key:
+          type: string
+          minLength: 1
+      required:
+        - rp_id
+        - origin
+        - credential_id
+        - public_key
+    ReviewerEnrollment:
+      type: object
+      properties:
+        request_id:
+          $ref: "#/components/schemas/PublicId"
+      required:
+        - request_id
+    ReviewerEnrollmentEnvelope:
+      $ref: "#/components/schemas/ReviewerEnrollment"
+      description: POST 평면 성공 객체(결정 9). 이름의 Envelope 접미사는 응답 봉투를 뜻하지 않는다.
+    ReviewerHitlItem:
+      type: object
+      properties:
+        id:
+          $ref: "#/components/schemas/PublicId"
+        kind:
+          type: string
+          enum:
+            - topic_ambiguity
+            - source_policy
+            - liveness_unresolved
+            - gate_unresolved
+        target:
+          $ref: "#/components/schemas/PublicId"
+        verdict:
+          type:
+            - integer
+            - string
+        state:
+          type: string
+          const: open
+        reason: *reviewer_schema_a1
+        attempted:
+          type: array
+          items: *reviewer_schema_a1
+        candidates:
+          type: array
+          items:
+            type: object
+        evidence:
+          type: array
+          items:
+            type: object
+        proposed_state:
+          anyOf:
+            - *reviewer_schema_a1
+            - type: "null"
+        created_at: *reviewer_schema_a3
+      required:
+        - id
+        - kind
+        - target
+        - verdict
+        - state
+        - reason
+        - attempted
+        - candidates
+        - evidence
+        - proposed_state
+        - created_at
+    ReviewerHitlList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReviewerHitlItem"
+      required:
+        - items
+    ReviewerHitlListEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/ReviewerEnvelope"
+        - type: object
+          properties:
+            data:
+              $ref: "#/components/schemas/ReviewerHitlList"
+          required:
+            - data
+    ReviewerHitlChallengeRequest:
+      type: object
+      properties:
+        item:
+          $ref: "#/components/schemas/PublicId"
+        action:
+          type: string
+          enum:
+            - select
+            - clarify
+            - reject
+            - approve
+            - confirm
+            - defer
+            - accept
+        params:
+          type: object
+      required:
+        - item
+        - action
+        - params
+    ReviewerHitlResolveRequest:
+      allOf:
+        - $ref: "#/components/schemas/ReviewerProofRequest"
+        - type: object
+          properties:
+            action: *reviewer_schema_a1
+            params:
+              type: object
+          required:
+            - action
+            - params
+    ReviewerHitlResolved:
+      type: object
+      properties:
+        item:
+          $ref: "#/components/schemas/PublicId"
+        review_state:
+          type: string
+          enum:
+            - user_accepted
+            - user_rejected
+      required:
+        - item
+    ReviewerHitlResolvedEnvelope:
+      $ref: "#/components/schemas/ReviewerHitlResolved"
+      description: POST 평면 성공 객체(결정 9). 이름의 Envelope 접미사는 응답 봉투를 뜻하지 않는다.
+    ReviewerProblem:
+      allOf:
+        - $ref: "#/components/schemas/Problem"
+        - oneOf:
+            - type: object
+              properties:
+                status:
+                  const: 403
+                code:
+                  type: string
+                  enum:
+                    - review_unverified
+                    - scope_denied
+                    - external_consent_required
+              required:
+                - status
+                - code
+            - type: object
+              properties:
+                status:
+                  const: 409
+                code:
+                  type: string
+                  enum:
+                    - review_stale
+                    - write_in_flight
+                    - idem_conflict
+              required:
+                - status
+                - code
+            - type: object
+              properties:
+                status:
+                  const: 503
+                code:
+                  type: string
+                  enum:
+                    - review_trust_unavailable
+                    - spool_full
+              required:
+                - status
+                - code
     Problem:
       type: object
       required:

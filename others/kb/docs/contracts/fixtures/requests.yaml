@@ -2,7 +2,7 @@
 # 사례 하나가 요청 하나다. 응답은 responses/<id>.json이다.
 meta:
   synthetic: true
-  contract_version: 0.4.0
+  contract_version: 0.5.0
   now_ms: 1801296000000
   export_after_seq: 89
   ledger_events: 92

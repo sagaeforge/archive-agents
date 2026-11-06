@@ -1,0 +1,854 @@
+{
+  "cases": [
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json",
+        "location": "/v1/actions/a-fixture-publish",
+        "retry-after": "1"
+      },
+      "id": "publish-prepare",
+      "method": "POST",
+      "path_template": "/v1/actions",
+      "request": {
+        "action": "publish",
+        "expected_version": 1,
+        "idempotency_key": "loupe-review:a:fixture",
+        "target": "f-fixture-note"
+      },
+      "response": {
+        "action_id": "a-fixture-publish",
+        "state": "preparing",
+        "status_url": "/v1/actions/a-fixture-publish"
+      },
+      "status": 202
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json"
+      },
+      "id": "release-prepare",
+      "method": "POST",
+      "path_template": "/v1/actions",
+      "request": {
+        "action": "release",
+        "expected_version": 1,
+        "idempotency_key": "loupe-review:a:fixture",
+        "target": "f-fixture-note"
+      },
+      "response": {
+        "action_id": "a-fixture-publish",
+        "state": "ready",
+        "status_url": "/v1/actions/a-fixture-publish"
+      },
+      "status": 201
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json"
+      },
+      "id": "declassify-prepare",
+      "method": "POST",
+      "path_template": "/v1/actions",
+      "request": {
+        "action": "declassify",
+        "expected_version": 1,
+        "idempotency_key": "loupe-review:a:fixture",
+        "sensitivity": "internal",
+        "target": "f-fixture-note"
+      },
+      "response": {
+        "action_id": "a-fixture-publish",
+        "state": "ready",
+        "status_url": "/v1/actions/a-fixture-publish"
+      },
+      "status": 201
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/problem+json"
+      },
+      "id": "review_trust_unavailable",
+      "method": "POST",
+      "path_template": "/v1/actions",
+      "request": {
+        "action": "publish",
+        "expected_version": 1,
+        "idempotency_key": "loupe-review:a:fixture",
+        "target": "f-fixture-note"
+      },
+      "response": {
+        "code": "review_trust_unavailable",
+        "detail": "본인 확인을 사용할 수 없습니다",
+        "instance": "/v1/actions/{id}",
+        "status": 503,
+        "title": "review trust unavailable",
+        "type": "https://kb.local/problems/review-trust-unavailable"
+      },
+      "status": 503
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/problem+json"
+      },
+      "id": "prepareUserAction-denied",
+      "method": "POST",
+      "path_template": "/v1/actions",
+      "request": {
+        "action": "publish",
+        "expected_version": 1,
+        "idempotency_key": "loupe-review:a:fixture",
+        "target": "f-fixture-note"
+      },
+      "response": {
+        "code": "scope_denied",
+        "detail": "KB 쓰기 권한이 없습니다. 토큰을 다시 설정하세요",
+        "instance": "/v1/actions",
+        "status": 403,
+        "title": "scope denied",
+        "type": "https://kb.local/problems/scope-denied"
+      },
+      "status": 403
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json"
+      },
+      "id": "publish-preparing",
+      "method": "GET",
+      "path_template": "/v1/actions/{id}",
+      "response": {
+        "applied_seq": 101,
+        "as_of": {
+          "observed": null,
+          "valid": null
+        },
+        "build_id": "g-fixture",
+        "data": {
+          "action": "publish",
+          "action_id": "a-fixture-publish",
+          "candidates": [],
+          "code": null,
+          "cost_usd": null,
+          "created_at": "2026-11-06T00:00:00Z",
+          "duration_ms": null,
+          "engine": null,
+          "executed": false,
+          "expected_version": 1,
+          "expires_at": null,
+          "external_refine": {
+            "engine": {
+              "backend": "synthetic",
+              "kind": "external",
+              "model": "synthetic"
+            },
+            "external_payload_sha": "0000000000000000000000000000000000000000000000000000000000000000",
+            "request_preview": null,
+            "status": "consent_required"
+          },
+          "refinement_mode": "local_only",
+          "state": "preparing",
+          "target": "f-fixture-note"
+        },
+        "data_as_of": "2026-11-06T00:00:00Z",
+        "degraded": [],
+        "epoch": 1,
+        "schema_version": "0.5.0"
+      },
+      "status": 200
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json"
+      },
+      "id": "publish-ready",
+      "method": "GET",
+      "path_template": "/v1/actions/{id}",
+      "response": {
+        "applied_seq": 101,
+        "as_of": {
+          "observed": null,
+          "valid": null
+        },
+        "build_id": "g-fixture",
+        "data": {
+          "action": "publish",
+          "action_id": "a-fixture-publish",
+          "candidates": [
+            {
+              "body": "합성 결과",
+              "body_sha": "979a66ad8eb93f22477258746ca588e3b15457a69eee60c2ebce19f579cb3c5e",
+              "sensitivity": "private",
+              "title": "합성 정제 결과",
+              "type": "Note"
+            }
+          ],
+          "code": null,
+          "cost_usd": "0",
+          "created_at": "2026-11-06T00:00:00Z",
+          "duration_ms": 17,
+          "engine": {
+            "backend": "local",
+            "kind": "local",
+            "model": "synthetic"
+          },
+          "executed": false,
+          "expected_version": 1,
+          "expires_at": "2026-11-06T00:15:01Z",
+          "external_refine": {
+            "engine": {
+              "backend": "synthetic",
+              "kind": "external",
+              "model": "synthetic"
+            },
+            "external_payload_sha": "a7dff4f602caf34dbd08d411a3ea22bdcb9243e86a70a8ae0f07ac9938f832e8",
+            "request_preview": "{\"engine\":\"synthetic\",\"model\":\"synthetic\",\"memo\":{\"title\":\"합성 메모\",\"body\":\"합성\"},\"parameters\":{}}",
+            "status": "consent_required"
+          },
+          "refinement_mode": "local_only",
+          "state": "ready",
+          "target": "f-fixture-note"
+        },
+        "data_as_of": "2026-11-06T00:00:00Z",
+        "degraded": [],
+        "epoch": 1,
+        "schema_version": "0.5.0"
+      },
+      "status": 200
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json"
+      },
+      "id": "publish-failed",
+      "method": "GET",
+      "path_template": "/v1/actions/{id}",
+      "response": {
+        "applied_seq": 101,
+        "as_of": {
+          "observed": null,
+          "valid": null
+        },
+        "build_id": "g-fixture",
+        "data": {
+          "action": "publish",
+          "action_id": "a-fixture-publish",
+          "candidates": [],
+          "code": "prepare_timeout",
+          "cost_usd": "0",
+          "created_at": "2026-11-06T00:00:00Z",
+          "duration_ms": 17,
+          "engine": {
+            "backend": "local",
+            "kind": "local",
+            "model": "synthetic"
+          },
+          "executed": false,
+          "expected_version": 1,
+          "expires_at": "2026-11-06T00:15:01Z",
+          "external_refine": {
+            "engine": {
+              "backend": "synthetic",
+              "kind": "external",
+              "model": "synthetic"
+            },
+            "external_payload_sha": "0000000000000000000000000000000000000000000000000000000000000000",
+            "request_preview": null,
+            "status": "consent_required"
+          },
+          "refinement_mode": "local_only",
+          "state": "failed",
+          "target": "f-fixture-note"
+        },
+        "data_as_of": "2026-11-06T00:00:00Z",
+        "degraded": [],
+        "epoch": 1,
+        "schema_version": "0.5.0"
+      },
+      "status": 200
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json"
+      },
+      "id": "publish-expired",
+      "method": "GET",
+      "path_template": "/v1/actions/{id}",
+      "response": {
+        "applied_seq": 101,
+        "as_of": {
+          "observed": null,
+          "valid": null
+        },
+        "build_id": "g-fixture",
+        "data": {
+          "action": "publish",
+          "action_id": "a-fixture-publish",
+          "candidates": [],
+          "code": null,
+          "cost_usd": "0",
+          "created_at": "2026-11-06T00:00:00Z",
+          "duration_ms": 17,
+          "engine": {
+            "backend": "local",
+            "kind": "local",
+            "model": "synthetic"
+          },
+          "executed": false,
+          "expected_version": 1,
+          "expires_at": "2026-11-06T00:15:01Z",
+          "external_refine": {
+            "engine": {
+              "backend": "synthetic",
+              "kind": "external",
+              "model": "synthetic"
+            },
+            "external_payload_sha": "0000000000000000000000000000000000000000000000000000000000000000",
+            "request_preview": null,
+            "status": "consent_required"
+          },
+          "refinement_mode": "local_only",
+          "state": "expired",
+          "target": "f-fixture-note"
+        },
+        "data_as_of": "2026-11-06T00:00:00Z",
+        "degraded": [],
+        "epoch": 1,
+        "schema_version": "0.5.0"
+      },
+      "status": 200
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/problem+json"
+      },
+      "id": "getUserAction-denied",
+      "method": "GET",
+      "path_template": "/v1/actions/{id}",
+      "response": {
+        "code": "not_found",
+        "detail": "문서를 찾을 수 없습니다",
+        "instance": "/v1/actions/{id}",
+        "status": 404,
+        "title": "not found",
+        "type": "https://kb.local/problems/not-found"
+      },
+      "status": 404
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json"
+      },
+      "id": "publish-external-ready",
+      "method": "GET",
+      "path_template": "/v1/actions/{id}",
+      "response": {
+        "applied_seq": 101,
+        "as_of": {
+          "observed": null,
+          "valid": null
+        },
+        "build_id": "g-fixture",
+        "data": {
+          "action": "publish",
+          "action_id": "a-fixture-publish",
+          "candidates": [
+            {
+              "body": "합성 결과",
+              "body_sha": "979a66ad8eb93f22477258746ca588e3b15457a69eee60c2ebce19f579cb3c5e",
+              "sensitivity": "private",
+              "title": "합성 정제 결과",
+              "type": "Note"
+            }
+          ],
+          "code": null,
+          "cost_usd": "0.0025",
+          "created_at": "2026-11-06T00:00:00Z",
+          "duration_ms": 29,
+          "engine": {
+            "backend": "synthetic",
+            "kind": "external",
+            "model": "synthetic"
+          },
+          "executed": false,
+          "expected_version": 1,
+          "expires_at": "2026-11-06T00:15:02Z",
+          "external_refine": {
+            "engine": {
+              "backend": "synthetic",
+              "kind": "external",
+              "model": "synthetic"
+            },
+            "external_payload_sha": "a7dff4f602caf34dbd08d411a3ea22bdcb9243e86a70a8ae0f07ac9938f832e8",
+            "request_preview": "{\"engine\":\"synthetic\",\"model\":\"synthetic\",\"memo\":{\"title\":\"합성 메모\",\"body\":\"합성\"},\"parameters\":{}}",
+            "status": "consented"
+          },
+          "refinement_mode": "external_consented",
+          "state": "ready",
+          "target": "f-fixture-note"
+        },
+        "data_as_of": "2026-11-06T00:00:00Z",
+        "degraded": [],
+        "epoch": 1,
+        "schema_version": "0.5.0"
+      },
+      "status": 200
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json"
+      },
+      "id": "publish-executed-status",
+      "method": "GET",
+      "path_template": "/v1/actions/{id}",
+      "response": {
+        "applied_seq": 101,
+        "as_of": {
+          "observed": null,
+          "valid": null
+        },
+        "build_id": "g-fixture",
+        "data": {
+          "action": "publish",
+          "action_id": "a-fixture-publish",
+          "candidates": [],
+          "code": null,
+          "cost_usd": "0.0025",
+          "created_at": "2026-11-06T00:00:00Z",
+          "duration_ms": 29,
+          "engine": {
+            "backend": "synthetic",
+            "kind": "external",
+            "model": "synthetic"
+          },
+          "executed": true,
+          "expected_version": 1,
+          "expires_at": "2026-11-06T00:15:02Z",
+          "external_refine": {
+            "engine": {
+              "backend": "synthetic",
+              "kind": "external",
+              "model": "synthetic"
+            },
+            "external_payload_sha": "a7dff4f602caf34dbd08d411a3ea22bdcb9243e86a70a8ae0f07ac9938f832e8",
+            "request_preview": null,
+            "status": "consented"
+          },
+          "refinement_mode": "external_consented",
+          "result": {
+            "ids": [
+              "f-fixture-result"
+            ]
+          },
+          "state": "expired",
+          "target": "f-fixture-note"
+        },
+        "data_as_of": "2026-11-06T00:00:00Z",
+        "degraded": [],
+        "epoch": 1,
+        "schema_version": "0.5.0"
+      },
+      "status": 200
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json"
+      },
+      "id": "challenge-publish_external_refine",
+      "method": "POST",
+      "path_template": "/v1/actions/challenge",
+      "request": {
+        "action": "publish_external_refine",
+        "action_id": "a-fixture-publish"
+      },
+      "response": {
+        "action_sha": "0000000000000000000000000000000000000000000000000000000000000000",
+        "challenge": "synthetic-challenge",
+        "challenge_id": "ch-fixture",
+        "rp_id": "localhost"
+      },
+      "status": 201
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json"
+      },
+      "id": "challenge-publish",
+      "method": "POST",
+      "path_template": "/v1/actions/challenge",
+      "request": {
+        "action": "publish",
+        "action_id": "a-fixture-publish"
+      },
+      "response": {
+        "action_sha": "1111111111111111111111111111111111111111111111111111111111111111",
+        "challenge": "synthetic-challenge",
+        "challenge_id": "ch-fixture",
+        "rp_id": "localhost"
+      },
+      "status": 201
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/problem+json"
+      },
+      "id": "userActionChallenge-denied",
+      "method": "POST",
+      "path_template": "/v1/actions/challenge",
+      "request": {
+        "action": "publish_external_refine",
+        "action_id": "a-fixture-publish"
+      },
+      "response": {
+        "code": "scope_denied",
+        "detail": "KB 쓰기 권한이 없습니다. 토큰을 다시 설정하세요",
+        "instance": "/v1/actions/challenge",
+        "status": 403,
+        "title": "scope denied",
+        "type": "https://kb.local/problems/scope-denied"
+      },
+      "status": 403
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json"
+      },
+      "id": "external-consented",
+      "method": "POST",
+      "path_template": "/v1/actions/{id}/external-refine",
+      "request": {
+        "assertion": {
+          "id": "synthetic-credential",
+          "response": {}
+        },
+        "challenge_id": "ch-fixture",
+        "idempotency_key": "loupe-review:a:execute"
+      },
+      "response": {
+        "action_id": "a-fixture-publish",
+        "state": "preparing"
+      },
+      "status": 202
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/problem+json"
+      },
+      "id": "consentExternalRefine-denied",
+      "method": "POST",
+      "path_template": "/v1/actions/{id}/external-refine",
+      "request": {
+        "assertion": {
+          "id": "synthetic-credential",
+          "response": {}
+        },
+        "challenge_id": "ch-fixture",
+        "idempotency_key": "loupe-review:a:execute"
+      },
+      "response": {
+        "code": "scope_denied",
+        "detail": "KB 쓰기 권한이 없습니다. 토큰을 다시 설정하세요",
+        "instance": "/v1/actions/{id}/external-refine",
+        "status": 403,
+        "title": "scope denied",
+        "type": "https://kb.local/problems/scope-denied"
+      },
+      "status": 403
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json"
+      },
+      "id": "publish-executed",
+      "method": "POST",
+      "path_template": "/v1/actions/{id}/execute",
+      "request": {
+        "assertion": {
+          "id": "synthetic-credential",
+          "response": {}
+        },
+        "challenge_id": "ch-fixture",
+        "idempotency_key": "loupe-review:a:execute"
+      },
+      "response": {
+        "action_id": "a-fixture-publish",
+        "result": {
+          "ids": [
+            "f-fixture-result"
+          ]
+        }
+      },
+      "status": 200
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/problem+json"
+      },
+      "id": "review_unverified",
+      "method": "POST",
+      "path_template": "/v1/actions/{id}/execute",
+      "request": {
+        "assertion": {
+          "id": "synthetic-credential",
+          "response": {}
+        },
+        "challenge_id": "ch-fixture",
+        "idempotency_key": "loupe-review:a:execute"
+      },
+      "response": {
+        "code": "review_unverified",
+        "detail": "본인 확인에 실패했습니다",
+        "instance": "/v1/actions/{id}",
+        "status": 403,
+        "title": "review unverified",
+        "type": "https://kb.local/problems/review-unverified"
+      },
+      "status": 403
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/problem+json"
+      },
+      "id": "review_stale",
+      "method": "POST",
+      "path_template": "/v1/actions/{id}/execute",
+      "request": {
+        "assertion": {
+          "id": "synthetic-credential",
+          "response": {}
+        },
+        "challenge_id": "ch-fixture",
+        "idempotency_key": "loupe-review:a:execute"
+      },
+      "response": {
+        "code": "review_stale",
+        "detail": "항목이 바뀌었습니다",
+        "instance": "/v1/actions/{id}",
+        "status": 409,
+        "title": "review stale",
+        "type": "https://kb.local/problems/review-stale"
+      },
+      "status": 409
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json"
+      },
+      "id": "reviewer-enroll",
+      "method": "POST",
+      "path_template": "/v1/reviewer/enroll",
+      "request": {
+        "credential_id": "synthetic-credential",
+        "origin": "http://localhost:4812",
+        "public_key": "synthetic-public-key",
+        "rp_id": "localhost"
+      },
+      "response": {
+        "request_id": "reg-fixture"
+      },
+      "status": 201
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/problem+json"
+      },
+      "id": "enrollReviewer-denied",
+      "method": "POST",
+      "path_template": "/v1/reviewer/enroll",
+      "request": {
+        "credential_id": "synthetic-credential",
+        "origin": "http://localhost:4812",
+        "public_key": "synthetic-public-key",
+        "rp_id": "localhost"
+      },
+      "response": {
+        "code": "scope_denied",
+        "detail": "KB 쓰기 권한이 없습니다. 토큰을 다시 설정하세요",
+        "instance": "/v1/reviewer/enroll",
+        "status": 403,
+        "title": "scope denied",
+        "type": "https://kb.local/problems/scope-denied"
+      },
+      "status": 403
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json"
+      },
+      "id": "hitl-open",
+      "method": "GET",
+      "path_template": "/v1/hitl",
+      "response": {
+        "applied_seq": 101,
+        "as_of": {
+          "observed": null,
+          "valid": null
+        },
+        "build_id": "g-fixture",
+        "data": {
+          "items": [
+            {
+              "attempted": [
+                "entailment"
+              ],
+              "candidates": [],
+              "created_at": "2026-11-06T00:00:00Z",
+              "evidence": [],
+              "id": "h-fixture",
+              "kind": "gate_unresolved",
+              "proposed_state": null,
+              "reason": "자동 함의 판정 미해결",
+              "state": "open",
+              "target": "c-fixture",
+              "verdict": 1
+            }
+          ]
+        },
+        "data_as_of": "2026-11-06T00:00:00Z",
+        "degraded": [],
+        "epoch": 1,
+        "schema_version": "0.5.0"
+      },
+      "status": 200
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/problem+json"
+      },
+      "id": "listHitl-denied",
+      "method": "GET",
+      "path_template": "/v1/hitl",
+      "response": {
+        "code": "scope_denied",
+        "detail": "KB 쓰기 권한이 없습니다. 토큰을 다시 설정하세요",
+        "instance": "/v1/hitl",
+        "status": 403,
+        "title": "scope denied",
+        "type": "https://kb.local/problems/scope-denied"
+      },
+      "status": 403
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json"
+      },
+      "id": "hitl-challenge",
+      "method": "POST",
+      "path_template": "/v1/hitl/challenge",
+      "request": {
+        "action": "accept",
+        "item": "h-fixture",
+        "params": {}
+      },
+      "response": {
+        "action_sha": "0000000000000000000000000000000000000000000000000000000000000000",
+        "challenge": "synthetic-challenge",
+        "challenge_id": "ch-fixture",
+        "rp_id": "localhost"
+      },
+      "status": 201
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/problem+json"
+      },
+      "id": "hitlChallenge-denied",
+      "method": "POST",
+      "path_template": "/v1/hitl/challenge",
+      "request": {
+        "action": "accept",
+        "item": "h-fixture",
+        "params": {}
+      },
+      "response": {
+        "code": "scope_denied",
+        "detail": "KB 쓰기 권한이 없습니다. 토큰을 다시 설정하세요",
+        "instance": "/v1/hitl/challenge",
+        "status": 403,
+        "title": "scope denied",
+        "type": "https://kb.local/problems/scope-denied"
+      },
+      "status": 403
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/json"
+      },
+      "id": "hitl-resolved",
+      "method": "POST",
+      "path_template": "/v1/hitl/{item}/resolve",
+      "request": {
+        "action": "accept",
+        "assertion": {
+          "id": "synthetic-credential",
+          "response": {}
+        },
+        "challenge_id": "ch-fixture",
+        "idempotency_key": "loupe-review:a:execute",
+        "params": {}
+      },
+      "response": {
+        "item": "h-fixture",
+        "review_state": "user_accepted"
+      },
+      "status": 200
+    },
+    {
+      "headers": {
+        "cache-control": "no-store",
+        "content-type": "application/problem+json"
+      },
+      "id": "resolveHitl-denied",
+      "method": "POST",
+      "path_template": "/v1/hitl/{item}/resolve",
+      "request": {
+        "action": "accept",
+        "assertion": {
+          "id": "synthetic-credential",
+          "response": {}
+        },
+        "challenge_id": "ch-fixture",
+        "idempotency_key": "loupe-review:a:execute",
+        "params": {}
+      },
+      "response": {
+        "code": "scope_denied",
+        "detail": "KB 쓰기 권한이 없습니다. 토큰을 다시 설정하세요",
+        "instance": "/v1/hitl/{item}/resolve",
+        "status": 403,
+        "title": "scope denied",
+        "type": "https://kb.local/problems/scope-denied"
+      },
+      "status": 403
+    }
+  ],
+  "contract_version": "0.5.0",
+  "note": "합성 계약 예시. 실제 WebAuthn/외부 전송/HTTP 실행 결과가 아니다.",
+  "synthetic": true
+}

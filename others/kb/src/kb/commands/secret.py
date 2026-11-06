@@ -4,15 +4,16 @@ from __future__ import annotations
 import sys
 
 from kb.write.cliutil import emit, guarded
-from kb.write import owner, secrets_scan
+from kb.write import secrets_scan
 
 
 def cmd_secret(args) -> int:
     def run() -> int:
         if args.action == "release":
-            r = owner.release_secret(args.target)
-            emit(r.as_dict(), args.json)
-            return 0
+            from kb.write.errors import WriteRejected
+            error = WriteRejected('review_unverified', 'Use the reviewer confirmation flow')
+            error.status = 403
+            raise error
         text = sys.stdin.read() if args.target in (None, "-") else open(args.target, encoding="utf-8").read()
         rules = sorted({h.rule for h in secrets_scan.scan_text(text)})
         emit({"hits": rules}, args.json)

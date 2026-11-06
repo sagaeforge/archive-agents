@@ -162,6 +162,36 @@ def sensitivity_closure(levels: dict[str, int], dependents: dict[str, set[str]])
     return levels
 
 
+def review_grants(led):
+    """Exact committed payload grants; a relation or mutable props cannot grant one."""
+    grants = {}
+    if led is None:
+        return grants
+    blocked = set()
+    for kind, raw in led.execute("SELECT e.kind,p.body FROM event e JOIN payload p ON p.sha=e.payload_sha "
+                                 "WHERE e.kind IN ('system.projection_quarantined','system.projection_released') ORDER BY e.seq"):
+        sequence = (jl(raw) or {}).get('seq')
+        if kind == 'system.projection_quarantined':
+            blocked.add(sequence)
+        else:
+            blocked.discard(sequence)
+    for seq, raw, actor, generated in led.execute(
+            "SELECT e.seq,p.body,e.actor,e.generated_by FROM event e JOIN payload p ON p.sha=e.payload_sha "
+            "WHERE e.kind='extract.run'"):
+        proof = jl(raw)
+        if (seq in blocked or actor != 'user:sagae' or not generated or not generated.startswith('app:')
+                or not generated.endswith(':action') or proof.get('action') not in ('publish', 'release', 'declassify')
+                or not proof.get('cred_id') or not proof.get('action_sha') or not proof.get('assertion_sha')):
+            continue
+        for rid, sha in proof.get('published_payload_shas', {}).items():
+            row = led.execute("SELECT e.seq,p.body FROM event e JOIN payload p ON p.sha=e.payload_sha "
+                              "WHERE e.kind='record.put' AND e.subject=? AND e.payload_sha=? "
+                              "AND e.actor=? AND e.generated_by=?", (rid, sha, actor, generated)).fetchone()
+            if row and row[0] not in blocked:
+                grants[(rid, sha)] = (proof.get('action'), proof.get('action_id'))
+    return grants
+
+
 def security_state(g=None, led=None) -> dict[str, int]:
     """읽기/내보내기의 민감도 스냅샷. 원장 확정은 낡은 gold보다 먼저 적용한다.
 
@@ -170,18 +200,21 @@ def security_state(g=None, led=None) -> dict[str, int]:
     """
     levels: dict[str, int] = {}
     deps: dict[str, set[str]] = defaultdict(set)
+    grants = review_grants(led)
+    approved_promotions = {(action_id, rid) for (rid, sha), (operation, action_id) in grants.items()
+                           if operation == 'publish'}
     if g is not None:
         levels.update((r[0], r[1]) for r in g.execute("SELECT id, sensitivity FROM head"))
         for cid, source in g.execute("SELECT claim_id, snapshot_id FROM evidence"):
             deps[source].add(cid)
         for cid, source in g.execute("SELECT n.id, c.subject FROM claim c JOIN node n ON n.vid=c.vid"):
             deps[source].add(cid)
-        for eid, src, dst, cid, rtype in g.execute("SELECT id, src, dst, claim_id, rtype FROM edge"):
+        for eid, src, dst, cid, rtype, raw_props in g.execute("SELECT id, src, dst, claim_id, rtype, props FROM edge"):
             deps[src].add(eid)
             deps[dst].add(eid)
             if cid:
                 deps[cid].add(eid)
-            if rtype == "PROMOTED_FROM":
+            if rtype == "PROMOTED_FROM" and ((jl(raw_props) or {}).get('review_action'), src) not in approved_promotions:
                 deps[dst].add(src)
     if led is not None:
         # tail.skip_set과 같은 격리 - 해제 규칙. export에는 gold 연결이 없으므로
@@ -209,7 +242,11 @@ def security_state(g=None, led=None) -> dict[str, int]:
             if kind == "record.put" and origin == "first_party":
                 rid = p["id"]
                 sens = 3 if (p.get("props") or {}).get("quarantine") else SENS[p["sensitivity"]]
-                levels[rid] = max(levels.get(rid, 0), sens)
+                grant = grants.get((rid, sha256_hex(canon_json(p))))
+                if grant and grant[0] in ('release', 'declassify'):
+                    levels[rid] = sens
+                else:
+                    levels[rid] = max(levels.get(rid, 0), sens)
                 for link in p.get("links") or []:
                     if link["rtype"] == "PROMOTED_FROM":
                         deps[link["dst"]].add(rid)
@@ -228,7 +265,7 @@ def security_state(g=None, led=None) -> dict[str, int]:
                 levels[eid] = max(levels.get(eid, 0), SENS.get(p.get("sensitivity"), 0))
                 if p.get("claim_id"):
                     deps[p["claim_id"]].add(eid)
-                if p["rtype"] == "PROMOTED_FROM":
+                if p["rtype"] == "PROMOTED_FROM" and ((p.get('props') or {}).get('review_action'), p['src']) not in approved_promotions:
                     deps[p["dst"]].add(p["src"])
     return sensitivity_closure(levels, deps)
 
@@ -285,6 +322,9 @@ def node_new(c: Ctx, nid: str, prev: dict | None = None, **o) -> dict:
 def _propagate_sens(c: Ctx, nid: str) -> None:
     """현재 행/헤드/색인과 파생물을 같은 투영 트랜잭션에서 올린다. 판은 늘리지 않는다."""
     g = c.g
+    approved = {(action_id, rid)
+                for (rid, sha), (operation, action_id) in review_grants(c.led).items()
+                if operation == 'publish'}
     pending = deque([nid])
     while pending:
         source = pending.popleft()
@@ -294,9 +334,14 @@ def _propagate_sens(c: Ctx, nid: str) -> None:
         children = {r[0] for r in g.execute(
             "SELECT claim_id FROM evidence WHERE snapshot_id=? UNION "
             "SELECT n.id FROM claim cl JOIN node n ON n.vid=cl.vid WHERE cl.subject=? UNION "
-            "SELECT src FROM edge WHERE dst=? AND rtype='PROMOTED_FROM' UNION "
             "SELECT id FROM edge WHERE expired_at IS NULL AND (src=? OR dst=? OR claim_id=?)",
-            (source, source, source, source, source, source))}
+            (source, source, source, source, source))}
+        # Exempt only the independent result bound to this publication proof.
+        # The relation itself and all other dependency paths still propagate.
+        for child, raw_props in g.execute(
+                "SELECT src,props FROM edge WHERE dst=? AND rtype='PROMOTED_FROM'", (source,)):
+            if ((jl(raw_props) or {}).get('review_action'), child) not in approved:
+                children.add(child)
         for child in sorted(children):
             if head_sens(g, child) >= level:
                 continue
@@ -463,6 +508,9 @@ def h_record_put(c: Ctx, p: dict) -> None:
     rid = p["id"]
     sens = max(SENS[p["sensitivity"]], head_sens(g, rid),
                *(head_sens(g, ln["dst"]) for ln in p.get("links") or [] if ln["rtype"] == "PROMOTED_FROM"))
+    grant = review_grants(c.led).get((rid, e.get('payload_sha')))
+    if grant and grant[0] in ('release', 'declassify'):
+        sens = SENS[p['sensitivity']]
     body = p.get("body")
     sha = p.get("body_sha")
     if body is None and sha and sens < 3:
@@ -815,6 +863,12 @@ def h_claim_review(c: Ctx, p: dict) -> None:
     prev = cur_node(g, cid)
     if prev is None:
         return add_change(c, cid, None, "Claim", 0)
+    if p.get('review_state') in ('user_accepted', 'user_rejected'):
+        props = dict(jl(prev['props']) or {})
+        props['review_state'] = p['review_state']
+        row = node_new(c, cid, prev, props=jb(props))
+        _copy_claim(g, prev['vid'], row['vid'])
+        return add_change(c, cid, row['version'], 'Claim', row['sensitivity'])
     if p.get("support_check"):
         g.execute("UPDATE evidence SET support_check=? WHERE claim_id=?", (p["support_check"], cid))
     row = reversion(c, cid, verification=p["verification"]) or prev

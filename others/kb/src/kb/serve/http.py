@@ -288,6 +288,8 @@ def _lower(h) -> dict:
 
 def error_instance(path: str, cfg: ServeConfig | None = None, max_sens: str = "internal") -> str:
     """없는 ID는 요청 경로를 유지하고, 숨은/private 대상은 템플릿만 낸다."""
+    if re.fullmatch(r'/v1/actions/[^/]+', path):
+        return '/v1/actions/{id}'
     route, nid = match_route(path)
     if route is not None and nid is not None:
         ctx = RC.ReadCtx(max_sensitivity=max_sens, db_path=cfg.db_path if cfg else None,
@@ -524,6 +526,16 @@ def _envelope_call(ctx, fn, *a, extra_degraded=None, **kw) -> dict:
         return RE.envelope(con, ctx, data, page=page, extra_degraded=extra)
 
 
+def reviewer_envelope(data) -> dict:
+    """Use the normal read snapshot metadata for FW9 GET responses only."""
+    cfg = _error_config.get() or ServeConfig.load()
+    ctx = RC.ReadCtx(max_sensitivity='private', db_path=cfg.db_path,
+                     deadline_s=cfg.deadline_s)
+    result = _envelope_call(ctx, lambda con, read_ctx: data)
+    result['schema_version'] = '0.5.0'
+    return result
+
+
 def _call(route: Route, ctx, nid, p, cfg) -> dict:
     op = route.op
     g = p.get
@@ -553,7 +565,11 @@ def _call(route: Route, ctx, nid, p, cfg) -> dict:
     if op == "getNodeHistory":
         return _envelope_call(ctx, R.history, nid, predicate=g("predicate"))
     if op == "getClaim":
-        return _envelope_call(ctx, R.get_claim, nid)
+        value = _envelope_call(ctx, R.get_claim, nid)
+        state = (value['data'].get('props') or {}).get('review_state')
+        if state:
+            value['data']['review_state'] = state
+        return value
     if op == "getEdge":
         return _envelope_call(ctx, R.get_edge, nid)
     if op == "search":
@@ -741,7 +757,7 @@ class TokenAuth:
         unix = srv is None or srv[1] is None
         from kb.serve import fpapi
         from kb.write import fpquota
-        write = bool(fpapi.WRITE_PATH.fullmatch(scope["path"]))
+        write = bool(fpapi.WRITE_PATH.fullmatch(scope["path"]) or fpapi.REVIEW_PATH.fullmatch(scope["path"]))
         ref = bool(fpapi.REF_PATH.fullmatch(scope["path"]))
         auth = None
         for k, v in scope.get("headers") or []:
@@ -764,6 +780,9 @@ class TokenAuth:
         if ref and (not info or info["scope"] != "editor"):
             # Unauthenticated, invalid and unauthorized reference probes share 404.
             response = auth_error(404, "not_found")
+        if scope['method'] == 'GET' and fpapi.ACTION_POLL.fullmatch(scope['path']) \
+                and (not info or info['scope'] != 'reviewer'):
+            response = auth_error(404, 'not_found')
         if response is None and info and not self.app.allow(info["tok_id"]):
             response = auth_error(429, "too_many_requests", retry=1)
         if response:
@@ -792,6 +811,8 @@ def build_app(cfg: ServeConfig | None = None, *, idle=None):
     from kb.serve.limits import ConcurrencyLimit
 
     cfg = cfg or ServeConfig.load()
+    from kb.write import reviewer
+    reviewer.trust_status()  # Inspect at startup without disabling ordinary reads/writes.
     from kb.serve.limits import check_max_concurrent
     check_max_concurrent(cfg.max_concurrent)
 
@@ -832,8 +853,9 @@ def build_app(cfg: ServeConfig | None = None, *, idle=None):
     read_limit = ConcurrencyLimit(authenticated, cfg.max_concurrent)
 
     async def read_limited(scope, receive, send):
-        from kb.serve.fpapi import WRITE_PATH, REF_PATH
-        if scope["type"] == "http" and (WRITE_PATH.fullmatch(scope["path"]) or REF_PATH.fullmatch(scope["path"])):
+        from kb.serve.fpapi import WRITE_PATH, REF_PATH, REVIEW_PATH
+        if scope["type"] == "http" and (WRITE_PATH.fullmatch(scope["path"]) or REF_PATH.fullmatch(scope["path"])
+                                         or REVIEW_PATH.fullmatch(scope["path"])):
             return await authenticated(scope, receive, send)
         return await read_limit(scope, receive, send)
 
