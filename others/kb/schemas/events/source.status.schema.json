@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/events/source.status.schema.json",
+  "title": "source.status",
+  "description": "소스 상태 변경.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "state": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reason": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "state"
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "body": {
+    "code": "bad_param",
+    "detail": "start 형식 오류",
+    "instance": "/v1/snapshots/n-1/text",
+    "param": "start",
+    "status": 400,
+    "title": "bad param",
+    "type": "https://kb.local/problems/bad-param"
+  },
+  "case": "text-bad-param",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/problem+json",
+    "vary": "Authorization"
+  },
+  "status": 400
+}

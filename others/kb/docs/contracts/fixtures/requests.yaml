@@ -1,0 +1,1029 @@
+# 합성 데이터다. 실제 사실이 아니다. tests/contract/gen_fixtures.py가 만든다. 손으로 고치지 않는다.
+# 사례 하나가 요청 하나다. 응답은 responses/<id>.json이다.
+meta:
+  synthetic: true
+  contract_version: 0.5.0
+  now_ms: 1801296000000
+  export_after_seq: 89
+  ledger_events: 92
+  tags:
+    supersede_chain: 대체 체인(결정적 주장 3세대)
+    retroactive_correction: 소급 정정(유효 시점과 관측 시점이 어긋남)
+    future_effective: 미래 발효 대체(효력일 전 두 주장 active, as_of_valid로 값 하나)
+    dead_subject: 'dead 주어: state는 status가 바뀌고 event는 유지, 판정 전 as-of'
+    superseded_subject: superseded 주어
+    revived: 번복(revived)
+    merge_chain: 연쇄 병합(merged_into, merged_into_final, 옛 id 조회)
+    korean_text: 한글 본문(조사, 한 음절 단어, 숫자 표기)
+    emoji_offset: 이모지 뒤 인용 코드포인트 오프셋
+    nfd_input: NFD 입력
+    hidden: private, secret 레코드의 404
+    sensitivity_raise: 민감도 상향과 visibility.revoked
+    parallel_edges: 평행 엣지(같은 양끝의 두 관계)
+    empty_search: 빈 검색 결과
+    cursor_mismatch: cursor_mismatch
+    epoch_changed: epoch_changed
+    export_follow: export 뒤 changes_cursor로 이어 받기
+    tail_cursor: 꼬리의 문자열 커서
+    series_reannounce: 시계열 재공시
+    series_gap: 시계열 공백 구간
+    first_party: first_party(Markdown, 작성자, 버전, 백링크)
+    held: first_party 보류(mcp/ 응답)
+    unknown_param: 모르는 파라미터 400 bad_param
+    filter_syntax: filter 복수 AND, 값 안의 ':', in 이스케이프
+    sort_desc_tie: sort 내림차순과 동률
+    ids_param: ids= 의 숨김, 없는 ID, 병합 ID
+    node_id_kinds: 노드 ID 종류별 404
+    search_kinds: 검색 항목 kind 네 종류
+    not_modified: '304'
+    cache_control: 경로 구분별 Cache-Control
+    as_of_unsupported: as_of_unsupported
+    truncated: truncated=true
+    total_null: total=null
+    overview_cursor: 개요 커서
+cases:
+- id: meta-ok
+  path: /v1/meta
+  tags:
+  - cache_control
+  examples:
+  - default
+  status: 200
+- id: meta-304
+  path: /v1/meta
+  headers:
+    If-None-Match: '"2-92-g-000000092-109f-4f53cda1"'
+  tags:
+  - not_modified
+  status: 304
+- id: meta-bad-param
+  path: /v1/meta?x=1
+  tags:
+  - unknown_param
+  status: 400
+- id: meta-post
+  path: /v1/meta
+  method: POST
+  status: 405
+- id: meta-forbidden-host
+  path: /v1/meta
+  headers:
+    Host: evil.example
+  status: 403
+- id: schema-ok
+  path: /v1/schema
+  examples:
+  - default
+  status: 200
+- id: schema-304
+  path: /v1/schema
+  headers:
+    If-None-Match: '"2-92-g-000000092-109f"'
+  tags:
+  - not_modified
+  status: 304
+- id: schema-as-of-unsupported
+  path: /v1/schema?as_of_valid=2027-01-01
+  tags:
+  - as_of_unsupported
+  status: 400
+- id: overview-ok
+  path: /v1/overview
+  examples:
+  - default
+  status: 200
+- id: overview-page1
+  path: /v1/overview?limit=3&edge_limit=2
+  tags:
+  - truncated
+  status: 200
+- id: overview-page2
+  path: /v1/overview?limit=3&edge_limit=2&cursor=eyJlIjoyLCJmIjoiOGNmMDllOWUiLCJrIjoiZTpwb2xpY3k6ZnV0dXJlIn0
+  tags:
+  - overview_cursor
+  status: 200
+- id: overview-bad-param
+  path: /v1/overview?limit=abc
+  status: 400
+- id: nodes-ok
+  path: /v1/nodes
+  examples:
+  - default
+  status: 200
+- id: nodes-repo-sort-desc
+  path: /v1/nodes?type=Repo&sort=-stars
+  tags:
+  - sort_desc_tie
+  status: 200
+- id: nodes-repo-sort-asc
+  path: /v1/nodes?type=Repo&sort=stars
+  tags:
+  - sort_desc_tie
+  status: 200
+- id: nodes-filter-and
+  path: /v1/nodes?type=Repo&filter=lang:eq:go&filter=stars:gte:10
+  tags:
+  - filter_syntax
+  status: 200
+- id: nodes-filter-colon
+  path: /v1/nodes?type=Repo&filter=label:eq:a:b:c
+  tags:
+  - filter_syntax
+  status: 200
+- id: nodes-label-prefix
+  path: '/v1/nodes?type=Repo&filter=label:prefix:a:b:'
+  tags:
+  - filter_syntax
+  status: 200
+- id: nodes-filter-in-escape
+  path: /v1/nodes?type=Repo&filter=label:in:a%5C,b,zeta
+  tags:
+  - filter_syntax
+  status: 200
+- id: nodes-limit-2
+  path: /v1/nodes?type=Repo&limit=2&sort=-stars
+  tags:
+  - truncated
+  status: 200
+- id: nodes-limit-2-next
+  path: /v1/nodes?type=Repo&limit=2&sort=-stars&cursor=eyJlIjoyLCJmIjoiZjY1ZDc5YTkiLCJrIjpbMTAsImU6cmVwbzphIl19
+  status: 200
+- id: nodes-cursor-sort-mismatch
+  path: /v1/nodes?type=Repo&limit=2&sort=stars&cursor=eyJlIjoyLCJmIjoiZjY1ZDc5YTkiLCJrIjpbMTAsImU6cmVwbzphIl19
+  tags:
+  - cursor_mismatch
+  status: 400
+- id: nodes-ids
+  path: /v1/nodes?ids=e:tool:ma,e:tool:mc,f-priv,f-sec,e:none:zz
+  tags:
+  - ids_param
+  - hidden
+  status: 200
+- id: nodes-bad-filter
+  path: /v1/nodes?filter=nope:eq:1
+  tags:
+  - filter_syntax
+  status: 400
+- id: nodes-type-and-types
+  path: /v1/nodes?type=Repo&types=Tool
+  status: 400
+- id: nodes-304
+  path: /v1/nodes
+  headers:
+    If-None-Match: '"2-92-g-000000092-109f"'
+  tags:
+  - not_modified
+  status: 304
+- id: node-ok
+  path: /v1/nodes/e:feature:history
+  examples:
+  - default
+  status: 200
+- id: node-304
+  path: /v1/nodes/e:feature:history
+  headers:
+    If-None-Match: '"2-92-g-000000092-109f"'
+  tags:
+  - not_modified
+  status: 304
+- id: node-not-found
+  path: /v1/nodes/e:tool:no-such
+  status: 404
+- id: node-bad-param
+  path: /v1/nodes/e:feature:history?include=nope
+  status: 400
+- id: node-private-hidden
+  path: /v1/nodes/f-priv
+  tags:
+  - hidden
+  status: 404
+- id: node-secret-hidden
+  path: /v1/nodes/f-sec
+  tags:
+  - hidden
+  status: 404
+- id: node-raised-hidden
+  path: /v1/nodes/f-raise
+  tags:
+  - hidden
+  - sensitivity_raise
+  status: 404
+- id: node-raised-observed-before
+  path: /v1/nodes/f-raise?as_of_observed=2027-01-15T19:00:00Z
+  tags:
+  - hidden
+  - sensitivity_raise
+  status: 404
+- id: node-merged-old
+  path: /v1/nodes/e:tool:ma
+  tags:
+  - merge_chain
+  status: 200
+- id: node-merged-middle
+  path: /v1/nodes/e:tool:mb
+  tags:
+  - merge_chain
+  status: 200
+- id: node-merged-final
+  path: /v1/nodes/e:tool:mc
+  tags:
+  - merge_chain
+  status: 200
+- id: node-dead-default
+  path: /v1/nodes/e:tool:dead
+  tags:
+  - dead_subject
+  status: 200
+- id: node-dead-all
+  path: /v1/nodes/e:tool:dead?status=all
+  tags:
+  - dead_subject
+  status: 200
+- id: node-superseded-subject
+  path: /v1/nodes/e:tool:old?status=all
+  tags:
+  - superseded_subject
+  status: 200
+- id: node-revived
+  path: /v1/nodes/e:tool:revived
+  tags:
+  - revived
+  status: 200
+- id: node-first-party
+  path: /v1/nodes/f-1?include=claims,edges,body
+  tags:
+  - first_party
+  status: 200
+- id: node-agent-record
+  path: /v1/nodes/f-agent
+  tags:
+  - first_party
+  status: 200
+- id: node-backlinks
+  path: /v1/nodes/e:tool:x?include=claims,edges,backlinks
+  tags:
+  - first_party
+  status: 200
+- id: node-parallel
+  path: /v1/nodes/e:tool:x?include=edges
+  tags:
+  - parallel_edges
+  status: 200
+- id: node-claim-evidence-emoji
+  path: /v1/nodes/c-emoji
+  tags:
+  - emoji_offset
+  status: 200
+- id: node-claim-evidence-nfd
+  path: /v1/nodes/c-nfd
+  tags:
+  - nfd_input
+  status: 200
+- id: node-kind-e-exists
+  path: /v1/nodes/e:tool:x
+  tags:
+  - node_id_kinds
+  status: 200
+- id: node-kind-e-missing
+  path: /v1/nodes/e:tool:zz
+  tags:
+  - node_id_kinds
+  status: 404
+- id: node-kind-c-exists
+  path: /v1/nodes/c-1
+  tags:
+  - node_id_kinds
+  status: 200
+- id: node-kind-c-missing
+  path: /v1/nodes/c-zz
+  tags:
+  - node_id_kinds
+  status: 404
+- id: node-kind-n-exists
+  path: /v1/nodes/n-1
+  tags:
+  - node_id_kinds
+  status: 200
+- id: node-kind-n-missing
+  path: /v1/nodes/n-zz
+  tags:
+  - node_id_kinds
+  status: 404
+- id: node-kind-f-exists
+  path: /v1/nodes/f-1
+  tags:
+  - node_id_kinds
+  status: 200
+- id: node-kind-f-missing
+  path: /v1/nodes/f-zz
+  tags:
+  - node_id_kinds
+  status: 404
+- id: node-kind-s-exists
+  path: /v1/nodes/s:rank
+  tags:
+  - node_id_kinds
+  status: 200
+- id: node-kind-s-missing
+  path: /v1/nodes/s:zz
+  tags:
+  - node_id_kinds
+  status: 404
+- id: node-kind-src-exists
+  path: /v1/nodes/src:a
+  tags:
+  - node_id_kinds
+  status: 200
+- id: node-kind-src-missing
+  path: /v1/nodes/src:zz
+  tags:
+  - node_id_kinds
+  status: 404
+- id: node-kind-t-exists
+  path: /v1/nodes/t-1
+  tags:
+  - node_id_kinds
+  status: 200
+- id: node-kind-t-missing
+  path: /v1/nodes/t-zz
+  tags:
+  - node_id_kinds
+  status: 404
+- id: node-kind-d-exists
+  path: /v1/nodes/d-n-1
+  tags:
+  - node_id_kinds
+  status: 200
+- id: node-kind-d-missing
+  path: /v1/nodes/d-zz
+  tags:
+  - node_id_kinds
+  status: 404
+- id: node-kind-r-exists
+  path: /v1/nodes/r-01
+  tags:
+  - node_id_kinds
+  status: 404
+- id: node-kind-r-missing
+  path: /v1/nodes/r-zz
+  tags:
+  - node_id_kinds
+  status: 404
+- id: claims-ok
+  path: /v1/nodes/e:tool:alpha/claims
+  examples:
+  - default
+  status: 200
+- id: claims-304
+  path: /v1/nodes/e:tool:alpha/claims
+  headers:
+    If-None-Match: '"2-92-g-000000092-109f"'
+  tags:
+  - not_modified
+  status: 304
+- id: claims-not-found
+  path: /v1/nodes/e:tool:no-such/claims
+  status: 404
+- id: claims-bad-param
+  path: /v1/nodes/e:tool:alpha/claims?limit=0
+  status: 400
+- id: claims-chain-all
+  path: /v1/nodes/e:policy:ypp/claims?status=all
+  tags:
+  - supersede_chain
+  status: 200
+- id: claims-chain-default
+  path: /v1/nodes/e:policy:ypp/claims
+  tags:
+  - supersede_chain
+  status: 200
+- id: claims-retro-now
+  path: /v1/nodes/e:policy:retro/claims
+  tags:
+  - retroactive_correction
+  status: 200
+- id: claims-retro-observed-before
+  path: /v1/nodes/e:policy:retro/claims?as_of_observed=2027-01-16T08:00:00Z&as_of_valid=2024-07-01
+  tags:
+  - retroactive_correction
+  status: 200
+- id: claims-retro-observed-after
+  path: /v1/nodes/e:policy:retro/claims?as_of_observed=2027-01-16T16:00:00Z&as_of_valid=2024-07-01
+  tags:
+  - retroactive_correction
+  status: 200
+- id: claims-future-both-active
+  path: /v1/nodes/e:policy:future/claims
+  tags:
+  - future_effective
+  status: 200
+- id: claims-future-before
+  path: /v1/nodes/e:policy:future/claims?as_of_valid=2027-02-01
+  tags:
+  - future_effective
+  status: 200
+- id: claims-future-after
+  path: /v1/nodes/e:policy:future/claims?as_of_valid=2027-04-01
+  tags:
+  - future_effective
+  status: 200
+- id: claims-dead-default
+  path: /v1/nodes/e:tool:dead/claims
+  tags:
+  - dead_subject
+  status: 200
+- id: claims-dead-status
+  path: /v1/nodes/e:tool:dead/claims?status=dead
+  tags:
+  - dead_subject
+  status: 200
+- id: claims-dead-observed-before
+  path: /v1/nodes/e:tool:dead/claims?as_of_observed=2027-01-16T08:00:00Z
+  tags:
+  - dead_subject
+  status: 200
+- id: claims-superseded-subject
+  path: /v1/nodes/e:tool:old/claims?status=superseded
+  tags:
+  - superseded_subject
+  status: 200
+- id: claims-revived
+  path: /v1/nodes/e:tool:revived/claims
+  tags:
+  - revived
+  status: 200
+- id: claims-merged-final
+  path: /v1/nodes/e:tool:mc/claims
+  tags:
+  - merge_chain
+  status: 200
+- id: edges-ok
+  path: /v1/nodes/e:product:p/edges
+  examples:
+  - default
+  status: 200
+- id: edges-304
+  path: /v1/nodes/e:product:p/edges
+  headers:
+    If-None-Match: '"2-92-g-000000092-109f"'
+  tags:
+  - not_modified
+  status: 304
+- id: edges-not-found
+  path: /v1/nodes/e:tool:no-such/edges
+  status: 404
+- id: edges-bad-param
+  path: /v1/nodes/e:product:p/edges?direction=up
+  status: 400
+- id: edges-parallel
+  path: /v1/nodes/e:tool:alpha/edges?direction=in
+  tags:
+  - parallel_edges
+  status: 200
+- id: edges-merged-final
+  path: /v1/nodes/e:tool:mc/edges
+  tags:
+  - merge_chain
+  status: 200
+- id: body-ok
+  path: /v1/nodes/f-1/body
+  tags:
+  - first_party
+  examples:
+  - default
+  status: 200
+- id: body-window
+  path: /v1/nodes/f-1/body?start=3&max_chars=8
+  tags:
+  - first_party
+  status: 200
+- id: body-304
+  path: /v1/nodes/f-1/body
+  headers:
+    If-None-Match: '"2-92-g-000000092-109f"'
+  tags:
+  - not_modified
+  status: 304
+- id: body-hidden
+  path: /v1/nodes/f-priv/body
+  tags:
+  - hidden
+  status: 404
+- id: body-bad-param
+  path: /v1/nodes/f-1/body?start=-1
+  status: 400
+- id: neighbors-ok
+  path: /v1/nodes/e:product:p/neighbors
+  examples:
+  - default
+  status: 200
+- id: neighbors-304
+  path: /v1/nodes/e:product:p/neighbors
+  headers:
+    If-None-Match: '"2-92-g-000000092-109f"'
+  tags:
+  - not_modified
+  status: 304
+- id: neighbors-depth-2
+  path: /v1/nodes/e:feature:history/neighbors?depth=2
+  status: 200
+- id: neighbors-limit
+  path: /v1/nodes/e:product:p/neighbors?limit=1
+  tags:
+  - truncated
+  status: 200
+- id: neighbors-parallel
+  path: /v1/nodes/e:tool:x/neighbors
+  tags:
+  - parallel_edges
+  status: 200
+- id: neighbors-merged-old
+  path: /v1/nodes/e:tool:ma/neighbors
+  tags:
+  - merge_chain
+  status: 200
+- id: neighbors-not-found
+  path: /v1/nodes/e:tool:no-such/neighbors
+  status: 404
+- id: neighbors-bad-param
+  path: /v1/nodes/e:product:p/neighbors?depth=9
+  status: 400
+- id: history-ok
+  path: /v1/nodes/e:policy:ypp/history
+  tags:
+  - supersede_chain
+  examples:
+  - default
+  status: 200
+- id: history-304
+  path: /v1/nodes/e:policy:ypp/history
+  headers:
+    If-None-Match: '"2-92-g-000000092-109f"'
+  tags:
+  - not_modified
+  status: 304
+- id: history-retro
+  path: /v1/nodes/c-retro/history
+  tags:
+  - retroactive_correction
+  status: 200
+- id: history-revived
+  path: /v1/nodes/e:tool:revived/history
+  tags:
+  - revived
+  status: 200
+- id: history-dead-claim
+  path: /v1/nodes/c-dead-state/history
+  tags:
+  - dead_subject
+  status: 200
+- id: history-first-party
+  path: /v1/nodes/f-1/history
+  tags:
+  - first_party
+  status: 200
+- id: history-not-found
+  path: /v1/nodes/e:tool:no-such/history
+  status: 404
+- id: history-as-of-unsupported
+  path: /v1/nodes/e:policy:ypp/history?as_of_valid=2027-01-01
+  tags:
+  - as_of_unsupported
+  status: 400
+- id: claim-ok
+  path: /v1/claims/c-1
+  examples:
+  - default
+  status: 200
+- id: claim-304
+  path: /v1/claims/c-1
+  headers:
+    If-None-Match: '"2-92-g-000000092-109f"'
+  tags:
+  - not_modified
+  status: 304
+- id: claim-not-found
+  path: /v1/claims/c-no-such
+  status: 404
+- id: claim-bad-param
+  path: /v1/claims/c-1?x=1
+  tags:
+  - unknown_param
+  status: 400
+- id: claim-dead
+  path: /v1/claims/c-dead-state
+  tags:
+  - dead_subject
+  status: 200
+- id: claim-retro-before
+  path: /v1/claims/c-retro?as_of_observed=2027-01-16T08:00:00Z&as_of_valid=2024-07-01
+  tags:
+  - retroactive_correction
+  status: 200
+- id: claim-retro-after
+  path: /v1/claims/c-retro?as_of_observed=2027-01-16T16:00:00Z&as_of_valid=2024-07-01
+  tags:
+  - retroactive_correction
+  status: 200
+- id: claim-chain-3
+  path: /v1/claims/c-chain-3
+  tags:
+  - supersede_chain
+  status: 200
+- id: edge-ok
+  path: /v1/edges/r-01
+  examples:
+  - default
+  status: 200
+- id: edge-304
+  path: /v1/edges/r-01
+  headers:
+    If-None-Match: '"2-92-g-000000092-109f"'
+  tags:
+  - not_modified
+  status: 304
+- id: edge-not-found
+  path: /v1/edges/r-no-such
+  status: 404
+- id: edge-bad-param
+  path: /v1/edges/r-01?x=1
+  tags:
+  - unknown_param
+  status: 400
+- id: edge-parallel-1
+  path: /v1/edges/r-par-1
+  tags:
+  - parallel_edges
+  status: 200
+- id: edge-parallel-2
+  path: /v1/edges/r-par-2
+  tags:
+  - parallel_edges
+  status: 200
+- id: search-ok
+  path: /v1/search?q=%EC%9C%84%EC%A0%AF
+  tags:
+  - search_kinds
+  - korean_text
+  examples:
+  - default
+  status: 200
+- id: search-304
+  path: /v1/search?q=%EC%9C%84%EC%A0%AF
+  headers:
+    If-None-Match: '"2-92-g-000000092-109f"'
+  tags:
+  - not_modified
+  status: 304
+- id: search-josa
+  path: /v1/search?q=%EC%9C%84%EC%A0%AF%EC%9D%84
+  tags:
+  - korean_text
+  status: 200
+- id: search-one-syllable
+  path: /v1/search?q=%EB%8B%AC
+  tags:
+  - korean_text
+  status: 200
+- id: search-number
+  path: /v1/search?q=4000%EC%8B%9C%EA%B0%84
+  tags:
+  - korean_text
+  status: 200
+- id: search-number-comma
+  path: /v1/search?q=4,000%EC%8B%9C%EA%B0%84
+  tags:
+  - korean_text
+  status: 200
+- id: search-kind-claim
+  path: /v1/search?q=%EC%9C%84%EC%A0%AF&kinds=claim
+  tags:
+  - search_kinds
+  status: 200
+- id: search-kind-record
+  path: /v1/search?q=%EC%9C%84%EC%A0%AF&kinds=record
+  tags:
+  - search_kinds
+  status: 200
+- id: search-kind-entity
+  path: /v1/search?q=%EB%8F%84%EA%B5%AC&kinds=entity
+  tags:
+  - search_kinds
+  status: 200
+- id: search-kind-passage
+  path: /v1/search?q=%EC%9C%84%EC%A0%AF&kinds=passage
+  tags:
+  - search_kinds
+  status: 200
+- id: search-empty
+  path: /v1/search?q=%EC%A1%B4%EC%9E%AC%ED%95%98%EC%A7%80%EC%95%8A%EB%8A%94%EB%A7%90
+  tags:
+  - empty_search
+  - total_null
+  status: 200
+- id: search-limit-1
+  path: /v1/search?q=%EC%9C%84%EC%A0%AF&limit=1
+  tags:
+  - total_null
+  status: 200
+- id: search-limit-1-next
+  path: /v1/search?q=%EC%9C%84%EC%A0%AF&limit=1&cursor=eyJlIjoyLCJmIjoiN2Y2NzZjOTIiLCJrIjpbMSwiYy1tYSJdfQ
+  status: 200
+- id: search-hybrid
+  path: /v1/search?q=%EC%9C%84%EC%A0%AF&mode=hybrid
+  status: 200
+- id: search-bad-param
+  path: /v1/search
+  status: 400
+- id: facets-ok
+  path: /v1/facets
+  examples:
+  - default
+  status: 200
+- id: facets-q
+  path: /v1/facets?q=%EC%9C%84%EC%A0%AF
+  tags:
+  - korean_text
+  status: 200
+- id: facets-304
+  path: /v1/facets
+  headers:
+    If-None-Match: '"2-92-g-000000092-109f"'
+  tags:
+  - not_modified
+  status: 304
+- id: facets-bad-param
+  path: /v1/facets?filter=nonesuch:eq:1
+  tags:
+  - filter_syntax
+  status: 400
+- id: counts-ok
+  path: /v1/counts?bucket=day&field=recorded_at
+  examples:
+  - default
+  status: 200
+- id: counts-304
+  path: /v1/counts?bucket=day&field=recorded_at
+  headers:
+    If-None-Match: '"2-92-g-000000092-109f"'
+  tags:
+  - not_modified
+  status: 304
+- id: counts-bad-param
+  path: /v1/counts?bucket=year
+  status: 400
+- id: series-ok
+  path: /v1/series/s:rank
+  tags:
+  - series_reannounce
+  - series_gap
+  examples:
+  - default
+  status: 200
+- id: series-304
+  path: /v1/series/s:rank
+  headers:
+    If-None-Match: '"2-92-g-000000092-109f"'
+  tags:
+  - not_modified
+  status: 304
+- id: series-bucket-month
+  path: /v1/series/s:rank?bucket=month
+  status: 200
+- id: series-observed-before-reannounce
+  path: /v1/series/s:rank?as_of_observed=2027-01-16T08:00:00Z
+  tags:
+  - series_reannounce
+  status: 200
+- id: series-from-after-gap
+  path: /v1/series/s:rank?from=2027-01-07
+  tags:
+  - series_gap
+  status: 200
+- id: series-not-found
+  path: /v1/series/s:no-such
+  status: 404
+- id: series-bad-param
+  path: /v1/series/s:rank?bucket=year
+  status: 400
+- id: snapshot-ok
+  path: /v1/snapshots/n-1
+  tags:
+  - cache_control
+  examples:
+  - default
+  status: 200
+- id: snapshot-304
+  path: /v1/snapshots/n-1
+  headers:
+    If-None-Match: '"2-92-g-000000092-109f"'
+  tags:
+  - not_modified
+  status: 304
+- id: snapshot-not-found
+  path: /v1/snapshots/n-no-such
+  status: 404
+- id: snapshot-bad-param
+  path: /v1/snapshots/n-1?x=1
+  tags:
+  - unknown_param
+  status: 400
+- id: text-ok
+  path: /v1/snapshots/n-1/text
+  tags:
+  - korean_text
+  examples:
+  - default
+  status: 200
+- id: text-304
+  path: /v1/snapshots/n-1/text
+  headers:
+    If-None-Match: '"n-1"'
+  tags:
+  - not_modified
+  status: 304
+- id: text-emoji
+  path: /v1/snapshots/n-emoji/text
+  tags:
+  - emoji_offset
+  status: 200
+- id: text-nfd
+  path: /v1/snapshots/n-nfd/text
+  tags:
+  - nfd_input
+  status: 200
+- id: text-window
+  path: /v1/snapshots/n-1/text?start=5&max_chars=10
+  status: 200
+- id: text-not-found
+  path: /v1/snapshots/n-no-such/text
+  status: 404
+- id: text-bad-param
+  path: /v1/snapshots/n-1/text?start=x
+  status: 400
+- id: raw-ok
+  path: /v1/snapshots/n-raw/raw
+  tags:
+  - cache_control
+  examples:
+  - default
+  status: 200
+- id: raw-304
+  path: /v1/snapshots/n-raw/raw
+  headers:
+    If-None-Match: '"n-raw"'
+  tags:
+  - not_modified
+  status: 304
+- id: raw-range
+  path: /v1/snapshots/n-raw/raw
+  headers:
+    Range: bytes=0-9
+  examples:
+  - default
+  status: 206
+- id: raw-range-unsatisfiable
+  path: /v1/snapshots/n-raw/raw
+  headers:
+    Range: bytes=99999-
+  status: 416
+- id: raw-gone
+  path: /v1/snapshots/n-1/raw
+  status: 410
+- id: raw-not-found
+  path: /v1/snapshots/n-no-such/raw
+  status: 404
+- id: raw-bad-param
+  path: /v1/snapshots/n-raw/raw?x=1
+  tags:
+  - unknown_param
+  status: 400
+- id: changes-ok
+  path: /v1/changes
+  tags:
+  - total_null
+  examples:
+  - default
+  status: 200
+- id: changes-304
+  path: /v1/changes
+  headers:
+    If-None-Match: '"2-92-g-000000092-109f"'
+  tags:
+  - not_modified
+  status: 304
+- id: changes-limit-2
+  path: /v1/changes?limit=2
+  tags:
+  - truncated
+  - total_null
+  status: 200
+- id: changes-kinds
+  path: /v1/changes?kinds=record.put&origin=first_party
+  status: 200
+- id: changes-revoked
+  path: /v1/changes?kinds=claim.assert&limit=500
+  tags:
+  - sensitivity_raise
+  status: 200
+- id: changes-cursor-mismatch
+  path: /v1/changes?cursor=zzz
+  tags:
+  - cursor_mismatch
+  status: 400
+- id: changes-epoch-changed
+  path: /v1/changes?cursor=eyJlIjoxLCJzIjozfQ
+  tags:
+  - epoch_changed
+  status: 410
+- id: changes-bad-param
+  path: /v1/changes?origin=alien
+  status: 400
+- id: export-manifest-ok
+  path: /v1/export/graph/manifest
+  tags:
+  - cache_control
+  examples:
+  - default
+  status: 200
+- id: changes-after-export
+  path: /v1/changes?cursor=eyJlIjoyLCJzIjo4OX0
+  tags:
+  - export_follow
+  status: 200
+- id: changes-tail
+  path: /v1/changes?cursor=eyJlIjoyLCJzIjo5Mn0
+  tags:
+  - tail_cursor
+  status: 200
+- id: export-manifest-304
+  path: /v1/export/graph/manifest
+  headers:
+    If-None-Match: '"p-000000089"'
+  tags:
+  - not_modified
+  status: 304
+- id: export-manifest-bad-param
+  path: /v1/export/graph/manifest?x=1
+  tags:
+  - unknown_param
+  status: 400
+- id: export-core
+  path: /v1/export/graph?profile=core
+  examples:
+  - default
+  status: 200
+- id: export-full
+  path: /v1/export/graph?profile=full
+  status: 200
+- id: export-304
+  path: /v1/export/graph?profile=core
+  headers:
+    If-None-Match: '"182fbbaae77d6c82b33a9073666d9796ef186dbead5b700bc445ba15128ae83f"'
+  tags:
+  - not_modified
+  status: 304
+- id: export-bad-param
+  path: /v1/export/graph?profile=x
+  status: 400
+- id: ops-freshness-ok
+  path: /v1/ops/freshness
+  examples:
+  - default
+  status: 200
+- id: ops-freshness-bad-param
+  path: /v1/ops/freshness?x=1
+  tags:
+  - unknown_param
+  status: 400
+- id: ops-tickets-ok
+  path: /v1/ops/tickets
+  examples:
+  - default
+  status: 200
+- id: ops-tickets-bad-param
+  path: /v1/ops/tickets?limit=0
+  status: 400
+- id: ops-runs-ok
+  path: /v1/ops/runs
+  examples:
+  - default
+  status: 200
+- id: ops-runs-limit-1
+  path: /v1/ops/runs?limit=1
+  tags:
+  - truncated
+  status: 200
+- id: ops-runs-bad-param
+  path: /v1/ops/runs?limit=0
+  status: 400
+- id: ops-metrics-ok
+  path: /v1/ops/metrics
+  examples:
+  - default
+  status: 200
+- id: ops-metrics-bad-param
+  path: /v1/ops/metrics?x=1
+  tags:
+  - unknown_param
+  status: 400

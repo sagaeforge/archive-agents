@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/events/entity.put.schema.json",
+  "title": "entity.put",
+  "description": "엔티티 등록 또는 갱신.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1
+    },
+    "aliases": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "domain": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "A",
+          "B",
+          "C",
+          "D",
+          "E",
+          "F",
+          "G"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "props": {
+      "type": "object"
+    },
+    "lang": {
+      "type": "string"
+    },
+    "liveness": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "id",
+    "type",
+    "label"
+  ]
+}

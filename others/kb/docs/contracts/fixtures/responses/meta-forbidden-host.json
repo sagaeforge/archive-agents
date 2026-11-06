@@ -1,0 +1,16 @@
+{
+  "body": {
+    "code": "host_rejected",
+    "detail": "허용되지 않은 Host",
+    "instance": "/v1/meta",
+    "status": 403,
+    "title": "host rejected",
+    "type": "https://kb.local/problems/host-rejected"
+  },
+  "case": "meta-forbidden-host",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/problem+json"
+  },
+  "status": 403
+}

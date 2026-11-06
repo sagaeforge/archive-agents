@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# 계약 검사 전체(계약 9장). 사용: ops/bin/contract-check
+#  1) oasdiff 1.35.0 준비(GitHub 릴리스, 해시 확인, $KB_TOOLCHAIN/bin)
+#  2) 기준선 존재 확인(없으면 실패. 건너뛰지 않는다)
+#  3) pytest tests/contract: fixture 사례와 왕복, Schemathesis 4.32.7, oasdiff 파괴 변경 0건
+#  4) 소비자 키트: npm ci && node verify.mjs (Node 26)
+#  5) Orval 생성 시험(tests/contract_draft/orval-check.sh, WP-23과 같은 스크립트)
+# 실운영 경로를 쓰지 않는다. 임시 파일은 $KB_TMP(디스크)에 둔다.
+set -euo pipefail
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo="$(cd "$here/../.." && pwd)"
+export KB_BUILD_ROOT="${KB_BUILD_ROOT:-$HOME/.cache/sagae-kb/build}"
+if [ -z "${KB_HOME:-}" ] || [ "${KB_HOME%/}" = "/home/user/sagae-kb-data" ]; then
+  export KB_HOME="$KB_BUILD_ROOT/WP-11"
+  export KB_CONFIG_DIR="$KB_HOME/config"
+fi
+export KB_TMP="${KB_TMP:-$KB_HOME/test-tmp/contract-check}"
+export KB_TOOLCHAIN="${KB_TOOLCHAIN:-/home/user/sagae-kb-data/runtime}"
+mkdir -p "$KB_TMP"
+. "$here/env.sh"
+cd "$repo"
+
+OASDIFF_VERSION=1.35.0
+step() { printf '\n== [%s] %s\n' "$1" "$2"; }
+
+step 1/5 "oasdiff $OASDIFF_VERSION"
+bin="$KB_TOOLCHAIN/bin/oasdiff"
+if [ ! -x "$bin" ] || ! "$bin" --version 2>/dev/null | grep -q "version $OASDIFF_VERSION\$"; then
+  tarball="oasdiff_${OASDIFF_VERSION}_linux_amd64.tar.gz"
+  work="$(mktemp -d "$KB_TMP/oasdiff.XXXXXX")"
+  curl -fsSL -o "$work/$tarball" "https://github.com/oasdiff/oasdiff/releases/download/v${OASDIFF_VERSION}/$tarball"
+  (cd "$work" && cp "$repo/tests/contract/oasdiff.sha256" . && sha256sum -c oasdiff.sha256)
+  tar -xzf "$work/$tarball" -C "$work" oasdiff
+  mkdir -p "$KB_TOOLCHAIN/bin"
+  install -m 0755 "$work/oasdiff" "$bin"
+  rm -rf "$work"
+fi
+"$bin" --version
+
+step 2/5 "기준선"
+[ -s docs/contracts/baseline/openapi.yaml ] || { echo "기준선 docs/contracts/baseline/openapi.yaml이 없다. 실패한다." >&2; exit 1; }
+echo "기준선 있음"
+
+step 3/5 "pytest tests/contract"
+"$here/dev" pytest tests/contract -q
+
+step 4/5 "소비자 키트(Node 26)"
+node_major="$(node -p 'process.versions.node.split(".")[0]')"
+[ "$node_major" -ge 26 ] || { echo "Node 26이 필요하다(현재 $(node --version))" >&2; exit 1; }
+(cd docs/contracts/consumer-kit && npm ci --no-audit --no-fund >/dev/null && node verify.mjs)
+
+step 5/5 "Orval 생성 시험"
+bash tests/contract_draft/orval-check.sh docs/contracts/openapi.yaml
+
+printf '\ncontract-check OK\n'

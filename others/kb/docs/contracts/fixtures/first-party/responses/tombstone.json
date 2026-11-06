@@ -1,0 +1,33 @@
+{
+  "headers": {
+    "cache-control": "no-store"
+  },
+  "id": "tombstone",
+  "method": "POST",
+  "path_template": "/v1/records/{id}/tombstone",
+  "request": {
+    "change": "save",
+    "expected_version": 2,
+    "idempotency_key": "loupe:t:f-fixture-page:v2",
+    "reason": "합성 문서로 합침"
+  },
+  "response": {
+    "actor": "app:loupe",
+    "claimed_author": "user:sagae",
+    "generated_by": "app:loupe:save",
+    "held": false,
+    "id": "f-fixture-page",
+    "payload_sha": "efe047e5100bb2f83baa9ef8df45d5444247651020e052afaeca48408698d78a",
+    "projected": true,
+    "quarantined": false,
+    "reason": null,
+    "replayed": false,
+    "seq": 103,
+    "spooled": false,
+    "unchanged": false,
+    "version": 3,
+    "warnings": [],
+    "write_ref": null
+  },
+  "status": 200
+}

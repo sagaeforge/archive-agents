@@ -1,0 +1,21 @@
+{
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/json"
+  },
+  "id": "release-prepare",
+  "method": "POST",
+  "path_template": "/v1/actions",
+  "request": {
+    "action": "release",
+    "expected_version": 1,
+    "idempotency_key": "loupe-review:a:fixture",
+    "target": "f-fixture-note"
+  },
+  "response": {
+    "action_id": "a-fixture-publish",
+    "state": "ready",
+    "status_url": "/v1/actions/a-fixture-publish"
+  },
+  "status": 201
+}

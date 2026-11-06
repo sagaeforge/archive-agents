@@ -1,0 +1,18 @@
+{
+  "body": {
+    "code": "as_of_unsupported",
+    "detail": "/v1/schema는 as_of_valid를 받지 않는다",
+    "instance": "/v1/schema",
+    "param": "as_of_valid",
+    "status": 400,
+    "title": "as of unsupported",
+    "type": "https://kb.local/problems/as-of-unsupported"
+  },
+  "case": "schema-as-of-unsupported",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/problem+json",
+    "vary": "Authorization"
+  },
+  "status": 400
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/events/system.projection_released.schema.json",
+  "title": "system.projection_released",
+  "description": "격리 해제.",
+  "type": "object",
+  "properties": {
+    "seq": {
+      "type": "integer",
+      "minimum": 1
+    }
+  },
+  "required": [
+    "seq"
+  ]
+}

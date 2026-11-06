@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "trail": {
+      "command": "/home/user/.local/bin/trail",
+      "args": ["mcp"],
+      "env": { "DO_NOT_TRACK": "1" }
+    },
+    "kb": {
+      "command": "/home/user/sagae-kb-data/runtime/bin/kb-mcp",
+      "args": [],
+      "env": { "DO_NOT_TRACK": "1" }
+    }
+  }
+}

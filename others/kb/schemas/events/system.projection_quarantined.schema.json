@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/events/system.projection_quarantined.schema.json",
+  "title": "system.projection_quarantined",
+  "description": "투영 불가 이벤트.",
+  "type": "object",
+  "properties": {
+    "seq": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "error": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": [
+    "seq",
+    "error"
+  ]
+}

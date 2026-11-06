@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/agent/workflow-return.schema.json",
+  "title": "모든 워크플로우 반환값의 공통 형태",
+  "type": "object",
+  "properties": {
+    "workflow": {
+      "type": "string"
+    },
+    "skipped": {
+      "type": "string"
+    },
+    "incidents": {
+      "$ref": "incidents.schema.json"
+    }
+  },
+  "required": [
+    "workflow",
+    "incidents"
+  ],
+  "additionalProperties": true
+}

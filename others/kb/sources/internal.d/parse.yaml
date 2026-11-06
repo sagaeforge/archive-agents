@@ -1,0 +1,6 @@
+# WP-07 내부 작업. LLM을 부르지 않는다. 네트워크도 쓰지 않는다.
+jobs:
+  - id: parse.codex_features
+    every_s: 21600
+    stage: 3
+    run: "kb.parse.local:codex_features"

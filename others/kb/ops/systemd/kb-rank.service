@@ -1,0 +1,19 @@
+# kb-rank 서비스. 첫 연결에 기동하고 유휴 15분에 스스로 종료한다(kb.rank.conf.IDLE_EXIT_S).
+# 유휴 5분에 가중치와 VRAM을 푼다: GPU를 다른 세션과 나눈다. 실패하면 호출자는 8초 뒤 어휘로 내려간다.
+[Unit]
+Description=kb-rank (KURE-v3 dense + KURE-Reranker-nano)
+Requires=kb-rank.socket
+After=kb-rank.socket
+
+[Service]
+Type=simple
+Environment=KB_HOME=%h/sagae-kb-data
+Environment=KB_TOOLCHAIN=%h/sagae-kb-data/runtime
+Environment=KB_MODELS=%h/sagae-kb-data/models
+Environment=HF_HUB_OFFLINE=1
+ExecStart=%h/sagae-kb-data/runtime/venv-rank/bin/python -I -m kb.rank.server
+TimeoutStopSec=10
+Restart=no
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=%h/sagae-kb-data/run

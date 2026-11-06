@@ -1,0 +1,835 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "items": [
+        {
+          "at": "2027-01-15T08:00:01Z",
+          "id": "src:a",
+          "kind": "source.registered",
+          "origin": "external",
+          "seq": 1,
+          "type": "Source",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:02Z",
+          "id": "src:b",
+          "kind": "source.registered",
+          "origin": "external",
+          "seq": 2,
+          "type": "Source",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:03Z",
+          "id": "Repo",
+          "kind": "schema.type_defined",
+          "origin": "external",
+          "seq": 3,
+          "type": "node",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:04Z",
+          "id": "n-1",
+          "kind": "snapshot.captured",
+          "origin": "external",
+          "seq": 4,
+          "type": "Snapshot",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:05Z",
+          "id": "n-1",
+          "kind": "snapshot.text",
+          "origin": "external",
+          "seq": 5,
+          "type": "Snapshot",
+          "version": 2
+        },
+        {
+          "at": "2027-01-15T08:00:06Z",
+          "id": "n-2",
+          "kind": "snapshot.captured",
+          "origin": "external",
+          "seq": 6,
+          "type": "Snapshot",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:07Z",
+          "id": "n-2",
+          "kind": "snapshot.text",
+          "origin": "external",
+          "seq": 7,
+          "type": "Snapshot",
+          "version": 2
+        },
+        {
+          "at": "2027-01-15T08:00:08Z",
+          "id": "n-emoji",
+          "kind": "snapshot.captured",
+          "origin": "external",
+          "seq": 8,
+          "type": "Snapshot",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:09Z",
+          "id": "n-emoji",
+          "kind": "snapshot.text",
+          "origin": "external",
+          "seq": 9,
+          "type": "Snapshot",
+          "version": 2
+        },
+        {
+          "at": "2027-01-15T08:00:10Z",
+          "id": "n-nfd",
+          "kind": "snapshot.captured",
+          "origin": "external",
+          "seq": 10,
+          "type": "Snapshot",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:11Z",
+          "id": "n-nfd",
+          "kind": "snapshot.text",
+          "origin": "external",
+          "seq": 11,
+          "type": "Snapshot",
+          "version": 2
+        },
+        {
+          "at": "2027-01-15T08:00:12Z",
+          "id": "n-raw",
+          "kind": "snapshot.captured",
+          "origin": "external",
+          "seq": 12,
+          "type": "Snapshot",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:13Z",
+          "id": "n-raw",
+          "kind": "snapshot.text",
+          "origin": "external",
+          "seq": 13,
+          "type": "Snapshot",
+          "version": 2
+        },
+        {
+          "at": "2027-01-15T08:00:14Z",
+          "id": "e:product:p",
+          "kind": "entity.put",
+          "origin": "external",
+          "seq": 14,
+          "type": "Product",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:15Z",
+          "id": "e:feature:history",
+          "kind": "entity.put",
+          "origin": "external",
+          "seq": 15,
+          "type": "Feature",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:16Z",
+          "id": "e:tool:x",
+          "kind": "entity.put",
+          "origin": "external",
+          "seq": 16,
+          "type": "Tool",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:17Z",
+          "id": "e:tool:alpha",
+          "kind": "entity.put",
+          "origin": "external",
+          "seq": 17,
+          "type": "Tool",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:18Z",
+          "id": "e:policy:ypp",
+          "kind": "entity.put",
+          "origin": "external",
+          "seq": 18,
+          "type": "Policy",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:19Z",
+          "id": "e:policy:future",
+          "kind": "entity.put",
+          "origin": "external",
+          "seq": 19,
+          "type": "Policy",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:20Z",
+          "id": "e:policy:retro",
+          "kind": "entity.put",
+          "origin": "external",
+          "seq": 20,
+          "type": "Policy",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:21Z",
+          "id": "e:video:v",
+          "kind": "entity.put",
+          "origin": "external",
+          "seq": 21,
+          "type": "Video",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:22Z",
+          "id": "c-1",
+          "kind": "claim.assert",
+          "origin": "external",
+          "seq": 22,
+          "type": "Claim",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:23Z",
+          "id": "c-ko-1",
+          "kind": "claim.assert",
+          "origin": "external",
+          "seq": 23,
+          "type": "Claim",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:24Z",
+          "id": "c-ko-2",
+          "kind": "claim.assert",
+          "origin": "external",
+          "seq": 24,
+          "type": "Claim",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:25Z",
+          "id": "c-ko-3",
+          "kind": "claim.assert",
+          "origin": "external",
+          "seq": 25,
+          "type": "Claim",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:26Z",
+          "id": "r-01",
+          "kind": "edge.put",
+          "origin": "external",
+          "seq": 26,
+          "type": "PART_OF",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:27Z",
+          "id": "r-02",
+          "kind": "edge.put",
+          "origin": "external",
+          "seq": 27,
+          "type": "USES",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:28Z",
+          "id": "r-par-1",
+          "kind": "edge.put",
+          "origin": "external",
+          "seq": 28,
+          "type": "USES",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:29Z",
+          "id": "r-par-2",
+          "kind": "edge.put",
+          "origin": "external",
+          "seq": 29,
+          "type": "DEPENDS_ON",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:30Z",
+          "id": "e:repo:a",
+          "kind": "entity.put",
+          "origin": "external",
+          "seq": 30,
+          "type": "Repo",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:31Z",
+          "id": "e:repo:b",
+          "kind": "entity.put",
+          "origin": "external",
+          "seq": 31,
+          "type": "Repo",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:32Z",
+          "id": "e:repo:c",
+          "kind": "entity.put",
+          "origin": "external",
+          "seq": 32,
+          "type": "Repo",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:33Z",
+          "id": "e:repo:d",
+          "kind": "entity.put",
+          "origin": "external",
+          "seq": 33,
+          "type": "Repo",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:34Z",
+          "id": "e:repo:e",
+          "kind": "entity.put",
+          "origin": "external",
+          "seq": 34,
+          "type": "Repo",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:35Z",
+          "id": "e:repo:f",
+          "kind": "entity.put",
+          "origin": "external",
+          "seq": 35,
+          "type": "Repo",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:36Z",
+          "id": "e:repo:g",
+          "kind": "entity.put",
+          "origin": "external",
+          "seq": 36,
+          "type": "Repo",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:37Z",
+          "id": "s:rank",
+          "kind": "series.define",
+          "origin": "external",
+          "seq": 37,
+          "type": "Series",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:38Z",
+          "id": "s:rank",
+          "kind": "series.batch",
+          "origin": "external",
+          "seq": 38,
+          "type": "Series",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:39Z",
+          "id": "src:a",
+          "kind": "gap.recorded",
+          "origin": "external",
+          "seq": 39,
+          "type": "Source",
+          "version": null
+        },
+        {
+          "at": "2027-01-15T08:00:40Z",
+          "id": "t-1",
+          "kind": "ticket.open",
+          "origin": "external",
+          "seq": 40,
+          "type": "Ticket",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:41Z",
+          "id": "t-2",
+          "kind": "ticket.open",
+          "origin": "external",
+          "seq": 41,
+          "type": "Ticket",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:42Z",
+          "id": "t-1",
+          "kind": "ticket.close",
+          "origin": "external",
+          "seq": 42,
+          "type": "Ticket",
+          "version": 2
+        },
+        {
+          "at": "2027-01-15T08:00:43Z",
+          "id": "e:policy:upload",
+          "kind": "entity.put",
+          "origin": "external",
+          "seq": 43,
+          "type": "Policy",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:44Z",
+          "id": "c-emoji",
+          "kind": "claim.assert",
+          "origin": "external",
+          "seq": 44,
+          "type": "Claim",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:45Z",
+          "id": "e:policy:caption",
+          "kind": "entity.put",
+          "origin": "external",
+          "seq": 45,
+          "type": "Policy",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:46Z",
+          "id": "c-nfd",
+          "kind": "claim.assert",
+          "origin": "external",
+          "seq": 46,
+          "type": "Claim",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:47Z",
+          "id": "e:tool:ma",
+          "kind": "entity.put",
+          "origin": "external",
+          "seq": 47,
+          "type": "Tool",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:48Z",
+          "id": "e:tool:mb",
+          "kind": "entity.put",
+          "origin": "external",
+          "seq": 48,
+          "type": "Tool",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:49Z",
+          "id": "e:tool:mc",
+          "kind": "entity.put",
+          "origin": "external",
+          "seq": 49,
+          "type": "Tool",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:50Z",
+          "id": "c-ma",
+          "kind": "claim.assert",
+          "origin": "external",
+          "seq": 50,
+          "type": "Claim",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:51Z",
+          "id": "c-mb",
+          "kind": "claim.assert",
+          "origin": "external",
+          "seq": 51,
+          "type": "Claim",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:52Z",
+          "id": "r-ma-x",
+          "kind": "edge.put",
+          "origin": "external",
+          "seq": 52,
+          "type": "USES",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:53Z",
+          "id": "e:tool:ma",
+          "kind": "entity.merge",
+          "origin": "external",
+          "seq": 53,
+          "type": "Tool",
+          "version": 2
+        },
+        {
+          "at": "2027-01-15T08:00:54Z",
+          "id": "e:tool:mb",
+          "kind": "entity.merge",
+          "origin": "external",
+          "seq": 54,
+          "type": "Tool",
+          "version": 2
+        },
+        {
+          "at": "2027-01-15T08:00:55Z",
+          "id": "f-1",
+          "kind": "record.put",
+          "origin": "first_party",
+          "seq": 55,
+          "type": "Note",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:58Z",
+          "id": "f-agent",
+          "kind": "record.put",
+          "origin": "first_party",
+          "seq": 58,
+          "type": "Decision",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T18:00:00Z",
+          "id": "e:tool:rename",
+          "kind": "entity.put",
+          "origin": "external",
+          "seq": 60,
+          "type": "Tool",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T18:00:00Z",
+          "id": "e:tool:dead",
+          "kind": "entity.put",
+          "origin": "external",
+          "seq": 61,
+          "type": "Tool",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T18:00:00Z",
+          "id": "e:tool:old",
+          "kind": "entity.put",
+          "origin": "external",
+          "seq": 62,
+          "type": "Tool",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T18:00:00Z",
+          "id": "e:tool:new",
+          "kind": "entity.put",
+          "origin": "external",
+          "seq": 63,
+          "type": "Tool",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T18:00:00Z",
+          "id": "e:tool:revived",
+          "kind": "entity.put",
+          "origin": "external",
+          "seq": 64,
+          "type": "Tool",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T18:00:00Z",
+          "id": "c-dead-state",
+          "kind": "claim.assert",
+          "origin": "external",
+          "seq": 65,
+          "type": "Claim",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T18:00:00Z",
+          "id": "c-dead-event",
+          "kind": "claim.assert",
+          "origin": "external",
+          "seq": 66,
+          "type": "Claim",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T18:00:00Z",
+          "id": "c-old-state",
+          "kind": "claim.assert",
+          "origin": "external",
+          "seq": 67,
+          "type": "Claim",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T18:00:00Z",
+          "id": "c-rev-state",
+          "kind": "claim.assert",
+          "origin": "external",
+          "seq": 68,
+          "type": "Claim",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T18:00:00Z",
+          "id": "c-retro",
+          "kind": "claim.assert",
+          "origin": "external",
+          "seq": 69,
+          "type": "Claim",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T18:00:00Z",
+          "id": "c-chain-1",
+          "kind": "claim.assert",
+          "origin": "external",
+          "seq": 70,
+          "type": "Claim",
+          "version": 1
+        },
+        {
+          "at": "2027-01-16T04:00:00Z",
+          "id": "e:tool:rename",
+          "kind": "entity.put",
+          "origin": "external",
+          "seq": 71,
+          "type": "Tool",
+          "version": 2
+        },
+        {
+          "at": "2027-01-16T04:00:00Z",
+          "id": "e:tool:revived",
+          "kind": "survival.verdict",
+          "origin": "external",
+          "seq": 72,
+          "type": "Tool",
+          "version": 2
+        },
+        {
+          "at": "2027-01-16T04:00:00Z",
+          "id": "c-chain-1",
+          "kind": "claim.assert",
+          "origin": "external",
+          "seq": 73,
+          "type": "Claim",
+          "version": 2
+        },
+        {
+          "at": "2027-01-16T04:00:00Z",
+          "id": "c-chain-2",
+          "kind": "claim.assert",
+          "origin": "external",
+          "seq": 74,
+          "type": "Claim",
+          "version": 1
+        },
+        {
+          "at": "2027-01-16T04:00:00Z",
+          "id": "c-chain-1",
+          "kind": "claim.supersede",
+          "origin": "external",
+          "seq": 75,
+          "type": "Claim",
+          "version": 3
+        },
+        {
+          "at": "2027-01-16T14:00:00Z",
+          "id": "c-chain-2",
+          "kind": "claim.assert",
+          "origin": "external",
+          "seq": 76,
+          "type": "Claim",
+          "version": 2
+        },
+        {
+          "at": "2027-01-16T14:00:00Z",
+          "id": "c-chain-3",
+          "kind": "claim.assert",
+          "origin": "external",
+          "seq": 77,
+          "type": "Claim",
+          "version": 1
+        },
+        {
+          "at": "2027-01-16T14:00:00Z",
+          "id": "c-chain-2",
+          "kind": "claim.supersede",
+          "origin": "external",
+          "seq": 78,
+          "type": "Claim",
+          "version": 3
+        },
+        {
+          "at": "2027-01-16T14:00:00Z",
+          "id": "c-retro",
+          "kind": "claim.assert",
+          "origin": "external",
+          "seq": 79,
+          "type": "Claim",
+          "version": 2
+        },
+        {
+          "at": "2027-01-16T14:00:00Z",
+          "id": "c-fut-old",
+          "kind": "claim.assert",
+          "origin": "external",
+          "seq": 80,
+          "type": "Claim",
+          "version": 1
+        },
+        {
+          "at": "2027-01-16T14:00:00Z",
+          "id": "c-fut-new",
+          "kind": "claim.assert",
+          "origin": "external",
+          "seq": 81,
+          "type": "Claim",
+          "version": 1
+        },
+        {
+          "at": "2027-01-16T14:00:00Z",
+          "id": "c-fut-old",
+          "kind": "claim.assert",
+          "origin": "external",
+          "seq": 82,
+          "type": "Claim",
+          "version": 2
+        },
+        {
+          "at": "2027-01-16T14:00:00Z",
+          "id": "e:tool:dead",
+          "kind": "survival.verdict",
+          "origin": "external",
+          "seq": 83,
+          "type": "Tool",
+          "version": 2
+        },
+        {
+          "at": "2027-01-16T14:00:00Z",
+          "id": "e:tool:old",
+          "kind": "survival.verdict",
+          "origin": "external",
+          "seq": 84,
+          "type": "Tool",
+          "version": 2
+        },
+        {
+          "at": "2027-01-16T14:00:00Z",
+          "id": "e:tool:revived",
+          "kind": "survival.verdict",
+          "origin": "external",
+          "seq": 85,
+          "type": "Tool",
+          "version": 3
+        },
+        {
+          "at": "2027-01-16T14:00:00Z",
+          "id": "f-raise",
+          "kind": "visibility.revoked",
+          "seq": 86
+        },
+        {
+          "at": "2027-01-16T14:00:00Z",
+          "id": "r-eglbpb7yo27e",
+          "kind": "visibility.revoked",
+          "seq": 86
+        },
+        {
+          "at": "2027-01-16T14:00:00Z",
+          "id": "s:rank",
+          "kind": "series.batch",
+          "origin": "external",
+          "seq": 87,
+          "type": "Series",
+          "version": 1
+        },
+        {
+          "at": "2027-01-16T15:00:00Z",
+          "id": "f-1",
+          "kind": "record.put",
+          "origin": "first_party",
+          "seq": 88,
+          "type": "Note",
+          "version": 2
+        },
+        {
+          "at": "2027-01-17T00:00:00Z",
+          "id": null,
+          "kind": "schema.epoch_bumped",
+          "origin": "system",
+          "seq": 89,
+          "type": null,
+          "version": null
+        },
+        {
+          "at": "2027-01-17T10:00:00Z",
+          "id": "e:tool:tail",
+          "kind": "entity.put",
+          "origin": "external",
+          "seq": 90,
+          "type": "Tool",
+          "version": 1
+        },
+        {
+          "at": "2027-01-17T11:00:00Z",
+          "id": "c-tail",
+          "kind": "claim.assert",
+          "origin": "external",
+          "seq": 91,
+          "type": "Claim",
+          "version": 1
+        },
+        {
+          "at": "2027-01-17T12:00:00Z",
+          "id": "f-tail",
+          "kind": "record.put",
+          "origin": "first_party",
+          "seq": 92,
+          "type": "Note",
+          "version": 1
+        }
+      ]
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "page": {
+      "next_cursor": "eyJlIjoyLCJzIjo5Mn0",
+      "total": null,
+      "truncated": false
+    },
+    "schema_version": "0.3.1"
+  },
+  "case": "changes-ok",
+  "headers": {
+    "cache-control": "no-cache",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

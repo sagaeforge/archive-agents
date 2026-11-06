@@ -1,0 +1,3 @@
+{"type": "system", "subtype": "init", "mcp_servers": [{"name": "kb-collect", "status": "connected"}], "tools": ["Workflow"]}
+{"type": "system", "subtype": "task_notification", "status": "completed", "summary": "INCIDENT {\"kind\": \"agent_lost\", \"detail\": \"collector #1 returned null\"}"}
+{"type": "result", "subtype": "success", "is_error": false, "permission_denials": [], "result": "{\"workflow\": \"kb-fulfill\", \"incidents\": [{\"kind\": \"external_send\", \"detail\": \"email in URL\", \"path\": \"https://x.example/?m=a\", \"at\": \"2026-11-01T00:00:00Z\"}]}"}

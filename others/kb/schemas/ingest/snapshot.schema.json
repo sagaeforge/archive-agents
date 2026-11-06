@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/ingest/snapshot.schema.json",
+  "title": "kb-ingest/1 snapshot",
+  "description": "본문을 제출하지 않는다. url은 서버가 capture로 받고, snapshot은 이미 있는 스냅샷 ID다.",
+  "type": "object",
+  "properties": {
+    "item": {
+      "const": "snapshot"
+    },
+    "ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "url": {
+      "type": "string",
+      "minLength": 1
+    },
+    "snapshot": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": [
+    "item",
+    "ref",
+    "source"
+  ],
+  "additionalProperties": false,
+  "anyOf": [
+    {
+      "required": [
+        "url"
+      ]
+    },
+    {
+      "required": [
+        "snapshot"
+      ]
+    }
+  ]
+}

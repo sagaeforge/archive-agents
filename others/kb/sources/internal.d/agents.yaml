@@ -1,0 +1,18 @@
+# WP-17 저장 워크플로우 작업. kind=agent는 tick이 아니라 `kb jobs run`(kb-agent.service)이 돈다. run 키가 없어 tick은 건너뛴다.
+# 실제 claude -p 호출이라 결정 11 승인 전에는 kb jobs run이 호출 0회로 끝난다.
+# when: tickets = 열린(queued) 티켓이 있을 때만, review_open = 열린 생존 검토 대기열이 있을 때만.
+# 회고(kb retro)는 metrics.yaml(WP-18)이 등록한다. kb jobs run은 만기인 kind=agent 작업을 아래 순서로 부른다:
+#   kb agent run -> kb-agent-run kb-fulfill -> kb-agent-run kb-liveness-review -> kb retro
+jobs:
+  - id: agents.fulfill
+    kind: agent
+    every_s: 86400
+    when: tickets
+    timeout_s: 3600
+    cmd: "kb-agent-run kb-fulfill"
+  - id: agents.liveness_review
+    kind: agent
+    every_s: 604800
+    when: review_open
+    timeout_s: 3600
+    cmd: "kb-agent-run kb-liveness-review"

@@ -1,0 +1,111 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "chains": [
+        {
+          "items": [
+            {
+              "expired_at": "2027-01-16T04:00:00Z",
+              "id": "c-rev-state",
+              "own_status": "active",
+              "recorded_at": "2027-01-15T18:00:00Z",
+              "status": "active",
+              "status_basis": "own",
+              "superseded_by": null,
+              "unit": null,
+              "valid": {
+                "from": null,
+                "label": null,
+                "precision": null,
+                "to": null
+              },
+              "value": "위젯",
+              "version": 1
+            },
+            {
+              "expired_at": "2027-01-16T14:00:00Z",
+              "id": "c-rev-state",
+              "own_status": "active",
+              "recorded_at": "2027-01-16T04:00:00Z",
+              "status": "dead",
+              "status_basis": "subject",
+              "superseded_by": null,
+              "unit": null,
+              "valid": {
+                "from": null,
+                "label": null,
+                "precision": null,
+                "to": null
+              },
+              "value": "위젯",
+              "version": 2
+            },
+            {
+              "expired_at": null,
+              "id": "c-rev-state",
+              "own_status": "active",
+              "recorded_at": "2027-01-16T14:00:00Z",
+              "status": "active",
+              "status_basis": "own",
+              "superseded_by": null,
+              "unit": null,
+              "valid": {
+                "from": null,
+                "label": null,
+                "precision": null,
+                "to": null
+              },
+              "value": "위젯",
+              "version": 3
+            }
+          ],
+          "predicate": "supports",
+          "slot": null
+        }
+      ],
+      "edges": [],
+      "id": "e:tool:revived",
+      "versions": [
+        {
+          "expired_at": "2027-01-16T04:00:00Z",
+          "label": "되살아난 도구",
+          "recorded_at": "2027-01-15T18:00:00Z",
+          "status": "active",
+          "version": 1
+        },
+        {
+          "expired_at": "2027-01-16T14:00:00Z",
+          "label": "되살아난 도구",
+          "recorded_at": "2027-01-16T04:00:00Z",
+          "status": "dead",
+          "version": 2
+        },
+        {
+          "expired_at": null,
+          "label": "되살아난 도구",
+          "recorded_at": "2027-01-16T14:00:00Z",
+          "status": "active",
+          "version": 3
+        }
+      ]
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "schema_version": "0.3.1"
+  },
+  "case": "history-revived",
+  "headers": {
+    "cache-control": "no-cache",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

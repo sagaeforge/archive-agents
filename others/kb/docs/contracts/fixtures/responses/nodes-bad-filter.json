@@ -1,0 +1,18 @@
+{
+  "body": {
+    "code": "bad_param",
+    "detail": "filter에 쓸 수 없는 이름: 'nope'",
+    "instance": "/v1/nodes",
+    "param": "filter",
+    "status": 400,
+    "title": "bad param",
+    "type": "https://kb.local/problems/bad-param"
+  },
+  "case": "nodes-bad-filter",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/problem+json",
+    "vary": "Authorization"
+  },
+  "status": 400
+}

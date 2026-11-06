@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/events/extract.rejected.schema.json",
+  "title": "extract.rejected",
+  "description": "게이트에서 거부된 추출.",
+  "type": "object",
+  "properties": {
+    "window_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "para_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "code": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reason": {
+      "type": "string"
+    },
+    "claim_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  },
+  "required": [
+    "window_sha",
+    "code"
+  ]
+}

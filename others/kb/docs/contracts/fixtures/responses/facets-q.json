@@ -1,0 +1,56 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "facets": {
+        "domain": [
+          {
+            "count": 2,
+            "value": "none"
+          }
+        ],
+        "origin": [
+          {
+            "count": 2,
+            "value": "first_party"
+          }
+        ],
+        "source": [],
+        "status": [
+          {
+            "count": 2,
+            "value": "active"
+          }
+        ],
+        "type": [
+          {
+            "count": 1,
+            "value": "Decision"
+          },
+          {
+            "count": 1,
+            "value": "Note"
+          }
+        ]
+      },
+      "total": 2
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "schema_version": "0.3.1"
+  },
+  "case": "facets-q",
+  "headers": {
+    "cache-control": "no-cache",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

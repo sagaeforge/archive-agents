@@ -1,0 +1,10 @@
+{
+  "body": null,
+  "case": "export-manifest-304",
+  "headers": {
+    "cache-control": "no-cache",
+    "etag": "\"p-000000089\"",
+    "vary": "Authorization"
+  },
+  "status": 304
+}

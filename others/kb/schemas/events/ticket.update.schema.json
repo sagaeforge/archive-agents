@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/events/ticket.update.schema.json",
+  "title": "ticket.update",
+  "description": "티켓 상태 갱신.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "enum": [
+        "queued",
+        "in_progress",
+        "done",
+        "unanswerable",
+        "blocked_policy"
+      ]
+    },
+    "note": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "status"
+  ]
+}

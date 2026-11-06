@@ -1,0 +1,10 @@
+[Unit]
+Description=sagae-kb read API (Unix socket)
+
+[Socket]
+ListenStream=%h/sagae-kb-data/run/read.sock
+SocketMode=0600
+Accept=no
+
+[Install]
+WantedBy=sockets.target

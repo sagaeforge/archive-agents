@@ -1,0 +1,12 @@
+# WP-18. 전사 ETL은 LLM 비용이 없어 tick 내부 작업이다(8단계 뒤, 주 1회). ~/.claude/projects는 읽기만 한다.
+# 회고는 claude를 부르므로 kind=agent다. run 키가 없어 tick은 건너뛰고 `kb jobs run`이 돈다(결정 11 승인 뒤).
+jobs:
+  - id: metrics.transcript_etl
+    every_s: 604800
+    stage: 8
+    run: "kb.metrics.transcript:job_transcript_etl"
+  - id: metrics.retro
+    kind: agent
+    every_s: 604800
+    timeout_s: 3600
+    cmd: "kb retro"

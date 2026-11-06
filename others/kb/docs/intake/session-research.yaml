@@ -1,0 +1,446 @@
+# 세션 조사 자료 매니페스트. 대장 docs/intake/session-research.md의 모든 행을 항목으로 옮긴 것이다(WP-26).
+# 한 행이 여러 파일이면 파일마다 항목을 둔다. treat 값은 kb.intake.manifest.TREATS.
+version: 1
+ledger: docs/intake/session-research.md
+copy_dir: ~/.local/share/sagae-kb/intake
+sessions:
+- id: sagae-tools-0e
+  project: sagae-tools
+  status: replied
+  reply: 11건 + 사본 2건
+- id: sagae-claude-plugins-0e
+  project: sagae-claude-plugins
+  status: replied
+  reply: 3건
+  note: Trail과 rtk 연결은 진행 중이다. 훅 설정의 최종 결론은 끝난 뒤 다시 받는다. 회신이 오면 같은 절차로 더한다.
+- id: claude-setup-22
+  project: claude-setup
+  status: replied
+  reply: 8건
+- id: sagae-bb
+  project: sagae
+  status: replied
+  reply: 3건
+- id: sagae-claude-plugins-9d
+  project: sagae-claude-plugins
+  status: replied
+  reply: 1건
+- id: sagae-claude-plugins-79
+  project: sagae-claude-plugins
+  status: no_target
+  reply: 대상 없음
+- id: sagae-claude-plugins-de
+  project: sagae-claude-plugins
+  status: no_target
+  reply: 대상 없음
+- id: claude-setup-b1
+  project: claude-setup
+  status: not_delivered
+  reply: 미전달. 승인 없이 만료됐다. 재전송은 사용자가 요청할 때만 한다
+  note: 재전송하지 않는다.
+items:
+- id: tools-oss-viewers
+  session: sagae-tools-0e
+  project: sagae-tools
+  path: /home/user/sagae-tools/docs/research/oss-viewers.md
+  topic: 기성 뷰어 앱 비교
+  researched_on: '2026-10-31'
+  primary: 포함(72개)
+  treat: full
+  note: 내용이 다르면 verify-*.md가 조사 보고서보다 우선한다.
+- id: tools-ui-blocks
+  session: sagae-tools-0e
+  project: sagae-tools
+  path: /home/user/sagae-tools/docs/research/ui-blocks.md
+  topic: 웹 뷰어 구성 요소의 버전과 유지보수 상태
+  researched_on: '2026-10-31'
+  primary: 포함(44개)
+  treat: full
+  note: 내용이 다르면 verify-*.md가 조사 보고서보다 우선한다.
+- id: tools-trends
+  session: sagae-tools-0e
+  project: sagae-tools
+  path: /home/user/sagae-tools/docs/research/trends.md
+  topic: 뷰어 관련 기술 동향
+  researched_on: '2026-10-31'
+  primary: 포함(48개)
+  treat: full
+  note: 내용이 다르면 verify-*.md가 조사 보고서보다 우선한다.
+- id: tools-mcp-gateways
+  session: sagae-tools-0e
+  project: sagae-tools
+  path: /home/user/sagae-tools/docs/research/mcp-gateways.md
+  topic: MCP 게이트웨이와 집계기 비교
+  researched_on: '2026-10-31'
+  primary: 포함(57개)
+  treat: full
+  note: 내용이 다르면 verify-*.md가 조사 보고서보다 우선한다.
+- id: tools-mcp-servers
+  session: sagae-tools-0e
+  project: sagae-tools
+  path: /home/user/sagae-tools/docs/research/mcp-servers.md
+  topic: MCP 서버 구축과 호스팅
+  researched_on: '2026-10-31'
+  primary: 포함(45개)
+  treat: full
+  note: 내용이 다르면 verify-*.md가 조사 보고서보다 우선한다.
+- id: tools-http-gateway
+  session: sagae-tools-0e
+  project: sagae-tools
+  path: /home/user/sagae-tools/docs/research/http-gateway.md
+  topic: HTTP 게이트웨이, 수명주기, 런타임
+  researched_on: '2026-10-31'
+  primary: 포함(40개)
+  treat: full
+  note: 내용이 다르면 verify-*.md가 조사 보고서보다 우선한다.
+- id: tools-verify-gateway
+  session: sagae-tools-0e
+  project: sagae-tools
+  path: /home/user/sagae-tools/docs/research/verify-gateway.md
+  topic: 게이트웨이 조사의 적대적 검증
+  researched_on: '2026-10-31'
+  primary: 포함(46개)
+  treat: full
+  note: verify-*.md는 조사 보고서보다 우선한다.
+- id: tools-verify-viewer
+  session: sagae-tools-0e
+  project: sagae-tools
+  path: /home/user/sagae-tools/docs/research/verify-viewer.md
+  topic: 뷰어 조사의 적대적 검증
+  researched_on: '2026-10-31'
+  primary: 포함(78개)
+  treat: full
+  note: verify-*.md는 조사 보고서보다 우선한다.
+- id: tools-token-tooling
+  session: sagae-tools-0e
+  project: sagae-tools
+  path: /home/user/sagae-tools/docs/research/understand-token-tooling.md
+  topic: rtk와 trail 조사
+  researched_on: '2026-10-31'
+  primary: 없음
+  treat: full
+- id: tools-spike-results
+  session: sagae-tools-0e
+  project: sagae-tools
+  path: /home/user/sagae-tools/docs/research/spike-results.md
+  topic: 이 머신의 실측 S1~S5
+  researched_on: '2026-10-31'
+  primary: 없음
+  treat: filtered
+  exclude_lines:
+  - 173
+  - 180
+  no_urls: true
+  note: L173, L180은 로컬 주소라 적재하지 않는다. 수치는 외부 사실이 아니므로 URL 후보를 만들지 않는다. Adversarial review가 스파이크 본문보다 우선한다.
+- id: tools-spikes
+  session: sagae-tools-0e
+  project: sagae-tools
+  path: /home/user/sagae-tools/docs/research/spikes
+  topic: 실측 소스와 일부 측정값(파일 목록)
+  researched_on: '2026-10-31'
+  primary: 없음
+  treat: index
+  note: 폴더 하나가 한 항목이다. 본문은 저장하지 않고 파일 목록, 크기, sha256만 둔다.
+- id: tools-orca-guide
+  session: sagae-tools-0e
+  project: sagae-tools
+  path: intake/sagae-tools-0e/orca-guide.md
+  topic: Orca 사용 메모(안내)
+  researched_on: '2026-10-31'
+  primary: 미확인
+  treat: full
+  note: 원본은 스크래치패드이고 접수 사본을 읽는다.
+- id: tools-orca-browser
+  session: sagae-tools-0e
+  project: sagae-tools
+  path: intake/sagae-tools-0e/orca-browser.md
+  topic: Orca 사용 메모(브라우저)
+  researched_on: '2026-10-31'
+  primary: 미확인
+  treat: full
+  note: 원본은 스크래치패드이고 접수 사본을 읽는다.
+- id: cp0e-docs-cli-reference
+  session: sagae-claude-plugins-0e
+  project: sagae-claude-plugins
+  path: /home/user/.claude/projects/-home-sagae-sagae-claude-plugins/archive-2026-10-31/docs-raw/cli-reference.md
+  topic: 'Claude Code 공식 문서 사본: cli-reference.md'
+  researched_on: '2026-10-31'
+  primary: 포함
+  treat: full
+  note: Trail과 rtk 연결은 진행 중이다. 훅 설정의 최종 결론은 끝난 뒤 다시 받는다.
+- id: cp0e-docs-env-vars
+  session: sagae-claude-plugins-0e
+  project: sagae-claude-plugins
+  path: /home/user/.claude/projects/-home-sagae-sagae-claude-plugins/archive-2026-10-31/docs-raw/env-vars.md
+  topic: 'Claude Code 공식 문서 사본: env-vars.md'
+  researched_on: '2026-10-31'
+  primary: 포함
+  treat: full
+  note: Trail과 rtk 연결은 진행 중이다. 훅 설정의 최종 결론은 끝난 뒤 다시 받는다.
+- id: cp0e-docs-hooks
+  session: sagae-claude-plugins-0e
+  project: sagae-claude-plugins
+  path: /home/user/.claude/projects/-home-sagae-sagae-claude-plugins/archive-2026-10-31/docs-raw/hooks.md
+  topic: 'Claude Code 공식 문서 사본: hooks.md'
+  researched_on: '2026-10-31'
+  primary: 포함
+  treat: full
+  note: Trail과 rtk 연결은 진행 중이다. 훅 설정의 최종 결론은 끝난 뒤 다시 받는다.
+- id: cp0e-docs-memory
+  session: sagae-claude-plugins-0e
+  project: sagae-claude-plugins
+  path: /home/user/.claude/projects/-home-sagae-sagae-claude-plugins/archive-2026-10-31/docs-raw/memory.md
+  topic: 'Claude Code 공식 문서 사본: memory.md'
+  researched_on: '2026-10-31'
+  primary: 포함
+  treat: full
+  note: Trail과 rtk 연결은 진행 중이다. 훅 설정의 최종 결론은 끝난 뒤 다시 받는다.
+- id: cp0e-docs-permissions
+  session: sagae-claude-plugins-0e
+  project: sagae-claude-plugins
+  path: /home/user/.claude/projects/-home-sagae-sagae-claude-plugins/archive-2026-10-31/docs-raw/permissions.md
+  topic: 'Claude Code 공식 문서 사본: permissions.md'
+  researched_on: '2026-10-31'
+  primary: 포함
+  treat: full
+  note: Trail과 rtk 연결은 진행 중이다. 훅 설정의 최종 결론은 끝난 뒤 다시 받는다.
+- id: cp0e-docs-security
+  session: sagae-claude-plugins-0e
+  project: sagae-claude-plugins
+  path: /home/user/.claude/projects/-home-sagae-sagae-claude-plugins/archive-2026-10-31/docs-raw/security.md
+  topic: 'Claude Code 공식 문서 사본: security.md'
+  researched_on: '2026-10-31'
+  primary: 포함
+  treat: full
+  note: Trail과 rtk 연결은 진행 중이다. 훅 설정의 최종 결론은 끝난 뒤 다시 받는다.
+- id: cp0e-docs-settings-reference
+  session: sagae-claude-plugins-0e
+  project: sagae-claude-plugins
+  path: /home/user/.claude/projects/-home-sagae-sagae-claude-plugins/archive-2026-10-31/docs-raw/settings-reference.md
+  topic: 'Claude Code 공식 문서 사본: settings-reference.md'
+  researched_on: '2026-10-31'
+  primary: 포함
+  treat: full
+  note: Trail과 rtk 연결은 진행 중이다. 훅 설정의 최종 결론은 끝난 뒤 다시 받는다.
+- id: cp0e-docs-settings
+  session: sagae-claude-plugins-0e
+  project: sagae-claude-plugins
+  path: /home/user/.claude/projects/-home-sagae-sagae-claude-plugins/archive-2026-10-31/docs-raw/settings.md
+  topic: 'Claude Code 공식 문서 사본: settings.md'
+  researched_on: '2026-10-31'
+  primary: 포함
+  treat: full
+  note: Trail과 rtk 연결은 진행 중이다. 훅 설정의 최종 결론은 끝난 뒤 다시 받는다.
+- id: cp0e-docs-sub-agents
+  session: sagae-claude-plugins-0e
+  project: sagae-claude-plugins
+  path: /home/user/.claude/projects/-home-sagae-sagae-claude-plugins/archive-2026-10-31/docs-raw/sub-agents.md
+  topic: 'Claude Code 공식 문서 사본: sub-agents.md'
+  researched_on: '2026-10-31'
+  primary: 포함
+  treat: full
+  note: Trail과 rtk 연결은 진행 중이다. 훅 설정의 최종 결론은 끝난 뒤 다시 받는다.
+- id: cp0e-docs-workflows
+  session: sagae-claude-plugins-0e
+  project: sagae-claude-plugins
+  path: /home/user/.claude/projects/-home-sagae-sagae-claude-plugins/archive-2026-10-31/docs-raw/workflows.md
+  topic: 'Claude Code 공식 문서 사본: workflows.md'
+  researched_on: '2026-10-31'
+  primary: 포함
+  treat: full
+  note: Trail과 rtk 연결은 진행 중이다. 훅 설정의 최종 결론은 끝난 뒤 다시 받는다.
+- id: cp0e-docs-worktrees
+  session: sagae-claude-plugins-0e
+  project: sagae-claude-plugins
+  path: /home/user/.claude/projects/-home-sagae-sagae-claude-plugins/archive-2026-10-31/docs-raw/worktrees.md
+  topic: 'Claude Code 공식 문서 사본: worktrees.md'
+  researched_on: '2026-10-31'
+  primary: 포함
+  treat: full
+  note: Trail과 rtk 연결은 진행 중이다. 훅 설정의 최종 결론은 끝난 뒤 다시 받는다.
+- id: cp0e-foundation-design
+  session: sagae-claude-plugins-0e
+  project: sagae-claude-plugins
+  path: /home/user/.claude/projects/-home-sagae-sagae-claude-plugins/archive-2026-10-31/foundation-design.html
+  topic: GitHub self-hosted 러너 과금·보안, 마켓플레이스 배포 비교
+  researched_on: '2026-10-31'
+  primary: 포함
+  treat: urls_only
+  note: 내부 호스트 정보가 섞여 있어 본문을 저장하지 않고 일반 기술 사실의 공개 URL만 추출한다.
+- id: cp0e-journal
+  session: sagae-claude-plugins-0e
+  project: sagae-claude-plugins
+  path: /home/user/.claude/projects/-home-sagae-sagae-claude-plugins/01842778-1730-486e-854c-25be5911f20a/subagents/workflows/wf_7fe34f38-d94/journal.jsonl
+  topic: Trail-Code 0.28.1, rtk 1.1.0, Claude Code 훅 실측
+  researched_on: '2026-10-31'
+  primary: investigate:claude만 포함
+  treat: jsonl_filter
+  select:
+  - investigate:trail
+  - investigate:rtk
+  - investigate:claude
+  note: type=result 줄에는 label이 없어 같은 key의 type=started 줄 label이 investigate:trail, investigate:rtk, investigate:claude인 줄만 저장한다.
+- id: cs22-graft
+  session: claude-setup-22
+  project: claude-setup
+  path: intake/claude-setup-22/graft.md
+  topic: Trail-Code(구 graft) README
+  researched_on: '2026-10-31'
+  primary: 미기록
+  treat: full
+  note: 분석 메모가 아니라 내려받은 공개 문서다. 출처 URL과 확인일이 기록돼 있지 않아 1차 출처 재확인이 필요하다.
+- id: cs22-rtk
+  session: claude-setup-22
+  project: claude-setup
+  path: intake/claude-setup-22/rtk.md
+  topic: rtk README
+  researched_on: '2026-10-31'
+  primary: 미기록
+  treat: full
+  note: 분석 메모가 아니라 내려받은 공개 문서다. 출처 URL과 확인일이 기록돼 있지 않아 1차 출처 재확인이 필요하다.
+- id: cs22-manifest
+  session: claude-setup-22
+  project: claude-setup
+  path: intake/claude-setup-22/manifest.md
+  topic: Orca 플러그인 매니페스트 레퍼런스(format 2)
+  researched_on: '2026-10-31'
+  primary: 미기록
+  treat: full
+  note: 분석 메모가 아니라 내려받은 공개 문서다. 출처 URL과 확인일이 기록돼 있지 않아 1차 출처 재확인이 필요하다.
+- id: cs22-catalog
+  session: claude-setup-22
+  project: claude-setup
+  path: intake/claude-setup-22/catalog.json
+  topic: Orca 공식 플러그인 카탈로그
+  researched_on: '2026-10-31'
+  primary: 미기록
+  treat: full
+  note: 분석 메모가 아니라 내려받은 공개 문서다. 출처 URL과 확인일이 기록돼 있지 않아 1차 출처 재확인이 필요하다.
+- id: cs22-orca-git-graph
+  session: claude-setup-22
+  project: claude-setup
+  path: intake/claude-setup-22/orca-git-graph.md
+  topic: 서드파티 Orca Git Graph 플러그인 README(v0.1.0)
+  researched_on: '2026-10-31'
+  primary: 미기록
+  treat: full
+  note: 분석 메모가 아니라 내려받은 공개 문서다. 출처 URL과 확인일이 기록돼 있지 않아 1차 출처 재확인이 필요하다.
+- id: cs22-git-graph
+  session: claude-setup-22
+  project: claude-setup
+  path: intake/claude-setup-22/git-graph.json
+  topic: 서드파티 Orca Git Graph 플러그인 메타데이터
+  researched_on: '2026-10-31'
+  primary: 미기록
+  treat: full
+  note: 분석 메모가 아니라 내려받은 공개 문서다. 출처 URL과 확인일이 기록돼 있지 않아 1차 출처 재확인이 필요하다.
+- id: cs22-orca-windows-notification-dot
+  session: claude-setup-22
+  project: claude-setup
+  path: intake/claude-setup-22/orca-windows-notification-dot.md
+  topic: 서드파티 Windows 작업표시줄 알림 플러그인 README
+  researched_on: '2026-10-31'
+  primary: 미기록
+  treat: full
+  note: 분석 메모가 아니라 내려받은 공개 문서다. 출처 URL과 확인일이 기록돼 있지 않아 1차 출처 재확인이 필요하다.
+- id: cs22-vibeguard
+  session: claude-setup-22
+  project: claude-setup
+  path: intake/claude-setup-22/vibeguard.md
+  topic: VibeGuard for Orca 보안 플러그인 README
+  researched_on: '2026-10-31'
+  primary: 미기록
+  treat: full
+  note: 분석 메모가 아니라 내려받은 공개 문서다. 출처 URL과 확인일이 기록돼 있지 않아 1차 출처 재확인이 필요하다.
+- id: bb-marketplace
+  session: sagae-bb
+  project: sagae
+  path: /home/user/.claude/projects/-mnt-c-Users-sagae/b20e2713-f884-4d72-81eb-ef5542195de4/subagents/agent-a1b79d360cb747d71.jsonl
+  topic: Claude Code 플러그인 마켓플레이스 스키마, 비공개 저장소 인증, 자동 업데이트, CLI
+  researched_on: '2026-10-31'
+  primary: 포함
+  treat: urls_only
+  urls_file: intake/bb-urls.txt
+  note: 서브에이전트 전사라 공개 URL만 쓰고 전사 본문은 열지 않는다. 추출본은 intake/bb-urls.txt(206개)다.
+- id: bb-plugins-readme
+  session: sagae-bb
+  project: sagae
+  path: /home/user/sagae-claude-plugins/README.md
+  topic: 배포 절차와 자동 업데이트 동작 요약
+  researched_on: '2026-10-31'
+  primary: 없음
+  treat: full
+  note: 운영 문서이고 백그라운드 갱신은 미측정이다.
+- id: bb-proxmox-lock
+  session: sagae-bb
+  project: sagae
+  path: /home/user/sagae-claude-plugins/plugins/proxmox/package-lock.json
+  topic: proxmox 플러그인이 쓰는 패키지 버전
+  researched_on: '2026-10-31'
+  primary: 없음
+  treat: versions_only
+  select:
+  - '@modelcontextprotocol/sdk'
+  - zod
+  note: 사용 버전(@modelcontextprotocol/sdk 1.32.2, zod 4.6.7)만 저장한다.
+- id: cp9d-project-tools
+  session: sagae-claude-plugins-9d
+  project: sagae-claude-plugins
+  git_show:
+    repo: /home/user/sagae-claude-plugins
+    ref: foundation/tools-hooks
+    path: docs/project-tools.md
+  topic: rtk, Trail-Code의 프로젝트 단위 훅 적용과 운영
+  researched_on: '2026-10-31'
+  primary: 없음
+  treat: full
+  note: 사용 문서다. git show로만 읽고 worktree 사본은 읽지 않는다.
+- id: ex-audit-build
+  session: excluded-table
+  project: sagae-claude-plugins
+  topic: audit-build.md (sagae-claude-plugins)
+  researched_on: '2026-10-31'
+  treat: excluded
+  note: 내부 인프라 감사. 내부 IP, 노드 이름, 보안 공백 분석, 토큰 권한 목록이 있고 작성 세션도 대상에서 뺐다. 잠시 만든 사본은 지웠다. 공개 사실은 원문 URL에서 수집한다.
+- id: ex-audit-ops
+  session: excluded-table
+  project: sagae-claude-plugins
+  topic: audit-ops.md (sagae-claude-plugins)
+  researched_on: '2026-10-31'
+  treat: excluded
+  note: 내부 인프라 감사. 내부 IP, 노드 이름, 보안 공백 분석, 토큰 권한 목록이 있고 작성 세션도 대상에서 뺐다. 잠시 만든 사본은 지웠다. 공개 사실은 원문 URL에서 수집한다.
+- id: ex-cp-scratchpad
+  session: excluded-table
+  project: sagae-claude-plugins
+  topic: sagae-claude-plugins 스크래치패드 전체
+  researched_on: '2026-10-31'
+  treat: excluded
+  note: 일부 하위 폴더가 비밀값 패턴에 걸렸다고 회신받았다.
+- id: ex-tools-ecosystem
+  session: excluded-table
+  project: sagae-tools
+  topic: sagae-tools understand-ecosystem.md
+  researched_on: '2026-10-31'
+  treat: excluded
+  note: 이 머신의 구성과 LAN 주소, KB 자체 내용, 내부 설계 브리프다.
+- id: ex-tools-verification
+  session: excluded-table
+  project: sagae-tools
+  topic: sagae-tools understand-verification.md
+  researched_on: '2026-10-31'
+  treat: excluded
+  note: 이 머신의 구성과 LAN 주소, KB 자체 내용, 내부 설계 브리프다.
+- id: ex-tools-kb-contract
+  session: excluded-table
+  project: sagae-tools
+  topic: sagae-tools understand-kb-contract.md
+  researched_on: '2026-10-31'
+  treat: excluded
+  note: 이 머신의 구성과 LAN 주소, KB 자체 내용, 내부 설계 브리프다.
+- id: ex-tools-brief
+  session: excluded-table
+  project: sagae-tools
+  topic: sagae-tools brief.md
+  researched_on: '2026-10-31'
+  treat: excluded
+  note: 이 머신의 구성과 LAN 주소, KB 자체 내용, 내부 설계 브리프다.

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/events/entity.merge.schema.json",
+  "title": "entity.merge",
+  "description": "from을 into로 병합한다. 옛 ID는 계속 해석된다.",
+  "type": "object",
+  "properties": {
+    "from": {
+      "type": "string",
+      "minLength": 1
+    },
+    "into": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reason": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "from",
+    "into"
+  ]
+}

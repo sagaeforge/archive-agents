@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/events/objects/para.schema.json",
+  "title": "para",
+  "description": "문단 목록의 항목. 오프셋은 표시 본문의 코드포인트, start 포함 end 미포함.",
+  "type": "object",
+  "properties": {
+    "para_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "start_cp": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "end_cp": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "heading_path": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "table_header": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "para_sha",
+    "start_cp",
+    "end_cp",
+    "heading_path",
+    "table_header"
+  ],
+  "additionalProperties": false
+}

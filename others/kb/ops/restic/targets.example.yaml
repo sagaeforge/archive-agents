@@ -1,0 +1,26 @@
+# 복사해서 $KB_CONFIG_DIR/targets.yaml(기본 ~/.config/sagae-kb/targets.yaml)로 둔다. 저장소에 실제 값을 넣지 않는다.
+# 비밀번호는 같은 폴더의 secrets.env(0600)에 둔다:
+#   RESTIC_PASSWORD=...                  # 모든 대상 공통
+#   RESTIC_PASSWORD_OFFSITE_E=...        # 대상별(id를 대문자, 영숫자 외는 _) 값이 있으면 그것이 먼저다
+# 계층: t0 원장/내보내기/raw·fp/spool/inbox(dirty면 매 박동), t1 raw/objects·models·wheels(1일), t3 ops.db·ops/runs(1일).
+# raw/ttl은 어떤 대상에도 가지 않는다.
+targets:
+  # 사본 A: 같은 PC의 C: 디스크. ext4.vhdx와 별개 파일이라 vhdx 손상과 실수 삭제를 막는다. 결정 3 뒤에 켠다.
+  - id: local-c
+    kind: local
+    repo: /mnt/c/Users/<사용자>/kb-restic
+    tiers: [t0, t1, t3]
+
+  # 사본 B: 외장 SSD E:(Windows E 드라이브, WSL /mnt/e, drvfs, NTFS). 결정 2.
+  # /mnt/e는 사용자가 수동으로 마운트한다(docs/runbooks/restore.md). kb는 mount, sudo, /etc/fstab, wsl.conf를 건드리지 않는다.
+  # 전송 직전마다 findmnt -T /mnt/e 의 TARGET, SOURCE, FSTYPE와 마커를 본다. 하나라도 어긋나면 이 대상만 건너뛴다. 마운트 옵션(metadata)은 요구하지 않는다.
+  - id: offsite-e
+    kind: external_drive
+    repo: /mnt/e/kb-restic
+    tiers: [t0, t1]
+    mount:
+      path: /mnt/e
+      fstype: drvfs            # findmnt가 9p로 보여 주면 옵션의 aname=drvfs로 확인한다
+      source: "E:"             # 생략하면 E:
+      marker: .kb-offsite-id   # <repo>/.kb-offsite-id 내용이 위 id와 같아야 한다. kb ship --init offsite-e 가 만든다
+    # copy_from: local-c       # 선택: 같은 박동에 local-c가 성공했으면 restic copy로 옮긴다(기본은 독립 backup)

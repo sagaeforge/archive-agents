@@ -1,0 +1,13 @@
+{
+  "name": "kb-contract-consumer-kit",
+  "version": "0.3.1",
+  "private": true,
+  "description": "KB 계약 fixture를 소비자 쪽에서 검증하는 키트(Node 26). sagae-tools가 복사해서 쓴다.",
+  "type": "module",
+  "engines": { "node": ">=26" },
+  "scripts": { "verify": "node verify.mjs" },
+  "dependencies": {
+    "ajv": "8.20.0",
+    "yaml": "2.9.1"
+  }
+}

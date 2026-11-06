@@ -1,0 +1,51 @@
+{
+ "_id": "demo-pkg",
+ "_rev": "12-abc",
+ "name": "demo-pkg",
+ "description": "Demo package for the npm_meta golden test",
+ "dist-tags": {
+  "latest": "2.0.1",
+  "next": "3.0.0-beta.1"
+ },
+ "versions": {
+  "1.0.0": {
+   "name": "demo-pkg",
+   "version": "1.0.0",
+   "license": "ISC",
+   "dist": {
+    "shasum": "a1",
+    "tarball": "https://registry.npmjs.org/demo-pkg/-/demo-pkg-1.0.0.tgz"
+   }
+  },
+  "2.0.1": {
+   "name": "demo-pkg",
+   "version": "2.0.1",
+   "license": "MIT",
+   "bin": {
+    "demo": "cli.js"
+   },
+   "dist": {
+    "shasum": "b2",
+    "tarball": "https://registry.npmjs.org/demo-pkg/-/demo-pkg-2.0.1.tgz"
+   }
+  },
+  "3.0.0-beta.1": {
+   "name": "demo-pkg",
+   "version": "3.0.0-beta.1",
+   "license": "MIT",
+   "dist": {
+    "shasum": "c3",
+    "tarball": "https://registry.npmjs.org/demo-pkg/-/demo-pkg-3.0.0-beta.1.tgz"
+   }
+  }
+ },
+ "time": {
+  "created": "2024-01-02T03:04:05.000Z",
+  "modified": "2026-10-30T01:02:03.000Z",
+  "1.0.0": "2024-01-02T03:04:05.000Z",
+  "2.0.1": "2026-09-01T00:00:00.000Z",
+  "3.0.0-beta.1": "2026-10-30T01:02:03.000Z"
+ },
+ "license": "MIT",
+ "readme": "# demo-pkg\n\nA tiny demo. It has prose that must not need an LLM to read the version."
+}

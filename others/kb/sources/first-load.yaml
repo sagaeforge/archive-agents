@@ -1,0 +1,61 @@
+# 첫 적재 배치 (WP-25). ADR 10.4 초기 활성 표 중 enabled, requires_decision 없음, robots=enforce, 결정적 어댑터 있음.
+# 제외 src:opensurvey-trend: 403 blocked, 서킷 open 상태에서 tick fetch 단계가 state.put 예외로 반복 실패(change_request).
+# 순서: A~F 문서형, F 개발, G1, G2, G3, G5. 제외: O07(로컬 실행), G4 저장소 순환, 결정 8/9 대기 소스.
+# max_pages: discover 소스의 첫 적재 상한(기본 25). 나머지는 큐에 남아 이후 tick과 WP-21이 잇는다.
+sources:
+  # A~F 문서형
+  - {id: src:datareportal, domain: [B, C]}
+  - {id: src:mobileindex-blog, domain: [B]}
+  - {id: src:nielsen-gauge, domain: [B, C]}
+  - {id: src:kmcc-media-survey, domain: [B]}
+  - {id: src:kisdi-stat, domain: [B]}
+  - {id: src:youtube-official-blog, domain: [C, D, E]}
+  - {id: src:yt-ypp-help, domain: [C, D, E]}
+  - {id: src:nasmedia-npr, domain: [B, E]}
+  - {id: src:yt-how-recommendations, domain: [C, D]}
+  - {id: src:google-ads-help, domain: [E]}
+  - {id: src:hn-algolia-f, domain: [F]}
+  - {id: src:kworb, domain: [A, B]}
+  # F 개발
+  - {id: src:yt-api-docs, domain: [F]}
+  - {id: src:f-tools, domain: [F]}
+  # G1
+  - {id: src:cc-changelog-gh, domain: [G]}
+  - {id: src:cc-changelog-docs, domain: [G]}
+  - {id: src:cc-docs-en, domain: [G], max_pages: 25}
+  - {id: src:cc-docs-ko, domain: [G], max_pages: 25}
+  - {id: src:cc-whats-new, domain: [G]}
+  - {id: src:claude-model-deprecations, domain: [G]}
+  - {id: src:claude-api-release-notes, domain: [G]}
+  - {id: src:anthropic-engineering, domain: [G], max_pages: 25}
+  - {id: src:claude-com-sitemap, domain: [G], max_pages: 25}
+  - {id: src:claude-support-release-notes, domain: [G]}
+  - {id: src:claude-status, domain: [G]}
+  - {id: src:cc-repo-meta, domain: [G]}
+  - {id: src:cc-npm, domain: [G]}
+  - {id: src:cc-agent-sdk, domain: [G]}
+  - {id: src:claude-plugins-official, domain: [G]}
+  - {id: src:cc-system-prompts, domain: [G]}
+  # G2
+  - {id: src:codex-releases, domain: [G]}
+  - {id: src:codex-features-lib, domain: [G]}
+  - {id: src:codex-npm, domain: [G]}
+  - {id: src:agents-md, domain: [G]}
+  # G3
+  - {id: src:cc-best-practices, domain: [G]}
+  - {id: src:cc-workflows, domain: [G]}
+  - {id: src:awesome-claude-code, domain: [G]}
+  - {id: src:simonw-atom, domain: [G]}
+  - {id: src:hn-algolia-g, domain: [G]}
+  - {id: src:geeknews, domain: [G]}
+  - {id: src:pytorch-kr, domain: [G]}
+  - {id: src:yozm-it, domain: [G]}
+  - {id: src:kr-tech-blogs, domain: [G]}
+  - {id: src:ollama-blog, domain: [G]}
+  - {id: src:lmstudio-blog, domain: [G]}
+  # G5
+  - {id: src:hf-models, domain: [G]}
+  - {id: src:llama-cpp-releases, domain: [G]}
+  - {id: src:ollama-releases, domain: [G]}
+  - {id: src:lmstudio-docs, domain: [G]}
+  - {id: src:korea-sovereign-ai, domain: [G]}

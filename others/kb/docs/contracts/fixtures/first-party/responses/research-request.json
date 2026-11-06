@@ -1,0 +1,26 @@
+{
+  "headers": {
+    "cache-control": "no-store"
+  },
+  "id": "research-request",
+  "method": "POST",
+  "path_template": "/v1/topics/{id}/research",
+  "request": {
+    "change": "save",
+    "expected_version": 2,
+    "idempotency_key": "loupe:r:f-fixture-spec:00000000-0000-4000-8000-000000000001",
+    "run_id": "00000000-0000-4000-8000-000000000001"
+  },
+  "response": {
+    "existing": false,
+    "replayed": false,
+    "run": "t-fixture-run",
+    "seq": 105,
+    "spec": "f-fixture-spec",
+    "spec_version": 2,
+    "state": "queued",
+    "status_url": "/v1/topics/f-fixture-spec/research",
+    "topic": "e:topic:fixture"
+  },
+  "status": 201
+}

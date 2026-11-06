@@ -1,0 +1,17 @@
+# 수집 어휘의 추가 술어(WP-08). schemas/predicates.yaml 형식과 같다. 미등록 술어는 null로 저장하고 후보 큐에 넣는다.
+version: 1
+predicates:
+  - {id: announced_on,        functional: false, value_kind: date,    labels: {ko: 발표일,          en: announced on}}
+  - {id: effective_on,        functional: false, value_kind: date,    labels: {ko: 시행일,          en: effective on}}
+  - {id: replaced_by,         functional: true,  value_kind: entity,  labels: {ko: 대체된 대상,     en: replaced by}}
+  - {id: scheduled_removal_on, functional: true, value_kind: date,    labels: {ko: 제거 예정일,     en: scheduled removal on}}
+  - {id: default_limit,       functional: true,  value_kind: count,   labels: {ko: 기본 한도,        en: default limit}}
+  - {id: cost_units,          functional: true,  value_kind: count,   labels: {ko: 소비 단위,        en: cost units}}
+  - {id: available_in,        functional: false, value_kind: string,  labels: {ko: 제공 범위,        en: available in}}
+  - {id: requires_plan,       functional: false, value_kind: string,  labels: {ko: 요구 플랜,        en: requires plan}}
+  - {id: behavior,            functional: false, value_kind: string,  labels: {ko: 동작,             en: behavior}}
+  - {id: timeout_default,     functional: true,  value_kind: duration, labels: {ko: 기본 시간 제한,  en: default timeout}}
+  - {id: exit_code,           functional: false, value_kind: string,  labels: {ko: 종료 코드,        en: exit code}}
+  - {id: flag_effect,         functional: false, value_kind: string,  labels: {ko: 플래그 효과,      en: flag effect}}
+  - {id: founded_on,          functional: true,  value_kind: date,    labels: {ko: 설립일,          en: founded on}}
+  - {id: reset_schedule,      functional: true,  value_kind: string,  labels: {ko: 초기화 시각,      en: reset schedule}}

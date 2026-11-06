@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/events/claim.confirm.schema.json",
+  "title": "claim.confirm",
+  "description": "새 스냅샷에서 인용구를 다시 찾았다. v2: 찾은 위치를 함께 싣는다. 값이 없으면(v1 이벤트, 인용구가 여러 곳이라 위치 미확정) 새 근거 행의 start_cp, end_cp는 NULL이다.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "snapshot": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence_id": {
+      "type": "string"
+    },
+    "exact": {
+      "type": "string",
+      "description": "새 스냅샷 표시 본문의 [start_cp, end_cp) 조각"
+    },
+    "prefix": {
+      "type": "string"
+    },
+    "suffix": {
+      "type": "string"
+    },
+    "start_cp": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "새 스냅샷 표시 본문의 코드포인트, 포함(계약 2.11)"
+    },
+    "end_cp": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "새 스냅샷 표시 본문의 코드포인트, 미포함"
+    }
+  },
+  "required": [
+    "id",
+    "snapshot"
+  ],
+  "dependentRequired": {
+    "start_cp": [
+      "end_cp",
+      "exact",
+      "evidence_id"
+    ],
+    "end_cp": [
+      "start_cp"
+    ]
+  }
+}

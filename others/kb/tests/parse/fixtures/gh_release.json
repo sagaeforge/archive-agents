@@ -1,0 +1,17 @@
+{
+ "url": "https://api.github.com/repos/openai/codex/releases/428320524",
+ "assets_url": "https://api.github.com/repos/openai/codex/releases/428320524/assets",
+ "upload_url": "https://uploads.github.com/repos/openai/codex/releases/428320524/assets{?name,label}",
+ "html_url": "https://github.com/openai/codex/releases/tag/rust-v0.166.0",
+ "id": 428320524,
+ "node_id": "RE_kwDOOYsS4c4Zh6cM",
+ "tag_name": "rust-v0.166.0",
+ "target_commitish": "main",
+ "name": "0.166.0",
+ "draft": false,
+ "immutable": false,
+ "prerelease": false,
+ "created_at": "2026-10-29T17:44:31Z",
+ "updated_at": "2026-10-29T19:50:20Z",
+ "published_at": "2026-10-29T19:47:53Z"
+}

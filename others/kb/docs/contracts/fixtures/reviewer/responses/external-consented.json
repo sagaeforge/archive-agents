@@ -1,0 +1,22 @@
+{
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/json"
+  },
+  "id": "external-consented",
+  "method": "POST",
+  "path_template": "/v1/actions/{id}/external-refine",
+  "request": {
+    "assertion": {
+      "id": "synthetic-credential",
+      "response": {}
+    },
+    "challenge_id": "ch-fixture",
+    "idempotency_key": "loupe-review:a:execute"
+  },
+  "response": {
+    "action_id": "a-fixture-publish",
+    "state": "preparing"
+  },
+  "status": 202
+}

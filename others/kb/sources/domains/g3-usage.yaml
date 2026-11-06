@@ -1,0 +1,387 @@
+# WP-07 소스 레지스트리(g3-usage.yaml). 원본: ADR-0001 10.4, docs/research/sources-inventory*.md, ADR-0002.
+# policy.reason: 비활성 사유 또는 주의. parse: 어댑터 설정. 비활성 소스는 enabled=false이고 수집 코드가 호출하지 않는다.
+sources:
+- id: src:cc-best-practices
+  inventory_id: U01
+  name: Claude Code Best practices
+  domain:
+  - G
+  class: docs
+  fetch:
+    kind: https
+    url: https://code.claude.com/docs/en/best-practices.md
+    conditional: true
+  parser: page_md@1
+  expect:
+    content_type: &id001
+    - text/plain
+    - text/markdown
+    - text/html
+    - application/xhtml+xml
+  policy:
+    enabled: true
+    tos: allowed
+    tos_ref: https://code.claude.com/docs/llms.txt
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:cc-workflows
+  inventory_id: U02
+  name: Claude Code prompt-library, common-workflows
+  domain:
+  - G
+  class: docs
+  fetch:
+    kind: https
+    urls:
+    - https://code.claude.com/docs/en/prompt-library.md
+    - https://code.claude.com/docs/en/common-workflows.md
+    conditional: true
+  parser: page_md@1
+  expect:
+    content_type: *id001
+  policy:
+    enabled: true
+    tos: allowed
+    tos_ref: https://code.claude.com/docs/llms.txt
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:openai-use-cases-llms
+  inventory_id: U03
+  name: learn.chatgpt.com use-cases llms.txt
+  domain:
+  - G
+  class: docs
+  fetch:
+    kind: https
+    url: https://learn.chatgpt.com/use-cases/llms.txt
+    conditional: true
+  policy:
+    enabled: false
+    tos: signals_conflict
+    tos_ref: https://openai.com/policies/terms-of-use/
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: 'URL이 두 UA 모두 404다(O02 llms.txt에는 등재). 켜는 조건: 경로 확인 + 결정 9'
+- id: src:awesome-claude-code
+  inventory_id: U04
+  name: awesome-claude-code 자료 표(CSV)
+  domain:
+  - G
+  class: feed
+  fetch:
+    kind: https
+    url: https://raw.githubusercontent.com/hesreallyhim/awesome-claude-code/main/THE_RESOURCES_TABLE_NEW.csv
+    conditional: true
+  parser: csv@1
+  parse:
+    label: Display Name
+    link: Link
+    type: Tool
+    prefix: awesome-cc
+    active: Active
+    prose:
+    - Description
+  expect:
+    content_type:
+    - text/plain
+    - text/csv
+    min_bytes: 20000
+  policy:
+    enabled: true
+    tos: allowed
+    tos_ref: https://docs.github.com/en/site-policy/acceptable-use-policies/github-acceptable-use-policies
+    robots: enforce
+    requires_decision: null
+    trust: secondary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:simonw-atom
+  inventory_id: U05
+  name: Simon Willison's Weblog
+  domain:
+  - G
+  class: feed
+  fetch:
+    kind: https
+    url: https://simonwillison.net/atom/everything/
+    conditional: true
+  parser: rss_atom@1
+  expect:
+    content_type: &id002
+    - application/rss+xml
+    - application/atom+xml
+    - application/xml
+    - text/xml
+    - text/plain
+  policy:
+    enabled: true
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: community
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:hn-algolia-g
+  inventory_id: U06
+  name: Hacker News 검색(codex, claude code, mcp server, local llm)
+  domain:
+  - G
+  class: short
+  fetch:
+    kind: https
+    urls:
+    - https://hn.algolia.com/api/v1/search?query=codex&tags=story&hitsPerPage=20
+    - https://hn.algolia.com/api/v1/search?query=claude%20code&tags=story&hitsPerPage=20
+    - https://hn.algolia.com/api/v1/search?query=mcp%20server&tags=story&hitsPerPage=20
+    - https://hn.algolia.com/api/v1/search?query=local%20llm&tags=story&hitsPerPage=20
+    conditional: true
+  parser: hn_algolia@1
+  expect:
+    content_type:
+    - application/json
+  policy:
+    enabled: true
+    tos: no_clause
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: community
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:reddit-claudecode
+  inventory_id: U07
+  name: Reddit r/ClaudeCode RSS
+  domain:
+  - G
+  class: short
+  fetch:
+    kind: https
+    url: https://www.reddit.com/r/ClaudeCode/.rss
+    conditional: true
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: community
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: '연속 호출 429, 약관 미확인. 켜는 조건: 경로 확인'
+- id: src:geeknews
+  inventory_id: U08
+  name: GeekNews RSS
+  domain:
+  - G
+  class: short
+  fetch:
+    kind: https
+    url: https://news.hada.io/rss/news
+    conditional: true
+  parser: rss_atom@1
+  expect:
+    content_type: *id002
+  policy:
+    enabled: true
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: community
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:pytorch-kr
+  inventory_id: U09
+  name: 파이토치 한국 사용자 모임
+  domain:
+  - G
+  class: feed
+  fetch:
+    kind: https
+    url: https://discuss.pytorch.kr/latest.rss
+    conditional: true
+  parser: rss_atom@1
+  expect:
+    content_type: *id002
+  policy:
+    enabled: true
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: community
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:yozm-it
+  inventory_id: U10
+  name: 요즘IT
+  domain:
+  - G
+  class: feed
+  fetch:
+    kind: https
+    url: https://yozm.wishket.com/magazine/feed/
+    conditional: true
+  parser: rss_atom@1
+  expect:
+    content_type: *id002
+  policy:
+    enabled: true
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: community
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:kr-tech-blogs
+  inventory_id: U11
+  name: 기업 기술 블로그(카카오, 우아한형제들, 토스, 네이버 D2)
+  domain:
+  - G
+  class: weekly
+  fetch:
+    kind: https
+    urls:
+    - https://tech.kakao.com/feed/
+    - https://techblog.woowahan.com/feed/
+    - https://toss.tech/rss.xml
+    - url: https://d2.naver.com/d2.atom
+      requires_decision: 9
+    conditional: true
+  parser: rss_atom@1
+  expect:
+    content_type: *id002
+  policy:
+    enabled: true
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: community
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:korean-communities
+  inventory_id: U12
+  name: GPTers, Disquiet, OKKY
+  domain:
+  - G
+  class: weekly
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: community
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: '프로그램 경로 미확인. 켜는 조건: 경로 확인'
+- id: src:velog
+  inventory_id: U13
+  name: velog
+  domain:
+  - G
+  class: weekly
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: community
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: 공통 피드 없음(/rss/ 404), 사용자별 경로 미확인
+- id: src:ollama-blog
+  inventory_id: U14
+  name: Ollama 블로그 RSS
+  domain:
+  - G
+  class: feed
+  fetch:
+    kind: https
+    url: https://ollama.com/blog/rss.xml
+    conditional: true
+  parser: rss_atom@1
+  expect:
+    content_type: *id002
+  policy:
+    enabled: true
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:lmstudio-blog
+  inventory_id: U15
+  name: LM Studio RSS
+  domain:
+  - G
+  class: weekly
+  fetch:
+    kind: https
+    url: https://lmstudio.ai/rss.xml
+    conditional: true
+  parser: rss_atom@1
+  expect:
+    content_type: *id002
+  policy:
+    enabled: true
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:openai-use-cases
+  inventory_id: U16
+  name: OpenAI use-cases 컬렉션
+  domain:
+  - G
+  class: docs
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: signals_conflict
+    tos_ref: https://openai.com/policies/terms-of-use/
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: '미조사. 켜는 조건: 경로 확인 + 결정 9'

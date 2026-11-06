@@ -1,0 +1,18 @@
+{
+  "body": {
+    "code": "bad_param",
+    "detail": "start는 0 이상",
+    "instance": "/v1/nodes/f-1/body",
+    "param": "start",
+    "status": 400,
+    "title": "bad param",
+    "type": "https://kb.local/problems/bad-param"
+  },
+  "case": "body-bad-param",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/problem+json",
+    "vary": "Authorization"
+  },
+  "status": 400
+}

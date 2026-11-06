@@ -1,0 +1,4 @@
+agent_message_board                      under development  false
+apps                                     stable             true
+apply_patch_freeform                     removed            false
+analytics_plan_history                   experimental       false

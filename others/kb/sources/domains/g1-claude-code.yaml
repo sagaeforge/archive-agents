@@ -1,0 +1,440 @@
+# WP-07 소스 레지스트리(g1-claude-code.yaml). 원본: ADR-0001 10.4, docs/research/sources-inventory*.md, ADR-0002.
+# policy.reason: 비활성 사유 또는 주의. parse: 어댑터 설정. 비활성 소스는 enabled=false이고 수집 코드가 호출하지 않는다.
+sources:
+- id: src:cc-changelog-gh
+  inventory_id: C01
+  name: Claude Code CHANGELOG
+  domain:
+  - G
+  class: rel
+  fetch:
+    kind: https
+    url: https://raw.githubusercontent.com/anthropics/claude-code/main/CHANGELOG.md
+    conditional: true
+  parser: changelog_md@1
+  parse:
+    entity:
+      slug: claude-code
+      label: Claude Code
+      type: Tool
+  expect:
+    content_type:
+    - text/plain
+    - text/markdown
+    min_bytes: 300000
+    entries_never_shrink: true
+  fallbacks:
+  - src:cc-changelog-docs
+  policy:
+    enabled: true
+    tos: allowed
+    tos_ref: https://docs.github.com/en/site-policy/acceptable-use-policies/github-acceptable-use-policies
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:cc-changelog-docs
+  inventory_id: C02
+  name: Claude Code 문서 Changelog RSS
+  domain:
+  - G
+  class: rel
+  fetch:
+    kind: https
+    url: https://code.claude.com/docs/en/changelog/rss.xml
+    conditional: true
+  parser: rss_atom@1
+  expect:
+    content_type: &id002
+    - application/rss+xml
+    - application/atom+xml
+    - application/xml
+    - text/xml
+    - text/plain
+  fallbacks:
+  - src:cc-changelog-gh
+  policy:
+    enabled: true
+    tos: allowed
+    tos_ref: https://code.claude.com/docs/llms.txt
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:cc-docs-en
+  inventory_id: C03
+  name: Claude Code 공식 문서(영문)
+  domain:
+  - G
+  class: docs
+  fetch:
+    kind: https
+    url: https://code.claude.com/docs/llms.txt
+    discover:
+      kind: llms_txt
+      max_pages: 260
+      max_depth: 2
+      include:
+      - ^https://code\.claude\.com/docs/en/
+    conditional: true
+  parser: llms_txt@1
+  expect:
+    content_type: &id001
+    - text/plain
+    - text/markdown
+    - text/html
+    - application/xhtml+xml
+  policy:
+    enabled: true
+    tos: allowed
+    tos_ref: https://code.claude.com/docs/llms.txt
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:cc-docs-ko
+  inventory_id: C04
+  name: Claude Code 문서 한국어판
+  domain:
+  - G
+  class: docs
+  fetch:
+    kind: https
+    url: https://code.claude.com/docs/_llms/ko.txt
+    discover:
+      kind: llms_txt
+      max_pages: 260
+      max_depth: 2
+      include:
+      - ^https://code\.claude\.com/docs/ko/
+    conditional: true
+  parser: llms_txt@1
+  l2: none
+  translation_of: src:cc-docs-en
+  expect:
+    content_type: *id001
+  policy:
+    enabled: true
+    tos: allowed
+    tos_ref: https://code.claude.com/docs/llms.txt
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:cc-whats-new
+  inventory_id: C05
+  name: Claude Code What's new RSS
+  domain:
+  - G
+  class: weekly
+  fetch:
+    kind: https
+    url: https://code.claude.com/docs/en/whats-new/rss.xml
+    conditional: true
+  parser: rss_atom@1
+  expect:
+    content_type: *id002
+  policy:
+    enabled: true
+    tos: allowed
+    tos_ref: https://code.claude.com/docs/llms.txt
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:claude-model-deprecations
+  inventory_id: C06
+  name: Claude 모델 지원 중단 문서
+  domain:
+  - G
+  class: docs
+  fetch:
+    kind: https
+    url: https://platform.claude.com/docs/en/about-claude/model-deprecations
+    conditional: true
+  parser: page_md@1
+  expect:
+    content_type: *id001
+  policy:
+    enabled: true
+    tos: allowed
+    tos_ref: https://platform.claude.com/llms.txt
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:claude-api-release-notes
+  inventory_id: C07
+  name: Claude Platform 릴리스 노트
+  domain:
+  - G
+  class: docs
+  fetch:
+    kind: https
+    url: https://platform.claude.com/docs/en/release-notes/overview
+    conditional: true
+  parser: page_md@1
+  expect:
+    content_type: *id001
+  policy:
+    enabled: true
+    tos: allowed
+    tos_ref: https://platform.claude.com/llms.txt
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:anthropic-engineering
+  inventory_id: C08
+  name: Anthropic Engineering 블로그
+  domain:
+  - G
+  class: monthly
+  fetch:
+    kind: https
+    url: https://www.anthropic.com/engineering
+    discover:
+      kind: html_index
+      max_pages: 40
+      max_depth: 2
+      include:
+      - ^https://www\.anthropic\.com/engineering/.
+      selector: a[href^='/engineering/']
+    conditional: true
+  parser: html_index@1
+  parse:
+    selector: a[href^='/engineering/']
+  expect:
+    content_type: *id001
+  policy:
+    enabled: true
+    tos: allowed
+    tos_ref: https://code.claude.com/docs/llms.txt
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:claude-com-sitemap
+  inventory_id: C09
+  name: claude.com 글(sitemap)
+  domain:
+  - G
+  class: feed
+  fetch:
+    kind: https
+    url: https://claude.com/sitemap.xml
+    discover:
+      kind: sitemap
+      max_pages: 150
+      max_depth: 2
+      include:
+      - ^https://claude\.com/resources/articles/.
+    conditional: true
+  parser: sitemap@1
+  expect:
+    content_type:
+    - application/rss+xml
+    - application/atom+xml
+    - application/xml
+    - text/xml
+    - text/plain
+    - text/plain
+    - text/markdown
+    - text/html
+    - application/xhtml+xml
+  policy:
+    enabled: true
+    tos: allowed
+    tos_ref: https://code.claude.com/docs/llms.txt
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:claude-support-release-notes
+  inventory_id: C10
+  name: Claude Support Release notes
+  domain:
+  - G
+  class: docs
+  fetch:
+    kind: https
+    url: https://support.claude.com/en/articles/12138966-release-notes
+    conditional: true
+  parser: page_md@1
+  expect:
+    content_type: *id001
+  policy:
+    enabled: true
+    tos: allowed
+    tos_ref: https://code.claude.com/docs/llms.txt
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:claude-status
+  inventory_id: C11
+  name: Claude 상태 페이지 이력
+  domain:
+  - G
+  class: feed
+  fetch:
+    kind: https
+    url: https://status.claude.com/history.rss
+    conditional: true
+  parser: rss_atom@1
+  expect:
+    content_type: *id002
+  policy:
+    enabled: true
+    tos: allowed
+    tos_ref: https://code.claude.com/docs/llms.txt
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:cc-repo-meta
+  inventory_id: C12
+  name: anthropics/claude-code 저장소 메타
+  domain:
+  - G
+  class: feed
+  fetch:
+    kind: https
+    url: https://api.github.com/repos/anthropics/claude-code
+    conditional: true
+  parser: github_repo_meta@1
+  parse:
+    entity:
+      slug: anthropics-claude-code
+      label: anthropics/claude-code
+      type: Repo
+  expect:
+    content_type: &id003
+    - application/json
+  policy:
+    enabled: true
+    tos: allowed
+    tos_ref: https://docs.github.com/en/site-policy/acceptable-use-policies/github-acceptable-use-policies
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:cc-npm
+  inventory_id: C13
+  name: npm @anthropic-ai/claude-code
+  domain:
+  - G
+  class: rel
+  fetch:
+    kind: https
+    url: https://registry.npmjs.org/@anthropic-ai/claude-code/latest
+    conditional: true
+  parser: npm_meta@1
+  expect:
+    content_type: *id003
+  policy:
+    enabled: true
+    tos: allowed
+    tos_ref: https://docs.npmjs.com/policies/open-source-terms
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:cc-agent-sdk
+  inventory_id: C14
+  name: Claude Agent SDK 릴리스
+  domain:
+  - G
+  class: rel
+  fetch:
+    kind: https
+    urls:
+    - https://api.github.com/repos/anthropics/claude-agent-sdk-python/releases/latest
+    - https://api.github.com/repos/anthropics/claude-agent-sdk-typescript/releases/latest
+    conditional: true
+  parser: github_release@1
+  expect:
+    content_type: *id003
+  policy:
+    enabled: true
+    tos: allowed
+    tos_ref: https://docs.github.com/en/site-policy/acceptable-use-policies/github-acceptable-use-policies
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:claude-plugins-official
+  inventory_id: C15
+  name: claude-plugins-official 저장소와 마켓플레이스
+  domain:
+  - G
+  class: feed
+  fetch:
+    kind: https
+    url: https://api.github.com/repos/anthropics/claude-plugins-official
+    conditional: true
+  parser: github_repo_meta@1
+  expect:
+    content_type: *id003
+  policy:
+    enabled: true
+    tos: allowed
+    tos_ref: https://docs.github.com/en/site-policy/acceptable-use-policies/github-acceptable-use-policies
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: 마켓플레이스 sitemap URL은 C09와 같은 claude.com/sitemap.xml이라 중복 수집을 피하려고 저장소 메타만 받는다
+- id: src:cc-system-prompts
+  inventory_id: C16
+  name: Piebald-AI/claude-code-system-prompts 릴리스
+  domain:
+  - G
+  class: rel
+  fetch:
+    kind: https
+    url: https://api.github.com/repos/Piebald-AI/claude-code-system-prompts/releases/latest
+    conditional: true
+  parser: github_release@1
+  expect:
+    content_type: *id003
+  policy:
+    enabled: true
+    tos: allowed
+    tos_ref: https://docs.github.com/en/site-policy/acceptable-use-policies/github-acceptable-use-policies
+    robots: enforce
+    requires_decision: null
+    trust: secondary
+    retention: permanent
+    pii: false
+    needs_contact: false

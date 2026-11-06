@@ -1,0 +1,30 @@
+[project]
+name = "sagae-kb"
+version = "0.1.0"
+description = "sagae knowledge base: 출처 붙은 그래프 정보 저장소"
+requires-python = ">=3.14"
+dependencies = []
+
+[project.optional-dependencies]
+serve = ["mcp==2.3.0", "starlette==1.10.0", "uvicorn==0.54.0", "webauthn==3.0.1"]
+collect = [
+  "feedparser==6.0.14", "trafilatura==2.3.1", "lxml==6.1.3", "cssselect==1.6.0",
+  "pypdf==6.21.4", "pyyaml==6.0.3", "jsonschema==4.26.0",
+]
+dev = ["pytest", "schemathesis==4.32.7", "openapi-spec-validator==0.9.0"]
+
+[project.scripts]
+kb = "kb.cli:main"
+kb-mcp = "kb.serve.mcp:main"
+
+[build-system]
+requires = ["uv_build>=0.13.6,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "kb"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-m 'not perf'"
+markers = ["perf: 성능 시험. 기본 제외"]

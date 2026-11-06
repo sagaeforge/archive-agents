@@ -1,0 +1,35 @@
+{
+  "disableAllHooks": true,
+  "enableAllProjectMcpServers": false,
+  "permissions": {
+    "allow": [
+      "Workflow(kb-first-collect)",
+      "WebSearch",
+      "WebFetch",
+      "mcp__kb-collect__kb_fetch",
+      "mcp__kb-collect__kb_source",
+      "mcp__kb-collect__kb_get",
+      "mcp__kb-collect__kb_search",
+      "mcp__kb-collect__kb_ingest_validate",
+      "mcp__kb-collect__kb_ingest_submit",
+      "mcp__kb-collect__kb_ticket_list",
+      "mcp__kb-collect__kb_ticket_close"
+    ],
+    "deny": [
+      "WebFetch(domain:youtube.com)",
+      "WebFetch(domain:youtu.be)",
+      "WebFetch(domain:youtube-nocookie.com)",
+      "WebFetch(domain:googlevideo.com)",
+      "WebFetch(domain:ytimg.com)",
+      "WebFetch(domain:suggestqueries.google.com)",
+      "WebFetch(domain:trends.google.com)",
+      "WebFetch(domain:sec.gov)",
+      "WebFetch(domain:netflix.com)",
+      "WebFetch(domain:kobaco.co.kr)",
+      "Read",
+      "Bash",
+      "Write",
+      "Edit"
+    ]
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/events/record.redact.schema.json",
+  "title": "record.redact",
+  "description": "본문 삭제 기록. payload_shas의 원장 본문을 지운다. 체인은 유지된다.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1
+    },
+    "payload_shas": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      }
+    },
+    "shared": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      }
+    },
+    "objects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tier": {
+            "enum": [
+              "objects",
+              "fp",
+              "ttl"
+            ]
+          },
+          "sha": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "tier",
+          "sha"
+        ]
+      }
+    }
+  },
+  "required": [
+    "id",
+    "reason",
+    "payload_shas"
+  ]
+}

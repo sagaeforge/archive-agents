@@ -1,0 +1,229 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "edges": {
+        "columns": [
+          "id",
+          "src",
+          "dst",
+          "rtype",
+          "status"
+        ],
+        "rows": [
+          [
+            "r-01",
+            "e:feature:history",
+            "e:product:p",
+            "PART_OF",
+            "active"
+          ],
+          [
+            "r-02",
+            "e:tool:x",
+            "e:product:p",
+            "USES",
+            "active"
+          ],
+          [
+            "r-3osfk6yw7slz",
+            "f-1",
+            "e:tool:x",
+            "LINKS_TO",
+            "active"
+          ],
+          [
+            "r-ma-x",
+            "e:tool:mc",
+            "e:tool:x",
+            "USES",
+            "active"
+          ],
+          [
+            "r-par-1",
+            "e:tool:x",
+            "e:tool:alpha",
+            "USES",
+            "active"
+          ],
+          [
+            "r-par-2",
+            "e:tool:x",
+            "e:tool:alpha",
+            "DEPENDS_ON",
+            "active"
+          ]
+        ]
+      },
+      "meta": {
+        "edge_total": 6,
+        "graph": {
+          "directed": true,
+          "multi": true
+        },
+        "node_total": 18,
+        "order": "id_asc",
+        "truncated": false
+      },
+      "nodes": {
+        "columns": [
+          "id",
+          "type",
+          "label",
+          "origin",
+          "status"
+        ],
+        "rows": [
+          [
+            "e:feature:history",
+            "Feature",
+            "기록 기능",
+            "external",
+            "active"
+          ],
+          [
+            "e:policy:caption",
+            "Policy",
+            "합성 자막 규칙",
+            "external",
+            "active"
+          ],
+          [
+            "e:policy:future",
+            "Policy",
+            "합성 정책 미래",
+            "external",
+            "active"
+          ],
+          [
+            "e:policy:retro",
+            "Policy",
+            "합성 정책 소급",
+            "external",
+            "active"
+          ],
+          [
+            "e:policy:upload",
+            "Policy",
+            "합성 업로드 규칙",
+            "external",
+            "active"
+          ],
+          [
+            "e:policy:ypp",
+            "Policy",
+            "합성 정책 YPP",
+            "external",
+            "active"
+          ],
+          [
+            "e:product:p",
+            "Product",
+            "합성 제품 P",
+            "external",
+            "active"
+          ],
+          [
+            "e:tool:alpha",
+            "Tool",
+            "도구 알파",
+            "external",
+            "active"
+          ],
+          [
+            "e:tool:mc",
+            "Tool",
+            "병합 C",
+            "external",
+            "active"
+          ],
+          [
+            "e:tool:new",
+            "Tool",
+            "새 도구",
+            "external",
+            "active"
+          ],
+          [
+            "e:tool:rename",
+            "Tool",
+            "새이름",
+            "external",
+            "active"
+          ],
+          [
+            "e:tool:revived",
+            "Tool",
+            "되살아난 도구",
+            "external",
+            "active"
+          ],
+          [
+            "e:tool:tail",
+            "Tool",
+            "꼬리 도구",
+            "external",
+            "active"
+          ],
+          [
+            "e:tool:x",
+            "Tool",
+            "도구 X",
+            "external",
+            "active"
+          ],
+          [
+            "f-1",
+            "Note",
+            "공개 메모",
+            "first_party",
+            "active"
+          ],
+          [
+            "f-agent",
+            "Decision",
+            "에이전트 메모",
+            "first_party",
+            "active"
+          ],
+          [
+            "f-tail",
+            "Note",
+            "꼬리 메모",
+            "first_party",
+            "active"
+          ],
+          [
+            "s:rank",
+            "Series",
+            "합성 순위",
+            "external",
+            "active"
+          ]
+        ]
+      }
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "page": {
+      "next_cursor": null,
+      "total": 18,
+      "truncated": false
+    },
+    "schema_version": "0.3.1"
+  },
+  "case": "overview-ok",
+  "headers": {
+    "cache-control": "no-cache",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

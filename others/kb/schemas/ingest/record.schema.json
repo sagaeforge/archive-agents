@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/ingest/record.schema.json",
+  "title": "kb-ingest/1 record",
+  "description": "producer=user:* 묶음만. author를 받지 않는다.",
+  "type": "object",
+  "properties": {
+    "item": {
+      "const": "record"
+    },
+    "ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "id": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "body": {
+      "type": "string"
+    },
+    "body_format": {
+      "enum": [
+        "markdown",
+        "text"
+      ]
+    },
+    "sensitivity": {
+      "enum": [
+        "public",
+        "internal",
+        "private",
+        "secret"
+      ]
+    },
+    "retention": {
+      "type": "string"
+    },
+    "props": {
+      "type": "object"
+    },
+    "links": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "authored_at": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "item",
+    "title"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,14 @@
+# WP-13 내부 작업. LLM을 부르지 않는다. 6.1 봉인과 7 전송은 tick_stage_ship.py의 STAGES가 돈다.
+jobs:
+  - id: guard.sweep_tmp
+    every_s: 3600
+    stage: 6.1
+    run: "kb.guard.tick_stage_ship:job_sweep_tmp"
+  - id: guard.drill_due
+    every_s: 3600
+    stage: 7
+    run: "kb.guard.tick_stage_ship:job_drill_due"
+  - id: guard.export_md
+    every_s: 3600
+    stage: 7
+    run: "kb.guard.tick_stage_ship:job_export_md"

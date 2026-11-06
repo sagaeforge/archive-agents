@@ -1,0 +1,43 @@
+# 세션 지식 자동 수확(kb harvest). LLM도 네트워크도 쓰지 않는다. 상주 프로세스나 systemd 유닛은 없다.
+# tick 1단계(recover)가 끝난 뒤 한 시간에 한 번 돌고, 실행당 상한(아래 settings) 안에서만 쓴다. 절차: docs/runbooks/harvest.md
+# 읽는 곳(읽기 전용): ~/.claude/projects/*/memory/*.md, 같은 폴더의 워크플로우 journal.jsonl 결과,
+# 끝난 에이전트의 보고서, ~/sagae-* 체크아웃의 docs/research/*.md. 전사 전체와 도구 출력은 읽지 않는다.
+jobs:
+  - id: harvest.sessions
+    every_s: 3600
+    stage: 1
+    run: "kb.harvest.jobs:run"
+
+# 값을 바꿀 때는 여기서만 바꾼다. 모든 상한은 한 번의 실행에 걸리고, 넘은 일은 버리지 않고 다음 실행이 잇는다.
+settings:
+  enabled: true                        # false면 tick 작업이 아무것도 하지 않는다(수동 kb harvest는 그대로 돈다)
+  claude_projects: "~/.claude/projects"
+  repos: ["~/sagae-*"]                 # .git이 있는 폴더만. 경로나 글롭 목록
+  research_glob: "docs/research/*.md"
+  session: "harvest"                   # 기록의 작성자는 agent:harvest(대리 user:sagae)
+  # 스크래치패드와 시험 폴더 프로젝트는 폴더를 열기 전에 뺀다(프로젝트 폴더 이름에 거는 정규식)
+  exclude_projects:
+    - "scratchpad"
+    - "test-tmp"
+    - "^-(?:var-)?tmp-claude-\\d+-"
+    - "^-home-[^-]+--cache-"
+  exclude_agent_types: ["team-watcher", "probe", "probe2", "turncount"]
+  exclude_memory_files: ["MEMORY.md"]  # 색인 파일. 개별 메모리가 같은 내용을 담는다
+  exclude_memory_types: ["user"]       # 메모리 머리말 metadata.type. user(프로필)는 거두지 않고 feedback, project, reference는 거둔다
+  # 원본 읽기
+  min_age_s: 600                       # 이보다 최근에 고친 원본은 쓰는 중일 수 있어 미룬다
+  max_sources: 1000
+  max_read_bytes: 4194304
+  transcript_tail_bytes: 1048576       # 에이전트 전사는 끝에서 이만큼만 읽는다
+  # 보고서 길이 거름
+  min_report_chars: 800
+  max_report_chars: 20000
+  min_result_chars: 80
+  min_body_chars: 40
+  # 쓰기 상한(실행당)
+  max_body_bytes: 131072
+  max_writes: 40
+  max_write_bytes: 2097152
+  max_urls_per_source: 20
+  max_urls: 60
+  deadline_s: 120

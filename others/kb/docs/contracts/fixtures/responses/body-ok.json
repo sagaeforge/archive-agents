@@ -1,0 +1,29 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "body_format": "markdown",
+      "end": 46,
+      "start": 0,
+      "text": "# 공개 메모\n\n- 항목 하나\n- 항목 둘\n- 위젯 [도구 X](e:tool:x)\n",
+      "total_chars": 46
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "schema_version": "0.3.1"
+  },
+  "case": "body-ok",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

@@ -1,0 +1,7 @@
+[Unit]
+Description=sagae-kb jobs run
+
+[Service]
+Type=oneshot
+ExecStart=%h/sagae-kb-data/runtime/bin/kb jobs run
+TimeoutStartSec=2h

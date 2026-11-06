@@ -1,0 +1,135 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "author": "collector:fixture",
+      "backlinks": [
+        {
+          "id": "f-1",
+          "label": "공개 메모",
+          "rtype": "LINKS_TO",
+          "type": "Note"
+        }
+      ],
+      "backlinks_truncated": false,
+      "body_format": null,
+      "claims": [],
+      "claims_truncated": false,
+      "domain": [
+        "F"
+      ],
+      "edges": {
+        "in": [
+          {
+            "claim_id": null,
+            "dst": "e:tool:x",
+            "id": "r-3osfk6yw7slz",
+            "peer": {
+              "id": "f-1",
+              "label": "공개 메모",
+              "type": "Note"
+            },
+            "rtype": "LINKS_TO",
+            "src": "f-1",
+            "status": "active"
+          },
+          {
+            "claim_id": null,
+            "dst": "e:tool:x",
+            "id": "r-ma-x",
+            "peer": {
+              "id": "e:tool:mc",
+              "label": "병합 C",
+              "type": "Tool"
+            },
+            "rtype": "USES",
+            "src": "e:tool:ma",
+            "status": "active"
+          }
+        ],
+        "out": [
+          {
+            "claim_id": null,
+            "dst": "e:product:p",
+            "id": "r-02",
+            "peer": {
+              "id": "e:product:p",
+              "label": "합성 제품 P",
+              "type": "Product"
+            },
+            "rtype": "USES",
+            "src": "e:tool:x",
+            "status": "active"
+          },
+          {
+            "claim_id": null,
+            "dst": "e:tool:alpha",
+            "id": "r-par-1",
+            "peer": {
+              "id": "e:tool:alpha",
+              "label": "도구 알파",
+              "type": "Tool"
+            },
+            "rtype": "USES",
+            "src": "e:tool:x",
+            "status": "active"
+          },
+          {
+            "claim_id": null,
+            "dst": "e:tool:alpha",
+            "id": "r-par-2",
+            "peer": {
+              "id": "e:tool:alpha",
+              "label": "도구 알파",
+              "type": "Tool"
+            },
+            "rtype": "DEPENDS_ON",
+            "src": "e:tool:x",
+            "status": "active"
+          }
+        ],
+        "truncated": false
+      },
+      "expired_at": null,
+      "generated_by": null,
+      "id": "e:tool:x",
+      "label": "도구 X",
+      "link_status": null,
+      "liveness": null,
+      "merged_into": null,
+      "merged_into_final": null,
+      "on_behalf_of": null,
+      "origin": "external",
+      "props": {},
+      "recorded_at": "2027-01-15T08:00:16Z",
+      "sensitivity": "public",
+      "status": "active",
+      "type": "Tool",
+      "valid": {
+        "from": null,
+        "label": null,
+        "precision": null,
+        "to": null
+      },
+      "verification": null,
+      "version": 1
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "schema_version": "0.3.1"
+  },
+  "case": "node-backlinks",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

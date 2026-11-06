@@ -1,0 +1,105 @@
+# 대장 지시 문장의 항목별 처리값. 매니페스트와 행별로 대조한다(test_ledger.py).
+# foundation-design.html=urls_only, spike-results.md=filtered + exclude_lines [173, 180], journal.jsonl=jsonl_filter, spikes/=index,
+# sagae-bb 전사=urls_only + urls_file bb-urls.txt, package-lock.json=versions_only, project-tools.md=git_show, 제외=excluded, 나머지=full
+tools-oss-viewers:
+  treat: full
+tools-ui-blocks:
+  treat: full
+tools-trends:
+  treat: full
+tools-mcp-gateways:
+  treat: full
+tools-mcp-servers:
+  treat: full
+tools-http-gateway:
+  treat: full
+tools-verify-gateway:
+  treat: full
+tools-verify-viewer:
+  treat: full
+tools-token-tooling:
+  treat: full
+tools-spike-results:
+  treat: filtered
+  exclude_lines:
+  - 173
+  - 180
+tools-spikes:
+  treat: index
+tools-orca-guide:
+  treat: full
+tools-orca-browser:
+  treat: full
+cp0e-docs-cli-reference:
+  treat: full
+cp0e-docs-env-vars:
+  treat: full
+cp0e-docs-hooks:
+  treat: full
+cp0e-docs-memory:
+  treat: full
+cp0e-docs-permissions:
+  treat: full
+cp0e-docs-security:
+  treat: full
+cp0e-docs-settings-reference:
+  treat: full
+cp0e-docs-settings:
+  treat: full
+cp0e-docs-sub-agents:
+  treat: full
+cp0e-docs-workflows:
+  treat: full
+cp0e-docs-worktrees:
+  treat: full
+cp0e-foundation-design:
+  treat: urls_only
+cp0e-journal:
+  treat: jsonl_filter
+  select:
+  - investigate:trail
+  - investigate:rtk
+  - investigate:claude
+cs22-graft:
+  treat: full
+cs22-rtk:
+  treat: full
+cs22-manifest:
+  treat: full
+cs22-catalog:
+  treat: full
+cs22-orca-git-graph:
+  treat: full
+cs22-git-graph:
+  treat: full
+cs22-orca-windows-notification-dot:
+  treat: full
+cs22-vibeguard:
+  treat: full
+bb-marketplace:
+  treat: urls_only
+  urls_file: bb-urls.txt
+bb-plugins-readme:
+  treat: full
+bb-proxmox-lock:
+  treat: versions_only
+  select:
+  - '@modelcontextprotocol/sdk'
+  - zod
+cp9d-project-tools:
+  treat: full
+  git_show: true
+ex-audit-build:
+  treat: excluded
+ex-audit-ops:
+  treat: excluded
+ex-cp-scratchpad:
+  treat: excluded
+ex-tools-ecosystem:
+  treat: excluded
+ex-tools-verification:
+  treat: excluded
+ex-tools-kb-contract:
+  treat: excluded
+ex-tools-brief:
+  treat: excluded

@@ -1,0 +1,11 @@
+# WP-20 내부 작업. LLM과 외부 네트워크를 쓰지 않는다. 6.4 vector 단계는 kb/rank/tick_stage.py의 STAGES가 돈다.
+# 증분은 같은 gold 빌드면 즉시 건너뛴다. venv-rank가 없으면 건너뛰고 조회는 어휘로 동작한다(R10).
+jobs:
+  - id: rank.index
+    every_s: 900
+    stage: 6.4
+    run: "kb.rank.tick_stage:job_index"
+  - id: rank.prune
+    every_s: 86400
+    stage: 6.4
+    run: "kb.rank.tick_stage:job_prune"

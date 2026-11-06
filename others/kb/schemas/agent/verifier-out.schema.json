@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/agent/verifier-out.schema.json",
+  "title": "kb-verifier 출력",
+  "type": "object",
+  "properties": {
+    "checked": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "mismatches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "detail"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "incidents": {
+      "$ref": "incidents.schema.json"
+    }
+  },
+  "required": [
+    "checked",
+    "mismatches",
+    "incidents"
+  ],
+  "additionalProperties": true
+}

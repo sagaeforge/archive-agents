@@ -1,0 +1,62 @@
+[
+  {
+    "url": "file:///etc/passwd",
+    "reason": "scheme"
+  },
+  {
+    "url": "http://example.com/",
+    "reason": "scheme"
+  },
+  {
+    "url": "ftp://example.com/",
+    "reason": "scheme"
+  },
+  {
+    "url": "https://user:pw@example.com/",
+    "reason": "userinfo"
+  },
+  {
+    "url": "https://127.0.0.1/",
+    "reason": "addr"
+  },
+  {
+    "url": "https://localhost/",
+    "reason": "addr"
+  },
+  {
+    "url": "https://[::1]/",
+    "reason": "addr"
+  },
+  {
+    "url": "https://[::ffff:127.0.0.1]/",
+    "reason": "addr"
+  },
+  {
+    "url": "https://2130706433/",
+    "reason": "addr"
+  },
+  {
+    "url": "https://0x7f.0.0.1/",
+    "reason": "addr"
+  },
+  {
+    "url": "https://169.254.169.254/latest/meta-data/",
+    "reason": "addr"
+  },
+  {
+    "url": "https://10.x.x.x/",
+    "reason": "addr"
+  },
+  {
+    "url": "https://192.0.2.1/",
+    "reason": "addr"
+  },
+  {
+    "url": "https://172.x.x.x/",
+    "reason": "addr"
+  },
+  {
+    "url": "https://example.com:8443/",
+    "reason": "port"
+  }
+]

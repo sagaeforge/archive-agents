@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# 개발 환경에서 명령 실행: ops/bin/dev <명령...>
+set -euo pipefail
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# 실운영 KB_HOME 보호: KB_LIVE=1 없이는 실운영 경로로 실행하지 않는다. 기본값은 빌드 영역.
+_prod=/home/user/sagae-kb-data
+export KB_HOME="${KB_HOME:-${KB_BUILD_ROOT:-$HOME/.cache/sagae-kb/build}/dev-home}"
+if [ "${KB_HOME%/}" = "$_prod" ] && [ "${KB_LIVE:-}" != "1" ]; then
+  echo "ops/bin/dev: KB_HOME이 실운영 경로($_prod)이다. KB_LIVE=1 없이는 실행하지 않는다." >&2
+  exit 3
+fi
+# KB_HOME만 바꾼 시험에서도 툴체인은 공용 기본값을 쓴다.
+if [ -z "${KB_TOOLCHAIN:-}" ] && [ -n "${KB_HOME:-}" ] && [ ! -x "$KB_HOME/runtime/uv/uv" ]; then
+  export KB_TOOLCHAIN=/home/user/sagae-kb-data/runtime
+fi
+. "$here/env.sh"
+export UV_PROJECT_ENVIRONMENT="$KB_TOOLCHAIN/venv-dev"
+exec uv run --frozen --all-extras --project "$KB_REPO" "$@"

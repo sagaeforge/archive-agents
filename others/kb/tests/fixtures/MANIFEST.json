@@ -1,0 +1,145 @@
+{
+  "generated": "2026-11-01",
+  "files": [
+    {
+      "path": "tests/fixtures/fetch/bypass.json",
+      "sha256": "1764ec32cd35df62c90b3f63f14528eb39e15655ab599ef63662d9623ed1527c",
+      "source": "/tmp/claude-1000/-home-sagae-sagae-knowloge-base/b32eef31-b09c-4e58-8902-431f279117b3/scratchpad/adr/scripts/fetch_guard.py (CASES)"
+    },
+    {
+      "path": "tests/fixtures/gate/docs/headless.in",
+      "sha256": "380463220ecf6565afb7fd73914a4a5cf5795c991e78fbb6093df65253f01961",
+      "source": "/tmp/claude-1000/-home-sagae-sagae-knowloge-base/b32eef31-b09c-4e58-8902-431f279117b3/scratchpad/proposal-retrieval/gate/out/headless.in"
+    },
+    {
+      "path": "tests/fixtures/gate/docs/headless.json",
+      "sha256": "ac62a318cc9d4c196d9928b1bc30cd026be69ceacc9ed8504b028faa2139b89d",
+      "source": "/tmp/claude-1000/-home-sagae-sagae-knowloge-base/b32eef31-b09c-4e58-8902-431f279117b3/scratchpad/proposal-retrieval/gate/out/headless.json"
+    },
+    {
+      "path": "tests/fixtures/gate/docs/headless.txt",
+      "sha256": "2eccba0231b54e18a62d163739793d062c9fbd7ced5e6bbaa80f295c110e47fb",
+      "source": "/tmp/claude-1000/-home-sagae-sagae-knowloge-base/b32eef31-b09c-4e58-8902-431f279117b3/scratchpad/proposal-retrieval/gate/out/headless.txt"
+    },
+    {
+      "path": "tests/fixtures/gate/docs/kowiki_yt.in",
+      "sha256": "947b7895d95627efffa556044356967e6119563e6c6e38de4966508760309b4d",
+      "source": "/tmp/claude-1000/-home-sagae-sagae-knowloge-base/b32eef31-b09c-4e58-8902-431f279117b3/scratchpad/proposal-retrieval/gate/out/kowiki_yt.in"
+    },
+    {
+      "path": "tests/fixtures/gate/docs/kowiki_yt.json",
+      "sha256": "a6705fc69636269b7e3f666461224857af257a98bc3a50dbdcc5a5a4d66a2bb8",
+      "source": "/tmp/claude-1000/-home-sagae-sagae-knowloge-base/b32eef31-b09c-4e58-8902-431f279117b3/scratchpad/proposal-retrieval/gate/out/kowiki_yt.json"
+    },
+    {
+      "path": "tests/fixtures/gate/docs/kowiki_yt.txt",
+      "sha256": "b33557cda28d1827ae778f3fafacd91472f2c6f859e96cfaa01a24978b4f559f",
+      "source": "/tmp/claude-1000/-home-sagae-sagae-knowloge-base/b32eef31-b09c-4e58-8902-431f279117b3/scratchpad/proposal-retrieval/gate/out/kowiki_yt.txt"
+    },
+    {
+      "path": "tests/fixtures/gate/docs/quota.in",
+      "sha256": "095ba09c11f89454be479f693908acde064a40e9b67dd0d22be093ff2047e2b0",
+      "source": "/tmp/claude-1000/-home-sagae-sagae-knowloge-base/b32eef31-b09c-4e58-8902-431f279117b3/scratchpad/proposal-retrieval/gate/out/quota.in"
+    },
+    {
+      "path": "tests/fixtures/gate/docs/quota.json",
+      "sha256": "51b966a898d6d3b931849030e8c088fa79a5c29a3d5150cfb67b5bdd87d79dc1",
+      "source": "/tmp/claude-1000/-home-sagae-sagae-knowloge-base/b32eef31-b09c-4e58-8902-431f279117b3/scratchpad/proposal-retrieval/gate/out/quota.json"
+    },
+    {
+      "path": "tests/fixtures/gate/docs/quota.txt",
+      "sha256": "1f877e6899b339de87e8feb2dd44c383dd6a543a7755f8bf1f4d95c4f6c2846d",
+      "source": "/tmp/claude-1000/-home-sagae-sagae-knowloge-base/b32eef31-b09c-4e58-8902-431f279117b3/scratchpad/proposal-retrieval/gate/out/quota.txt"
+    },
+    {
+      "path": "tests/fixtures/gate/docs/ypp_ko.in",
+      "sha256": "7d1b556090473eb84f8bbd5f093e316bc8a8179b124a8605d1c60082408a5534",
+      "source": "/tmp/claude-1000/-home-sagae-sagae-knowloge-base/b32eef31-b09c-4e58-8902-431f279117b3/scratchpad/proposal-retrieval/gate/out/ypp_ko.in"
+    },
+    {
+      "path": "tests/fixtures/gate/docs/ypp_ko.json",
+      "sha256": "0c2e19f15240fe8d747fd39d0eb0d0b946b751ddbd392afacb2151f1e96542a9",
+      "source": "/tmp/claude-1000/-home-sagae-sagae-knowloge-base/b32eef31-b09c-4e58-8902-431f279117b3/scratchpad/proposal-retrieval/gate/out/ypp_ko.json"
+    },
+    {
+      "path": "tests/fixtures/gate/docs/ypp_ko.txt",
+      "sha256": "6df5db3046ea268008f3f498f2f311831ccaa00854483ec16ed7724655341eeb",
+      "source": "/tmp/claude-1000/-home-sagae-sagae-knowloge-base/b32eef31-b09c-4e58-8902-431f279117b3/scratchpad/proposal-retrieval/gate/out/ypp_ko.txt"
+    },
+    {
+      "path": "tests/fixtures/gate/gate_rows.json",
+      "sha256": "bb6b366e824ca22b11d86bf33db2e18a8e53764f54717b79dd91b6a4a1e423be",
+      "source": "/tmp/claude-1000/-home-sagae-sagae-knowloge-base/b32eef31-b09c-4e58-8902-431f279117b3/scratchpad/proposal-retrieval/gate/out/gate_rows.json"
+    },
+    {
+      "path": "tests/fixtures/gate/prompt.txt",
+      "sha256": "c40993820d316a45cab3453c43ebf46d30639859117b2b88310b1702b21492d8",
+      "source": "/tmp/claude-1000/-home-sagae-sagae-knowloge-base/b32eef31-b09c-4e58-8902-431f279117b3/scratchpad/proposal-retrieval/gate/prompt.txt"
+    },
+    {
+      "path": "tests/fixtures/gate/schema.json",
+      "sha256": "ef34b64cbc9b5a9ba191e71d61d566757b4099c31e4922cba5af837f251b4be3",
+      "source": "/tmp/claude-1000/-home-sagae-sagae-knowloge-base/b32eef31-b09c-4e58-8902-431f279117b3/scratchpad/proposal-retrieval/gate/schema.json"
+    },
+    {
+      "path": "tests/fixtures/gate/t5_gate.py",
+      "sha256": "e1510a54b2b7b7836ab82fa95cd334ba1ead04ebc255ae9f4a396caae0c7aad6",
+      "source": "/tmp/claude-1000/-home-sagae-sagae-knowloge-base/b32eef31-b09c-4e58-8902-431f279117b3/scratchpad/redteam/t5_gate.py"
+    },
+    {
+      "path": "tests/fixtures/gate/t5_tables.py",
+      "sha256": "bb6b1f1181bab895c0547fa47abb347ae02699b84362cbc8ee9b3599fd120950",
+      "source": "/tmp/claude-1000/-home-sagae-sagae-knowloge-base/b32eef31-b09c-4e58-8902-431f279117b3/scratchpad/adr/scripts/t5_tables.py"
+    },
+    {
+      "path": "tests/fixtures/streams/stem-c_b.jsonl",
+      "sha256": "ce71ee4a8d0c58c4b3a008d20ccbf2c05439b8b48d4231832067e696b979616b",
+      "source": "/tmp/claude-1000/-home-sagae-sagae-knowloge-base/b32eef31-b09c-4e58-8902-431f279117b3/scratchpad/harness/out/c_b.jsonl"
+    },
+    {
+      "path": "tests/fixtures/streams/stem-c_d.jsonl",
+      "sha256": "0d572f8e35ed8556f3793572045aaad021ece1c1626c3bb9217635433bd3a7fe",
+      "source": "/tmp/claude-1000/-home-sagae-sagae-knowloge-base/b32eef31-b09c-4e58-8902-431f279117b3/scratchpad/harness/out/c_d.jsonl"
+    },
+    {
+      "path": "tests/fixtures/streams/stem-r12.jsonl",
+      "sha256": "14d4473d4ec1c5a784f7e34e0a462d18ddf8d71c7490f38ce85d85a158dea7eb",
+      "source": "/tmp/claude-1000/-home-sagae-sagae-knowloge-base/b32eef31-b09c-4e58-8902-431f279117b3/scratchpad/harness/out/r12.jsonl"
+    },
+    {
+      "path": "tests/fixtures/streams/stem-r13.jsonl",
+      "sha256": "7dc339106581a32de26b9a2886093508edaa8fbe3cfb3cafffc9d58c800e4545",
+      "source": "/tmp/claude-1000/-home-sagae-sagae-knowloge-base/b32eef31-b09c-4e58-8902-431f279117b3/scratchpad/harness/out/r13.jsonl"
+    },
+    {
+      "path": "tests/fixtures/streams/stem-t11b.jsonl",
+      "sha256": "7f5d160e70536e4672746fe20e7bb81002f997db59997584036babf2585ff73e",
+      "source": "/tmp/claude-1000/-home-sagae-sagae-knowloge-base/b32eef31-b09c-4e58-8902-431f279117b3/scratchpad/harness/out/t11b.jsonl"
+    },
+    {
+      "path": "tests/fixtures/streams/stem-t22.jsonl",
+      "sha256": "109d44ce7d295f8e07d01c9a6e06070504dfb34fe77e8fce6f9ea1552fb95c31",
+      "source": "/tmp/claude-1000/-home-sagae-sagae-knowloge-base/b32eef31-b09c-4e58-8902-431f279117b3/scratchpad/harness/out/t22.jsonl"
+    },
+    {
+      "path": "tests/fixtures/tokens/attack.json",
+      "sha256": "0aa3fdf604740aefb18a7ed73b80e3cdd74ac8113d0e4b2824d1c9d3aa6882c8",
+      "source": "/tmp/claude-1000/-home-sagae-sagae-knowloge-base/b32eef31-b09c-4e58-8902-431f279117b3/scratchpad/adr/scripts/tok_eval.py (CORPUS, CASES, ALIAS)"
+    },
+    {
+      "path": "tests/fixtures/tokens/attack_edge.json",
+      "sha256": "b112c48a4802586da480f0dde91ff2642588821afc0273f9ea10a6b6681e3ecd",
+      "source": "/tmp/claude-1000/-home-sagae-sagae-knowloge-base/b32eef31-b09c-4e58-8902-431f279117b3/scratchpad/audit/blocking/tok_edge.py"
+    },
+    {
+      "path": "/home/user/sagae-kb-data/runtime/eval-data/ko-strategyqa/docs.json",
+      "sha256": "5ab3c86722a39d893780675c3f87b8e255e1a47a8c44f41f904b955ed77d8bfe",
+      "source": "/tmp/claude-1000/-home-sagae-sagae-knowloge-base/b32eef31-b09c-4e58-8902-431f279117b3/scratchpad/retrieval/data_sqa/docs.json"
+    },
+    {
+      "path": "/home/user/sagae-kb-data/runtime/eval-data/ko-strategyqa/queries.json",
+      "sha256": "64b5091197ed57768aaf4c02156c715a5f9df85b857dcfc12d906c68e519d273",
+      "source": "/tmp/claude-1000/-home-sagae-sagae-knowloge-base/b32eef31-b09c-4e58-8902-431f279117b3/scratchpad/retrieval/data_sqa/queries.json"
+    }
+  ]
+}

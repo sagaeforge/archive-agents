@@ -1,0 +1,86 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "chains": [
+        {
+          "items": [
+            {
+              "expired_at": "2027-01-16T14:00:00Z",
+              "id": "c-dead-state",
+              "own_status": "active",
+              "recorded_at": "2027-01-15T18:00:00Z",
+              "status": "active",
+              "status_basis": "own",
+              "superseded_by": null,
+              "unit": null,
+              "valid": {
+                "from": null,
+                "label": null,
+                "precision": null,
+                "to": null
+              },
+              "value": "위젯",
+              "version": 1
+            },
+            {
+              "expired_at": null,
+              "id": "c-dead-state",
+              "own_status": "active",
+              "recorded_at": "2027-01-16T14:00:00Z",
+              "status": "dead",
+              "status_basis": "subject",
+              "superseded_by": null,
+              "unit": null,
+              "valid": {
+                "from": null,
+                "label": null,
+                "precision": null,
+                "to": null
+              },
+              "value": "위젯",
+              "version": 2
+            }
+          ],
+          "predicate": "supports",
+          "slot": null
+        }
+      ],
+      "edges": [],
+      "id": "c-dead-state",
+      "versions": [
+        {
+          "expired_at": "2027-01-16T14:00:00Z",
+          "label": "dead는 위젯을 지원한다",
+          "recorded_at": "2027-01-15T18:00:00Z",
+          "status": "active",
+          "version": 1
+        },
+        {
+          "expired_at": null,
+          "label": "dead는 위젯을 지원한다",
+          "recorded_at": "2027-01-16T14:00:00Z",
+          "status": "active",
+          "version": 2
+        }
+      ]
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "schema_version": "0.3.1"
+  },
+  "case": "history-dead-claim",
+  "headers": {
+    "cache-control": "no-cache",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

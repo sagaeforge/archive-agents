@@ -1,0 +1,6 @@
+/.state/
+/.venv/
+/graft/
+__pycache__/
+.pytest_cache/
+.claude/settings.local.json

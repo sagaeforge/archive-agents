@@ -1,0 +1,60 @@
+{
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/json"
+  },
+  "id": "publish-external-ready",
+  "method": "GET",
+  "path_template": "/v1/actions/{id}",
+  "response": {
+    "applied_seq": 101,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-fixture",
+    "data": {
+      "action": "publish",
+      "action_id": "a-fixture-publish",
+      "candidates": [
+        {
+          "body": "합성 결과",
+          "body_sha": "979a66ad8eb93f22477258746ca588e3b15457a69eee60c2ebce19f579cb3c5e",
+          "sensitivity": "private",
+          "title": "합성 정제 결과",
+          "type": "Note"
+        }
+      ],
+      "code": null,
+      "cost_usd": "0.0025",
+      "created_at": "2026-11-06T00:00:00Z",
+      "duration_ms": 29,
+      "engine": {
+        "backend": "synthetic",
+        "kind": "external",
+        "model": "synthetic"
+      },
+      "executed": false,
+      "expected_version": 1,
+      "expires_at": "2026-11-06T00:15:02Z",
+      "external_refine": {
+        "engine": {
+          "backend": "synthetic",
+          "kind": "external",
+          "model": "synthetic"
+        },
+        "external_payload_sha": "a7dff4f602caf34dbd08d411a3ea22bdcb9243e86a70a8ae0f07ac9938f832e8",
+        "request_preview": "{\"engine\":\"synthetic\",\"model\":\"synthetic\",\"memo\":{\"title\":\"합성 메모\",\"body\":\"합성\"},\"parameters\":{}}",
+        "status": "consented"
+      },
+      "refinement_mode": "external_consented",
+      "state": "ready",
+      "target": "f-fixture-note"
+    },
+    "data_as_of": "2026-11-06T00:00:00Z",
+    "degraded": [],
+    "epoch": 1,
+    "schema_version": "0.5.0"
+  },
+  "status": 200
+}

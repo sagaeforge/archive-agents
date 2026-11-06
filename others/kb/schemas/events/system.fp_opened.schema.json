@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/events/system.fp_opened.schema.json",
+  "title": "system.fp_opened",
+  "description": "first_party 쓰기를 연다.",
+  "type": "object",
+  "properties": {
+    "mode": {
+      "enum": [
+        "drill",
+        "accept_single_copy"
+      ]
+    },
+    "drill_at": {
+      "type": "integer"
+    },
+    "authored_before": {
+      "type": "integer"
+    }
+  },
+  "required": [
+    "mode"
+  ]
+}

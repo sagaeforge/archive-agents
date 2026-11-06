@@ -1,0 +1,662 @@
+# WP-07 소스 레지스트리(platform.yaml). 원본: ADR-0001 10.4, docs/research/sources-inventory*.md, ADR-0002.
+# policy.reason: 비활성 사유 또는 주의. parse: 어댑터 설정. 비활성 소스는 enabled=false이고 수집 코드가 호출하지 않는다.
+sources:
+- id: src:yt-data-api
+  inventory_id: P01
+  name: YouTube Data API v3
+  domain:
+  - A
+  - D
+  - F
+  class: rel
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: no_clause
+    tos_ref: https://developers.google.com/youtube/terms/developer-policies
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: '키 필요. 어댑터와 자격 증명 처리가 없다. 켜는 조건: 결정 1 + WP-24'
+- id: src:yt-analytics-api
+  inventory_id: P02
+  name: YouTube Analytics API
+  domain:
+  - C
+  - D
+  class: rel
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: '채널 소유자 OAuth 필요. 켜는 조건: 결정 1 + WP-24'
+- id: src:yt-reporting-api
+  inventory_id: P03
+  name: YouTube Reporting API
+  domain:
+  - C
+  - D
+  class: rel
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: '채널 소유자 OAuth 필요. 켜는 조건: 결정 1 + WP-24'
+- id: src:yt-suggest
+  inventory_id: P04
+  name: 자동완성 엔드포인트
+  domain:
+  - A
+  class: short
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: '결정 1 답: 쓰지 않는다 중 google.com 호스트 변형만 WP-24가 켠다. suggestqueries-clients6.youtube.com 변형은 쓰지 않는다'
+- id: src:yt-dlp
+  inventory_id: P05
+  name: yt-dlp
+  domain:
+  - A
+  - C
+  - D
+  - F
+  class: rel
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: forbidden
+    tos_ref: https://www.youtube.com/t/terms
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: '결정 1 답: 쓰지 않는다: yt-dlp. YouTube 약관이 자동화 접근을 금지한다'
+- id: src:innertube
+  inventory_id: P06
+  name: InnerTube(youtubei.js)
+  domain:
+  - A
+  - C
+  - D
+  - F
+  class: rel
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: forbidden
+    tos_ref: https://www.youtube.com/t/terms
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: '결정 1 답: 쓰지 않는다: /youtubei/는 robots Disallow'
+- id: src:yt-channel-rss
+  inventory_id: P07
+  name: 채널 RSS, WebSub
+  domain:
+  - D
+  - F
+  class: rel
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: signals_conflict
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: '결정 1 답: 쓰지 않는다: /feeds/videos.xml은 robots Disallow. WebSub는 공개 콜백 서버가 필요해 상주 프로세스 0과 충돌한다'
+- id: src:trends-api-alpha
+  inventory_id: P08
+  name: Google Trends API 알파
+  domain:
+  - A
+  - B
+  class: rel
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: '신청제 알파, 미승인. 켜는 조건: 결정 1 + WP-24'
+- id: src:google-trends
+  inventory_id: P09
+  name: Google Trends 비공식 경로
+  domain:
+  - A
+  - B
+  class: rel
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: P09c Trends RSS는 결정 1 답에 따라 WP-24가 켠다. P09a Explore, P09b 내부 API는 쓰지 않는다
+- id: src:kworb
+  inventory_id: P10
+  name: Kworb 한국 트렌딩 차트
+  domain:
+  - A
+  - B
+  class: chart
+  fetch:
+    kind: https
+    urls:
+    - https://kworb.net/youtube/trending/kr.html
+    - https://kworb.net/youtube/insights/kr.html
+    - https://kworb.net/youtube/insights/kr_daily.html
+    conditional: true
+  parser: kworb@1
+  expect:
+    content_type:
+    - text/html
+  policy:
+    enabled: true
+    tos: no_clause
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: secondary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:playboard
+  inventory_id: P11
+  name: Playboard
+  domain:
+  - B
+  - E
+  class: rel
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: forbidden
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: 약관이 로봇·스크립트와 상업적 사용을 금지한다
+- id: src:socialblade
+  inventory_id: P12
+  name: Social Blade
+  domain:
+  - B
+  - D
+  class: rel
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: forbidden
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: 대량 복제·크롤링 금지. Business API는 키 경로(WP-24)
+- id: src:yt-charts-internal
+  inventory_id: P13
+  name: YouTube Charts 내부 API
+  domain:
+  - B
+  class: rel
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: forbidden
+    tos_ref: https://www.youtube.com/t/terms
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: '결정 1 답: 쓰지 않는다: 비공식, /youtubei/ Disallow'
+- id: src:yt-transcript-api
+  inventory_id: P14
+  name: youtube-transcript-api
+  domain:
+  - C
+  - D
+  - F
+  class: rel
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: forbidden
+    tos_ref: https://www.youtube.com/t/terms
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: '결정 1 답: 쓰지 않는다: YouTube 약관'
+- id: src:yt-studio-research
+  inventory_id: P15
+  name: YouTube Studio Research 탭
+  domain:
+  - A
+  class: rel
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: 프로그램 접근 경로가 없다. 채널 로그인 필요
+- id: src:chzzk-internal
+  inventory_id: X01
+  name: 치지직 내부 API
+  domain:
+  - B
+  class: rel
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: forbidden
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: 비공식, 네이버 약관이 자동화 수집을 금지한다
+- id: src:chzzk-open
+  inventory_id: X02
+  name: 치지직 Open API
+  domain:
+  - B
+  - F
+  class: rel
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: 앱 등록과 Client 인증 필요. 사용자가 계정을 제공한 뒤 WP-24
+- id: src:soop-internal
+  inventory_id: X03
+  name: SOOP 내부 API
+  domain:
+  - B
+  class: rel
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: 비공식, 약관 원문 미확인. 결정 1
+- id: src:soop-open
+  inventory_id: X04
+  name: SOOP Open API
+  domain:
+  - B
+  - F
+  class: rel
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: client_id 필요. 사용자가 계정을 제공한 뒤 WP-24
+- id: src:twitch-helix
+  inventory_id: X05
+  name: Twitch Helix
+  domain:
+  - B
+  - F
+  class: rel
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: OAuth 필요. 사용자가 계정을 제공한 뒤 WP-24
+- id: src:twitchtracker
+  inventory_id: X06
+  name: TwitchTracker
+  domain:
+  - B
+  class: rel
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: '본문 0바이트. 켜는 조건: 경로 확인'
+- id: src:streams-charts
+  inventory_id: X07
+  name: Streams Charts
+  domain:
+  - B
+  class: quarter
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: 로컬 Cloudflare 403. 키 또는 계정이 필요하다. 사용자가 계정을 제공한 뒤 WP-24
+- id: src:tiktok-research
+  inventory_id: X08
+  name: TikTok Research Tools
+  domain:
+  - B
+  class: rel
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: 기관 승인 필요, 한국 미포함
+- id: src:tiktok-creative-center
+  inventory_id: X09
+  name: TikTok Creative Center
+  domain:
+  - A
+  - B
+  - E
+  class: rel
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: 로그인 범위 미확인, SPA, robots가 검색·AI 봇을 전면 Disallow
+- id: src:meta-content-library
+  inventory_id: X10
+  name: Meta Content Library
+  domain:
+  - B
+  class: rel
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: 기관 소속 승인 필요
+- id: src:netflix-top10
+  inventory_id: X11
+  name: Netflix Top 10 TSV
+  domain:
+  - B
+  class: weekly
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: forbidden
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: robots Disallow /, 약관 1.8이 자동 접근을 금지, 국가 파일 32.8 MB는 크기 상한 초과. 필요하면 사람이 받아 inbox/로 넣는다
+- id: src:flixpatrol
+  inventory_id: X12
+  name: FlixPatrol
+  domain:
+  - B
+  class: rel
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: 'Cloudflare 403. 켜는 조건: 경로 확인'
+- id: src:kinolights
+  inventory_id: X13
+  name: 키노라이츠
+  domain:
+  - B
+  class: rel
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: '앱 소개 페이지. 켜는 조건: 경로 확인'
+- id: src:sec-edgar
+  inventory_id: X14
+  name: SEC EDGAR
+  domain:
+  - B
+  class: quarter
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: 연락처 요구 소스. 사용자 결정 5(지정 안 함)로 꺼짐. sec.gov는 거부 호스트
+- id: src:dart-openapi
+  inventory_id: X18
+  name: DART OpenAPI
+  domain:
+  - B
+  class: quarter
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: 인증키 필요. 사용자가 키를 제공한 뒤 WP-24
+- id: src:kosis-openapi
+  inventory_id: X19
+  name: KOSIS OpenAPI, data.go.kr
+  domain:
+  - B
+  class: rel
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: 인증키 필요. 사용자가 키를 제공한 뒤 WP-24
+- id: src:google-ads-api
+  inventory_id: X20
+  name: Google Ads API
+  domain:
+  - A
+  - E
+  class: rel
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: Google Cloud 프로젝트와 Ads 계정 필요. 사용자가 계정을 제공한 뒤 WP-24
+- id: src:kw-tools
+  inventory_id: X21
+  name: vidIQ, TubeBuddy, Ahrefs YouTube
+  domain:
+  - A
+  class: rel
+  fetch:
+    kind: https
+  policy:
+    enabled: false
+    tos: unverified
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: unknown
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: 유료 계정 필요. 사용자가 계정을 제공한 뒤 WP-24

@@ -1,0 +1,49 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "items": [
+        {
+          "at": "2027-01-15T08:00:01Z",
+          "id": "src:a",
+          "kind": "source.registered",
+          "origin": "external",
+          "seq": 1,
+          "type": "Source",
+          "version": 1
+        },
+        {
+          "at": "2027-01-15T08:00:02Z",
+          "id": "src:b",
+          "kind": "source.registered",
+          "origin": "external",
+          "seq": 2,
+          "type": "Source",
+          "version": 1
+        }
+      ]
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "page": {
+      "next_cursor": "eyJlIjoyLCJzIjoyfQ",
+      "total": null,
+      "truncated": true
+    },
+    "schema_version": "0.3.1"
+  },
+  "case": "changes-limit-2",
+  "headers": {
+    "cache-control": "no-cache",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

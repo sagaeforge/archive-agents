@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/events/entity.alias.schema.json",
+  "title": "entity.alias",
+  "description": "별칭 추가.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "alias": {
+      "type": "string",
+      "minLength": 1
+    },
+    "lang": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "alias"
+  ]
+}

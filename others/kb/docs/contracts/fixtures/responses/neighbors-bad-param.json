@@ -1,0 +1,18 @@
+{
+  "body": {
+    "code": "bad_param",
+    "detail": "depth는 1~2",
+    "instance": "/v1/nodes/e:product:p/neighbors",
+    "param": "depth",
+    "status": 400,
+    "title": "bad param",
+    "type": "https://kb.local/problems/bad-param"
+  },
+  "case": "neighbors-bad-param",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/problem+json",
+    "vary": "Authorization"
+  },
+  "status": 400
+}

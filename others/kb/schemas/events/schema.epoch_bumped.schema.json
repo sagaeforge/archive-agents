@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/events/schema.epoch_bumped.schema.json",
+  "title": "schema.epoch_bumped",
+  "description": "복원 등으로 epoch을 올린다.",
+  "type": "object",
+  "properties": {
+    "reason": {
+      "type": "string",
+      "minLength": 1
+    },
+    "lost_from_seq": {
+      "type": "integer"
+    },
+    "lost_to_seq": {
+      "type": "integer"
+    }
+  },
+  "required": [
+    "reason"
+  ]
+}

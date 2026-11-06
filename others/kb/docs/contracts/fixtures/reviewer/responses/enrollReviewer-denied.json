@@ -1,0 +1,24 @@
+{
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/problem+json"
+  },
+  "id": "enrollReviewer-denied",
+  "method": "POST",
+  "path_template": "/v1/reviewer/enroll",
+  "request": {
+    "credential_id": "synthetic-credential",
+    "origin": "http://localhost:4812",
+    "public_key": "synthetic-public-key",
+    "rp_id": "localhost"
+  },
+  "response": {
+    "code": "scope_denied",
+    "detail": "KB 쓰기 권한이 없습니다. 토큰을 다시 설정하세요",
+    "instance": "/v1/reviewer/enroll",
+    "status": 403,
+    "title": "scope denied",
+    "type": "https://kb.local/problems/scope-denied"
+  },
+  "status": 403
+}

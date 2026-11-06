@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/ingest/claim.schema.json",
+  "title": "kb-ingest/1 claim",
+  "description": "kind=event는 valid.from 또는 changed_on 필수(E_EVENT_TIME, 처리기가 검사).",
+  "type": "object",
+  "properties": {
+    "item": {
+      "const": "claim"
+    },
+    "ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "subject": {
+      "type": "string",
+      "minLength": 1
+    },
+    "subject_new": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "aliases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "label"
+      ],
+      "additionalProperties": false
+    },
+    "predicate": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "object": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "value": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "unit": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "qualifiers": {
+      "type": "object"
+    },
+    "statement": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kind": {
+      "enum": [
+        "event",
+        "state",
+        "howto"
+      ]
+    },
+    "stance": {
+      "enum": [
+        "stated",
+        "attributed"
+      ]
+    },
+    "speaker": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence": {
+      "type": "object",
+      "properties": {
+        "snapshot": {
+          "type": "string",
+          "minLength": 1
+        },
+        "quote": {
+          "type": "string"
+        },
+        "prefix": {
+          "type": "string"
+        },
+        "suffix": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "snapshot",
+        "quote"
+      ],
+      "additionalProperties": false
+    },
+    "valid": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        },
+        "precision": {
+          "enum": [
+            "instant",
+            "day",
+            "month",
+            "quarter",
+            "year"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "changed_on": {
+      "type": "string"
+    },
+    "depends_on": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "domain": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "A",
+          "B",
+          "C",
+          "D",
+          "E",
+          "F",
+          "G"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "method": {
+      "enum": [
+        "deterministic",
+        "llm",
+        "human"
+      ]
+    },
+    "extractor": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "item",
+    "subject",
+    "statement",
+    "kind",
+    "stance",
+    "evidence",
+    "method"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "stance": {
+            "const": "attributed"
+          }
+        },
+        "required": [
+          "stance"
+        ]
+      },
+      "then": {
+        "required": [
+          "speaker"
+        ]
+      }
+    }
+  ]
+}

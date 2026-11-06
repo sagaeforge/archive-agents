@@ -1,0 +1,18 @@
+{
+  "body": {
+    "code": "bad_param",
+    "detail": "허용되지 않은 파라미터: x",
+    "instance": "/v1/claims/c-1",
+    "param": "x",
+    "status": 400,
+    "title": "bad param",
+    "type": "https://kb.local/problems/bad-param"
+  },
+  "case": "claim-bad-param",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/problem+json",
+    "vary": "Authorization"
+  },
+  "status": 400
+}

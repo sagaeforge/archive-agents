@@ -1,0 +1,55 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "items": [
+        {
+          "highlight_unit": "codepoint",
+          "highlights": [
+            {
+              "end": 6,
+              "start": 4
+            }
+          ],
+          "id": "c-ma",
+          "kind": "claim",
+          "origin": "external",
+          "recorded_at": "2027-01-15T08:00:50Z",
+          "snippet": "ma는 위젯을 지원한다",
+          "source": {
+            "id": "src:a",
+            "label": "합성 출처 A",
+            "trust": "unknown"
+          },
+          "status": "active",
+          "subject": "e:tool:ma",
+          "title": "ma는 위젯을 지원한다",
+          "type": "Claim",
+          "verification": "quote_found"
+        }
+      ]
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "page": {
+      "next_cursor": "eyJlIjoyLCJmIjoiN2Y2NzZjOTIiLCJrIjpbMSwiYy1tYSJdfQ",
+      "total": null,
+      "truncated": false
+    },
+    "schema_version": "0.3.1"
+  },
+  "case": "search-limit-1",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

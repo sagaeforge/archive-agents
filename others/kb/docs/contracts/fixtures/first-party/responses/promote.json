@@ -1,0 +1,48 @@
+{
+  "headers": {
+    "cache-control": "no-store"
+  },
+  "id": "promote",
+  "method": "POST",
+  "path_template": "/v1/records/{id}/promote",
+  "request": {
+    "change": "save",
+    "idempotency_key": "loupe:p:f-fixture-note:v4",
+    "memo_version": 4,
+    "record": {
+      "body": "조사 범위",
+      "props": {
+        "export_llm": false,
+        "export_query": false
+      },
+      "title": "합성 연구"
+    },
+    "to": "topic"
+  },
+  "response": {
+    "actor": "app:loupe",
+    "claimed_author": "user:sagae",
+    "generated_by": "app:loupe:save",
+    "held": false,
+    "id": "f-fixture-spec",
+    "payload_sha": "2e15de5ac1961ff400d8779003bf35a329577f6d173d80b10ff64046dec5178f",
+    "projected": true,
+    "promoted_from": {
+      "id": "f-fixture-note",
+      "version": 4
+    },
+    "quarantined": false,
+    "reason": null,
+    "replayed": false,
+    "research": {
+      "state": "budget_unavailable"
+    },
+    "seq": 104,
+    "spooled": false,
+    "unchanged": false,
+    "version": 1,
+    "warnings": [],
+    "write_ref": null
+  },
+  "status": 201
+}

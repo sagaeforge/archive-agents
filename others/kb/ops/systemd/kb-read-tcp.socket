@@ -1,0 +1,10 @@
+[Unit]
+Description=sagae-kb read API (optional TCP, Bearer required)
+
+[Socket]
+ListenStream=127.0.0.1:8737
+Accept=no
+Service=kb-read.service
+
+[Install]
+WantedBy=sockets.target

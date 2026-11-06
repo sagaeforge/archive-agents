@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sagae-kb/schemas/events/claim.withdraw.schema.json",
+  "title": "claim.withdraw",
+  "description": "같은 URL 새 스냅샷에서 인용구가 사라져 철회한다.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1
+    },
+    "snapshot": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "reason"
+  ]
+}

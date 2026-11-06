@@ -1,0 +1,26 @@
+{
+ "name": "@scope/demo-tool",
+ "dist-tags": {
+  "latest": "0.9.0"
+ },
+ "modified": "2026-11-01T00:00:00.000Z",
+ "versions": {
+  "0.8.0": {
+   "name": "@scope/demo-tool",
+   "version": "0.8.0",
+   "dist": {
+    "shasum": "d4",
+    "tarball": "https://registry.npmjs.org/@scope/demo-tool/-/demo-tool-0.8.0.tgz"
+   }
+  },
+  "0.9.0": {
+   "name": "@scope/demo-tool",
+   "version": "0.9.0",
+   "deprecated": "Renamed to @scope/demo-tool2",
+   "dist": {
+    "shasum": "e5",
+    "tarball": "https://registry.npmjs.org/@scope/demo-tool/-/demo-tool-0.9.0.tgz"
+   }
+  }
+ }
+}

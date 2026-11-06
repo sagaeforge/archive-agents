@@ -1,0 +1,57 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "items": [
+        {
+          "claim_id": null,
+          "dst": "e:product:p",
+          "id": "r-01",
+          "peer": {
+            "id": "e:feature:history",
+            "label": "기록 기능",
+            "type": "Feature"
+          },
+          "rtype": "PART_OF",
+          "src": "e:feature:history",
+          "status": "active"
+        },
+        {
+          "claim_id": null,
+          "dst": "e:product:p",
+          "id": "r-02",
+          "peer": {
+            "id": "e:tool:x",
+            "label": "도구 X",
+            "type": "Tool"
+          },
+          "rtype": "USES",
+          "src": "e:tool:x",
+          "status": "active"
+        }
+      ]
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "page": {
+      "next_cursor": null,
+      "total": 2,
+      "truncated": false
+    },
+    "schema_version": "0.3.1"
+  },
+  "case": "edges-ok",
+  "headers": {
+    "cache-control": "no-cache",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

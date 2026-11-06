@@ -1,0 +1,179 @@
+{
+  "source": "adr/scripts/tok_eval.py (scratchpad)",
+  "corpus": [
+    {
+      "id": "d1",
+      "text": "YPP 신규 진입 기준은 8,000시간으로 올라간다."
+    },
+    {
+      "id": "d2",
+      "text": "유튜브 쇼츠의 수익 배분은 45%다."
+    },
+    {
+      "id": "d3",
+      "text": "앱을 설치하면 알림을 받을 수 있다."
+    },
+    {
+      "id": "d4",
+      "text": "Claude Code 2.1.314에서 --dump-json 옵션이 추가됐다."
+    },
+    {
+      "id": "d5",
+      "text": "C++ 코드를 빌드한다."
+    },
+    {
+      "id": "d6",
+      "text": "C# 과 .NET 런타임을 쓴다."
+    },
+    {
+      "id": "d7",
+      "text": "GPT-5.5 모델은 2026-10-01에 공개됐다."
+    },
+    {
+      "id": "d8",
+      "text": "유튜브API 할당량은 하루 10,000단위다."
+    },
+    {
+      "id": "d9",
+      "text": "클로드 코드의 훅 설정"
+    },
+    {
+      "id": "d10",
+      "text": "숏폼 영상과 쇼츠 알고리즘"
+    },
+    {
+      "id": "d11",
+      "text": "search.list 호출은 하루 100회다."
+    },
+    {
+      "id": "d12",
+      "text": "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS 값을 0으로 둔다."
+    }
+  ],
+  "cases": [
+    {
+      "query": "8000시간",
+      "expect": "d1"
+    },
+    {
+      "query": "8,000시간",
+      "expect": "d1"
+    },
+    {
+      "query": "8천시간",
+      "expect": "d1"
+    },
+    {
+      "query": "유튜브쇼츠",
+      "expect": "d2"
+    },
+    {
+      "query": "쇼츠의 수익",
+      "expect": "d2"
+    },
+    {
+      "query": "쇼츠 수익은",
+      "expect": "d2"
+    },
+    {
+      "query": "앱",
+      "expect": "d3"
+    },
+    {
+      "query": "앱 설치",
+      "expect": "d3"
+    },
+    {
+      "query": "--dump-json",
+      "expect": "d4"
+    },
+    {
+      "query": "dump_json",
+      "expect": "d4"
+    },
+    {
+      "query": "2.1.314",
+      "expect": "d4"
+    },
+    {
+      "query": "314",
+      "expect": "d4"
+    },
+    {
+      "query": "C++",
+      "expect": "d5"
+    },
+    {
+      "query": "C#",
+      "expect": "d6"
+    },
+    {
+      "query": ".NET",
+      "expect": "d6"
+    },
+    {
+      "query": "GPT-5.5",
+      "expect": "d7"
+    },
+    {
+      "query": "GPT5.5",
+      "expect": "d7"
+    },
+    {
+      "query": "유튜브 API",
+      "expect": "d8"
+    },
+    {
+      "query": "Claude Code 훅",
+      "expect": "d9"
+    },
+    {
+      "query": "클로드코드",
+      "expect": "d9"
+    },
+    {
+      "query": "숏츠",
+      "expect": "d10"
+    },
+    {
+      "query": "search.list",
+      "expect": "d11"
+    },
+    {
+      "query": "searchlist",
+      "expect": "d11"
+    },
+    {
+      "query": "PRINT_BG_WAIT",
+      "expect": "d12"
+    },
+    {
+      "query": "CEILING",
+      "expect": "d12"
+    },
+    {
+      "query": "훅",
+      "expect": "d9"
+    }
+  ],
+  "alias": {
+    "숏츠": [
+      "쇼츠",
+      "shorts"
+    ],
+    "쇼츠": [
+      "숏츠",
+      "shorts"
+    ],
+    "클로드코드": [
+      "클로드 코드",
+      "claude code"
+    ],
+    "8천": [
+      "8000"
+    ],
+    "gpt5.5": [
+      "gpt-5.5"
+    ]
+  }
+}

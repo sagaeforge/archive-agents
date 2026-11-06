@@ -1,0 +1,36 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "items": [
+        {
+          "ended_at": "2027-01-30T07:31:40Z",
+          "job": "tick",
+          "outcome": "ok",
+          "started_at": "2027-01-30T07:30:00Z"
+        }
+      ]
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "page": {
+      "next_cursor": "eyJlIjoyLCJmIjoiYzliMTg2ZTMiLCJrIjoyfQ",
+      "total": 2,
+      "truncated": true
+    },
+    "schema_version": "0.3.1"
+  },
+  "case": "ops-runs-limit-1",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/json",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

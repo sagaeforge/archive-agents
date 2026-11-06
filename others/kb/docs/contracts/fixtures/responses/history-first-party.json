@@ -1,0 +1,43 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "chains": [],
+      "edges": [],
+      "id": "f-1",
+      "versions": [
+        {
+          "expired_at": "2027-01-16T15:00:00Z",
+          "label": "공개 메모",
+          "recorded_at": "2027-01-15T08:00:55Z",
+          "status": "active",
+          "version": 1
+        },
+        {
+          "expired_at": null,
+          "label": "공개 메모",
+          "recorded_at": "2027-01-16T15:00:00Z",
+          "status": "active",
+          "version": 2
+        }
+      ]
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "schema_version": "0.3.1"
+  },
+  "case": "history-first-party",
+  "headers": {
+    "cache-control": "no-cache",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

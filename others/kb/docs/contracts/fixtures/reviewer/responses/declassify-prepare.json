@@ -1,0 +1,22 @@
+{
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/json"
+  },
+  "id": "declassify-prepare",
+  "method": "POST",
+  "path_template": "/v1/actions",
+  "request": {
+    "action": "declassify",
+    "expected_version": 1,
+    "idempotency_key": "loupe-review:a:fixture",
+    "sensitivity": "internal",
+    "target": "f-fixture-note"
+  },
+  "response": {
+    "action_id": "a-fixture-publish",
+    "state": "ready",
+    "status_url": "/v1/actions/a-fixture-publish"
+  },
+  "status": 201
+}

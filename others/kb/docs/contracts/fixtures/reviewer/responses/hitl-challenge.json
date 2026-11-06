@@ -1,0 +1,21 @@
+{
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/json"
+  },
+  "id": "hitl-challenge",
+  "method": "POST",
+  "path_template": "/v1/hitl/challenge",
+  "request": {
+    "action": "accept",
+    "item": "h-fixture",
+    "params": {}
+  },
+  "response": {
+    "action_sha": "0000000000000000000000000000000000000000000000000000000000000000",
+    "challenge": "synthetic-challenge",
+    "challenge_id": "ch-fixture",
+    "rp_id": "localhost"
+  },
+  "status": 201
+}

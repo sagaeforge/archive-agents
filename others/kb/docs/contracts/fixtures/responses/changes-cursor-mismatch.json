@@ -1,0 +1,17 @@
+{
+  "body": {
+    "code": "cursor_mismatch",
+    "detail": "해석할 수 없는 커서",
+    "instance": "/v1/changes",
+    "status": 400,
+    "title": "cursor mismatch",
+    "type": "https://kb.local/problems/cursor-mismatch"
+  },
+  "case": "changes-cursor-mismatch",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/problem+json",
+    "vary": "Authorization"
+  },
+  "status": 400
+}

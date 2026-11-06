@@ -1,0 +1,8 @@
+# WP-15 내부 작업. LLM을 부르지 않는다. 6.5 체크포인트와 8 워치독은 tick_stage_watch.py의 STAGES가 돈다.
+# fsck 단계별 주기(매일 체인·CAS 1/30, 주 1회 integrity_check, 월 1회 gold 지문)는 fsck.run()이 ops.db의
+# fsck.last.<단계>로 판정하므로 이 작업은 한 시간마다 만기 단계만 돌린다. 워치독(8)이 읽기 전에 도는 6.5 뒤에 둔다.
+jobs:
+  - id: watch.fsck_due
+    every_s: 3600
+    stage: 6.5
+    run: "kb.guard.tick_stage_watch:job_fsck_due"

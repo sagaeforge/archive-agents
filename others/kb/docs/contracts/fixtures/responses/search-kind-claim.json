@@ -1,0 +1,151 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "items": [
+        {
+          "highlight_unit": "codepoint",
+          "highlights": [
+            {
+              "end": 6,
+              "start": 4
+            }
+          ],
+          "id": "c-ma",
+          "kind": "claim",
+          "origin": "external",
+          "recorded_at": "2027-01-15T08:00:50Z",
+          "snippet": "ma는 위젯을 지원한다",
+          "source": {
+            "id": "src:a",
+            "label": "합성 출처 A",
+            "trust": "unknown"
+          },
+          "status": "active",
+          "subject": "e:tool:ma",
+          "title": "ma는 위젯을 지원한다",
+          "type": "Claim",
+          "verification": "quote_found"
+        },
+        {
+          "highlight_unit": "codepoint",
+          "highlights": [
+            {
+              "end": 11,
+              "start": 9
+            }
+          ],
+          "id": "c-rev-state",
+          "kind": "claim",
+          "origin": "external",
+          "recorded_at": "2027-01-16T14:00:00Z",
+          "snippet": "revived는 위젯을 지원한다",
+          "source": {
+            "id": "src:a",
+            "label": "합성 출처 A",
+            "trust": "unknown"
+          },
+          "status": "active",
+          "subject": "e:tool:revived",
+          "title": "revived는 위젯을 지원한다",
+          "type": "Claim",
+          "verification": "quote_found"
+        },
+        {
+          "highlight_unit": "codepoint",
+          "highlights": [
+            {
+              "end": 8,
+              "start": 6
+            }
+          ],
+          "id": "c-tail",
+          "kind": "claim",
+          "origin": "external",
+          "recorded_at": "2027-01-17T11:00:00Z",
+          "snippet": "tail은 위젯을 지원한다",
+          "source": {
+            "id": "src:a",
+            "label": "합성 출처 A",
+            "trust": "unknown"
+          },
+          "status": "active",
+          "subject": "e:tool:tail",
+          "title": "tail은 위젯을 지원한다",
+          "type": "Claim",
+          "verification": "quote_found"
+        },
+        {
+          "highlight_unit": "codepoint",
+          "highlights": [
+            {
+              "end": 14,
+              "start": 12
+            }
+          ],
+          "id": "c-1",
+          "kind": "claim",
+          "origin": "external",
+          "recorded_at": "2027-01-15T08:00:22Z",
+          "snippet": "history 기능은 위젯을 지원한다",
+          "source": {
+            "id": "src:a",
+            "label": "합성 출처 A",
+            "trust": "unknown"
+          },
+          "status": "active",
+          "subject": "e:feature:history",
+          "title": "history 기능은 위젯을 지원한다",
+          "type": "Claim",
+          "verification": "quote_found"
+        },
+        {
+          "highlight_unit": "codepoint",
+          "highlights": [
+            {
+              "end": 12,
+              "start": 10
+            }
+          ],
+          "id": "c-ko-1",
+          "kind": "claim",
+          "origin": "external",
+          "recorded_at": "2027-01-15T08:00:23Z",
+          "snippet": "합성 도구 알파는 위젯을 지원한다.",
+          "source": {
+            "id": "src:a",
+            "label": "합성 출처 A",
+            "trust": "unknown"
+          },
+          "status": "active",
+          "subject": "e:tool:alpha",
+          "title": "합성 도구 알파는 위젯을 지원한다.",
+          "type": "Claim",
+          "verification": "quote_found"
+        }
+      ]
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "page": {
+      "next_cursor": null,
+      "total": 5,
+      "truncated": false
+    },
+    "schema_version": "0.3.1"
+  },
+  "case": "search-kind-claim",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

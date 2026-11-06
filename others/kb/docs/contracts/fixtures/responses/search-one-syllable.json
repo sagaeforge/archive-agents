@@ -1,0 +1,103 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "items": [
+        {
+          "highlight_unit": "codepoint",
+          "highlights": [
+            {
+              "end": 5,
+              "start": 4
+            }
+          ],
+          "id": "c-mb",
+          "kind": "claim",
+          "origin": "external",
+          "recorded_at": "2027-01-15T08:00:51Z",
+          "snippet": "mb는 달을 지원한다",
+          "source": {
+            "id": "src:a",
+            "label": "합성 출처 A",
+            "trust": "unknown"
+          },
+          "status": "active",
+          "subject": "e:tool:mb",
+          "title": "mb는 달을 지원한다",
+          "type": "Claim",
+          "verification": "quote_found"
+        },
+        {
+          "end": 35,
+          "highlight_unit": "codepoint",
+          "highlights": [
+            {
+              "end": 1,
+              "start": 0
+            }
+          ],
+          "id": "n-1:21",
+          "kind": "passage",
+          "origin": "external",
+          "snapshot_id": "n-1",
+          "snippet": "달 기능은 채널에 열린다.",
+          "source": {
+            "id": "src:a",
+            "label": "합성 출처 A",
+            "trust": "unknown"
+          },
+          "start": 21,
+          "status": "active",
+          "title": "https://docs.example.test/widget",
+          "type": "Document"
+        },
+        {
+          "highlight_unit": "codepoint",
+          "highlights": [
+            {
+              "end": 1,
+              "start": 0
+            }
+          ],
+          "id": "c-ko-2",
+          "kind": "claim",
+          "origin": "external",
+          "recorded_at": "2027-01-15T08:00:24Z",
+          "snippet": "달 기능은 채널에 열린다.",
+          "source": {
+            "id": "src:a",
+            "label": "합성 출처 A",
+            "trust": "unknown"
+          },
+          "status": "active",
+          "subject": "e:tool:alpha",
+          "title": "달 기능은 채널에 열린다.",
+          "type": "Claim",
+          "verification": "quote_found"
+        }
+      ]
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "page": {
+      "next_cursor": null,
+      "total": null,
+      "truncated": false
+    },
+    "schema_version": "0.3.1"
+  },
+  "case": "search-one-syllable",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

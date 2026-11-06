@@ -1,0 +1,17 @@
+{
+  "body": {
+    "code": "not_found",
+    "detail": "없음",
+    "instance": "/v1/nodes/{id}",
+    "status": 404,
+    "title": "not found",
+    "type": "https://kb.local/problems/not-found"
+  },
+  "case": "node-raised-observed-before",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/problem+json",
+    "vary": "Authorization"
+  },
+  "status": 404
+}

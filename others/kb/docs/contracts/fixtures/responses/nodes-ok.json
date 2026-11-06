@@ -1,0 +1,823 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "items": [
+        {
+          "author": "collector:fixture",
+          "body_format": null,
+          "domain": [
+            "E",
+            "F"
+          ],
+          "expired_at": null,
+          "generated_by": null,
+          "id": "e:feature:history",
+          "label": "기록 기능",
+          "link_status": null,
+          "liveness": null,
+          "merged_into": null,
+          "merged_into_final": null,
+          "on_behalf_of": null,
+          "origin": "external",
+          "props": {},
+          "recorded_at": "2027-01-15T08:00:15Z",
+          "sensitivity": "public",
+          "status": "active",
+          "type": "Feature",
+          "valid": {
+            "from": null,
+            "label": null,
+            "precision": null,
+            "to": null
+          },
+          "verification": null,
+          "version": 1
+        },
+        {
+          "author": "collector:fixture",
+          "body_format": null,
+          "domain": [],
+          "expired_at": null,
+          "generated_by": null,
+          "id": "e:policy:caption",
+          "label": "합성 자막 규칙",
+          "link_status": null,
+          "liveness": null,
+          "merged_into": null,
+          "merged_into_final": null,
+          "on_behalf_of": null,
+          "origin": "external",
+          "props": {},
+          "recorded_at": "2027-01-15T08:00:45Z",
+          "sensitivity": "public",
+          "status": "active",
+          "type": "Policy",
+          "valid": {
+            "from": null,
+            "label": null,
+            "precision": null,
+            "to": null
+          },
+          "verification": null,
+          "version": 1
+        },
+        {
+          "author": "collector:fixture",
+          "body_format": null,
+          "domain": [
+            "E"
+          ],
+          "expired_at": null,
+          "generated_by": null,
+          "id": "e:policy:future",
+          "label": "합성 정책 미래",
+          "link_status": null,
+          "liveness": null,
+          "merged_into": null,
+          "merged_into_final": null,
+          "on_behalf_of": null,
+          "origin": "external",
+          "props": {},
+          "recorded_at": "2027-01-15T08:00:19Z",
+          "sensitivity": "public",
+          "status": "active",
+          "type": "Policy",
+          "valid": {
+            "from": null,
+            "label": null,
+            "precision": null,
+            "to": null
+          },
+          "verification": null,
+          "version": 1
+        },
+        {
+          "author": "collector:fixture",
+          "body_format": null,
+          "domain": [
+            "E"
+          ],
+          "expired_at": null,
+          "generated_by": null,
+          "id": "e:policy:retro",
+          "label": "합성 정책 소급",
+          "link_status": null,
+          "liveness": null,
+          "merged_into": null,
+          "merged_into_final": null,
+          "on_behalf_of": null,
+          "origin": "external",
+          "props": {},
+          "recorded_at": "2027-01-15T08:00:20Z",
+          "sensitivity": "public",
+          "status": "active",
+          "type": "Policy",
+          "valid": {
+            "from": null,
+            "label": null,
+            "precision": null,
+            "to": null
+          },
+          "verification": null,
+          "version": 1
+        },
+        {
+          "author": "collector:fixture",
+          "body_format": null,
+          "domain": [],
+          "expired_at": null,
+          "generated_by": null,
+          "id": "e:policy:upload",
+          "label": "합성 업로드 규칙",
+          "link_status": null,
+          "liveness": null,
+          "merged_into": null,
+          "merged_into_final": null,
+          "on_behalf_of": null,
+          "origin": "external",
+          "props": {},
+          "recorded_at": "2027-01-15T08:00:43Z",
+          "sensitivity": "public",
+          "status": "active",
+          "type": "Policy",
+          "valid": {
+            "from": null,
+            "label": null,
+            "precision": null,
+            "to": null
+          },
+          "verification": null,
+          "version": 1
+        },
+        {
+          "author": "collector:fixture",
+          "body_format": null,
+          "domain": [
+            "E",
+            "F"
+          ],
+          "expired_at": null,
+          "generated_by": null,
+          "id": "e:policy:ypp",
+          "label": "합성 정책 YPP",
+          "link_status": null,
+          "liveness": null,
+          "merged_into": null,
+          "merged_into_final": null,
+          "on_behalf_of": null,
+          "origin": "external",
+          "props": {},
+          "recorded_at": "2027-01-15T08:00:18Z",
+          "sensitivity": "public",
+          "status": "active",
+          "type": "Policy",
+          "valid": {
+            "from": null,
+            "label": null,
+            "precision": null,
+            "to": null
+          },
+          "verification": null,
+          "version": 1
+        },
+        {
+          "author": "collector:fixture",
+          "body_format": null,
+          "domain": [
+            "E"
+          ],
+          "expired_at": null,
+          "generated_by": null,
+          "id": "e:product:p",
+          "label": "합성 제품 P",
+          "link_status": null,
+          "liveness": null,
+          "merged_into": null,
+          "merged_into_final": null,
+          "on_behalf_of": null,
+          "origin": "external",
+          "props": {},
+          "recorded_at": "2027-01-15T08:00:14Z",
+          "sensitivity": "public",
+          "status": "active",
+          "type": "Product",
+          "valid": {
+            "from": null,
+            "label": null,
+            "precision": null,
+            "to": null
+          },
+          "verification": null,
+          "version": 1
+        },
+        {
+          "author": "collector:fixture",
+          "body_format": null,
+          "domain": [],
+          "expired_at": null,
+          "generated_by": null,
+          "id": "e:repo:a",
+          "label": "Hooks",
+          "link_status": null,
+          "liveness": null,
+          "merged_into": null,
+          "merged_into_final": null,
+          "on_behalf_of": null,
+          "origin": "external",
+          "props": {
+            "created": "2027-01-01T00:00:00Z",
+            "flag": true,
+            "lang": "go",
+            "ratio": "0.5",
+            "stars": 10,
+            "tags": [
+              "x",
+              "y"
+            ]
+          },
+          "recorded_at": "2027-01-15T08:00:30Z",
+          "sensitivity": "public",
+          "status": "active",
+          "type": "Repo",
+          "valid": {
+            "from": null,
+            "label": null,
+            "precision": null,
+            "to": null
+          },
+          "verification": null,
+          "version": 1
+        },
+        {
+          "author": "collector:fixture",
+          "body_format": null,
+          "domain": [],
+          "expired_at": null,
+          "generated_by": null,
+          "id": "e:repo:b",
+          "label": "hook-lib",
+          "link_status": null,
+          "liveness": null,
+          "merged_into": null,
+          "merged_into_final": null,
+          "on_behalf_of": null,
+          "origin": "external",
+          "props": {
+            "created": "2027-02-01",
+            "flag": false,
+            "lang": "go",
+            "ratio": "1.25",
+            "stars": 9,
+            "tags": [
+              "y"
+            ]
+          },
+          "recorded_at": "2027-01-15T08:00:31Z",
+          "sensitivity": "public",
+          "status": "active",
+          "type": "Repo",
+          "valid": {
+            "from": null,
+            "label": null,
+            "precision": null,
+            "to": null
+          },
+          "verification": null,
+          "version": 1
+        },
+        {
+          "author": "collector:fixture",
+          "body_format": null,
+          "domain": [],
+          "expired_at": null,
+          "generated_by": null,
+          "id": "e:repo:c",
+          "label": "a:b:c",
+          "link_status": null,
+          "liveness": null,
+          "merged_into": null,
+          "merged_into_final": null,
+          "on_behalf_of": null,
+          "origin": "external",
+          "props": {
+            "created": "2026-12-31T23:59:59Z",
+            "lang": "Rust",
+            "stars": 100,
+            "tags": []
+          },
+          "recorded_at": "2027-01-15T08:00:32Z",
+          "sensitivity": "public",
+          "status": "active",
+          "type": "Repo",
+          "valid": {
+            "from": null,
+            "label": null,
+            "precision": null,
+            "to": null
+          },
+          "verification": null,
+          "version": 1
+        },
+        {
+          "author": "collector:fixture",
+          "body_format": null,
+          "domain": [],
+          "expired_at": null,
+          "generated_by": null,
+          "id": "e:repo:d",
+          "label": "a,b",
+          "link_status": null,
+          "liveness": null,
+          "merged_into": null,
+          "merged_into_final": null,
+          "on_behalf_of": null,
+          "origin": "external",
+          "props": {
+            "hidden": "s",
+            "lang": "go"
+          },
+          "recorded_at": "2027-01-15T08:00:33Z",
+          "sensitivity": "public",
+          "status": "active",
+          "type": "Repo",
+          "valid": {
+            "from": null,
+            "label": null,
+            "precision": null,
+            "to": null
+          },
+          "verification": null,
+          "version": 1
+        },
+        {
+          "author": "collector:fixture",
+          "body_format": null,
+          "domain": [],
+          "expired_at": null,
+          "generated_by": null,
+          "id": "e:repo:e",
+          "label": "Éa",
+          "link_status": null,
+          "liveness": null,
+          "merged_into": null,
+          "merged_into_final": null,
+          "on_behalf_of": null,
+          "origin": "external",
+          "props": {
+            "ratio": 2,
+            "stars": 9
+          },
+          "recorded_at": "2027-01-15T08:00:34Z",
+          "sensitivity": "public",
+          "status": "active",
+          "type": "Repo",
+          "valid": {
+            "from": null,
+            "label": null,
+            "precision": null,
+            "to": null
+          },
+          "verification": null,
+          "version": 1
+        },
+        {
+          "author": "collector:fixture",
+          "body_format": null,
+          "domain": [],
+          "expired_at": null,
+          "generated_by": null,
+          "id": "e:repo:f",
+          "label": "éa",
+          "link_status": null,
+          "liveness": null,
+          "merged_into": null,
+          "merged_into_final": null,
+          "on_behalf_of": null,
+          "origin": "external",
+          "props": {
+            "stars": 9
+          },
+          "recorded_at": "2027-01-15T08:00:35Z",
+          "sensitivity": "public",
+          "status": "active",
+          "type": "Repo",
+          "valid": {
+            "from": null,
+            "label": null,
+            "precision": null,
+            "to": null
+          },
+          "verification": null,
+          "version": 1
+        },
+        {
+          "author": "collector:fixture",
+          "body_format": null,
+          "domain": [],
+          "expired_at": null,
+          "generated_by": null,
+          "id": "e:repo:g",
+          "label": "zeta",
+          "link_status": null,
+          "liveness": null,
+          "merged_into": null,
+          "merged_into_final": null,
+          "on_behalf_of": null,
+          "origin": "external",
+          "props": {},
+          "recorded_at": "2027-01-15T08:00:36Z",
+          "sensitivity": "public",
+          "status": "active",
+          "type": "Repo",
+          "valid": {
+            "from": null,
+            "label": null,
+            "precision": null,
+            "to": null
+          },
+          "verification": null,
+          "version": 1
+        },
+        {
+          "author": "collector:fixture",
+          "body_format": null,
+          "domain": [
+            "F"
+          ],
+          "expired_at": null,
+          "generated_by": null,
+          "id": "e:tool:alpha",
+          "label": "도구 알파",
+          "link_status": null,
+          "liveness": null,
+          "merged_into": null,
+          "merged_into_final": null,
+          "on_behalf_of": null,
+          "origin": "external",
+          "props": {},
+          "recorded_at": "2027-01-15T08:00:17Z",
+          "sensitivity": "public",
+          "status": "active",
+          "type": "Tool",
+          "valid": {
+            "from": null,
+            "label": null,
+            "precision": null,
+            "to": null
+          },
+          "verification": null,
+          "version": 1
+        },
+        {
+          "author": "collector:fixture",
+          "body_format": null,
+          "domain": [],
+          "expired_at": null,
+          "generated_by": null,
+          "id": "e:tool:mc",
+          "label": "병합 C",
+          "link_status": null,
+          "liveness": null,
+          "merged_into": null,
+          "merged_into_final": null,
+          "on_behalf_of": null,
+          "origin": "external",
+          "props": {},
+          "recorded_at": "2027-01-15T08:00:49Z",
+          "sensitivity": "public",
+          "status": "active",
+          "type": "Tool",
+          "valid": {
+            "from": null,
+            "label": null,
+            "precision": null,
+            "to": null
+          },
+          "verification": null,
+          "version": 1
+        },
+        {
+          "author": "collector:fixture",
+          "body_format": null,
+          "domain": [],
+          "expired_at": null,
+          "generated_by": null,
+          "id": "e:tool:new",
+          "label": "새 도구",
+          "link_status": null,
+          "liveness": null,
+          "merged_into": null,
+          "merged_into_final": null,
+          "on_behalf_of": null,
+          "origin": "external",
+          "props": {},
+          "recorded_at": "2027-01-15T18:00:00Z",
+          "sensitivity": "public",
+          "status": "active",
+          "type": "Tool",
+          "valid": {
+            "from": null,
+            "label": null,
+            "precision": null,
+            "to": null
+          },
+          "verification": null,
+          "version": 1
+        },
+        {
+          "author": "collector:fixture",
+          "body_format": null,
+          "domain": [],
+          "expired_at": null,
+          "generated_by": null,
+          "id": "e:tool:rename",
+          "label": "새이름",
+          "link_status": null,
+          "liveness": null,
+          "merged_into": null,
+          "merged_into_final": null,
+          "on_behalf_of": null,
+          "origin": "external",
+          "props": {
+            "v": 2
+          },
+          "recorded_at": "2027-01-16T04:00:00Z",
+          "sensitivity": "public",
+          "status": "active",
+          "type": "Tool",
+          "valid": {
+            "from": null,
+            "label": null,
+            "precision": null,
+            "to": null
+          },
+          "verification": null,
+          "version": 2
+        },
+        {
+          "author": "collector:fixture",
+          "body_format": null,
+          "domain": [
+            "F"
+          ],
+          "expired_at": null,
+          "generated_by": null,
+          "id": "e:tool:revived",
+          "label": "되살아난 도구",
+          "link_status": null,
+          "liveness": "revived",
+          "merged_into": null,
+          "merged_into_final": null,
+          "on_behalf_of": null,
+          "origin": "external",
+          "props": {},
+          "recorded_at": "2027-01-16T14:00:00Z",
+          "sensitivity": "public",
+          "status": "active",
+          "type": "Tool",
+          "valid": {
+            "from": null,
+            "label": null,
+            "precision": null,
+            "to": null
+          },
+          "verification": null,
+          "version": 3
+        },
+        {
+          "author": "collector:fixture",
+          "body_format": null,
+          "domain": [
+            "F"
+          ],
+          "expired_at": null,
+          "generated_by": null,
+          "id": "e:tool:tail",
+          "label": "꼬리 도구",
+          "link_status": null,
+          "liveness": null,
+          "merged_into": null,
+          "merged_into_final": null,
+          "on_behalf_of": null,
+          "origin": "external",
+          "props": {},
+          "recorded_at": "2027-01-17T10:00:00Z",
+          "sensitivity": "public",
+          "status": "active",
+          "type": "Tool",
+          "valid": {
+            "from": null,
+            "label": null,
+            "precision": null,
+            "to": null
+          },
+          "verification": null,
+          "version": 1
+        },
+        {
+          "author": "collector:fixture",
+          "body_format": null,
+          "domain": [
+            "F"
+          ],
+          "expired_at": null,
+          "generated_by": null,
+          "id": "e:tool:x",
+          "label": "도구 X",
+          "link_status": null,
+          "liveness": null,
+          "merged_into": null,
+          "merged_into_final": null,
+          "on_behalf_of": null,
+          "origin": "external",
+          "props": {},
+          "recorded_at": "2027-01-15T08:00:16Z",
+          "sensitivity": "public",
+          "status": "active",
+          "type": "Tool",
+          "valid": {
+            "from": null,
+            "label": null,
+            "precision": null,
+            "to": null
+          },
+          "verification": null,
+          "version": 1
+        },
+        {
+          "author": "collector:fixture",
+          "body_format": null,
+          "domain": [
+            "E"
+          ],
+          "expired_at": null,
+          "generated_by": null,
+          "id": "e:video:v",
+          "label": "합성 영상",
+          "link_status": null,
+          "liveness": null,
+          "merged_into": null,
+          "merged_into_final": null,
+          "on_behalf_of": null,
+          "origin": "external",
+          "props": {},
+          "recorded_at": "2027-01-15T08:00:21Z",
+          "sensitivity": "public",
+          "status": "active",
+          "type": "Video",
+          "valid": {
+            "from": null,
+            "label": null,
+            "precision": null,
+            "to": null
+          },
+          "verification": null,
+          "version": 1
+        },
+        {
+          "author": "user:sagae",
+          "body_format": "markdown",
+          "domain": [],
+          "expired_at": null,
+          "generated_by": null,
+          "id": "f-1",
+          "label": "공개 메모",
+          "link_status": null,
+          "liveness": null,
+          "merged_into": null,
+          "merged_into_final": null,
+          "on_behalf_of": null,
+          "origin": "first_party",
+          "props": {},
+          "recorded_at": "2027-01-16T15:00:00Z",
+          "sensitivity": "internal",
+          "status": "active",
+          "type": "Note",
+          "valid": {
+            "from": null,
+            "label": null,
+            "precision": null,
+            "to": null
+          },
+          "verification": "first_party",
+          "version": 2
+        },
+        {
+          "author": "agent:s-fixture",
+          "body_format": "markdown",
+          "domain": [],
+          "expired_at": null,
+          "generated_by": null,
+          "id": "f-agent",
+          "label": "에이전트 메모",
+          "link_status": null,
+          "liveness": null,
+          "merged_into": null,
+          "merged_into_final": null,
+          "on_behalf_of": "user:sagae",
+          "origin": "first_party",
+          "props": {
+            "status": "accepted"
+          },
+          "recorded_at": "2027-01-15T08:00:58Z",
+          "sensitivity": "internal",
+          "status": "active",
+          "type": "Decision",
+          "valid": {
+            "from": null,
+            "label": null,
+            "precision": null,
+            "to": null
+          },
+          "verification": "first_party",
+          "version": 1
+        },
+        {
+          "author": "user:sagae",
+          "body_format": "markdown",
+          "domain": [],
+          "expired_at": null,
+          "generated_by": null,
+          "id": "f-tail",
+          "label": "꼬리 메모",
+          "link_status": null,
+          "liveness": null,
+          "merged_into": null,
+          "merged_into_final": null,
+          "on_behalf_of": null,
+          "origin": "first_party",
+          "props": {},
+          "recorded_at": "2027-01-17T12:00:00Z",
+          "sensitivity": "internal",
+          "status": "active",
+          "type": "Note",
+          "valid": {
+            "from": null,
+            "label": null,
+            "precision": null,
+            "to": null
+          },
+          "verification": "first_party",
+          "version": 1
+        },
+        {
+          "author": "collector:fixture",
+          "body_format": null,
+          "domain": [
+            "E"
+          ],
+          "expired_at": null,
+          "generated_by": null,
+          "id": "s:rank",
+          "label": "합성 순위",
+          "link_status": null,
+          "liveness": null,
+          "merged_into": null,
+          "merged_into_final": null,
+          "on_behalf_of": null,
+          "origin": "external",
+          "props": {
+            "metric": "chart_rank",
+            "subject": "e:video:v",
+            "unit": "rank"
+          },
+          "recorded_at": "2027-01-15T08:00:37Z",
+          "sensitivity": "public",
+          "status": "active",
+          "type": "Series",
+          "valid": {
+            "from": null,
+            "label": null,
+            "precision": null,
+            "to": null
+          },
+          "verification": null,
+          "version": 1
+        }
+      ]
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "page": {
+      "next_cursor": null,
+      "total": 26,
+      "truncated": false
+    },
+    "schema_version": "0.3.1"
+  },
+  "case": "nodes-ok",
+  "headers": {
+    "cache-control": "no-cache",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

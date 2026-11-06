@@ -1,0 +1,148 @@
+# WP-07 소스 레지스트리(f-dev.yaml). 원본: ADR-0001 10.4, docs/research/sources-inventory*.md, ADR-0002.
+# policy.reason: 비활성 사유 또는 주의. parse: 어댑터 설정. 비활성 소스는 enabled=false이고 수집 코드가 호출하지 않는다.
+sources:
+- id: src:yt-api-docs
+  inventory_id: null
+  name: YouTube Data API 공식 문서(읽기)
+  domain:
+  - F
+  class: docs
+  fetch:
+    kind: https
+    urls:
+    - https://developers.google.com/youtube/data/determine_quota_cost
+    - https://developers.google.com/youtube/terms/revision-history
+    - https://developers.google.com/youtube/terms/developer-policies
+    conditional: true
+  parser: page_md@1
+  expect:
+    content_type:
+    - text/plain
+    - text/markdown
+    - text/html
+    - application/xhtml+xml
+  policy:
+    enabled: true
+    tos: no_clause
+    tos_ref: https://developers.google.com/youtube/terms/developer-policies
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: 공식 문서 읽기다. Data API 호출이 아니다
+- id: src:f-tools
+  inventory_id: null
+  name: 영상 처리 도구 저장소 릴리스
+  domain:
+  - F
+  class: rel
+  fetch:
+    kind: https
+    urls:
+    - https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest
+    - https://api.github.com/repos/ggml-org/whisper.cpp/releases/latest
+    - https://api.github.com/repos/SYSTRAN/faster-whisper/releases/latest
+    - https://api.github.com/repos/Breakthrough/PySceneDetect/releases/latest
+    - https://api.github.com/repos/remotion-dev/remotion/releases/latest
+    - https://api.github.com/repos/Zulko/moviepy/releases/latest
+    - https://api.github.com/repos/WyattBlue/auto-editor/releases/latest
+    conditional: true
+  parser: github_release@1
+  expect:
+    content_type: &id001
+    - application/json
+  policy:
+    enabled: true
+    tos: allowed
+    tos_ref: https://docs.github.com/en/site-policy/acceptable-use-policies/github-acceptable-use-policies
+    robots: enforce
+    requires_decision: null
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+    reason: FFmpeg/FFmpeg는 GitHub 릴리스를 게시하지 않아(releases/latest 404) 2026-11-01에 목록에서 뺐다
+- id: src:hn-algolia-f
+  inventory_id: X16
+  name: Hacker News 검색(youtube api)
+  domain:
+  - F
+  class: meta
+  fetch:
+    kind: https
+    url: https://hn.algolia.com/api/v1/search?query=youtube%20api&tags=story&hitsPerPage=20
+    conditional: true
+  parser: hn_algolia@1
+  expect:
+    content_type: *id001
+  policy:
+    enabled: true
+    tos: no_clause
+    tos_ref: null
+    robots: enforce
+    requires_decision: null
+    trust: community
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:pypi-meta
+  inventory_id: X17
+  name: PyPI 패키지 메타
+  domain:
+  - F
+  class: meta
+  fetch:
+    kind: https
+    urls:
+    - https://pypi.org/pypi/superclaude/json
+    - https://pypi.org/pypi/serena-agent/json
+    - https://pypi.org/pypi/mcp/json
+    - https://pypi.org/pypi/yt-dlp/json
+    - https://pypi.org/pypi/faster-whisper/json
+    - https://pypi.org/pypi/anthropic/json
+    - https://pypi.org/pypi/openai/json
+    conditional: true
+  parser: pypi_meta@1
+  expect:
+    content_type: *id001
+  policy:
+    enabled: true
+    tos: allowed
+    tos_ref: https://docs.pypi.org/api/json/
+    robots: official_api
+    requires_decision: 8
+    trust: primary
+    retention: permanent
+    pii: false
+    needs_contact: false
+- id: src:arxiv-api
+  inventory_id: X15
+  name: arXiv API(영상 추천·플랫폼 연구)
+  domain:
+  - C
+  - F
+  class: paper
+  fetch:
+    kind: https
+    url: https://export.arxiv.org/api/query?search_query=all:%22video+recommendation%22+AND+all:YouTube&sortBy=submittedDate&sortOrder=descending&max_results=50
+    conditional: true
+  parser: arxiv@1
+  expect:
+    content_type:
+    - application/rss+xml
+    - application/atom+xml
+    - application/xml
+    - text/xml
+    - text/plain
+  policy:
+    enabled: true
+    tos: allowed
+    tos_ref: https://info.arxiv.org/help/api/tou.html
+    robots: official_api
+    requires_decision: 8
+    trust: secondary
+    retention: permanent
+    pii: false
+    needs_contact: false

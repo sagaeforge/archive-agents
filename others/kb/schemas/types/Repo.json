@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Repo",
+  "x-kb-kind": "node",
+  "x-kb-group": "world",
+  "x-kb-overview": false,
+  "x-kb-version": 1,
+  "type": "object",
+  "properties": {},
+  "additionalProperties": true
+}

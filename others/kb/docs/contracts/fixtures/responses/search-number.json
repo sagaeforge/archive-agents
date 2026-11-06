@@ -1,0 +1,199 @@
+{
+  "body": {
+    "applied_seq": 92,
+    "as_of": {
+      "observed": null,
+      "valid": null
+    },
+    "build_id": "g-000000092-109f",
+    "data": {
+      "items": [
+        {
+          "end": 57,
+          "highlight_unit": "codepoint",
+          "highlights": [
+            {
+              "end": 17,
+              "start": 10
+            }
+          ],
+          "id": "n-1:37",
+          "kind": "passage",
+          "origin": "external",
+          "snapshot_id": "n-1",
+          "snippet": "시청 시간 기준은 4,000시간이다.",
+          "source": {
+            "id": "src:a",
+            "label": "합성 출처 A",
+            "trust": "unknown"
+          },
+          "start": 37,
+          "status": "active",
+          "title": "https://docs.example.test/widget",
+          "type": "Document"
+        },
+        {
+          "highlight_unit": "codepoint",
+          "highlights": [
+            {
+              "end": 17,
+              "start": 10
+            }
+          ],
+          "id": "c-ko-3",
+          "kind": "claim",
+          "origin": "external",
+          "recorded_at": "2027-01-15T08:00:25Z",
+          "snippet": "시청 시간 기준은 4,000시간이다.",
+          "source": {
+            "id": "src:a",
+            "label": "합성 출처 A",
+            "trust": "unknown"
+          },
+          "status": "active",
+          "subject": "e:policy:ypp",
+          "title": "시청 시간 기준은 4,000시간이다.",
+          "type": "Claim",
+          "verification": "quote_found"
+        },
+        {
+          "highlight_unit": "codepoint",
+          "highlights": [
+            {
+              "end": 10,
+              "start": 8
+            }
+          ],
+          "id": "c-chain-3",
+          "kind": "claim",
+          "origin": "external",
+          "recorded_at": "2027-01-16T14:00:00Z",
+          "snippet": "기준은 2000시간이다.",
+          "source": {
+            "id": "src:a",
+            "label": "합성 출처 A",
+            "trust": "unknown"
+          },
+          "status": "active",
+          "subject": "e:policy:ypp",
+          "title": "기준은 2000시간이다.",
+          "type": "Claim",
+          "verification": "parser_derived"
+        },
+        {
+          "highlight_unit": "codepoint",
+          "highlights": [
+            {
+              "end": 10,
+              "start": 8
+            }
+          ],
+          "id": "c-retro",
+          "kind": "claim",
+          "origin": "external",
+          "recorded_at": "2027-01-16T14:00:00Z",
+          "snippet": "기준은 3000시간이다.",
+          "source": {
+            "id": "src:a",
+            "label": "합성 출처 A",
+            "trust": "unknown"
+          },
+          "status": "active",
+          "subject": "e:policy:retro",
+          "title": "기준은 3000시간이다.",
+          "type": "Claim",
+          "verification": "quote_found"
+        },
+        {
+          "highlight_unit": "codepoint",
+          "highlights": [
+            {
+              "end": 10,
+              "start": 8
+            }
+          ],
+          "id": "c-fut-new",
+          "kind": "claim",
+          "origin": "external",
+          "recorded_at": "2027-01-16T14:00:00Z",
+          "snippet": "기준은 2000시간이다.",
+          "source": {
+            "id": "src:a",
+            "label": "합성 출처 A",
+            "trust": "unknown"
+          },
+          "status": "active",
+          "subject": "e:policy:future",
+          "title": "기준은 2000시간이다.",
+          "type": "Claim",
+          "verification": "quote_found"
+        },
+        {
+          "highlight_unit": "codepoint",
+          "highlights": [
+            {
+              "end": 10,
+              "start": 8
+            }
+          ],
+          "id": "c-fut-old",
+          "kind": "claim",
+          "origin": "external",
+          "recorded_at": "2027-01-16T14:00:00Z",
+          "snippet": "기준은 3000시간이다.",
+          "source": {
+            "id": "src:a",
+            "label": "합성 출처 A",
+            "trust": "unknown"
+          },
+          "status": "active",
+          "subject": "e:policy:future",
+          "title": "기준은 3000시간이다.",
+          "type": "Claim",
+          "verification": "quote_found"
+        },
+        {
+          "end": 14,
+          "highlight_unit": "codepoint",
+          "highlights": [
+            {
+              "end": 6,
+              "start": 4
+            }
+          ],
+          "id": "n-2:0",
+          "kind": "passage",
+          "origin": "external",
+          "snapshot_id": "n-2",
+          "snippet": "기준은 시간으로 정해진다.",
+          "source": {
+            "id": "src:a",
+            "label": "합성 출처 A",
+            "trust": "unknown"
+          },
+          "start": 0,
+          "status": "active",
+          "title": "https://docs.example.test/policy",
+          "type": "Document"
+        }
+      ]
+    },
+    "data_as_of": "2027-01-17T12:00:00Z",
+    "degraded": [],
+    "epoch": 2,
+    "page": {
+      "next_cursor": null,
+      "total": null,
+      "truncated": false
+    },
+    "schema_version": "0.3.1"
+  },
+  "case": "search-number",
+  "headers": {
+    "cache-control": "no-store",
+    "content-type": "application/json",
+    "etag": "\"2-92-g-000000092-109f\"",
+    "vary": "Authorization"
+  },
+  "status": 200
+}

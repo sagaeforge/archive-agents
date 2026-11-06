@@ -1,0 +1,82 @@
+{
+ "exhaustive": {
+  "nbHits": false,
+  "typo": false
+ },
+ "exhaustiveNbHits": false,
+ "exhaustiveTypo": false,
+ "hits": [
+  {
+   "_tags": [
+    "story",
+    "author_kirushik",
+    "story_48734373"
+   ],
+   "author": "kirushik",
+   "created_at": "2026-06-30T15:44:24Z",
+   "created_at_i": 1782834264,
+   "num_comments": 750,
+   "objectID": "48734373",
+   "points": 2445,
+   "story_id": 48734373,
+   "title": "Claude Code is steganographically marking requests",
+   "updated_at": "2026-10-17T17:59:22Z",
+   "url": "https://thereallo.dev/blog/claude-code-prompt-steganography"
+  },
+  {
+   "_tags": [
+    "story",
+    "author_bakugo",
+    "story_43163011"
+   ],
+   "author": "bakugo",
+   "created_at": "2025-02-24T18:28:59Z",
+   "created_at_i": 1740421739,
+   "num_comments": 963,
+   "objectID": "43163011",
+   "points": 2127,
+   "story_id": 43163011,
+   "title": "Claude 3.7 Sonnet and Claude Code",
+   "updated_at": "2026-10-09T22:54:58Z",
+   "url": "https://www.anthropic.com/news/claude-3-7-sonnet"
+  },
+  {
+   "_tags": [
+    "story",
+    "author_treexs",
+    "story_47584540"
+   ],
+   "author": "treexs",
+   "created_at": "2026-03-31T09:00:40Z",
+   "created_at_i": 1774947640,
+   "num_comments": 1022,
+   "objectID": "47584540",
+   "points": 2095,
+   "story_id": 47584540,
+   "story_text": "<a href=\"https:&#x2F;&#x2F;xcancel.com&#x2F;Fried_rice&#x2F;status&#x2F;2038894956459290963\" rel=\"nofollow\">https:&#x2F;&#x2F;xcancel.com&#x2F;Fried_rice&#x2F;status&#x2F;2038894956459290963</a><p>Related ongoing thread: <i>The Claude Code Source Leak: fake tools, frustration regexes, undercover mode</i> - <a href=\"https:&#x2F;&#x2F;news.ycombinator.com&#x2F;item?id=47586778\">https:&#x2F;&#x2F;news.ycombinator.com&#x2F;item?id=47586778</a>",
+   "title": "Claude Code's source code has been leaked via a map file in their NPM registry",
+   "updated_at": "2026-09-27T09:54:46Z",
+   "url": "https://twitter.com/Fried_rice/status/2038894956459290963"
+  }
+ ],
+ "hitsPerPage": 3,
+ "nbHits": 9798,
+ "nbPages": 334,
+ "page": 0,
+ "params": "query=claude+code&tags=story&hitsPerPage=3&advancedSyntax=true&analyticsTags=backend",
+ "processingTimeMS": 15,
+ "processingTimingsMS": {
+  "_request": {
+   "queue": 1,
+   "roundTrip": 15
+  },
+  "fetch": {
+   "query": 5,
+   "scanning": 9,
+   "total": 15
+  },
+  "total": 15
+ },
+ "query": "claude code",
+ "serverTimeMS": 17
+}

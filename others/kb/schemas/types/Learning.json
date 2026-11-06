@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Learning",
+  "x-kb-kind": "node",
+  "x-kb-group": "user",
+  "x-kb-overview": true,
+  "x-kb-version": 2,
+  "type": "object",
+  "properties": {
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "source_kind": {
+      "type": "string",
+      "description": "kb harvest가 거둔 원본 종류: memory, workflow, agent_report, research_doc"
+    },
+    "project": {
+      "type": "string",
+      "description": "원본이 속한 프로젝트 이름(Claude 프로젝트 폴더 또는 저장소)"
+    },
+    "source_path": {
+      "type": "string",
+      "description": "원본 경로. 홈 디렉터리는 ~로 줄인다"
+    },
+    "session": {
+      "type": "string",
+      "description": "원본을 만든 세션 ID. 자기 신고 표시값이며 작성자와 멱등 판정에 쓰지 않는다"
+    },
+    "source_date": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "원본의 날짜(UTC). 메모리는 modified, 에이전트 보고서는 마지막 메시지 시각, 나머지는 파일 수정 시각"
+    },
+    "content_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "제목과 본문의 sha256. 같으면 새 버전을 만들지 않는다"
+    },
+    "scrubbed_lines": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "저장 전에 뺀 줄 수(내용은 남기지 않는다)"
+    },
+    "truncated": {
+      "type": "boolean",
+      "description": "본문이 상한을 넘어 줄 경계에서 잘렸다"
+    }
+  },
+  "additionalProperties": true
+}
