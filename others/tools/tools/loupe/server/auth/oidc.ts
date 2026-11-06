@@ -78,14 +78,14 @@ export class Oidc {
   }
 
   /** Trades the code for an ID token and returns its checked claims. The Google tokens are dropped here and never stored. */
-  async finish(callback: { code: string; state: string }, expected: { state: string; nonce: string; verifier: string; redirectUri: string }): Promise<Claims> {
+  async finish(callback: { code: string; state: string; iss?: string | undefined }, expected: { state: string; nonce: string; verifier: string; redirectUri: string }): Promise<Claims> {
     const as = await this.metadata();
     const { client, issuer } = this.settings();
     const redirectUri = expected.redirectUri;
     const c: oauth.Client = { client_id: client.client_id };
     const opts = this.opts(issuer);
     let params: URLSearchParams;
-    try { params = oauth.validateAuthResponse(as, c, new URLSearchParams({ code: callback.code, state: callback.state }), expected.state); } catch (e) {
+    try { params = oauth.validateAuthResponse(as, c, new URLSearchParams({ code: callback.code, state: callback.state, ...(callback.iss ? { iss: callback.iss } : {}) }), expected.state); } catch (e) {
       throw new LoginFailure('provider_error', (e as { code?: string }).code);
     }
     let res: Response;

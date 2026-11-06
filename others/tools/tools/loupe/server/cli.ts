@@ -119,7 +119,7 @@ export async function googleEnroll(io: Io, o: EnrollOptions = {}) {
       if (url.pathname !== '/auth/google/callback' || deny || q.get('state') !== begin.state) { res.writeHead(404).end(); return; }
       const page = (msg: string) => { res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' }); res.end(msg); };
       if (q.has('error') || !q.get('code')) { page('loupe: login failed. Return to the terminal.\n'); clearTimeout(timer); reject(new CliError('the provider returned an error')); return; }
-      oidc.finish({ code: q.get('code')!, state: q.get('state')! }, { ...begin, redirectUri }).then((c) => {
+      oidc.finish({ code: q.get('code')!, state: q.get('state')!, iss: q.get('iss') ?? undefined }, { ...begin, redirectUri }).then((c) => {
         page('loupe: login received. Return to the terminal.\n'); clearTimeout(timer); resolve(c);
       }, (e: unknown) => { page('loupe: login failed. Return to the terminal.\n'); clearTimeout(timer); reject(new CliError(`login refused (${e instanceof LoginFailure ? e.code : 'error'})`)); });
     });
