@@ -1,0 +1,4 @@
+import fs from 'node:fs';
+const f=process.argv[2]; const from=+(process.argv[3]||0);
+const ls=fs.readFileSync(f,'utf8').trim().split('\n').slice(from);
+for(const l of ls){const r=JSON.parse(l);if(!r.passive)continue;const o=r.passive,s=r.sync;console.log(r.P.v,r.P.size,r.P.ds||'',r.P.K||'',r.P.tech||'',r.P.dash||'',r.env.vw+'x'+r.env.vh,r.env.vis,'init',r.init.firstFrameMs,'ctor',r.init.ctorMs,'build',r.init.buildMs);console.log('  pass fps',o.fps,'rAF',o.rAF.p50,o.rAF.p95,o.rAF.max,'o20/34/50',o.over20,o.over34,o.over50,'js',o.jsRender.p50,o.jsRender.p95,'lbl',o.labels?.p50,'ov',o.ovTotal?.p50,o.ovTotal?.p95,'churn',o.churnMean);console.log('  sync full',s?.cpuGpuFrame.p50,s?.cpuGpuFrame.p95,'fps',s.fps,'rAF',s.rAF.p50,s.rAF.p95,'hover',r.hoverEnter.p50,r.hoverEnter.p95,r.hoverLeave.p50,'heapMB',r.heap.after&&(r.heap.after.used/1e6).toFixed(1))}

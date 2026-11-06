@@ -1,0 +1,34 @@
+# Expected failures of tower against @modelcontextprotocol/conformance 0.2.0-alpha.12, `--requirements 2026-07-28`.
+# Setup: conformance-fixture.ts as upstream `test` (uriPrefixes ["test://"]) and, with FIXTURE_ROLE=json, as upstream `json`.
+# Entries are scenario names. The reason is the comment above each group. A baseline entry is still a failure.
+#
+# Classes: tower-design = tower does not do it and docs/design/tower.md says so (not a defect; the scenario is the only gap).
+#          upstream-limit = the SDK or the referee cannot do it, the fixture on its own fails the same way or the SDK code says so.
+#          fixture-gap = the port of the fixture cannot do it. There is none left in this leg.
+#          tower-defect = a bug against the design. There is none in this leg.
+
+server:
+  # tower-design (3: "completion, logging, subscribe, tasks, sampling, roots are unsupported", capability not declared).
+  # tools/call gets Method not found. The fixture alone passes.
+  - completion-complete
+
+  # tower-design (4: `input_required` is relayed for tools/call only, "prompts/get ... not in v1").
+  # prompts/get returns an error naming the upstream instead of the InputRequiredResult. The fixture alone passes.
+  - input-required-result-non-tool-request
+
+  # upstream-limit: SDK 2.4.0 validates Mcp-Param-* only when the handler factory returns an McpServer (createMcpHandler,
+  # src/index.mjs `product instanceof McpServer`). tower returns a low-level Server, so a missing or wrong header gets 200.
+  # The scenario is `pending` in the referee, not scored. tower rebuilds the header from the body for the upstream, so the upstream is not misled.
+  - http-custom-header-server-validation
+
+  # upstream-limit: the io.modelcontextprotocol/tasks extension (SEP-2663). The SDK server does not implement it: the fixture alone fails
+  # the same 9 scenarios, and the SDK's own expected-failures.yaml lists them. Extension scenarios are never scored.
+  - tasks-lifecycle
+  - tasks-capability-negotiation
+  - tasks-wire-fields
+  - tasks-request-state-removal
+  - tasks-mrtr-input
+  - tasks-request-headers
+  - tasks-dispatch-and-envelope
+  - tasks-required-task-error
+  - tasks-mrtr-composition

@@ -1,0 +1,80 @@
+{
+ "20k": {
+  "n": 20000,
+  "m": 80000,
+  "genMs": 125,
+  "overview": {
+   "raw": 7581796,
+   "gzip": 2271482,
+   "zstd": 2060344,
+   "gzipMs": 109,
+   "zstdMs": 23
+  },
+  "export": {
+   "raw": 7661597,
+   "gzip": 2288987,
+   "zstd": 2093202,
+   "gzipMs": 108,
+   "zstdMs": 23
+  },
+  "rows": {
+   "raw": 10341336,
+   "gzip": 2410952,
+   "zstd": 2262078,
+   "gzipMs": 102,
+   "zstdMs": 26
+  },
+  "typeCounts": {
+   "Feature": 5526,
+   "Concept": 3264,
+   "Video": 1093,
+   "Person": 1209,
+   "Keyword": 2581,
+   "Product": 814,
+   "Event": 1570,
+   "Repo": 1306,
+   "Org": 1138,
+   "Channel": 697,
+   "Library": 802
+  }
+ },
+ "50k": {
+  "n": 50000,
+  "m": 200000,
+  "genMs": 220,
+  "overview": {
+   "raw": 18952328,
+   "gzip": 5842625,
+   "zstd": 5536175,
+   "gzipMs": 272,
+   "zstdMs": 60
+  },
+  "export": {
+   "raw": 19152128,
+   "gzip": 5888326,
+   "zstd": 5618643,
+   "gzipMs": 277,
+   "zstdMs": 61
+  },
+  "rows": {
+   "raw": 25851867,
+   "gzip": 6189167,
+   "zstd": 6054359,
+   "gzipMs": 257,
+   "zstdMs": 68
+  },
+  "typeCounts": {
+   "Feature": 11663,
+   "Channel": 1725,
+   "Event": 3812,
+   "Person": 3134,
+   "Concept": 8323,
+   "Library": 1930,
+   "Video": 3700,
+   "Keyword": 7483,
+   "Product": 2205,
+   "Org": 2654,
+   "Repo": 3371
+  }
+ }
+}

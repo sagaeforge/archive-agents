@@ -1,0 +1,1 @@
+{ "alpha": { "url": "http://127.0.0.1:{{P_third}}/mcp" }, "beta": { "command": "{{NODE}}", "args": ["{{REGRESSION}}/upstreams/beta.mjs"], "env": {"BETA_SPAWN_LOG": "{{TMP}}/beta-spawn.log"} }, "real": { "command": "{{NODE}}", "args": ["{{REGRESSION}}/review-assets/realts.mjs"] } }

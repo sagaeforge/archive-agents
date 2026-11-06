@@ -1,0 +1,37 @@
+.task-center { position:absolute; right:16px; bottom:10px; z-index:2147483600; display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
+.task-pill { display:inline-flex; align-items:center; gap:8px; height:34px; padding:0 14px; border:1px solid #9da8b6; border-radius:20px; background:var(--color-paper,#fff); box-shadow:0 2px 10px #0002; font-size:13px; cursor:pointer; }
+.task-pill:hover { background:#eef1f4; }
+.task-list { width:min(380px,calc(100vw - 32px)); max-height:min(60vh,520px); overflow:auto; border:1px solid #9da8b6; border-radius:12px; background:var(--color-paper,#fff); box-shadow:0 6px 22px #0003; padding:6px; }
+.task-list ul { list-style:none; margin:0; padding:0; }
+.task-note { margin:8px; font-size:13px; color:#4b5560; }
+.task-item { padding:8px; border-bottom:1px solid #e3e6e9; font-size:13px; }
+.task-item:last-child { border-bottom:0; }
+.task-head { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+.task-kind { color:#4b5560; font-size:12px; }
+.task-title { font-weight:600; min-width:0; overflow-wrap:anywhere; }
+.task-state { font-size:12px; color:#2f3a45; background:#eef1f4; border-radius:4px; padding:0 5px; }
+/* Color is for confirmation-needed and errors only (U4); the word is always written too. */
+.task-badge { display:inline-block; border-radius:10px; padding:1px 8px; font-size:12px; font-weight:600; }
+.task-badge[data-tone=attention] { background:#facc15; color:#1f1a00; }
+.task-badge[data-tone=error] { background:#dc2626; color:#fff; }
+.task-lock { margin:4px 0 0; font-weight:600; color:#7f1d1d; }
+.task-summary { margin:3px 0 0; color:#2f3a45; }
+.task-open { margin-top:6px; border:1px solid #aab1ba; border-radius:14px; padding:2px 12px; font-size:12px; background:var(--color-paper,#fff); cursor:pointer; }
+.task-open:hover { background:#dde4eb; }
+.task-detail { padding:14px 16px 20px; font-size:13px; display:grid; gap:12px; }
+.task-detail h2 { margin:0; font-size:15px; }
+.task-detail h3 { margin:0 0 4px; font-size:13px; }
+.task-detail p, .task-detail ul { margin:0; }
+.task-detail ul { list-style:none; padding:0; display:grid; gap:4px; }
+.task-warning { padding:6px 8px; border:1px solid #aab1ba; border-radius:8px; background:#f6f7f8; color:#2f3a45; }
+.task-graph { width:100%; max-width:360px; height:auto; border:1px solid #e3e6e9; border-radius:8px; background:#fbfbfa; }
+.task-graph text { font-size:10px; fill:#2f3a45; }
+.task-graph line { stroke:#536f8b; stroke-width:1.5; }
+.task-graph line[data-new=true] { stroke-dasharray:4 3; }
+.task-graph circle { fill:#dde4eb; stroke:#536f8b; }
+.task-edges { width:100%; border-collapse:collapse; }
+.task-edges th, .task-edges td { text-align:left; padding:3px 6px; border-bottom:1px solid #e3e6e9; }
+.task-claim { padding:6px 8px; border:1px solid #e3e6e9; border-radius:8px; }
+.task-claim .task-verdict { margin-left:8px; font-size:12px; color:#2f3a45; background:#eef1f4; border-radius:4px; padding:0 5px; }
+.task-rerun:disabled { opacity:.55; cursor:not-allowed; }
+@media (max-width:599px) { .task-center { right:8px; } }

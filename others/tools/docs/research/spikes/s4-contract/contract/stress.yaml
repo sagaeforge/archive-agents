@@ -1,0 +1,75 @@
+openapi: 3.1.1
+info: { title: stress, version: 0.0.0 }
+paths:
+  /stress:
+    get:
+      operationId: getStress
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Stress' }
+components:
+  schemas:
+    Base:
+      type: object
+      required: [id]
+      properties:
+        id: { type: string }
+        opt: { type: string }
+    Cat:
+      type: object
+      required: [kind, meow]
+      properties:
+        kind: { type: string }
+        meow: { type: boolean }
+    Dog:
+      type: object
+      required: [kind, bark]
+      properties:
+        kind: { type: string }
+        bark: { type: integer }
+    Pet:
+      oneOf:
+        - $ref: '#/components/schemas/Cat'
+        - $ref: '#/components/schemas/Dog'
+      discriminator: { propertyName: kind }
+    WithDefs:
+      type: object
+      $defs:
+        Inner: { type: object, required: [n], properties: { n: { type: integer } } }
+    Tree:
+      type: object
+      required: [name, children]
+      properties:
+        name: { type: string }
+        children: { type: array, items: { $ref: '#/components/schemas/Tree' } }
+    Stress:
+      type: object
+      required: [s01,s02,s03,s04,s05,s06,s07,s08,s09,s10,s11,s12,s13,s14,s15,s16,x-kb-rev,s18,s19,s20,s21,s23,s24]
+      properties:
+        s01: { type: [object, 'null'], required: [x], properties: { x: { type: string } } }
+        s02: { type: [array, 'null'], items: { type: integer } }
+        s03: { type: [string, number] }
+        s04: { $ref: '#/components/schemas/Base', description: sibling keyword next to ref }
+        s05: { anyOf: [ { $ref: '#/components/schemas/Base' }, { type: 'null' } ] }
+        s06: { type: object, additionalProperties: { type: integer } }
+        s07: { type: array, prefixItems: [ { type: string }, { type: integer } ], items: false, minItems: 2, maxItems: 2 }
+        s08: { const: 1 }
+        s09: { oneOf: [ { $ref: '#/components/schemas/Pet' }, { type: 'null' } ] }
+        s10: { $ref: '#/components/schemas/Pet' }
+        s11: { allOf: [ { $ref: '#/components/schemas/Base' }, { required: [opt] } ] }
+        s12: { type: integer, enum: [1, 2, 3] }
+        s13: { type: string, enum: ['활성', '보관-됨', 'a b'] }
+        s14: { anyOf: [ { type: string, enum: [a, b] }, { type: string } ] }
+        s15: { $ref: '#/components/schemas/WithDefs/$defs/Inner' }
+        s16: { type: integer, format: int64 }
+        x-kb-rev: { type: string }
+        s18: { type: string, readOnly: true }
+        s19: { $ref: '#/components/schemas/Tree' }
+        s20: { type: object, patternProperties: { '^x-': { type: string } }, additionalProperties: false }
+        s21: { type: 'null' }
+        s22: { type: integer, default: 50 }
+        s23: { type: string, format: date }
+        s24: { type: object, properties: { a: { type: string } }, if: { required: [a] }, then: { required: [a] }, unevaluatedProperties: false }

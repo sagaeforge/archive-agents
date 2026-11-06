@@ -1,0 +1,16 @@
+{
+  "tags": [],
+  "tagFilterMode": "none",
+  "enablePagination": false,
+  "expires": 1793524025992,
+  "createdAt": 1793437625982,
+  "lastAccessedAt": 1793437625992,
+  "initializeResponse": {
+    "protocolVersion": "2025-11-25",
+    "capabilities": {},
+    "serverInfo": {
+      "name": "1mcp",
+      "version": "0.39.7"
+    }
+  }
+}

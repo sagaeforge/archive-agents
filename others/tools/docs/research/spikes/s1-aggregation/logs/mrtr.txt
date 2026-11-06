@@ -1,0 +1,12 @@
+control (direct alpha): tool=confirm client asked 1x result=confirmed isError=false
+agentgateway: tool=alpha_confirm client asked 1x result=confirmed isError=false
+1mcp:         tool=alpha_1mcp_confirm client asked 0x FAILED Tool execution may have occurred; the outcome is unknown
+fastmcp:      tool=alpha_confirm client asked 0x result=Cannot request input 'confirm' (elicitation/create): the client on this 2025-era connection did not declare the required isError=true
+mcp-use:      tool=alpha_confirm client asked 0x result=Cannot request input 'confirm' (elicitation/create): the request's client capabilities do not declare the required capab isError=true
+baseline:     tool=alpha_confirm client asked 0x FAILED Cannot request input 'confirm' (elicitation/create): the request's client capabilities do not declare the required capability
+##### gateway SIGKILL: does a stdio child outlive it?
+ag: children before=0; live beta total after SIGKILL=4
+c4: children before=1; live beta total after SIGKILL=3
+c2: children before=1; live beta total after SIGKILL=2
+c3: children before=1; live beta total after SIGKILL=1
+c5: children before=1; live beta total after SIGKILL=0

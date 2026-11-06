@@ -1,0 +1,280 @@
+{
+ "legacy": {
+  "negotiated": "2025-11-25",
+  "serverInfo": {
+   "name": "gateway",
+   "version": "0.0.1"
+  },
+  "instructions": "[alpha]\nALPHA_INSTRUCTIONS: use alpha for snapshots.\n\n[beta]\nBETA_INSTRUCTIONS: use beta for notes.",
+  "capabilities": {
+   "tools": {
+    "listChanged": true
+   },
+   "resources": {
+    "listChanged": true
+   },
+   "prompts": {
+    "listChanged": true
+   }
+  },
+  "toolsListMeta": {},
+  "tools": [
+   {
+    "name": "alpha_status",
+    "title": "Alpha status",
+    "hasOutputSchema": true,
+    "annotations": {
+     "readOnlyHint": true
+    },
+    "meta": {
+     "anthropic/alwaysLoad": true,
+     "x.spike/marker": "alpha-status"
+    },
+    "desc": "ALPHA status with structured output"
+   },
+   {
+    "name": "alpha_link_doc",
+    "hasOutputSchema": false,
+    "desc": "ALPHA returns a resource_link to its snapshot"
+   },
+   {
+    "name": "beta_status",
+    "hasOutputSchema": false,
+    "desc": "BETA status, plain text, no outputSchema"
+   },
+   {
+    "name": "beta_beta_echo",
+    "hasOutputSchema": false,
+    "desc": "BETA echoes text"
+   }
+  ],
+  "resources": [
+   {
+    "uri": "kb://alpha/snapshot/1",
+    "name": "alpha-snapshot",
+    "mimeType": "text/plain"
+   },
+   {
+    "uri": "beta://notes/1",
+    "name": "beta-notes",
+    "mimeType": "text/plain"
+   }
+  ],
+  "calls": {
+   "alpha_status": {
+    "status": 200,
+    "text": [
+     "{\"source\":\"alpha\",\"pid\":2241013,\"calls\":1}"
+    ],
+    "structuredContent": {
+     "source": "alpha",
+     "pid": 2241013,
+     "calls": 1
+    },
+    "resourceLinks": [],
+    "ms": 17.8
+   },
+   "alpha_link_doc": {
+    "status": 200,
+    "text": [
+     "see kb://alpha/snapshot/1"
+    ],
+    "resourceLinks": [
+     {
+      "uri": "kb://alpha/snapshot/1",
+      "name": "alpha-snapshot"
+     }
+    ],
+    "ms": 8.9
+   },
+   "beta_status": {
+    "status": 200,
+    "text": [
+     "beta-status pid=2241960"
+    ],
+    "resourceLinks": [],
+    "ms": 5.2
+   },
+   "beta_beta_echo": {
+    "status": 200,
+    "text": [
+     "beta-echo:x pid=2241960"
+    ],
+    "resourceLinks": [],
+    "ms": 3.1
+   }
+  },
+  "reads": {
+   "kb://alpha/snapshot/1": {
+    "contents": [
+     {
+      "uri": "kb://alpha/snapshot/1",
+      "text": "alpha-body from 2241013"
+     }
+    ],
+    "ttlMs": 0,
+    "cacheScope": "private"
+   },
+   "beta://notes/1": {
+    "contents": [
+     {
+      "uri": "beta://notes/1",
+      "text": "beta-body from 2241960"
+     }
+    ]
+   }
+  },
+  "linkReadback": {
+   "alpha_link_doc -> kb://alpha/snapshot/1": {
+    "ok": true,
+    "uri": "kb://alpha/snapshot/1"
+   }
+  },
+  "prompts": 0
+ },
+ "modern": {
+  "negotiated": "2026-07-28",
+  "instructions": "[alpha]\nALPHA_INSTRUCTIONS: use alpha for snapshots.\n\n[beta]\nBETA_INSTRUCTIONS: use beta for notes.",
+  "capabilities": {
+   "tools": {
+    "listChanged": true
+   },
+   "resources": {
+    "listChanged": true
+   },
+   "prompts": {
+    "listChanged": true
+   }
+  },
+  "toolsListMeta": {
+   "resultType": "complete",
+   "ttlMs": 0,
+   "cacheScope": "private",
+   "_meta": {
+    "io.modelcontextprotocol/serverInfo": {
+     "name": "gateway",
+     "version": "0.0.1"
+    }
+   }
+  },
+  "tools": [
+   {
+    "name": "alpha_status",
+    "title": "Alpha status",
+    "hasOutputSchema": true,
+    "annotations": {
+     "readOnlyHint": true
+    },
+    "meta": {
+     "anthropic/alwaysLoad": true,
+     "x.spike/marker": "alpha-status"
+    },
+    "desc": "ALPHA status with structured output"
+   },
+   {
+    "name": "alpha_link_doc",
+    "hasOutputSchema": false,
+    "desc": "ALPHA returns a resource_link to its snapshot"
+   },
+   {
+    "name": "beta_status",
+    "hasOutputSchema": false,
+    "desc": "BETA status, plain text, no outputSchema"
+   },
+   {
+    "name": "beta_beta_echo",
+    "hasOutputSchema": false,
+    "desc": "BETA echoes text"
+   }
+  ],
+  "resources": [
+   {
+    "uri": "kb://alpha/snapshot/1",
+    "name": "alpha-snapshot",
+    "mimeType": "text/plain"
+   },
+   {
+    "uri": "beta://notes/1",
+    "name": "beta-notes",
+    "mimeType": "text/plain"
+   }
+  ],
+  "calls": {
+   "alpha_status": {
+    "status": 200,
+    "text": [
+     "{\"source\":\"alpha\",\"pid\":2241013,\"calls\":2}"
+    ],
+    "structuredContent": {
+     "source": "alpha",
+     "pid": 2241013,
+     "calls": 2
+    },
+    "resourceLinks": [],
+    "resultType": "complete",
+    "ms": 7.4
+   },
+   "alpha_link_doc": {
+    "status": 200,
+    "text": [
+     "see kb://alpha/snapshot/1"
+    ],
+    "resourceLinks": [
+     {
+      "uri": "kb://alpha/snapshot/1",
+      "name": "alpha-snapshot"
+     }
+    ],
+    "resultType": "complete",
+    "ms": 4.5
+   },
+   "beta_status": {
+    "status": 200,
+    "text": [
+     "beta-status pid=2241960"
+    ],
+    "resourceLinks": [],
+    "resultType": "complete",
+    "ms": 2.7
+   },
+   "beta_beta_echo": {
+    "status": 200,
+    "text": [
+     "beta-echo:x pid=2241960"
+    ],
+    "resourceLinks": [],
+    "resultType": "complete",
+    "ms": 2.3
+   }
+  },
+  "reads": {
+   "kb://alpha/snapshot/1": {
+    "contents": [
+     {
+      "uri": "kb://alpha/snapshot/1",
+      "text": "alpha-body from 2241013"
+     }
+    ],
+    "ttlMs": 0,
+    "cacheScope": "private"
+   },
+   "beta://notes/1": {
+    "contents": [
+     {
+      "uri": "beta://notes/1",
+      "text": "beta-body from 2241960"
+     }
+    ],
+    "ttlMs": 0,
+    "cacheScope": "private"
+   }
+  },
+  "linkReadback": {
+   "alpha_link_doc -> kb://alpha/snapshot/1": {
+    "ok": true,
+    "uri": "kb://alpha/snapshot/1"
+   }
+  },
+  "prompts": 0
+ }
+}

@@ -1,0 +1,5 @@
+{
+  "name": "sagae-tools",
+  "private": true,
+  "workspaces": ["tools/*"]
+}

@@ -1,0 +1,1 @@
+{ "compilerOptions": { "target": "ES2023", "lib": ["ES2023","DOM","DOM.Iterable"], "module": "ESNext", "moduleResolution": "bundler", "strict": true, "noEmit": true, "skipLibCheck": true, "noUncheckedIndexedAccess": true, "verbatimModuleSyntax": true, "allowImportingTsExtensions": true, "types": ["node"] }, "include": ["src"], "exclude": ["src/ajv-probe.mjs"] }

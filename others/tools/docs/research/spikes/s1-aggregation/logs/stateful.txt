@@ -1,0 +1,42 @@
+##### agentgateway legacy
+open legacy                                  negotiated=2025-11-25 session=yes
+--- HTTP upstream back
+tools/list [alpha back, same session]        tools=[beta_status,beta_beta_echo] (9 ms)
+call alpha [alpha back, same session]        rpcError -32001 "Session not found" http=404 (2.9 ms)
+call alpha [+2 s, same session]              rpcError -32001 "Session not found" http=404 (2.9 ms)
+NEW session call alpha                       ok "{"source":"alpha","pid":1865682,"calls":1}" (5.2 ms)
+call alpha [+0.3 s]                          rpcError -32001 "Session not found" http=404 (2.5 ms)
+##### agentgateway modern
+open modern                                  negotiated=null session=no
+##### 1mcp modern
+open modern                                  negotiated=2026-07-28 session=no
+--- HTTP upstream back
+tools/list [alpha back, same session]        tools=[beta_1mcp_beta_echo,beta_1mcp_status] (101 ms)
+call alpha [alpha back, same session]        rpcError -32602 "Tool definition is unavailable" http=200 (13.1 ms)
+call alpha [+2 s, same session]              ok "{"source":"alpha","pid":1882434,"calls":1}" (191.3 ms)
+NEW session call alpha                       ok "{"source":"alpha","pid":1882434,"calls":2}" (173 ms)
+call alpha [+0.3 s]                          ok "{"source":"alpha","pid":1882434,"calls":3}" (298.9 ms)
+##### fastmcp modern
+open modern                                  negotiated=2026-07-28 session=no
+--- HTTP upstream back
+tools/list [alpha back, same session]        tools=[alpha_status,alpha_link_doc,beta_status,beta_beta_echo] (4 ms)
+call alpha [alpha back, same session]        isError "[{"type":"text","text":"Error POSTing to endpoint: {\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32001"
+call alpha [+2 s, same session]              isError "[{"type":"text","text":"Error POSTing to endpoint: {\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32001"
+NEW session call alpha                       isError "[{"type":"text","text":"Error POSTing to endpoint: {\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32001"
+call alpha [+0.3 s]                          isError "[{"type":"text","text":"Error POSTing to endpoint: {\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32001"
+##### mcp-use modern
+open modern                                  negotiated=2026-07-28 session=no
+--- HTTP upstream back
+tools/list [alpha back, same session]        tools=[alpha_status,alpha_link_doc,beta_status,beta_beta_echo] (3.8 ms)
+call alpha [alpha back, same session]        isError "[{"type":"text","text":"Error POSTing to endpoint: {\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32001"
+call alpha [+2 s, same session]              isError "[{"type":"text","text":"Error POSTing to endpoint: {\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32001"
+NEW session call alpha                       isError "[{"type":"text","text":"Error POSTing to endpoint: {\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32001"
+call alpha [+0.3 s]                          isError "[{"type":"text","text":"Error POSTing to endpoint: {\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32001"
+##### baseline modern
+open modern                                  negotiated=2026-07-28 session=no
+--- HTTP upstream back
+tools/list [alpha back, same session]        tools=[beta_status,beta_beta_echo] (11.5 ms)
+call alpha [alpha back, same session]        rpcError -32603 "Error POSTing to endpoint: {"jsonrpc":"2.0","id":null,"error":{"code":-32001,"message":"Session not fou
+call alpha [+2 s, same session]              rpcError -32603 "Error POSTing to endpoint: {"jsonrpc":"2.0","id":null,"error":{"code":-32001,"message":"Session not fou
+NEW session call alpha                       rpcError -32603 "Error POSTing to endpoint: {"jsonrpc":"2.0","id":null,"error":{"code":-32001,"message":"Session not fou
+call alpha [+0.3 s]                          rpcError -32603 "Error POSTing to endpoint: {"jsonrpc":"2.0","id":null,"error":{"code":-32001,"message":"Session not fou

@@ -1,0 +1,10 @@
+Configuration is valid!
+##### agentgateway
+korean uri: listed alpha+kb://alpha/스냅샷/1 read ok, body=korean-uri-body
+##### 1mcp
+korean uri: not listed (mcp+1mcp.15070794f9a7cc24+kb://alpha/snapshot/1, mcp+1mcp.fdf48a181cd555bf+beta://notes/1)
+##### baseline
+korean uri: listed kb://alpha/스냅샷/1 read ok, body=korean-uri-body
+##### 70 s call with explicit timeouts
+1mcp: 70 s call: FAILED after 60033 ms: Tool execution may have occurred; the outcome is unknown
+agentgateway: 70 s call: ok after 70056 ms: slept 70041 isError=false

@@ -1,0 +1,7 @@
+agentgateway {"cold":{"n":20,"p50":127.3,"p95":1164.7,"min":111.7,"max":1164.7},"port":{"n":20,"p50":16.9,"p95":1023.3,"min":14.6,"max":1023.3}} {"afterBootGatewayRssMb":41.9,"idleGatewayRssMb":42.8,"idleGatewayPssMb":42.8,"idleTreeRssMb":199.1,"idleTreePssMb":108.1,"procs":3,"threads":33}
+fastmcp-ts {"cold":{"n":20,"p50":406.7,"p95":1034.5,"min":375.9,"max":1034.5},"port":{"n":20,"p50":383.5,"p95":1013.1,"min":355.5,"max":1013.1}} {"afterBootGatewayRssMb":120.9,"idleGatewayRssMb":124.6,"idleGatewayPssMb":70.9,"idleTreeRssMb":201.7,"idleTreePssMb":102.7,"procs":2,"threads":7}
+mcp-use {"cold":{"n":20,"p50":374.4,"p95":1033.3,"min":361.8,"max":1033.3},"port":{"n":20,"p50":347.3,"p95":1007.7,"min":335.8,"max":1007.7}} {"afterBootGatewayRssMb":111.1,"idleGatewayRssMb":116.2,"idleGatewayPssMb":62.7,"idleTreeRssMb":194.5,"idleTreePssMb":95.4,"procs":2,"threads":7}
+1mcp {"cold":{"n":20,"p50":1213.4,"p95":1289.1,"min":1162.4,"max":1289.1},"port":{"n":20,"p50":1013.2,"p95":1069.4,"min":963.9,"max":1069.4}} {"afterBootGatewayRssMb":302.5,"idleGatewayRssMb":318.8,"idleGatewayPssMb":263.9,"idleTreeRssMb":398.9,"idleTreePssMb":298.2,"procs":2,"threads":15}
+baseline {"cold":{"n":20,"p50":244.3,"p95":1064.5,"min":230.7,"max":1064.5},"port":{"n":20,"p50":147.9,"p95":1035.6,"min":137.5,"max":1035.6}} {"afterBootGatewayRssMb":110.7,"idleGatewayRssMb":112.5,"idleGatewayPssMb":59.7,"idleTreeRssMb":190,"idleTreePssMb":91.8,"procs":2,"threads":7}
+control {"n":200,"p50":0.7,"p95":1,"min":0.6,"max":3.2}
+done

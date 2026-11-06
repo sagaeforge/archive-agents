@@ -1,0 +1,1 @@
+{ "delta": { "url": "http://127.0.0.1:{{P_third}}/mcp" }, "real": { "command": "{{NODE}}", "args": ["{{REGRESSION}}/review-assets/realts.mjs"] } }

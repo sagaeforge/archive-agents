@@ -1,0 +1,42 @@
+[
+  {
+    "id": "setext-headings",
+    "input": "제목\n====\n\n부제\n----\n",
+    "output": "# 제목\n\n## 부제"
+  },
+  {
+    "id": "emphasis-edges",
+    "input": "foo_bar_baz 한_글_말 **굵게 *중첩* 끝** \\*별표\\* a***b***c",
+    "output": "foo\\_bar\\_baz 한\\_글\\_말 **굵게 *중첩* 끝** \\*별표\\* a***b***c"
+  },
+  {
+    "id": "links",
+    "input": "[링크](https://example.invalid/path?q=1 \"제목\") 및 <https://example.invalid>",
+    "output": "[링크](https://example.invalid/path?q=1 \"제목\") 및 [https://example.invalid](https://example.invalid)"
+  },
+  {
+    "id": "tilde-code-fence",
+    "input": "~~~~text\n```\n한글 <tag> & [[id]]\n~~~~\n",
+    "output": "~~~text\n```\n한글 <tag> & [[id]]\n~~~"
+  },
+  {
+    "id": "indented-code",
+    "input": "    한글 코드\n    둘째 줄\n",
+    "output": "```\n한글 코드\n둘째 줄\n```"
+  },
+  {
+    "id": "inline-code-edges",
+    "input": "코드 `` `한글` `` 와 ` a  b ` 끝",
+    "output": "코드 `` `한글` `` 와 `a  b` 끝"
+  },
+  {
+    "id": "escaped-html",
+    "input": "\\<div>한글\\</div> &lt;script&gt;alert(1)&lt;/script&gt;",
+    "output": "&lt;div&gt;한글&lt;/div&gt; &lt;script&gt;alert(1)&lt;/script&gt;"
+  },
+  {
+    "id": "entities-and-escapes",
+    "input": "&copy; &#54620; &amp; \\# \\[괄호\\] \\`코드\\` \\\\",
+    "output": "&copy; &#54620; &amp; # \\[괄호\\] \\`코드\\` \\\\"
+  }
+]

@@ -1,0 +1,3 @@
+{ "alpha": { "url": "http://127.0.0.1:{{P_alpha}}/mcp" },
+  "real": { "command": "{{PY1}}", "args": ["{{REGRESSION}}/review-assets/realpy.py"] },
+  "slow": { "command": "{{PY1}}", "args": ["{{REGRESSION}}/review-assets/slowpy.py"], "env": { "SLOW_S": "3" } } }

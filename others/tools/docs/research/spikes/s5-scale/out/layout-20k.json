@@ -1,0 +1,50 @@
+{
+ "name": "20k",
+ "n": 20000,
+ "m": 80000,
+ "iters": 300,
+ "runs": [
+  {
+   "ms": 17995,
+   "ratio": 0.0466,
+   "load1": 0.41,
+   "load1After": 1.16,
+   "settings": {
+    "scalingRatio": 10,
+    "gravity": 0.05,
+    "slowDown": 10.903487552536127
+   }
+  },
+  {
+   "ms": 18308,
+   "ratio": 0.0466,
+   "load1": 1.16,
+   "load1After": 1.8,
+   "settings": {
+    "scalingRatio": 10,
+    "gravity": 0.05,
+    "slowDown": 10.903487552536127
+   }
+  },
+  {
+   "ms": 17527,
+   "ratio": 0.0466,
+   "load1": 1.8,
+   "load1After": 1.62,
+   "settings": {
+    "scalingRatio": 10,
+    "gravity": 0.05,
+    "slowDown": 10.903487552536127
+   }
+  }
+ ],
+ "bestMs": 17527,
+ "medianMs": 17995,
+ "louvain": {
+  "ms": 62,
+  "communities": 92,
+  "modularity": 0.81
+ },
+ "node": "v26.13.0",
+ "cpus": 24
+}

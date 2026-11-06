@@ -1,0 +1,286 @@
+{
+ "legacy": {
+  "negotiated": "2025-11-25",
+  "serverInfo": {
+   "name": "agentgateway",
+   "version": "1.7.0"
+  },
+  "instructions": "This server is a gateway to a set of mcp servers. It is responsible for routing requests to the correct server and aggregating the results.\n\n[alpha]\nALPHA_INSTRUCTIONS: use alpha for snapshots.\n\n[beta]\nBETA_INSTRUCTIONS: use beta for notes.",
+  "capabilities": {
+   "prompts": {},
+   "resources": {
+    "listChanged": true
+   },
+   "tools": {
+    "listChanged": true
+   }
+  },
+  "toolsListMeta": {},
+  "tools": [
+   {
+    "name": "alpha_status",
+    "title": "Alpha status",
+    "hasOutputSchema": true,
+    "annotations": {
+     "readOnlyHint": true
+    },
+    "meta": {
+     "anthropic/alwaysLoad": true,
+     "x.spike/marker": "alpha-status"
+    },
+    "desc": "ALPHA status with structured output"
+   },
+   {
+    "name": "alpha_link_doc",
+    "hasOutputSchema": false,
+    "desc": "ALPHA returns a resource_link to its snapshot"
+   },
+   {
+    "name": "beta_status",
+    "hasOutputSchema": false,
+    "desc": "BETA status, plain text, no outputSchema"
+   },
+   {
+    "name": "beta_beta_echo",
+    "hasOutputSchema": false,
+    "desc": "BETA echoes text"
+   }
+  ],
+  "resources": [
+   {
+    "uri": "alpha+kb://alpha/snapshot/1",
+    "name": "alpha-snapshot",
+    "mimeType": "text/plain"
+   },
+   {
+    "uri": "beta+beta://notes/1",
+    "name": "beta-notes",
+    "mimeType": "text/plain"
+   }
+  ],
+  "calls": {
+   "alpha_status": {
+    "status": 200,
+    "text": [
+     "{\"source\":\"alpha\",\"pid\":1094689,\"calls\":7}"
+    ],
+    "structuredContent": {
+     "source": "alpha",
+     "pid": 1094689,
+     "calls": 7
+    },
+    "resourceLinks": [],
+    "ms": 3.7
+   },
+   "alpha_link_doc": {
+    "status": 200,
+    "text": [
+     "see kb://alpha/snapshot/1"
+    ],
+    "resourceLinks": [
+     {
+      "uri": "kb://alpha/snapshot/1",
+      "name": "alpha-snapshot"
+     }
+    ],
+    "ms": 3.6
+   },
+   "beta_status": {
+    "status": 200,
+    "text": [
+     "beta-status pid=1461101"
+    ],
+    "resourceLinks": [],
+    "ms": 4
+   },
+   "beta_beta_echo": {
+    "status": 200,
+    "text": [
+     "beta-echo:x pid=1461101"
+    ],
+    "resourceLinks": [],
+    "ms": 2.2
+   }
+  },
+  "reads": {
+   "alpha+kb://alpha/snapshot/1": {
+    "contents": [
+     {
+      "uri": "alpha+kb://alpha/snapshot/1",
+      "text": "alpha-body from 1094689"
+     }
+    ]
+   },
+   "beta+beta://notes/1": {
+    "contents": [
+     {
+      "uri": "beta+beta://notes/1",
+      "text": "beta-body from 1461101"
+     }
+    ]
+   }
+  },
+  "linkReadback": {
+   "alpha_link_doc -> kb://alpha/snapshot/1": {
+    "status": 500,
+    "error": {
+     "code": -32603,
+     "message": "failed to send message"
+    }
+   }
+  },
+  "prompts": {
+   "status": 200,
+   "error": {
+    "code": -32601,
+    "message": "Method not found"
+   }
+  }
+ },
+ "modern": {
+  "negotiated": "2026-07-28",
+  "instructions": "This server is a gateway to a set of mcp servers. It is responsible for routing requests to the correct server and aggregating the results.\n\n[alpha]\nALPHA_INSTRUCTIONS: use alpha for snapshots.\n\n[beta]\nBETA_INSTRUCTIONS: use beta for notes.",
+  "capabilities": {
+   "prompts": {},
+   "resources": {
+    "listChanged": true
+   },
+   "tools": {
+    "listChanged": true
+   }
+  },
+  "toolsListMeta": {
+   "resultType": "complete",
+   "ttlMs": 0,
+   "cacheScope": "private"
+  },
+  "tools": [
+   {
+    "name": "alpha_status",
+    "title": "Alpha status",
+    "hasOutputSchema": true,
+    "annotations": {
+     "readOnlyHint": true
+    },
+    "meta": {
+     "anthropic/alwaysLoad": true,
+     "x.spike/marker": "alpha-status"
+    },
+    "desc": "ALPHA status with structured output"
+   },
+   {
+    "name": "alpha_link_doc",
+    "hasOutputSchema": false,
+    "desc": "ALPHA returns a resource_link to its snapshot"
+   },
+   {
+    "name": "beta_status",
+    "hasOutputSchema": false,
+    "desc": "BETA status, plain text, no outputSchema"
+   },
+   {
+    "name": "beta_beta_echo",
+    "hasOutputSchema": false,
+    "desc": "BETA echoes text"
+   }
+  ],
+  "resources": [
+   {
+    "uri": "alpha+kb://alpha/snapshot/1",
+    "name": "alpha-snapshot",
+    "mimeType": "text/plain"
+   },
+   {
+    "uri": "beta+beta://notes/1",
+    "name": "beta-notes",
+    "mimeType": "text/plain"
+   }
+  ],
+  "calls": {
+   "alpha_status": {
+    "status": 200,
+    "text": [
+     "{\"source\":\"alpha\",\"pid\":1094689,\"calls\":8}"
+    ],
+    "structuredContent": {
+     "source": "alpha",
+     "pid": 1094689,
+     "calls": 8
+    },
+    "resourceLinks": [],
+    "resultType": "complete",
+    "ms": 3.3
+   },
+   "alpha_link_doc": {
+    "status": 200,
+    "text": [
+     "see kb://alpha/snapshot/1"
+    ],
+    "resourceLinks": [
+     {
+      "uri": "kb://alpha/snapshot/1",
+      "name": "alpha-snapshot"
+     }
+    ],
+    "resultType": "complete",
+    "ms": 3
+   },
+   "beta_status": {
+    "status": 200,
+    "text": [
+     "beta-status pid=1461231"
+    ],
+    "resourceLinks": [],
+    "resultType": "complete",
+    "ms": 109.3
+   },
+   "beta_beta_echo": {
+    "status": 200,
+    "text": [
+     "beta-echo:x pid=1461258"
+    ],
+    "resourceLinks": [],
+    "resultType": "complete",
+    "ms": 105.9
+   }
+  },
+  "reads": {
+   "alpha+kb://alpha/snapshot/1": {
+    "contents": [
+     {
+      "uri": "alpha+kb://alpha/snapshot/1",
+      "text": "alpha-body from 1094689"
+     }
+    ],
+    "ttlMs": 0,
+    "cacheScope": "private"
+   },
+   "beta+beta://notes/1": {
+    "contents": [
+     {
+      "uri": "beta+beta://notes/1",
+      "text": "beta-body from 1461280"
+     }
+    ],
+    "ttlMs": 0,
+    "cacheScope": "private"
+   }
+  },
+  "linkReadback": {
+   "alpha_link_doc -> kb://alpha/snapshot/1": {
+    "status": 400,
+    "error": {
+     "code": -32602,
+     "message": "invalid request parameters: invalid resource URI"
+    }
+   }
+  },
+  "prompts": {
+   "status": 404,
+   "error": {
+    "code": -32601,
+    "message": "Method not found"
+   }
+  }
+ }
+}

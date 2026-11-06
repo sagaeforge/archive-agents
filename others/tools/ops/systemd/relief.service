@@ -1,0 +1,17 @@
+# No [Install] section: the socket unit starts this service.
+# Nothing here names tower: it is one source, relief runs without it, and tower.socket wakes it on the first call.
+[Unit]
+Description=relief network map
+Requires=relief.socket
+After=relief.socket
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+WorkingDirectory=/home/user/sagae-tools/tools/relief
+ExecStart=/home/user/.nvm/versions/node/v26.13.0/bin/node bin/relief.mjs serve
+Environment=NODE_COMPILE_CACHE=%C/relief/compile-cache
+Restart=always
+RestartSec=1
+TimeoutStopSec=8
+KillMode=mixed

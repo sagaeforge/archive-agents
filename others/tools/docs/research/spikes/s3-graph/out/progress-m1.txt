@@ -1,0 +1,2 @@
+52/84 mode=bench&v=A&size=full&K=200&tech=fill&hm=all&rep=1
+done (tab closed externally at 52/84)

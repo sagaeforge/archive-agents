@@ -1,0 +1,107 @@
+################ fm-none_beta.mjs
+== legacy: negotiated=2025-11-25 server=agentgateway/1.7.0 
+   instructions: "This server is a gateway to a set of mcp servers. It is responsible for routing requests to the correct server and aggregating the results.\n\n[alpha]\nALPHA_INSTRUCTIONS: use alpha 
+   tools: alpha_status[out][_meta], alpha_link_doc, beta_status, beta_beta_echo  listMeta={}
+   resources: alpha+kb://alpha/snapshot/1, beta+beta://notes/1
+   call alpha_status: {"status":200,"text":["{\"source\":\"alpha\",\"pid\":1094689,\"calls\":7}"],"structuredContent":{"source":"alpha","pid":1094689,"calls":7},"resourceLinks":[],"ms":3.7}
+   call alpha_link_doc: {"status":200,"text":["see kb://alpha/snapshot/1"],"resourceLinks":[{"uri":"kb://alpha/snapshot/1","name":"alpha-snapshot"}],"ms":3.6}
+   call beta_status: {"status":200,"text":["beta-status pid=1461101"],"resourceLinks":[],"ms":4}
+   call beta_beta_echo: {"status":200,"text":["beta-echo:x pid=1461101"],"resourceLinks":[],"ms":2.2}
+== modern: negotiated=2026-07-28 server=/ 
+   instructions: "This server is a gateway to a set of mcp servers. It is responsible for routing requests to the correct server and aggregating the results.\n\n[alpha]\nALPHA_INSTRUCTIONS: use alpha 
+   tools: alpha_status[out][_meta], alpha_link_doc, beta_status, beta_beta_echo  listMeta={"resultType":"complete","ttlMs":0,"cacheScope":"private"}
+   resources: alpha+kb://alpha/snapshot/1, beta+beta://notes/1
+   call alpha_status: {"status":200,"text":["{\"source\":\"alpha\",\"pid\":1094689,\"calls\":8}"],"structuredContent":{"source":"alpha","pid":1094689,"calls":8},"resourceLinks":[],"resultType":"comple
+   call alpha_link_doc: {"status":200,"text":["see kb://alpha/snapshot/1"],"resourceLinks":[{"uri":"kb://alpha/snapshot/1","name":"alpha-snapshot"}],"resultType":"complete","ms":3}
+   call beta_status: {"status":200,"text":["beta-status pid=1461231"],"resourceLinks":[],"resultType":"complete","ms":109.3}
+   call beta_beta_echo: {"status":200,"text":["beta-echo:x pid=1461258"],"resourceLinks":[],"resultType":"complete","ms":105.9}
+   spawns during probe: 12  exits: 11
+200 143.9ms event: message data: {"jsonrpc":"2.0","id":1,"result":{"resultType":"complete","supportedVersions":["2026-07-28"],"capabilities":{"prompts
+   ^^ [server/discover] beta spawns: 1
+200 140.1ms event: message data: {"jsonrpc":"2.0","id":1,"result":{"resultType":"complete","ttlMs":0,"cacheScope":"private","tools":[{"name":"alpha_st
+   ^^ [tools/list] beta spawns: 1
+200 41.5ms event: message data: {"jsonrpc":"2.0","id":1,"result":{"resultType":"complete","content":[{"type":"text","text":"{\"source\":\"alpha\",\"pi
+   ^^ [tools/call alpha_status] beta spawns: 1
+200 162.0ms event: message data: {"jsonrpc":"2.0","id":1,"result":{"resultType":"complete","content":[{"type":"text","text":"beta-status pid=1461511"}
+   ^^ [tools/call beta_status] beta spawns: 1
+################ fm-failOpen_beta.mjs
+== legacy: negotiated=2025-11-25 server=agentgateway/1.7.0 
+   instructions: "This server is a gateway to a set of mcp servers. It is responsible for routing requests to the correct server and aggregating the results.\n\n[alpha]\nALPHA_INSTRUCTIONS: use alpha 
+   tools: alpha_status[out][_meta], alpha_link_doc, beta_status, beta_beta_echo  listMeta={}
+   resources: alpha+kb://alpha/snapshot/1, beta+beta://notes/1
+   call alpha_status: {"status":200,"text":["{\"source\":\"alpha\",\"pid\":1094689,\"calls\":10}"],"structuredContent":{"source":"alpha","pid":1094689,"calls":10},"resourceLinks":[],"ms":3.4}
+   call alpha_link_doc: {"status":200,"text":["see kb://alpha/snapshot/1"],"resourceLinks":[{"uri":"kb://alpha/snapshot/1","name":"alpha-snapshot"}],"ms":2.6}
+   call beta_status: {"status":200,"text":["beta-status pid=1461753"],"resourceLinks":[],"ms":4.1}
+   call beta_beta_echo: {"status":200,"text":["beta-echo:x pid=1461753"],"resourceLinks":[],"ms":2.2}
+== modern: negotiated=2026-07-28 server=/ 
+   instructions: "This server is a gateway to a set of mcp servers. It is responsible for routing requests to the correct server and aggregating the results.\n\n[alpha]\nALPHA_INSTRUCTIONS: use alpha 
+   tools: alpha_status[out][_meta], alpha_link_doc, beta_status, beta_beta_echo  listMeta={"resultType":"complete","ttlMs":0,"cacheScope":"private"}
+   resources: alpha+kb://alpha/snapshot/1, beta+beta://notes/1
+   call alpha_status: {"status":200,"text":["{\"source\":\"alpha\",\"pid\":1094689,\"calls\":11}"],"structuredContent":{"source":"alpha","pid":1094689,"calls":11},"resourceLinks":[],"resultType":"comp
+   call alpha_link_doc: {"status":200,"text":["see kb://alpha/snapshot/1"],"resourceLinks":[{"uri":"kb://alpha/snapshot/1","name":"alpha-snapshot"}],"resultType":"complete","ms":3.7}
+   call beta_status: {"status":200,"text":["beta-status pid=1461839"],"resourceLinks":[],"resultType":"complete","ms":117.7}
+   call beta_beta_echo: {"status":200,"text":["beta-echo:x pid=1461863"],"resourceLinks":[],"resultType":"complete","ms":120.2}
+   spawns during probe: 12  exits: 11
+200 146.2ms event: message data: {"jsonrpc":"2.0","id":1,"result":{"resultType":"complete","supportedVersions":["2026-07-28"],"capabilities":{"prompts
+   ^^ [server/discover] beta spawns: 1
+200 140.3ms event: message data: {"jsonrpc":"2.0","id":1,"result":{"resultType":"complete","ttlMs":0,"cacheScope":"private","tools":[{"name":"alpha_st
+   ^^ [tools/list] beta spawns: 1
+200 37.4ms event: message data: {"jsonrpc":"2.0","id":1,"result":{"resultType":"complete","content":[{"type":"text","text":"{\"source\":\"alpha\",\"pi
+   ^^ [tools/call alpha_status] beta spawns: 1
+200 156.5ms event: message data: {"jsonrpc":"2.0","id":1,"result":{"resultType":"complete","content":[{"type":"text","text":"beta-status pid=1462110"}
+   ^^ [tools/call beta_status] beta spawns: 1
+################ fm-none_beta-legacy.mjs
+== legacy: negotiated=2025-11-25 server=agentgateway/1.7.0 
+   instructions: "This server is a gateway to a set of mcp servers. It is responsible for routing requests to the correct server and aggregating the results.\n\n[alpha]\nALPHA_INSTRUCTIONS: use alpha 
+   tools: alpha_status[out][_meta], alpha_link_doc, beta_status, beta_beta_echo  listMeta={}
+   resources: alpha+kb://alpha/snapshot/1, beta+beta://notes/1
+   call alpha_status: {"status":200,"text":["{\"source\":\"alpha\",\"pid\":1094689,\"calls\":13}"],"structuredContent":{"source":"alpha","pid":1094689,"calls":13},"resourceLinks":[],"ms":3.5}
+   call alpha_link_doc: {"status":200,"text":["see kb://alpha/snapshot/1"],"resourceLinks":[{"uri":"kb://alpha/snapshot/1","name":"alpha-snapshot"}],"ms":3}
+   call beta_status: {"status":200,"text":["beta-status pid=1462259"],"resourceLinks":[],"ms":3.9}
+   call beta_beta_echo: {"status":200,"text":["beta-echo:x pid=1462259"],"resourceLinks":[],"ms":2.1}
+== modern: negotiated=null server=/ 
+   discover failed: {"status":200,"error":{"code":-32601,"message":"Method not found"}}
+   instructions: undefined
+   tools: alpha_status[out][_meta], alpha_link_doc, beta_status, beta_beta_echo  listMeta={"resultType":"complete","ttlMs":0,"cacheScope":"private"}
+   resources: alpha+kb://alpha/snapshot/1, beta+beta://notes/1
+   call alpha_status: {"status":200,"text":["{\"source\":\"alpha\",\"pid\":1094689,\"calls\":14}"],"structuredContent":{"source":"alpha","pid":1094689,"calls":14},"resourceLinks":[],"resultType":"comp
+   call alpha_link_doc: {"status":200,"text":["see kb://alpha/snapshot/1"],"resourceLinks":[{"uri":"kb://alpha/snapshot/1","name":"alpha-snapshot"}],"resultType":"complete","ms":2.7}
+   call beta_status: {"status":200,"text":["beta-status pid=1462327"],"resourceLinks":[],"resultType":"complete","ms":110.9}
+   call beta_beta_echo: {"status":200,"text":["beta-echo:x pid=1462352"],"resourceLinks":[],"resultType":"complete","ms":109.8}
+   spawns during probe: 12  exits: 11
+200 140.8ms event: message data: {"jsonrpc":"2.0","id":1,"error":{"code":-32601,"message":"Method not found"}} 
+   ^^ [server/discover] beta spawns: 1
+200 170.9ms event: message data: {"jsonrpc":"2.0","id":1,"result":{"resultType":"complete","ttlMs":0,"cacheScope":"private","tools":[{"name":"alpha_st
+   ^^ [tools/list] beta spawns: 1
+200 40.8ms event: message data: {"jsonrpc":"2.0","id":1,"result":{"resultType":"complete","content":[{"type":"text","text":"{\"source\":\"alpha\",\"pi
+   ^^ [tools/call alpha_status] beta spawns: 1
+200 147.9ms event: message data: {"jsonrpc":"2.0","id":1,"result":{"resultType":"complete","content":[{"type":"text","text":"beta-status pid=1462879"}
+   ^^ [tools/call beta_status] beta spawns: 1
+################ fm-failOpen_beta-legacy.mjs
+== legacy: negotiated=2025-11-25 server=agentgateway/1.7.0 
+   instructions: "This server is a gateway to a set of mcp servers. It is responsible for routing requests to the correct server and aggregating the results.\n\n[alpha]\nALPHA_INSTRUCTIONS: use alpha 
+   tools: alpha_status[out][_meta], alpha_link_doc, beta_status, beta_beta_echo  listMeta={}
+   resources: alpha+kb://alpha/snapshot/1, beta+beta://notes/1
+   call alpha_status: {"status":200,"text":["{\"source\":\"alpha\",\"pid\":1094689,\"calls\":16}"],"structuredContent":{"source":"alpha","pid":1094689,"calls":16},"resourceLinks":[],"ms":3.6}
+   call alpha_link_doc: {"status":200,"text":["see kb://alpha/snapshot/1"],"resourceLinks":[{"uri":"kb://alpha/snapshot/1","name":"alpha-snapshot"}],"ms":3.4}
+   call beta_status: {"status":200,"text":["beta-status pid=1463033"],"resourceLinks":[],"ms":4.1}
+   call beta_beta_echo: {"status":200,"text":["beta-echo:x pid=1463033"],"resourceLinks":[],"ms":2.1}
+== modern: negotiated=null server=/ 
+   discover failed: {"status":200,"error":{"code":-32601,"message":"Method not found"}}
+   instructions: undefined
+   tools: alpha_status[out][_meta], alpha_link_doc, beta_status, beta_beta_echo  listMeta={"resultType":"complete","ttlMs":0,"cacheScope":"private"}
+   resources: alpha+kb://alpha/snapshot/1, beta+beta://notes/1
+   call alpha_status: {"status":200,"text":["{\"source\":\"alpha\",\"pid\":1094689,\"calls\":17}"],"structuredContent":{"source":"alpha","pid":1094689,"calls":17},"resourceLinks":[],"resultType":"comp
+   call alpha_link_doc: {"status":200,"text":["see kb://alpha/snapshot/1"],"resourceLinks":[{"uri":"kb://alpha/snapshot/1","name":"alpha-snapshot"}],"resultType":"complete","ms":3.2}
+   call beta_status: {"status":200,"text":["beta-status pid=1463091"],"resourceLinks":[],"resultType":"complete","ms":117.6}
+   call beta_beta_echo: {"status":200,"text":["beta-echo:x pid=1463109"],"resourceLinks":[],"resultType":"complete","ms":114.9}
+   spawns during probe: 12  exits: 11
+200 146.6ms event: message data: {"jsonrpc":"2.0","id":1,"error":{"code":-32601,"message":"Method not found"}} 
+   ^^ [server/discover] beta spawns: 1
+200 140.4ms event: message data: {"jsonrpc":"2.0","id":1,"result":{"resultType":"complete","ttlMs":0,"cacheScope":"private","tools":[{"name":"alpha_st
+   ^^ [tools/list] beta spawns: 1
+200 38.3ms event: message data: {"jsonrpc":"2.0","id":1,"result":{"resultType":"complete","content":[{"type":"text","text":"{\"source\":\"alpha\",\"pi
+   ^^ [tools/call alpha_status] beta spawns: 1
+200 138.5ms event: message data: {"jsonrpc":"2.0","id":1,"result":{"resultType":"complete","content":[{"type":"text","text":"beta-status pid=1463482"}
+   ^^ [tools/call beta_status] beta spawns: 1
+live beta after stop: 1

@@ -1,0 +1,2624 @@
+{
+ "meta": {
+  "name": "large",
+  "dockerSource": true,
+  "tiers": [
+   [
+    "외부",
+    "선언 3 · GW 1 추정"
+   ],
+   [
+    "노드",
+    "5 관측 · 낡음 1"
+   ],
+   [
+    "게스트",
+    "QEMU 48 · LXC 32"
+   ],
+   [
+    "Docker",
+    "호스트 14 · 컨테이너 188"
+   ]
+  ],
+  "panel": {
+   "title": "노드 4",
+   "sub": "수집 실패 · 마지막 관측 3분 전",
+   "rows": [
+    [
+     "상태",
+     "낡음",
+     "observed",
+     "3분 전"
+    ],
+    [
+     "게스트",
+     "16개 (마지막 값)",
+     "observed",
+     "3분 전"
+    ],
+    [
+     "브리지",
+     "vmbr0, vmbr1",
+     "observed",
+     "3분 전"
+    ],
+    [
+     "회선",
+     "회선 A",
+     "declared",
+     "검토일 지남"
+    ]
+   ]
+  }
+ },
+ "nodes": [
+  {
+   "id": "wan",
+   "kind": "wan",
+   "title": "회선 A (선언)",
+   "basis": "declared",
+   "state": "ok"
+  },
+  {
+   "id": "tun",
+   "kind": "tunnel",
+   "title": "VPN 터널 (선언)",
+   "basis": "declared",
+   "state": "ok"
+  },
+  {
+   "id": "gw",
+   "kind": "gateway",
+   "title": "게이트웨이 192.0.2.1",
+   "basis": "derived",
+   "state": "unknown"
+  },
+  {
+   "id": "rp",
+   "kind": "proxy",
+   "title": "리버스 프록시 (선언)",
+   "basis": "declared",
+   "state": "ok"
+  },
+  {
+   "id": "seg1",
+   "kind": "segment",
+   "title": "관리 192.0.2.0/24",
+   "basis": "derived",
+   "state": "ok"
+  },
+  {
+   "id": "seg2",
+   "kind": "segment",
+   "title": "VLAN 20 198.51.100.0/24",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "node-1",
+   "kind": "node",
+   "title": "노드 1",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "node-1-br1",
+   "kind": "bridge",
+   "parent": "node-1",
+   "title": "vmbr0",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "node-1-st1",
+   "kind": "storage",
+   "parent": "node-1",
+   "title": "local",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "node-1-br2",
+   "kind": "bridge",
+   "parent": "node-1",
+   "title": "vmbr1",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "node-1-st2",
+   "kind": "storage",
+   "parent": "node-1",
+   "title": "local-lvm",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "vm-100",
+   "kind": "vm",
+   "parent": "node-1",
+   "title": "데이터베이스-100",
+   "basis": "observed",
+   "state": "running",
+   "docker": true
+  },
+  {
+   "id": "vm-100-c0",
+   "kind": "container",
+   "parent": "vm-100",
+   "title": "nginx",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-100-c1",
+   "kind": "container",
+   "parent": "vm-100",
+   "title": "수집기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-100-c2",
+   "kind": "container",
+   "parent": "vm-100",
+   "title": "pg",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-100-c3",
+   "kind": "container",
+   "parent": "vm-100",
+   "title": "내보내기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-100-c4",
+   "kind": "container",
+   "parent": "vm-100",
+   "title": "queue",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-100-c5",
+   "kind": "container",
+   "parent": "vm-100",
+   "title": "nginx",
+   "basis": "observed",
+   "state": "stopped"
+  },
+  {
+   "id": "vm-100-c6",
+   "kind": "container",
+   "parent": "vm-100",
+   "title": "수집기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-100-c7",
+   "kind": "container",
+   "parent": "vm-100",
+   "title": "api",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-100-c8",
+   "kind": "container",
+   "parent": "vm-100",
+   "title": "색인기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-100-c9",
+   "kind": "container",
+   "parent": "vm-100",
+   "title": "색인기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-100-c10",
+   "kind": "container",
+   "parent": "vm-100",
+   "title": "queue",
+   "basis": "observed",
+   "state": "stopped"
+  },
+  {
+   "id": "vm-100-c11",
+   "kind": "container",
+   "parent": "vm-100",
+   "title": "수집기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-100-c12",
+   "kind": "container",
+   "parent": "vm-100",
+   "title": "색인기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-100-c13",
+   "kind": "container",
+   "parent": "vm-100",
+   "title": "색인기",
+   "basis": "observed",
+   "state": "stopped"
+  },
+  {
+   "id": "vm-100-c14",
+   "kind": "container",
+   "parent": "vm-100",
+   "title": "api",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-101",
+   "kind": "vm",
+   "parent": "node-1",
+   "title": "인증-101",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "lxc-102",
+   "kind": "lxc",
+   "parent": "node-1",
+   "title": "배포-102",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "vm-103",
+   "kind": "vm",
+   "parent": "node-1",
+   "title": "인증-103",
+   "basis": "observed",
+   "state": "running",
+   "docker": true
+  },
+  {
+   "id": "vm-103-c0",
+   "kind": "container",
+   "parent": "vm-103",
+   "title": "내보내기",
+   "basis": "observed",
+   "state": "stopped"
+  },
+  {
+   "id": "vm-103-c1",
+   "kind": "container",
+   "parent": "vm-103",
+   "title": "색인기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-103-c2",
+   "kind": "container",
+   "parent": "vm-103",
+   "title": "pg",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-103-c3",
+   "kind": "container",
+   "parent": "vm-103",
+   "title": "수집기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-103-c4",
+   "kind": "container",
+   "parent": "vm-103",
+   "title": "redis",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-103-c5",
+   "kind": "container",
+   "parent": "vm-103",
+   "title": "queue",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-103-c6",
+   "kind": "container",
+   "parent": "vm-103",
+   "title": "worker",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-103-c7",
+   "kind": "container",
+   "parent": "vm-103",
+   "title": "redis",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-103-c8",
+   "kind": "container",
+   "parent": "vm-103",
+   "title": "redis",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-103-c9",
+   "kind": "container",
+   "parent": "vm-103",
+   "title": "pg",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-103-c10",
+   "kind": "container",
+   "parent": "vm-103",
+   "title": "cron",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-103-c11",
+   "kind": "container",
+   "parent": "vm-103",
+   "title": "내보내기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-103-c12",
+   "kind": "container",
+   "parent": "vm-103",
+   "title": "web",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-103-c13",
+   "kind": "container",
+   "parent": "vm-103",
+   "title": "cron",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-103-c14",
+   "kind": "container",
+   "parent": "vm-103",
+   "title": "api",
+   "basis": "observed",
+   "state": "stopped"
+  },
+  {
+   "id": "vm-103-c15",
+   "kind": "container",
+   "parent": "vm-103",
+   "title": "cron",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "lxc-104",
+   "kind": "lxc",
+   "parent": "node-1",
+   "title": "캐시-104",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "lxc-105",
+   "kind": "lxc",
+   "parent": "node-1",
+   "title": "모니터-105",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "vm-106",
+   "kind": "vm",
+   "parent": "node-1",
+   "title": "사내위키-106",
+   "basis": "observed",
+   "state": "running",
+   "docker": true
+  },
+  {
+   "id": "vm-106-c0",
+   "kind": "container",
+   "parent": "vm-106",
+   "title": "queue",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-106-c1",
+   "kind": "container",
+   "parent": "vm-106",
+   "title": "worker",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-106-c2",
+   "kind": "container",
+   "parent": "vm-106",
+   "title": "web",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-106-c3",
+   "kind": "container",
+   "parent": "vm-106",
+   "title": "cron",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-106-c4",
+   "kind": "container",
+   "parent": "vm-106",
+   "title": "cron",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-106-c5",
+   "kind": "container",
+   "parent": "vm-106",
+   "title": "내보내기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-106-c6",
+   "kind": "container",
+   "parent": "vm-106",
+   "title": "내보내기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-106-c7",
+   "kind": "container",
+   "parent": "vm-106",
+   "title": "redis",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-106-c8",
+   "kind": "container",
+   "parent": "vm-106",
+   "title": "색인기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-106-c9",
+   "kind": "container",
+   "parent": "vm-106",
+   "title": "web",
+   "basis": "observed",
+   "state": "stopped"
+  },
+  {
+   "id": "vm-106-c10",
+   "kind": "container",
+   "parent": "vm-106",
+   "title": "내보내기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-106-c11",
+   "kind": "container",
+   "parent": "vm-106",
+   "title": "web",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-106-c12",
+   "kind": "container",
+   "parent": "vm-106",
+   "title": "queue",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-106-c13",
+   "kind": "container",
+   "parent": "vm-106",
+   "title": "redis",
+   "basis": "observed",
+   "state": "stopped"
+  },
+  {
+   "id": "lxc-107",
+   "kind": "lxc",
+   "parent": "node-1",
+   "title": "인증-107",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "lxc-108",
+   "kind": "lxc",
+   "parent": "node-1",
+   "title": "사내위키-108",
+   "basis": "observed",
+   "state": "stopped",
+   "docker": false
+  },
+  {
+   "id": "vm-109",
+   "kind": "vm",
+   "parent": "node-1",
+   "title": "배포-109",
+   "basis": "observed",
+   "state": "running",
+   "docker": true
+  },
+  {
+   "id": "vm-109-c0",
+   "kind": "container",
+   "parent": "vm-109",
+   "title": "queue",
+   "basis": "observed",
+   "state": "stopped"
+  },
+  {
+   "id": "vm-109-c1",
+   "kind": "container",
+   "parent": "vm-109",
+   "title": "redis",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-109-c2",
+   "kind": "container",
+   "parent": "vm-109",
+   "title": "api",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-109-c3",
+   "kind": "container",
+   "parent": "vm-109",
+   "title": "pg",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-109-c4",
+   "kind": "container",
+   "parent": "vm-109",
+   "title": "색인기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-109-c5",
+   "kind": "container",
+   "parent": "vm-109",
+   "title": "nginx",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-109-c6",
+   "kind": "container",
+   "parent": "vm-109",
+   "title": "nginx",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-109-c7",
+   "kind": "container",
+   "parent": "vm-109",
+   "title": "nginx",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-109-c8",
+   "kind": "container",
+   "parent": "vm-109",
+   "title": "색인기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-109-c9",
+   "kind": "container",
+   "parent": "vm-109",
+   "title": "pg",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-109-c10",
+   "kind": "container",
+   "parent": "vm-109",
+   "title": "cron",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-109-c11",
+   "kind": "container",
+   "parent": "vm-109",
+   "title": "내보내기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-109-c12",
+   "kind": "container",
+   "parent": "vm-109",
+   "title": "redis",
+   "basis": "observed",
+   "state": "stopped"
+  },
+  {
+   "id": "vm-109-c13",
+   "kind": "container",
+   "parent": "vm-109",
+   "title": "redis",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-109-c14",
+   "kind": "container",
+   "parent": "vm-109",
+   "title": "내보내기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-109-c15",
+   "kind": "container",
+   "parent": "vm-109",
+   "title": "worker",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-110",
+   "kind": "vm",
+   "parent": "node-1",
+   "title": "사내위키-110",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "lxc-111",
+   "kind": "lxc",
+   "parent": "node-1",
+   "title": "백업-111",
+   "basis": "observed",
+   "state": "error",
+   "docker": false
+  },
+  {
+   "id": "vm-112",
+   "kind": "vm",
+   "parent": "node-1",
+   "title": "데이터베이스-112",
+   "basis": "observed",
+   "state": "running",
+   "docker": true
+  },
+  {
+   "id": "vm-112-c0",
+   "kind": "container",
+   "parent": "vm-112",
+   "title": "queue",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-112-c1",
+   "kind": "container",
+   "parent": "vm-112",
+   "title": "api",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-112-c2",
+   "kind": "container",
+   "parent": "vm-112",
+   "title": "api",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-112-c3",
+   "kind": "container",
+   "parent": "vm-112",
+   "title": "색인기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-112-c4",
+   "kind": "container",
+   "parent": "vm-112",
+   "title": "내보내기",
+   "basis": "observed",
+   "state": "stopped"
+  },
+  {
+   "id": "vm-112-c5",
+   "kind": "container",
+   "parent": "vm-112",
+   "title": "nginx",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-112-c6",
+   "kind": "container",
+   "parent": "vm-112",
+   "title": "web",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-112-c7",
+   "kind": "container",
+   "parent": "vm-112",
+   "title": "내보내기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-112-c8",
+   "kind": "container",
+   "parent": "vm-112",
+   "title": "pg",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-112-c9",
+   "kind": "container",
+   "parent": "vm-112",
+   "title": "수집기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-112-c10",
+   "kind": "container",
+   "parent": "vm-112",
+   "title": "api",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-112-c11",
+   "kind": "container",
+   "parent": "vm-112",
+   "title": "수집기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-112-c12",
+   "kind": "container",
+   "parent": "vm-112",
+   "title": "수집기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-113",
+   "kind": "vm",
+   "parent": "node-1",
+   "title": "모니터-113",
+   "basis": "observed",
+   "state": "starting",
+   "docker": false
+  },
+  {
+   "id": "lxc-114",
+   "kind": "lxc",
+   "parent": "node-1",
+   "title": "배포-114",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "vm-115",
+   "kind": "vm",
+   "parent": "node-1",
+   "title": "사내위키-115",
+   "basis": "observed",
+   "state": "running",
+   "docker": true
+  },
+  {
+   "id": "vm-115-c0",
+   "kind": "container",
+   "parent": "vm-115",
+   "title": "nginx",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-115-c1",
+   "kind": "container",
+   "parent": "vm-115",
+   "title": "nginx",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-115-c2",
+   "kind": "container",
+   "parent": "vm-115",
+   "title": "redis",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-115-c3",
+   "kind": "container",
+   "parent": "vm-115",
+   "title": "수집기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-115-c4",
+   "kind": "container",
+   "parent": "vm-115",
+   "title": "queue",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-115-c5",
+   "kind": "container",
+   "parent": "vm-115",
+   "title": "pg",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-115-c6",
+   "kind": "container",
+   "parent": "vm-115",
+   "title": "web",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-115-c7",
+   "kind": "container",
+   "parent": "vm-115",
+   "title": "worker",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-115-c8",
+   "kind": "container",
+   "parent": "vm-115",
+   "title": "api",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-115-c9",
+   "kind": "container",
+   "parent": "vm-115",
+   "title": "cron",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-115-c10",
+   "kind": "container",
+   "parent": "vm-115",
+   "title": "색인기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-115-c11",
+   "kind": "container",
+   "parent": "vm-115",
+   "title": "api",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-115-c12",
+   "kind": "container",
+   "parent": "vm-115",
+   "title": "web",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-115-c13",
+   "kind": "container",
+   "parent": "vm-115",
+   "title": "api",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "node-2",
+   "kind": "node",
+   "title": "노드 2",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "node-2-br1",
+   "kind": "bridge",
+   "parent": "node-2",
+   "title": "vmbr0",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "node-2-st1",
+   "kind": "storage",
+   "parent": "node-2",
+   "title": "local",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "node-2-br2",
+   "kind": "bridge",
+   "parent": "node-2",
+   "title": "vmbr1",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "node-2-st2",
+   "kind": "storage",
+   "parent": "node-2",
+   "title": "local-lvm",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "vm-116",
+   "kind": "vm",
+   "parent": "node-2",
+   "title": "백업-116",
+   "basis": "observed",
+   "state": "running",
+   "docker": true
+  },
+  {
+   "id": "vm-116-c0",
+   "kind": "container",
+   "parent": "vm-116",
+   "title": "cron",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-116-c1",
+   "kind": "container",
+   "parent": "vm-116",
+   "title": "수집기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-116-c2",
+   "kind": "container",
+   "parent": "vm-116",
+   "title": "pg",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-116-c3",
+   "kind": "container",
+   "parent": "vm-116",
+   "title": "redis",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-116-c4",
+   "kind": "container",
+   "parent": "vm-116",
+   "title": "내보내기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-116-c5",
+   "kind": "container",
+   "parent": "vm-116",
+   "title": "색인기",
+   "basis": "observed",
+   "state": "stopped"
+  },
+  {
+   "id": "vm-116-c6",
+   "kind": "container",
+   "parent": "vm-116",
+   "title": "nginx",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-116-c7",
+   "kind": "container",
+   "parent": "vm-116",
+   "title": "수집기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-116-c8",
+   "kind": "container",
+   "parent": "vm-116",
+   "title": "queue",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-116-c9",
+   "kind": "container",
+   "parent": "vm-116",
+   "title": "queue",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-116-c10",
+   "kind": "container",
+   "parent": "vm-116",
+   "title": "수집기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-116-c11",
+   "kind": "container",
+   "parent": "vm-116",
+   "title": "redis",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-116-c12",
+   "kind": "container",
+   "parent": "vm-116",
+   "title": "내보내기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-116-c13",
+   "kind": "container",
+   "parent": "vm-116",
+   "title": "web",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-116-c14",
+   "kind": "container",
+   "parent": "vm-116",
+   "title": "redis",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-116-c15",
+   "kind": "container",
+   "parent": "vm-116",
+   "title": "nginx",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-117",
+   "kind": "vm",
+   "parent": "node-2",
+   "title": "로그-117",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "lxc-118",
+   "kind": "lxc",
+   "parent": "node-2",
+   "title": "검색-118",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "vm-119",
+   "kind": "vm",
+   "parent": "node-2",
+   "title": "사내위키-119",
+   "basis": "observed",
+   "state": "running",
+   "docker": true
+  },
+  {
+   "id": "vm-119-c0",
+   "kind": "container",
+   "parent": "vm-119",
+   "title": "nginx",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-119-c1",
+   "kind": "container",
+   "parent": "vm-119",
+   "title": "색인기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-119-c2",
+   "kind": "container",
+   "parent": "vm-119",
+   "title": "내보내기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-119-c3",
+   "kind": "container",
+   "parent": "vm-119",
+   "title": "cron",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-119-c4",
+   "kind": "container",
+   "parent": "vm-119",
+   "title": "pg",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-119-c5",
+   "kind": "container",
+   "parent": "vm-119",
+   "title": "worker",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-119-c6",
+   "kind": "container",
+   "parent": "vm-119",
+   "title": "redis",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-119-c7",
+   "kind": "container",
+   "parent": "vm-119",
+   "title": "cron",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-119-c8",
+   "kind": "container",
+   "parent": "vm-119",
+   "title": "api",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-120",
+   "kind": "vm",
+   "parent": "node-2",
+   "title": "백업-120",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "lxc-121",
+   "kind": "lxc",
+   "parent": "node-2",
+   "title": "로그-121",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "vm-122",
+   "kind": "vm",
+   "parent": "node-2",
+   "title": "모니터-122",
+   "basis": "observed",
+   "state": "running",
+   "docker": true
+  },
+  {
+   "id": "vm-122-c0",
+   "kind": "container",
+   "parent": "vm-122",
+   "title": "queue",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-122-c1",
+   "kind": "container",
+   "parent": "vm-122",
+   "title": "worker",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-122-c2",
+   "kind": "container",
+   "parent": "vm-122",
+   "title": "worker",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-122-c3",
+   "kind": "container",
+   "parent": "vm-122",
+   "title": "nginx",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-122-c4",
+   "kind": "container",
+   "parent": "vm-122",
+   "title": "web",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-122-c5",
+   "kind": "container",
+   "parent": "vm-122",
+   "title": "pg",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-122-c6",
+   "kind": "container",
+   "parent": "vm-122",
+   "title": "내보내기",
+   "basis": "observed",
+   "state": "stopped"
+  },
+  {
+   "id": "vm-122-c7",
+   "kind": "container",
+   "parent": "vm-122",
+   "title": "색인기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-122-c8",
+   "kind": "container",
+   "parent": "vm-122",
+   "title": "web",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-122-c9",
+   "kind": "container",
+   "parent": "vm-122",
+   "title": "색인기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-122-c10",
+   "kind": "container",
+   "parent": "vm-122",
+   "title": "api",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-122-c11",
+   "kind": "container",
+   "parent": "vm-122",
+   "title": "pg",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-122-c12",
+   "kind": "container",
+   "parent": "vm-122",
+   "title": "내보내기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-122-c13",
+   "kind": "container",
+   "parent": "vm-122",
+   "title": "web",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-123",
+   "kind": "vm",
+   "parent": "node-2",
+   "title": "로그-123",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "lxc-124",
+   "kind": "lxc",
+   "parent": "node-2",
+   "title": "검색-124",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "vm-125",
+   "kind": "vm",
+   "parent": "node-2",
+   "title": "배포-125",
+   "basis": "observed",
+   "state": "running",
+   "docker": true
+  },
+  {
+   "id": "vm-125-c0",
+   "kind": "container",
+   "parent": "vm-125",
+   "title": "redis",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-125-c1",
+   "kind": "container",
+   "parent": "vm-125",
+   "title": "pg",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-125-c2",
+   "kind": "container",
+   "parent": "vm-125",
+   "title": "pg",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-125-c3",
+   "kind": "container",
+   "parent": "vm-125",
+   "title": "redis",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-125-c4",
+   "kind": "container",
+   "parent": "vm-125",
+   "title": "redis",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-125-c5",
+   "kind": "container",
+   "parent": "vm-125",
+   "title": "redis",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-125-c6",
+   "kind": "container",
+   "parent": "vm-125",
+   "title": "web",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-125-c7",
+   "kind": "container",
+   "parent": "vm-125",
+   "title": "색인기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-125-c8",
+   "kind": "container",
+   "parent": "vm-125",
+   "title": "worker",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-125-c9",
+   "kind": "container",
+   "parent": "vm-125",
+   "title": "색인기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-125-c10",
+   "kind": "container",
+   "parent": "vm-125",
+   "title": "nginx",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-125-c11",
+   "kind": "container",
+   "parent": "vm-125",
+   "title": "nginx",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-125-c12",
+   "kind": "container",
+   "parent": "vm-125",
+   "title": "내보내기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "lxc-126",
+   "kind": "lxc",
+   "parent": "node-2",
+   "title": "빌드-126",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "lxc-127",
+   "kind": "lxc",
+   "parent": "node-2",
+   "title": "인증-127",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "vm-128",
+   "kind": "vm",
+   "parent": "node-2",
+   "title": "로그-128",
+   "basis": "observed",
+   "state": "running",
+   "docker": true
+  },
+  {
+   "id": "vm-128-c0",
+   "kind": "container",
+   "parent": "vm-128",
+   "title": "pg",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-128-c1",
+   "kind": "container",
+   "parent": "vm-128",
+   "title": "queue",
+   "basis": "observed",
+   "state": "stopped"
+  },
+  {
+   "id": "vm-128-c2",
+   "kind": "container",
+   "parent": "vm-128",
+   "title": "redis",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-128-c3",
+   "kind": "container",
+   "parent": "vm-128",
+   "title": "nginx",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-128-c4",
+   "kind": "container",
+   "parent": "vm-128",
+   "title": "cron",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-128-c5",
+   "kind": "container",
+   "parent": "vm-128",
+   "title": "redis",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-128-c6",
+   "kind": "container",
+   "parent": "vm-128",
+   "title": "queue",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-128-c7",
+   "kind": "container",
+   "parent": "vm-128",
+   "title": "수집기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-128-c8",
+   "kind": "container",
+   "parent": "vm-128",
+   "title": "worker",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-128-c9",
+   "kind": "container",
+   "parent": "vm-128",
+   "title": "내보내기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-128-c10",
+   "kind": "container",
+   "parent": "vm-128",
+   "title": "queue",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "lxc-129",
+   "kind": "lxc",
+   "parent": "node-2",
+   "title": "데이터베이스-129",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "vm-130",
+   "kind": "vm",
+   "parent": "node-2",
+   "title": "모니터-130",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "vm-131",
+   "kind": "vm",
+   "parent": "node-2",
+   "title": "배포-131",
+   "basis": "observed",
+   "state": "running",
+   "docker": true
+  },
+  {
+   "id": "vm-131-c0",
+   "kind": "container",
+   "parent": "vm-131",
+   "title": "내보내기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-131-c1",
+   "kind": "container",
+   "parent": "vm-131",
+   "title": "worker",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-131-c2",
+   "kind": "container",
+   "parent": "vm-131",
+   "title": "worker",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-131-c3",
+   "kind": "container",
+   "parent": "vm-131",
+   "title": "api",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-131-c4",
+   "kind": "container",
+   "parent": "vm-131",
+   "title": "pg",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-131-c5",
+   "kind": "container",
+   "parent": "vm-131",
+   "title": "cron",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-131-c6",
+   "kind": "container",
+   "parent": "vm-131",
+   "title": "nginx",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-131-c7",
+   "kind": "container",
+   "parent": "vm-131",
+   "title": "queue",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-131-c8",
+   "kind": "container",
+   "parent": "vm-131",
+   "title": "worker",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-131-c9",
+   "kind": "container",
+   "parent": "vm-131",
+   "title": "worker",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-131-c10",
+   "kind": "container",
+   "parent": "vm-131",
+   "title": "worker",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-131-c11",
+   "kind": "container",
+   "parent": "vm-131",
+   "title": "cron",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "node-3",
+   "kind": "node",
+   "title": "노드 3",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "node-3-br1",
+   "kind": "bridge",
+   "parent": "node-3",
+   "title": "vmbr0",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "node-3-st1",
+   "kind": "storage",
+   "parent": "node-3",
+   "title": "local",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "node-3-br2",
+   "kind": "bridge",
+   "parent": "node-3",
+   "title": "vmbr1",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "node-3-st2",
+   "kind": "storage",
+   "parent": "node-3",
+   "title": "local-lvm",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "vm-132",
+   "kind": "vm",
+   "parent": "node-3",
+   "title": "모니터-132",
+   "basis": "observed",
+   "state": "running",
+   "docker": true
+  },
+  {
+   "id": "vm-132-c0",
+   "kind": "container",
+   "parent": "vm-132",
+   "title": "worker",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-132-c1",
+   "kind": "container",
+   "parent": "vm-132",
+   "title": "수집기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-132-c2",
+   "kind": "container",
+   "parent": "vm-132",
+   "title": "내보내기",
+   "basis": "observed",
+   "state": "stopped"
+  },
+  {
+   "id": "vm-132-c3",
+   "kind": "container",
+   "parent": "vm-132",
+   "title": "내보내기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-132-c4",
+   "kind": "container",
+   "parent": "vm-132",
+   "title": "web",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-132-c5",
+   "kind": "container",
+   "parent": "vm-132",
+   "title": "nginx",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-132-c6",
+   "kind": "container",
+   "parent": "vm-132",
+   "title": "redis",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-132-c7",
+   "kind": "container",
+   "parent": "vm-132",
+   "title": "nginx",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-132-c8",
+   "kind": "container",
+   "parent": "vm-132",
+   "title": "redis",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-132-c9",
+   "kind": "container",
+   "parent": "vm-132",
+   "title": "redis",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-132-c10",
+   "kind": "container",
+   "parent": "vm-132",
+   "title": "queue",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-132-c11",
+   "kind": "container",
+   "parent": "vm-132",
+   "title": "api",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-132-c12",
+   "kind": "container",
+   "parent": "vm-132",
+   "title": "pg",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-133",
+   "kind": "vm",
+   "parent": "node-3",
+   "title": "인증-133",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "vm-134",
+   "kind": "vm",
+   "parent": "node-3",
+   "title": "검색-134",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "vm-135",
+   "kind": "vm",
+   "parent": "node-3",
+   "title": "로그-135",
+   "basis": "observed",
+   "state": "running",
+   "docker": true
+  },
+  {
+   "id": "vm-135-c0",
+   "kind": "container",
+   "parent": "vm-135",
+   "title": "api",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-135-c1",
+   "kind": "container",
+   "parent": "vm-135",
+   "title": "수집기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-135-c2",
+   "kind": "container",
+   "parent": "vm-135",
+   "title": "cron",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-135-c3",
+   "kind": "container",
+   "parent": "vm-135",
+   "title": "내보내기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-135-c4",
+   "kind": "container",
+   "parent": "vm-135",
+   "title": "내보내기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-135-c5",
+   "kind": "container",
+   "parent": "vm-135",
+   "title": "web",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-135-c6",
+   "kind": "container",
+   "parent": "vm-135",
+   "title": "수집기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-135-c7",
+   "kind": "container",
+   "parent": "vm-135",
+   "title": "api",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-135-c8",
+   "kind": "container",
+   "parent": "vm-135",
+   "title": "pg",
+   "basis": "observed",
+   "state": "stopped"
+  },
+  {
+   "id": "vm-135-c9",
+   "kind": "container",
+   "parent": "vm-135",
+   "title": "cron",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-135-c10",
+   "kind": "container",
+   "parent": "vm-135",
+   "title": "nginx",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-135-c11",
+   "kind": "container",
+   "parent": "vm-135",
+   "title": "내보내기",
+   "basis": "observed",
+   "state": "running"
+  },
+  {
+   "id": "vm-136",
+   "kind": "vm",
+   "parent": "node-3",
+   "title": "배포-136",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "lxc-137",
+   "kind": "lxc",
+   "parent": "node-3",
+   "title": "모니터-137",
+   "basis": "observed",
+   "state": "error",
+   "docker": false
+  },
+  {
+   "id": "lxc-138",
+   "kind": "lxc",
+   "parent": "node-3",
+   "title": "백업-138",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "vm-139",
+   "kind": "vm",
+   "parent": "node-3",
+   "title": "배포-139",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "lxc-140",
+   "kind": "lxc",
+   "parent": "node-3",
+   "title": "백업-140",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "vm-141",
+   "kind": "vm",
+   "parent": "node-3",
+   "title": "메일-141",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "lxc-142",
+   "kind": "lxc",
+   "parent": "node-3",
+   "title": "배포-142",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "vm-143",
+   "kind": "vm",
+   "parent": "node-3",
+   "title": "사내위키-143",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "vm-144",
+   "kind": "vm",
+   "parent": "node-3",
+   "title": "캐시-144",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "vm-145",
+   "kind": "vm",
+   "parent": "node-3",
+   "title": "메일-145",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "vm-146",
+   "kind": "vm",
+   "parent": "node-3",
+   "title": "데이터베이스-146",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "lxc-147",
+   "kind": "lxc",
+   "parent": "node-3",
+   "title": "캐시-147",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "node-4",
+   "kind": "node",
+   "title": "노드 4",
+   "basis": "observed",
+   "state": "stale"
+  },
+  {
+   "id": "node-4-br1",
+   "kind": "bridge",
+   "parent": "node-4",
+   "title": "vmbr0",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "node-4-st1",
+   "kind": "storage",
+   "parent": "node-4",
+   "title": "local",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "node-4-br2",
+   "kind": "bridge",
+   "parent": "node-4",
+   "title": "vmbr1",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "node-4-st2",
+   "kind": "storage",
+   "parent": "node-4",
+   "title": "local-lvm",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "lxc-148",
+   "kind": "lxc",
+   "parent": "node-4",
+   "title": "빌드-148",
+   "basis": "observed",
+   "state": "stale",
+   "docker": false
+  },
+  {
+   "id": "vm-149",
+   "kind": "vm",
+   "parent": "node-4",
+   "title": "검색-149",
+   "basis": "observed",
+   "state": "stale",
+   "docker": false
+  },
+  {
+   "id": "vm-150",
+   "kind": "vm",
+   "parent": "node-4",
+   "title": "사내위키-150",
+   "basis": "observed",
+   "state": "stale",
+   "docker": false
+  },
+  {
+   "id": "lxc-151",
+   "kind": "lxc",
+   "parent": "node-4",
+   "title": "백업-151",
+   "basis": "observed",
+   "state": "stale",
+   "docker": false
+  },
+  {
+   "id": "vm-152",
+   "kind": "vm",
+   "parent": "node-4",
+   "title": "메일-152",
+   "basis": "observed",
+   "state": "stale",
+   "docker": false
+  },
+  {
+   "id": "vm-153",
+   "kind": "vm",
+   "parent": "node-4",
+   "title": "배포-153",
+   "basis": "observed",
+   "state": "stale",
+   "docker": false
+  },
+  {
+   "id": "vm-154",
+   "kind": "vm",
+   "parent": "node-4",
+   "title": "캐시-154",
+   "basis": "observed",
+   "state": "stale",
+   "docker": false
+  },
+  {
+   "id": "lxc-155",
+   "kind": "lxc",
+   "parent": "node-4",
+   "title": "메일-155",
+   "basis": "observed",
+   "state": "stale",
+   "docker": false
+  },
+  {
+   "id": "lxc-156",
+   "kind": "lxc",
+   "parent": "node-4",
+   "title": "검색-156",
+   "basis": "observed",
+   "state": "stale",
+   "docker": false
+  },
+  {
+   "id": "lxc-157",
+   "kind": "lxc",
+   "parent": "node-4",
+   "title": "데이터베이스-157",
+   "basis": "observed",
+   "state": "stale",
+   "docker": false
+  },
+  {
+   "id": "vm-158",
+   "kind": "vm",
+   "parent": "node-4",
+   "title": "빌드-158",
+   "basis": "observed",
+   "state": "stale",
+   "docker": false
+  },
+  {
+   "id": "lxc-159",
+   "kind": "lxc",
+   "parent": "node-4",
+   "title": "인증-159",
+   "basis": "observed",
+   "state": "stale",
+   "docker": false
+  },
+  {
+   "id": "vm-160",
+   "kind": "vm",
+   "parent": "node-4",
+   "title": "검색-160",
+   "basis": "observed",
+   "state": "stale",
+   "docker": false
+  },
+  {
+   "id": "lxc-161",
+   "kind": "lxc",
+   "parent": "node-4",
+   "title": "모니터-161",
+   "basis": "observed",
+   "state": "stale",
+   "docker": false
+  },
+  {
+   "id": "vm-162",
+   "kind": "vm",
+   "parent": "node-4",
+   "title": "모니터-162",
+   "basis": "observed",
+   "state": "stale",
+   "docker": false
+  },
+  {
+   "id": "vm-163",
+   "kind": "vm",
+   "parent": "node-4",
+   "title": "배포-163",
+   "basis": "observed",
+   "state": "stale",
+   "docker": false
+  },
+  {
+   "id": "node-5",
+   "kind": "node",
+   "title": "노드 5",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "node-5-br1",
+   "kind": "bridge",
+   "parent": "node-5",
+   "title": "vmbr0",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "node-5-st1",
+   "kind": "storage",
+   "parent": "node-5",
+   "title": "local",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "node-5-br2",
+   "kind": "bridge",
+   "parent": "node-5",
+   "title": "vmbr1",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "node-5-st2",
+   "kind": "storage",
+   "parent": "node-5",
+   "title": "local-lvm",
+   "basis": "observed",
+   "state": "ok"
+  },
+  {
+   "id": "lxc-164",
+   "kind": "lxc",
+   "parent": "node-5",
+   "title": "결제-164",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "vm-165",
+   "kind": "vm",
+   "parent": "node-5",
+   "title": "사내위키-165",
+   "basis": "observed",
+   "state": "stopped",
+   "docker": false
+  },
+  {
+   "id": "lxc-166",
+   "kind": "lxc",
+   "parent": "node-5",
+   "title": "결제-166",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "lxc-167",
+   "kind": "lxc",
+   "parent": "node-5",
+   "title": "백업-167",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "vm-168",
+   "kind": "vm",
+   "parent": "node-5",
+   "title": "배포-168",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "vm-169",
+   "kind": "vm",
+   "parent": "node-5",
+   "title": "메일-169",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "vm-170",
+   "kind": "vm",
+   "parent": "node-5",
+   "title": "인증-170",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "vm-171",
+   "kind": "vm",
+   "parent": "node-5",
+   "title": "결제-171",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "vm-172",
+   "kind": "vm",
+   "parent": "node-5",
+   "title": "검색-172",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "vm-173",
+   "kind": "vm",
+   "parent": "node-5",
+   "title": "캐시-173",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "lxc-174",
+   "kind": "lxc",
+   "parent": "node-5",
+   "title": "사내위키-174",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "lxc-175",
+   "kind": "lxc",
+   "parent": "node-5",
+   "title": "배포-175",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "lxc-176",
+   "kind": "lxc",
+   "parent": "node-5",
+   "title": "데이터베이스-176",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "vm-177",
+   "kind": "vm",
+   "parent": "node-5",
+   "title": "빌드-177",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "vm-178",
+   "kind": "vm",
+   "parent": "node-5",
+   "title": "배포-178",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  },
+  {
+   "id": "lxc-179",
+   "kind": "lxc",
+   "parent": "node-5",
+   "title": "로그-179",
+   "basis": "observed",
+   "state": "running",
+   "docker": false
+  }
+ ],
+ "edges": [
+  {
+   "id": "e1",
+   "source": "wan",
+   "target": "gw",
+   "kind": "wan",
+   "basis": "declared"
+  },
+  {
+   "id": "e2",
+   "source": "tun",
+   "target": "gw",
+   "kind": "wan",
+   "basis": "declared"
+  },
+  {
+   "id": "e3",
+   "source": "gw",
+   "target": "rp",
+   "kind": "route",
+   "basis": "declared"
+  },
+  {
+   "id": "e4",
+   "source": "gw",
+   "target": "seg1",
+   "kind": "route",
+   "basis": "derived"
+  },
+  {
+   "id": "e5",
+   "source": "rp",
+   "target": "seg2",
+   "kind": "route",
+   "basis": "declared"
+  },
+  {
+   "id": "e-node-1-1",
+   "source": "seg1",
+   "target": "node-1",
+   "kind": "uplink",
+   "basis": "observed"
+  },
+  {
+   "id": "e-node-1-2",
+   "source": "seg2",
+   "target": "node-1",
+   "kind": "uplink",
+   "basis": "observed"
+  },
+  {
+   "id": "e-node-2-1",
+   "source": "seg1",
+   "target": "node-2",
+   "kind": "uplink",
+   "basis": "observed"
+  },
+  {
+   "id": "e-node-2-2",
+   "source": "seg2",
+   "target": "node-2",
+   "kind": "uplink",
+   "basis": "observed"
+  },
+  {
+   "id": "e-node-3-1",
+   "source": "seg1",
+   "target": "node-3",
+   "kind": "uplink",
+   "basis": "observed"
+  },
+  {
+   "id": "e-node-3-2",
+   "source": "seg2",
+   "target": "node-3",
+   "kind": "uplink",
+   "basis": "observed"
+  },
+  {
+   "id": "e-node-4-1",
+   "source": "seg1",
+   "target": "node-4",
+   "kind": "uplink",
+   "basis": "observed"
+  },
+  {
+   "id": "e-node-4-2",
+   "source": "seg2",
+   "target": "node-4",
+   "kind": "uplink",
+   "basis": "observed"
+  },
+  {
+   "id": "e-node-5-1",
+   "source": "seg1",
+   "target": "node-5",
+   "kind": "uplink",
+   "basis": "observed"
+  },
+  {
+   "id": "e-node-5-2",
+   "source": "seg2",
+   "target": "node-5",
+   "kind": "uplink",
+   "basis": "observed"
+  }
+ ]
+}

@@ -1,0 +1,26 @@
+config:
+  adminAddr: "off"
+  statsAddr: "off"
+  readinessAddr: "off"
+  storage: { mode: readOnly }
+
+gateways:
+  default: { port: 18110, bindAddress: 127.0.0.1 }
+routes:
+- matches: [{ path: { pathPrefix: /mcp } }]
+  policies:
+    apiKey:
+      mode: strict
+      location: { header: { name: authorization, prefix: 'Bearer ' } }
+      keys: [{ keyHash: 'sha256:118fde049ae83494dbaf04f9972f68d21ba41c485d1aaa0b191e736db1fd1458' }]
+  backends:
+  - mcp:
+      dnsRebindingProtection: true
+
+
+
+      targets:
+      - name: alpha
+        mcp: { host: http://127.0.0.1:18101/mcp }
+      - name: beta
+        stdio: { cmd: /home/user/.nvm/versions/node/v26.13.0/bin/node, args: [/tmp/claude-1000/-home-sagae-sagae-tools/02a1e6e4-8e47-4124-a5b3-6286b9153cd2/scratchpad/spikes/s1-aggregation/upstreams/beta.mjs] }

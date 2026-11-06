@@ -1,0 +1,355 @@
+{
+ "legacy": {
+  "negotiated": "2025-11-25",
+  "serverInfo": {
+   "name": "1mcp",
+   "version": "0.39.7"
+  },
+  "instructions": "# 1MCP - Model Context Protocol Proxy\n\nYou are interacting with 1MCP, a proxy server that aggregates capabilities from multiple MCP (Model Context Protocol) servers. 1MCP acts as a unified gateway, allowing you to access tools and resources from various specialized MCP servers through a single connection.\n\n## How 1MCP Works\n\n- **Unified Access**: Connect to multiple MCP servers through one proxy\n- **Tool Aggregation**: Most tool names follow the naming pattern `{server}_1mcp_{tool}`. Use the exact names returned by tools/list; names outside the protocol limits use a stable compact form.\n- **Resource Sharing**: Access files, data, and capabilities across different servers\n- **Intelligent Routing**: Your requests are automatically routed to the appropriate servers\n\n## Currently Connected Servers\n\n2 MCP servers are currently available:\n\nalpha\nbeta\n\n## Available Capabilities\n\nMost tool names from connected servers follow the format: `{server}_1mcp_{tool}`. Use the exact names returned by tools/list; names outside the protocol limits use a stable compact form.\n\nExamples:\n- `filesystem_1mcp_read_file` - Read files through filesystem server\n- `web_1mcp_search` - Search the web through web server\n- `database_1mcp_query` - Query databases through database server\n\n## Server-Specific Instructions\n\nThe following sections contain instructions from each connected MCP server. Each server's instructions are wrapped in XML-like tags (e.g., `<server-name>instructions</server-name>`) to clearly identify their source and scope.\n\n<alpha>\nALPHA_INSTRUCTIONS: use alpha for snapshots.\n</alpha>\n\n<beta>\nBETA_INSTRUCTIONS: use beta for notes.\n</beta>\n\n\n## Tips for Using 1MCP\n\n- Tools are namespaced by server to avoid conflicts\n\n\n",
+  "capabilities": {
+   "completions": {},
+   "resources": {
+    "listChanged": true
+   },
+   "tools": {
+    "listChanged": true
+   },
+   "prompts": {
+    "listChanged": true
+   },
+   "logging": {}
+  },
+  "toolsListMeta": {},
+  "tools": [
+   {
+    "name": "alpha_1mcp_link_doc",
+    "hasOutputSchema": false,
+    "meta": {
+     "app.1mcp/route": {
+      "kind": "tools",
+      "server": "alpha",
+      "upstreamIdentity": "link_doc"
+     }
+    },
+    "desc": "ALPHA returns a resource_link to its snapshot"
+   },
+   {
+    "name": "alpha_1mcp_status",
+    "title": "Alpha status",
+    "hasOutputSchema": true,
+    "annotations": {
+     "readOnlyHint": true
+    },
+    "meta": {
+     "anthropic/alwaysLoad": true,
+     "x.spike/marker": "alpha-status",
+     "app.1mcp/route": {
+      "kind": "tools",
+      "server": "alpha",
+      "upstreamIdentity": "status"
+     }
+    },
+    "desc": "ALPHA status with structured output"
+   },
+   {
+    "name": "beta_1mcp_beta_echo",
+    "hasOutputSchema": false,
+    "meta": {
+     "app.1mcp/route": {
+      "kind": "tools",
+      "server": "beta",
+      "upstreamIdentity": "beta_echo"
+     }
+    },
+    "desc": "BETA echoes text"
+   },
+   {
+    "name": "beta_1mcp_status",
+    "hasOutputSchema": false,
+    "meta": {
+     "app.1mcp/route": {
+      "kind": "tools",
+      "server": "beta",
+      "upstreamIdentity": "status"
+     }
+    },
+    "desc": "BETA status, plain text, no outputSchema"
+   }
+  ],
+  "resources": [
+   {
+    "uri": "mcp+1mcp.15070794f9a7cc24+kb://alpha/snapshot/1",
+    "name": "alpha-snapshot",
+    "mimeType": "text/plain"
+   },
+   {
+    "uri": "mcp+1mcp.fdf48a181cd555bf+beta://notes/1",
+    "name": "beta-notes",
+    "mimeType": "text/plain"
+   }
+  ],
+  "calls": {
+   "alpha_1mcp_link_doc": {
+    "status": 200,
+    "text": [
+     "see kb://alpha/snapshot/1"
+    ],
+    "resourceLinks": [
+     {
+      "uri": "kb://alpha/snapshot/1",
+      "name": "alpha-snapshot"
+     }
+    ],
+    "ms": 29.8
+   },
+   "alpha_1mcp_status": {
+    "status": 200,
+    "text": [
+     "{\"source\":\"alpha\",\"pid\":1595539,\"calls\":1}"
+    ],
+    "structuredContent": {
+     "calls": 1,
+     "pid": 1595539,
+     "source": "alpha"
+    },
+    "resourceLinks": [],
+    "ms": 39.4
+   },
+   "beta_1mcp_beta_echo": {
+    "status": 200,
+    "text": [
+     "beta-echo:x pid=1599041"
+    ],
+    "resourceLinks": [],
+    "ms": 27.3
+   },
+   "beta_1mcp_status": {
+    "status": 200,
+    "text": [
+     "beta-status pid=1599041"
+    ],
+    "resourceLinks": [],
+    "ms": 14
+   }
+  },
+  "reads": {
+   "mcp+1mcp.15070794f9a7cc24+kb://alpha/snapshot/1": {
+    "contents": [
+     {
+      "uri": "mcp+1mcp.15070794f9a7cc24+kb://alpha/snapshot/1",
+      "text": "alpha-body from 1595539"
+     }
+    ],
+    "ttlMs": 0,
+    "cacheScope": "private"
+   },
+   "mcp+1mcp.fdf48a181cd555bf+beta://notes/1": {
+    "contents": [
+     {
+      "uri": "mcp+1mcp.fdf48a181cd555bf+beta://notes/1",
+      "text": "beta-body from 1599041"
+     }
+    ],
+    "ttlMs": 0,
+    "cacheScope": "private"
+   }
+  },
+  "linkReadback": {
+   "alpha_1mcp_link_doc -> kb://alpha/snapshot/1": {
+    "status": 200,
+    "error": {
+     "code": -32002,
+     "message": "Error reading resource",
+     "data": {
+      "app.1mcp/failure": {
+       "kind": "protocol",
+       "code": "resource_not_found"
+      },
+      "uri": "kb://alpha/snapshot/1"
+     }
+    }
+   }
+  },
+  "prompts": 0
+ },
+ "modern": {
+  "negotiated": "2026-07-28",
+  "instructions": "# 1MCP - Model Context Protocol Proxy\n\nYou are interacting with 1MCP, a proxy server that aggregates capabilities from multiple MCP (Model Context Protocol) servers. 1MCP acts as a unified gateway, allowing you to access tools and resources from various specialized MCP servers through a single connection.\n\n## How 1MCP Works\n\n- **Unified Access**: Connect to multiple MCP servers through one proxy\n- **Tool Aggregation**: Most tool names follow the naming pattern `{server}_1mcp_{tool}`. Use the exact names returned by tools/list; names outside the protocol limits use a stable compact form.\n- **Resource Sharing**: Access files, data, and capabilities across different servers\n- **Intelligent Routing**: Your requests are automatically routed to the appropriate servers\n\n## Currently Connected Servers\n\n2 MCP servers are currently available:\n\nalpha\nbeta\n\n## Available Capabilities\n\nMost tool names from connected servers follow the format: `{server}_1mcp_{tool}`. Use the exact names returned by tools/list; names outside the protocol limits use a stable compact form.\n\nExamples:\n- `filesystem_1mcp_read_file` - Read files through filesystem server\n- `web_1mcp_search` - Search the web through web server\n- `database_1mcp_query` - Query databases through database server\n\n## Server-Specific Instructions\n\nThe following sections contain instructions from each connected MCP server. Each server's instructions are wrapped in XML-like tags (e.g., `<server-name>instructions</server-name>`) to clearly identify their source and scope.\n\n<alpha>\nALPHA_INSTRUCTIONS: use alpha for snapshots.\n</alpha>\n\n<beta>\nBETA_INSTRUCTIONS: use beta for notes.\n</beta>\n\n\n## Tips for Using 1MCP\n\n- Tools are namespaced by server to avoid conflicts\n\n\n",
+  "capabilities": {
+   "tools": {
+    "listChanged": true
+   },
+   "prompts": {},
+   "resources": {
+    "listChanged": true
+   },
+   "completions": {}
+  },
+  "toolsListMeta": {
+   "resultType": "complete",
+   "ttlMs": 0,
+   "cacheScope": "private",
+   "_meta": {
+    "io.modelcontextprotocol/serverInfo": {
+     "name": "1mcp",
+     "version": "0.39.7"
+    }
+   }
+  },
+  "tools": [
+   {
+    "name": "alpha_1mcp_link_doc",
+    "hasOutputSchema": false,
+    "meta": {
+     "app.1mcp/route": {
+      "kind": "tools",
+      "server": "alpha",
+      "upstreamIdentity": "link_doc"
+     }
+    },
+    "desc": "ALPHA returns a resource_link to its snapshot"
+   },
+   {
+    "name": "alpha_1mcp_status",
+    "title": "Alpha status",
+    "hasOutputSchema": true,
+    "annotations": {
+     "readOnlyHint": true
+    },
+    "meta": {
+     "anthropic/alwaysLoad": true,
+     "x.spike/marker": "alpha-status",
+     "app.1mcp/route": {
+      "kind": "tools",
+      "server": "alpha",
+      "upstreamIdentity": "status"
+     }
+    },
+    "desc": "ALPHA status with structured output"
+   },
+   {
+    "name": "beta_1mcp_beta_echo",
+    "hasOutputSchema": false,
+    "meta": {
+     "app.1mcp/route": {
+      "kind": "tools",
+      "server": "beta",
+      "upstreamIdentity": "beta_echo"
+     }
+    },
+    "desc": "BETA echoes text"
+   },
+   {
+    "name": "beta_1mcp_status",
+    "hasOutputSchema": false,
+    "meta": {
+     "app.1mcp/route": {
+      "kind": "tools",
+      "server": "beta",
+      "upstreamIdentity": "status"
+     }
+    },
+    "desc": "BETA status, plain text, no outputSchema"
+   }
+  ],
+  "resources": [
+   {
+    "uri": "mcp+1mcp.15070794f9a7cc24+kb://alpha/snapshot/1",
+    "name": "alpha-snapshot",
+    "mimeType": "text/plain"
+   },
+   {
+    "uri": "mcp+1mcp.fdf48a181cd555bf+beta://notes/1",
+    "name": "beta-notes",
+    "mimeType": "text/plain"
+   }
+  ],
+  "calls": {
+   "alpha_1mcp_link_doc": {
+    "status": 200,
+    "text": [
+     "see kb://alpha/snapshot/1"
+    ],
+    "resourceLinks": [
+     {
+      "uri": "kb://alpha/snapshot/1",
+      "name": "alpha-snapshot"
+     }
+    ],
+    "resultType": "complete",
+    "ms": 40
+   },
+   "alpha_1mcp_status": {
+    "status": 200,
+    "text": [
+     "{\"source\":\"alpha\",\"pid\":1595539,\"calls\":2}"
+    ],
+    "structuredContent": {
+     "calls": 2,
+     "pid": 1595539,
+     "source": "alpha"
+    },
+    "resourceLinks": [],
+    "resultType": "complete",
+    "ms": 32
+   },
+   "beta_1mcp_beta_echo": {
+    "status": 200,
+    "text": [
+     "beta-echo:x pid=1599041"
+    ],
+    "resourceLinks": [],
+    "resultType": "complete",
+    "ms": 30.7
+   },
+   "beta_1mcp_status": {
+    "status": 200,
+    "text": [
+     "beta-status pid=1599041"
+    ],
+    "resourceLinks": [],
+    "resultType": "complete",
+    "ms": 29
+   }
+  },
+  "reads": {
+   "mcp+1mcp.15070794f9a7cc24+kb://alpha/snapshot/1": {
+    "contents": [
+     {
+      "uri": "mcp+1mcp.15070794f9a7cc24+kb://alpha/snapshot/1",
+      "text": "alpha-body from 1595539"
+     }
+    ],
+    "ttlMs": 0,
+    "cacheScope": "private"
+   },
+   "mcp+1mcp.fdf48a181cd555bf+beta://notes/1": {
+    "contents": [
+     {
+      "uri": "mcp+1mcp.fdf48a181cd555bf+beta://notes/1",
+      "text": "beta-body from 1599041"
+     }
+    ],
+    "ttlMs": 0,
+    "cacheScope": "private"
+   }
+  },
+  "linkReadback": {
+   "alpha_1mcp_link_doc -> kb://alpha/snapshot/1": {
+    "status": 200,
+    "error": {
+     "code": -32602,
+     "message": "Unknown resource",
+     "data": {
+      "app.1mcp/failure": {
+       "kind": "protocol",
+       "code": "resource_not_found"
+      },
+      "uri": "kb://alpha/snapshot/1"
+     }
+    }
+   }
+  },
+  "prompts": 0
+ }
+}

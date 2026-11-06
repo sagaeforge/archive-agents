@@ -1,0 +1,202 @@
+{
+ "legacy": {
+  "negotiated": "2025-11-25",
+  "serverInfo": {
+   "name": "alpha",
+   "version": "1.0.0"
+  },
+  "instructions": "ALPHA_INSTRUCTIONS: use alpha for snapshots.",
+  "capabilities": {
+   "tools": {
+    "listChanged": true
+   },
+   "resources": {
+    "listChanged": true
+   }
+  },
+  "toolsListMeta": {},
+  "tools": [
+   {
+    "name": "status",
+    "title": "Alpha status",
+    "hasOutputSchema": true,
+    "annotations": {
+     "readOnlyHint": true
+    },
+    "meta": {
+     "anthropic/alwaysLoad": true,
+     "x.spike/marker": "alpha-status"
+    },
+    "desc": "ALPHA status with structured output"
+   },
+   {
+    "name": "link_doc",
+    "hasOutputSchema": false,
+    "desc": "ALPHA returns a resource_link to its snapshot"
+   }
+  ],
+  "resources": [
+   {
+    "uri": "kb://alpha/snapshot/1",
+    "name": "alpha-snapshot",
+    "mimeType": "text/plain"
+   }
+  ],
+  "calls": {
+   "status": {
+    "status": 200,
+    "text": [
+     "{\"source\":\"alpha\",\"pid\":1094689,\"calls\":1}"
+    ],
+    "structuredContent": {
+     "source": "alpha",
+     "pid": 1094689,
+     "calls": 1
+    },
+    "resourceLinks": [],
+    "ms": 9.6
+   },
+   "link_doc": {
+    "status": 200,
+    "text": [
+     "see kb://alpha/snapshot/1"
+    ],
+    "resourceLinks": [
+     {
+      "uri": "kb://alpha/snapshot/1",
+      "name": "alpha-snapshot"
+     }
+    ],
+    "ms": 8.5
+   }
+  },
+  "reads": {
+   "kb://alpha/snapshot/1": {
+    "contents": [
+     {
+      "uri": "kb://alpha/snapshot/1",
+      "text": "alpha-body from 1094689"
+     }
+    ]
+   }
+  },
+  "linkReadback": {
+   "link_doc -> kb://alpha/snapshot/1": {
+    "ok": true,
+    "uri": "kb://alpha/snapshot/1"
+   }
+  },
+  "prompts": {
+   "status": 200,
+   "error": {
+    "code": -32601,
+    "message": "Method not found"
+   }
+  }
+ },
+ "modern": {
+  "negotiated": "2026-07-28",
+  "instructions": "ALPHA_INSTRUCTIONS: use alpha for snapshots.",
+  "capabilities": {
+   "tools": {
+    "listChanged": true
+   },
+   "resources": {
+    "listChanged": true
+   }
+  },
+  "toolsListMeta": {
+   "resultType": "complete",
+   "ttlMs": 0,
+   "cacheScope": "private",
+   "_meta": {
+    "io.modelcontextprotocol/serverInfo": {
+     "name": "alpha",
+     "version": "1.0.0"
+    }
+   }
+  },
+  "tools": [
+   {
+    "name": "status",
+    "title": "Alpha status",
+    "hasOutputSchema": true,
+    "annotations": {
+     "readOnlyHint": true
+    },
+    "meta": {
+     "anthropic/alwaysLoad": true,
+     "x.spike/marker": "alpha-status"
+    },
+    "desc": "ALPHA status with structured output"
+   },
+   {
+    "name": "link_doc",
+    "hasOutputSchema": false,
+    "desc": "ALPHA returns a resource_link to its snapshot"
+   }
+  ],
+  "resources": [
+   {
+    "uri": "kb://alpha/snapshot/1",
+    "name": "alpha-snapshot",
+    "mimeType": "text/plain"
+   }
+  ],
+  "calls": {
+   "status": {
+    "status": 200,
+    "text": [
+     "{\"source\":\"alpha\",\"pid\":1094689,\"calls\":2}"
+    ],
+    "structuredContent": {
+     "source": "alpha",
+     "pid": 1094689,
+     "calls": 2
+    },
+    "resourceLinks": [],
+    "resultType": "complete",
+    "ms": 10.4
+   },
+   "link_doc": {
+    "status": 200,
+    "text": [
+     "see kb://alpha/snapshot/1"
+    ],
+    "resourceLinks": [
+     {
+      "uri": "kb://alpha/snapshot/1",
+      "name": "alpha-snapshot"
+     }
+    ],
+    "resultType": "complete",
+    "ms": 6
+   }
+  },
+  "reads": {
+   "kb://alpha/snapshot/1": {
+    "contents": [
+     {
+      "uri": "kb://alpha/snapshot/1",
+      "text": "alpha-body from 1094689"
+     }
+    ],
+    "ttlMs": 0,
+    "cacheScope": "private"
+   }
+  },
+  "linkReadback": {
+   "link_doc -> kb://alpha/snapshot/1": {
+    "ok": true,
+    "uri": "kb://alpha/snapshot/1"
+   }
+  },
+  "prompts": {
+   "status": 404,
+   "error": {
+    "code": -32601,
+    "message": "Method not found"
+   }
+  }
+ }
+}

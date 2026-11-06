@@ -1,0 +1,17 @@
+# No [Install] section: the socket unit starts this service.
+[Unit]
+Description=tower control server
+Requires=tower.socket
+After=tower.socket
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+WorkingDirectory=/home/user/sagae-tools/tools/tower
+ExecStart=/home/user/.nvm/versions/node/v26.13.0/bin/node dist/server.js
+Environment=NODE_COMPILE_CACHE=%C/tower/compile-cache
+Restart=always
+RestartSec=1
+TimeoutStopSec=8
+# tower alone gets SIGTERM, so the section 7 order holds. systemd SIGKILLs what is left in the cgroup once tower has exited.
+KillMode=mixed

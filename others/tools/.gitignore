@@ -1,0 +1,34 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.env
+.env.*
+
+# python venvs for the real-server regression fixtures (tools/tower/test/.venv-*)
+.venv/
+.venv-*/
+__pycache__/
+*.pyc
+
+# regression run output and generated copies
+tools/tower/test/regression/.gen/
+tools/tower/test/regression/.run/
+tools/tower/test/regression/results/
+
+# Trail-Code's local graph cache (regenerable). The bare /graft also covers a link by that name.
+/graft/
+/graft
+
+# Local Claude Code state: agent worktrees and personal settings.
+/.claude/worktrees/
+/.claude/settings.local.json
+
+# Never commit what `trail init` or `trail note` would leave here. See docs/project-tools.md.
+/.trail/
+
+# Trail's local build settings.
+/.graft/
+/.graft
+
+# superpowers plugin scratch: brainstorm mockups and SDD ledgers. See docs/project-tools.md.
+/.superpowers/
