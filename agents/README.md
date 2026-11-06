@@ -300,5 +300,5 @@ Node 버전을 바꿀 때는 `.github/workflows/ci.yml`의 `matrix.node`, `plugi
 |---|---|
 | [docs/stable-gate.md](docs/stable-gate.md) | `stable` 게이트 켜기, 머신 재등록, 게이트를 켠 뒤의 롤백 |
 | [docs/live-smoke.md](docs/live-smoke.md) | 러너 LXC의 라이브 스모크와 결과 읽기 |
-| [docs/team-operations.md](docs/team-operations.md) | Workflow와 Orca 워커 고르기, `team-watcher`로 기다리기 |
+| [docs/team-operations.md](docs/team-operations.md) | Workflow와 Orca 워커 고르기, 백그라운드 Bash로 기다리기 |
 | [docs/rehearsals.md](docs/rehearsals.md) | 아직 실행하지 않은 리허설 체크리스트와 결과 기록 |
