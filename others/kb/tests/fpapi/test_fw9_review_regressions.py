@@ -136,3 +136,31 @@ def test_release_of_ordinary_private_note_cannot_bypass_declassify(api, monkeypa
     current_version, current_sha = ledger.record_head(api.world.led, fw.target)
     assert current_version == version
     assert ledger.get_payload(api.world.led, current_sha)['sensitivity'] == 'private'
+
+
+
+def test_declassified_publication_stays_public_and_original_stays_private(api, monkeypatch):
+    """A separately signed declassify keeps its result public, never its sources."""
+    fw = FW9(api, monkeypatch)
+    fw.selection['kind'] = 'local'
+    other = 'f-fw9-declassify-other-private'
+    other_title, other_body = 'PRIVATE-OTHER-TITLE', 'PRIVATE-OTHER-BODY'
+    api.world.add(record(other, other_title, 'private', body=other_body))
+    _, rid = _publish_result(fw, 'declassify-public', counter=1)
+    version, _ = ledger.record_head(api.world.led, rid)
+    prepared = api.call('POST', '/v1/actions', fw.token,
+                        dict(action='declassify', target=rid, expected_version=version,
+                             sensitivity='public', idempotency_key='fw9-review:a:declassify-public-prepare'))
+    assert prepared.status == 201, prepared.body
+    aid = data(prepared)['action_id']
+    challenge = fw.challenge(aid, action='declassify')
+    executed = fw.execute(aid, challenge, key='fw9-review:a:declassify-public-execute',
+                          assertion=fw.auth.sign(challenge, counter=2))
+    assert executed.status == 200, executed.body
+    public = api.call('GET', f'/v1/nodes/{rid}?include=body,edges', None)
+    assert public.status == 200, public.body
+    assert data(public)['data']['sensitivity'] == 'public'
+    original = api.call('GET', f'/v1/nodes/{fw.target}?include=body', None)
+    assert original.status == 404, original.body
+    for marker in (fw.target, 'FW9 memo', '정제할 합성 메모', other, other_title, other_body):
+        assert marker.encode('utf-8') not in public.body, public.body

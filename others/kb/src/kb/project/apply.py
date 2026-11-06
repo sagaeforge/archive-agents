@@ -193,16 +193,26 @@ def review_grants(led):
 
 
 def publication_grants(led, grants=None):
-    """Only a current verified payload may cross its original promotion boundary."""
+    """Carry a publication boundary only through consecutive verified payloads."""
     if led is None:
         return set()
-    latest = {rid: sha for rid, sha in led.execute(
-        "SELECT subject,payload_sha FROM event WHERE kind IN "
-        "('record.put','record.tombstone','record.redact') ORDER BY seq")}
     grants = review_grants(led) if grants is None else grants
+    boundaries = {}
+    for rid, sha, kind in led.execute(
+            "SELECT subject,payload_sha,kind FROM event WHERE kind IN "
+            "('record.put','record.tombstone','record.redact') ORDER BY seq"):
+        previous = boundaries.pop(rid, None)
+        grant = grants.get((rid, sha))
+        if kind != 'record.put' or grant is None:
+            continue  # An unverified payload or removal breaks the chain.
+        operation, action_id, target = grant
+        if operation == 'publish':
+            boundaries[rid] = (sha, action_id, target)
+        elif operation == 'declassify' and target == rid and previous is not None:
+            # Renew the verified SHA, retaining the original action/destination.
+            boundaries[rid] = (sha, previous[1], previous[2])
     return {(action_id, rid, target)
-            for (rid, sha), (operation, action_id, target) in grants.items()
-            if operation == 'publish' and latest.get(rid) == sha}
+            for rid, (sha, action_id, target) in boundaries.items()}
 
 
 def security_state(g=None, led=None) -> dict[str, int]:
