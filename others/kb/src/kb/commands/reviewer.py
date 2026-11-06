@@ -67,6 +67,9 @@ def install_candidate(request_id, *, filesystem=None, effective_uid=None):
         con.close()
     if candidate is None or candidate['rp_id'] != 'localhost' or candidate['origin'] != 'http://localhost:4812':
         raise ValueError('Invalid reviewer registration request')
+    expires = candidate.get('expires_at', candidate.get('created_at', 0) + actions.ENROLL_TTL_S)
+    if candidate.get('consumed') or actions.now() >= expires:
+        raise ValueError('Invalid reviewer registration request')
     def install(credentials):
         credentials[candidate['credential_id']] = dict(public_key=candidate['public_key'], rp_id=candidate['rp_id'])
     _replace(filesystem, install)

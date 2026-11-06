@@ -270,3 +270,47 @@ def test_secret_rejection_keeps_safe_hit_spans_and_stored_false(api):
         assert 0 <= start < end <= len(body)
         assert hit['start_u16'] == len(body[:start].encode('utf-16-le')) // 2
         assert hit['end_u16'] == len(body[:end].encode('utf-16-le')) // 2
+
+
+
+def test_expired_candidate_install_refused_before_maintenance(api, monkeypatch):
+    import pytest
+    from kb.commands.reviewer import install_candidate
+
+    fw = FW9(api, monkeypatch)
+    response = api.call('POST', '/v1/reviewer/enroll', fw.token,
+                        dict(rp_id='localhost', origin='http://localhost:4812',
+                             credential_id='fw7-expired-install', public_key='synthetic-key'))
+    assert response.status == 201, response.body
+    request_id = data(response)['request_id']
+    with fw.actions.database() as con:
+        candidate = fw.actions.load(con, 'enroll:' + request_id)
+    assert candidate is not None and candidate['expires_at'] > fw.now
+    trusted = copy.deepcopy(fw.fs.credentials)
+    fw.now = candidate['expires_at'] + 1
+    # No API request or maintenance after advancing the injected candidate clock.
+    with pytest.raises(ValueError):
+        install_candidate(request_id, filesystem=fw.fs, effective_uid=0)
+    assert fw.fs.credentials == trusted
+
+
+def test_consumed_candidate_cannot_be_reinstalled_after_revoke(api, monkeypatch):
+    import pytest
+    from kb.commands.reviewer import install_candidate, revoke_credential
+
+    fw = FW9(api, monkeypatch)
+    credential_id = 'fw7-consumed-reinstall'
+    response = api.call('POST', '/v1/reviewer/enroll', fw.token,
+                        dict(rp_id='localhost', origin='http://localhost:4812',
+                             credential_id=credential_id, public_key='synthetic-key'))
+    assert response.status == 201, response.body
+    request_id = data(response)['request_id']
+    install_candidate(request_id, filesystem=fw.fs, effective_uid=0)
+    assert credential_id in fw.fs.credentials
+    revoke_credential(credential_id, filesystem=fw.fs, effective_uid=0)
+    assert credential_id not in fw.fs.credentials
+    trusted = copy.deepcopy(fw.fs.credentials)
+    # A consumed request must stay unusable even before its cleanup runs.
+    with pytest.raises(ValueError):
+        install_candidate(request_id, filesystem=fw.fs, effective_uid=0)
+    assert fw.fs.credentials == trusted
