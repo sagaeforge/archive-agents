@@ -186,6 +186,13 @@ def _capacity(con, action):
         fail('spool_full', 503)
 
 
+def require_quarantine(payload):
+    # Release restores quarantine_from (or the owner's internal default);
+    # ordinary sensitivity changes require the separate declassify action.
+    if not (payload.get('props') or {}).get('quarantine'):
+        fail('schema_invalid', 400)
+
+
 def prepare(obj):
     info = identity()
     reviewer.require_trust()
@@ -207,6 +214,8 @@ def prepare(obj):
             return []
         if obj.get('expected_version') != version:
             fail('review_stale', 409)
+        if action_name == 'release':
+            require_quarantine(payload)
         if action_name == 'publish' and payload.get('type') != 'Note':
             fail('schema_invalid', 400)
         if action_name != 'release' and secrets_scan.scan_record(payload):
@@ -498,6 +507,7 @@ def execute(aid, obj, external=False):
             else:
                 payload = copy.deepcopy(original)
                 if action['action'] == 'release':
+                    require_quarantine(payload)
                     props = payload.setdefault('props', {})
                     payload['sensitivity'] = props.get('quarantine_from', 'internal')
                     for field in ('quarantine', 'quarantine_from', 'quarantine_rules'):
@@ -624,10 +634,14 @@ def reconcile_hitl(signal):
         item_id = 'h-' + digest([kind, signal['target'], signal['verdict']])[:32]
         prior = load(con, 'hitl:' + item_id)
         if not signal.get('unresolved'):
-            if prior:
-                prior['state'] = 'auto_resolved'
-                save(con, 'hitl:' + item_id, prior)
-                result.update(prior)
+            for key, item in rows(con, 'hitl:'):
+                if (item['kind'] == kind and item['target'] == signal['target']
+                        and item['state'] == 'open'):
+                    item['state'] = 'auto_resolved'
+                    save(con, key, item)
+                    if item['id'] == item_id:
+                        result.update(item)
+            save(con, 'verdict:' + digest([kind, signal['target']]), signal['verdict'])
             return []
         if prior is None:
             prior = dict(signal, id=item_id, state='open', created_at=now(), proposed_state=signal.get('proposed_state'))

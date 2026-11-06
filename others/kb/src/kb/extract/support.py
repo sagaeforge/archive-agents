@@ -152,11 +152,17 @@ def run_queue(backends: dict, router, limit: int = 20) -> dict:
                     done = str(j["reason"]).startswith("guard:") or (bool(j.get("called")) and it["attempts"] >= int(settings.get("max_attempts", 3)))
                 else:
                     sup = j["supported"]
-                    commit([{"kind": "claim.review", "actor": "l2", "origin": "system", "subject": cl["id"],
+                    reviewed = commit([{"kind": "claim.review", "actor": "l2", "origin": "system", "subject": cl["id"],
                              "idem_key": f"support:{cl['id']}:{j['backend']}:{j['model']}",
                              "payload": {"id": cl["id"], "verification": "quote_found" if sup else "needs_review",
                                          "support_check": "supported" if sup else "unsupported",
                                          "decided_by": f"l2:support:{j['backend']}:{j['model']}"}}], "l2", timeout=60.0)
+                    if reviewed.seq is not None:
+                        from kb.write.actions import reconcile_hitl
+                        reconcile_hitl(dict(kind="gate_unresolved", target=cl["id"], verdict=reviewed.seq,
+                                            unresolved=not sup, reason="unsupported_entailment",
+                                            attempted=[f"support:{j['backend']}:{j['model']}"], candidates=[],
+                                            evidence=[{"snapshot": cl["snapshot"]}], proposed_state="needs_review"))
                     out["checked"] += 1
                     out["supported" if sup else "unsupported"] += 1
             c = opsdb.connect()

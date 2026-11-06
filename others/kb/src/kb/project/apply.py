@@ -175,8 +175,8 @@ def review_grants(led):
             blocked.add(sequence)
         else:
             blocked.discard(sequence)
-    for seq, raw, actor, generated in led.execute(
-            "SELECT e.seq,p.body,e.actor,e.generated_by FROM event e JOIN payload p ON p.sha=e.payload_sha "
+    for seq, raw, actor, generated, target in led.execute(
+            "SELECT e.seq,p.body,e.actor,e.generated_by,e.subject FROM event e JOIN payload p ON p.sha=e.payload_sha "
             "WHERE e.kind='extract.run'"):
         proof = jl(raw)
         if (seq in blocked or actor != 'user:sagae' or not generated or not generated.startswith('app:')
@@ -188,8 +188,21 @@ def review_grants(led):
                               "WHERE e.kind='record.put' AND e.subject=? AND e.payload_sha=? "
                               "AND e.actor=? AND e.generated_by=?", (rid, sha, actor, generated)).fetchone()
             if row and row[0] not in blocked:
-                grants[(rid, sha)] = (proof.get('action'), proof.get('action_id'))
+                grants[(rid, sha)] = (proof.get('action'), proof.get('action_id'), target)
     return grants
+
+
+def publication_grants(led, grants=None):
+    """Only a current verified payload may cross its original promotion boundary."""
+    if led is None:
+        return set()
+    latest = {rid: sha for rid, sha in led.execute(
+        "SELECT subject,payload_sha FROM event WHERE kind IN "
+        "('record.put','record.tombstone','record.redact') ORDER BY seq")}
+    grants = review_grants(led) if grants is None else grants
+    return {(action_id, rid, target)
+            for (rid, sha), (operation, action_id, target) in grants.items()
+            if operation == 'publish' and latest.get(rid) == sha}
 
 
 def security_state(g=None, led=None) -> dict[str, int]:
@@ -201,8 +214,7 @@ def security_state(g=None, led=None) -> dict[str, int]:
     levels: dict[str, int] = {}
     deps: dict[str, set[str]] = defaultdict(set)
     grants = review_grants(led)
-    approved_promotions = {(action_id, rid) for (rid, sha), (operation, action_id) in grants.items()
-                           if operation == 'publish'}
+    approved_promotions = publication_grants(led, grants)
     if g is not None:
         levels.update((r[0], r[1]) for r in g.execute("SELECT id, sensitivity FROM head"))
         for cid, source in g.execute("SELECT claim_id, snapshot_id FROM evidence"):
@@ -214,7 +226,7 @@ def security_state(g=None, led=None) -> dict[str, int]:
             deps[dst].add(eid)
             if cid:
                 deps[cid].add(eid)
-            if rtype == "PROMOTED_FROM" and ((jl(raw_props) or {}).get('review_action'), src) not in approved_promotions:
+            if rtype == "PROMOTED_FROM" and ((jl(raw_props) or {}).get('review_action'), src, dst) not in approved_promotions:
                 deps[dst].add(src)
     if led is not None:
         # tail.skip_set과 같은 격리 - 해제 규칙. export에는 gold 연결이 없으므로
@@ -265,7 +277,7 @@ def security_state(g=None, led=None) -> dict[str, int]:
                 levels[eid] = max(levels.get(eid, 0), SENS.get(p.get("sensitivity"), 0))
                 if p.get("claim_id"):
                     deps[p["claim_id"]].add(eid)
-                if p["rtype"] == "PROMOTED_FROM" and ((p.get('props') or {}).get('review_action'), p['src']) not in approved_promotions:
+                if p["rtype"] == "PROMOTED_FROM" and ((p.get('props') or {}).get('review_action'), p['src'], p['dst']) not in approved_promotions:
                     deps[p["dst"]].add(p["src"])
     return sensitivity_closure(levels, deps)
 
@@ -322,9 +334,7 @@ def node_new(c: Ctx, nid: str, prev: dict | None = None, **o) -> dict:
 def _propagate_sens(c: Ctx, nid: str) -> None:
     """현재 행/헤드/색인과 파생물을 같은 투영 트랜잭션에서 올린다. 판은 늘리지 않는다."""
     g = c.g
-    approved = {(action_id, rid)
-                for (rid, sha), (operation, action_id) in review_grants(c.led).items()
-                if operation == 'publish'}
+    approved = publication_grants(c.led)
     pending = deque([nid])
     while pending:
         source = pending.popleft()
@@ -340,7 +350,7 @@ def _propagate_sens(c: Ctx, nid: str) -> None:
         # The relation itself and all other dependency paths still propagate.
         for child, raw_props in g.execute(
                 "SELECT src,props FROM edge WHERE dst=? AND rtype='PROMOTED_FROM'", (source,)):
-            if ((jl(raw_props) or {}).get('review_action'), child) not in approved:
+            if ((jl(raw_props) or {}).get('review_action'), child, source) not in approved:
                 children.add(child)
         for child in sorted(children):
             if head_sens(g, child) >= level:
@@ -508,6 +518,10 @@ def h_record_put(c: Ctx, p: dict) -> None:
     rid = p["id"]
     sens = max(SENS[p["sensitivity"]], head_sens(g, rid),
                *(head_sens(g, ln["dst"]) for ln in p.get("links") or [] if ln["rtype"] == "PROMOTED_FROM"))
+    approved = publication_grants(c.led)
+    for target, raw_props in g.execute("SELECT dst,props FROM edge WHERE src=? AND rtype='PROMOTED_FROM'", (rid,)):
+        if ((jl(raw_props) or {}).get('review_action'), rid, target) not in approved:
+            sens = max(sens, head_sens(g, target))
     grant = review_grants(c.led).get((rid, e.get('payload_sha')))
     if grant and grant[0] in ('release', 'declassify'):
         sens = SENS[p['sensitivity']]
